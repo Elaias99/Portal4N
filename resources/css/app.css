@@ -1,0 +1,14 @@
+.navbar-brand {
+    display: flex;
+    align-items: center; /* Asegura que el logo y los textos estén alineados verticalmente */
+}
+
+.logo-guirnalda {
+    height: 50px; /* Ajusta el tamaño del logo al valor que prefieras */
+    max-height: 60px; /* Controla la altura máxima del logo */
+}
+
+.navbar {
+    height: 65px; /* Fija la altura de la barra de navegación */
+}
+

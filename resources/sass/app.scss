@@ -1,0 +1,115 @@
+// Fonts
+@import url('https://fonts.bunny.net/css?family=Nunito');
+
+// Variables
+@import 'variables';
+
+// Bootstrap
+@import 'bootstrap/scss/bootstrap';
+
+/* Estilos personalizados para móviles */
+@media (max-width: 768px) {
+    /* Asegura que el contenedor del navbar ocupa toda la pantalla */
+    .navbar-collapse {
+        width: 100%;
+        padding: 10px 0;
+        margin-top: 10px;
+    }
+
+    /* Aumenta el tamaño y separación del logo para móviles */
+    .navbar-brand .logo-guirnalda {
+        max-height: 40px;
+        margin-right: 10px;
+    }
+
+    /* Asegura que los elementos de menú estén bien alineados */
+    .navbar-nav .nav-link {
+        padding: 10px;
+        font-size: 18px;
+        display: block; /* Asegura que cada enlace ocupe toda la línea */
+    }
+
+    /* Ajuste del menú desplegable para centrarlo en móviles */
+    .dropdown-menu {
+        position: absolute;
+        width: 90vw; /* Asegura que el menú ocupa casi todo el ancho */
+        left: 50%; /* Centra el menú horizontalmente */
+        transform: translateX(0%); /* Mueve el menú hacia el centro */
+        top: 100%;
+        margin-top: 10px;
+        padding: 10px;
+        font-size: 16px;
+        border-radius: 8px;
+        transition: opacity 0.15s ease-in-out, transform 0.15s ease-in-out;
+        will-change: opacity, transform;
+    }
+
+    /* Esconde el menú completamente cuando está oculto */
+    .dropdown-menu:not(.show) {
+        opacity: 0; /* Invisible */
+        transform: translateY(-10px); /* Mueve el menú hacia arriba */
+        pointer-events: none; /* Evita que sea interactivo mientras está oculto */
+    }
+
+    /* Ajuste de los ítems dentro del dropdown */
+    .dropdown-item {
+        color: #555; /* Color más claro para distinguir de los títulos */
+    }
+
+    /* Estilos para el menú desplegable principal */
+    .navbar-collapse.show {
+        background-color: #f0f0f0;
+        padding: 10px;
+        border-radius: 8px;
+        position: relative;
+        z-index: 1050; /* Asegura que el menú esté al frente */
+    }
+
+    /* Estilo para los títulos de las secciones "Trabajadores" y "Solicitudes" */
+    .navbar-nav > .nav-item > .nav-link {
+        font-weight: bold;
+        color: #333; /* Color oscuro para los títulos */
+        padding-top: 8px;
+        padding-bottom: 8px;
+        background-color: #e0e0e0; /* Fondo gris más oscuro para resaltar el título */
+        border-radius: 5px;
+        margin-bottom: 5px; /* Separación entre los títulos y sus opciones */
+    }
+
+    /* Ajuste del icono del menú hamburguesa */
+    .navbar-toggler {
+        padding: 8px 15px;
+        font-size: 20px;
+    }
+
+    /* Ajustes para el título */
+    h1.text-center {
+        font-size: 22px;
+        margin-top: 15px;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+
+    /* Botones de acción en columna para ocupar todo el ancho en móviles */
+    .text-center a.btn {
+        display: block;
+        width: 100%;
+        margin-bottom: 10px;
+        font-size: 16px;
+        padding: 12px;
+    }
+
+    /* Ajustes para las tarjetas de empleados */
+    .card {
+        margin-bottom: 15px;
+        padding: 10px;
+    }
+
+    /* Ajustes dentro de cada tarjeta */
+    .card-body h5.card-title {
+        font-size: 16px;
+    }
+    .card-body .text-muted {
+        font-size: 14px;
+    }
+}

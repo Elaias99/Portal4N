@@ -1,0 +1,37 @@
+{
+  "public/images/camion4.png": {
+    "file": "assets/camion4-TFrTbaBX.png",
+    "src": "public/images/camion4.png"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-DOpGuOCh.css",
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/css/landing.css": {
+    "file": "assets/landing-BthRCC29.css",
+    "src": "resources/css/landing.css",
+    "isEntry": true
+  },
+  "resources/css/loader.css": {
+    "file": "assets/loader-n-w7iyBA.css",
+    "src": "resources/css/loader.css",
+    "isEntry": true
+  },
+  "resources/css/login.css": {
+    "file": "assets/login-CwyL021F.css",
+    "src": "resources/css/login.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-BkDPDVeP.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/sass/app.scss": {
+    "file": "assets/app-7v_sDFtm.css",
+    "src": "resources/sass/app.scss",
+    "isEntry": true
+  }
+}

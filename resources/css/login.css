@@ -1,0 +1,383 @@
+        /* Código base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', sans-serif;
+        }
+    
+        body {
+            background: linear-gradient(135deg, #ffffff, #b0b0b0 25%, #333333 50%, #1a1a1a); 
+            color: #000;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            align-items: center;
+            height: 100vh;
+            padding: 20px;
+            transition: background-color 0.5s ease-in-out;
+        }
+    
+        .container {
+            display: flex;
+            width: 100%;
+            max-width: 1500px;
+            background: #3a3a3c; /* Fondo sin opacidad */
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6); 
+            border: 3px solid rgba(255, 255, 255, 0.2); 
+            border-radius: 40px;
+            overflow: hidden;
+            position: relative;
+            height: 600px; /* Altura fija para pantallas grandes */
+            min-height: 600px; /* Asegura un tamaño mínimo */
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+        }
+        
+        
+    
+        body.loaded .container {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    
+        .image-section {
+            flex: 1.5; /* Mantén la proporción original */
+            background: url('../../public/images/camion4.png') no-repeat center center;
+            background-size: cover; /* Mantén el fondo ajustado */
+            position: relative;
+            min-height: 100%; /* Asegura que llene todo el contenedor */
+            max-height: 600px; /* Limita la altura para pantallas grandes */
+        }
+        
+    
+        .image-section::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3); /* Reducción de la opacidad del overlay */
+        }
+    
+        .logo {
+            position: absolute;
+            width: 260px;
+            right: -50px;
+            bottom: -30px;
+            z-index: 3;
+        }
+    
+        .text-section {
+            flex: 1;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: #505050;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.05);
+        }
+    
+        h1 {
+            font-size: 2.2em;
+            margin-bottom: 20px;
+            color: #ffffff;
+            text-align: center;
+        }
+    
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 20px;
+        }
+    
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+    
+        .input-group i {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6a8eff;
+            transition: transform 0.3s ease;
+            z-index: 1; /* Asegura que el ícono esté encima */
+        }
+
+        .invalid-feedback {
+            color: #010101; /* Cambia el color si es necesario */
+            font-size: 0.9em;
+            position: absolute;
+            bottom: -20px; /* Ajusta la posición del mensaje */
+            left: 10px;
+            display: block;
+        }
+    
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 15px;
+            padding-left: 40px;
+            font-size: 16px;
+            border-radius: 12px;
+            border: 1px solid #ccc;
+            background-color: #ffffff;
+            color: #333;
+            outline: none;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 10px rgba(100, 100, 100, 0.15);
+        }
+    
+        input:focus {
+            border-color: #6a8eff;
+            box-shadow: 0 6px 15px rgba(106, 142, 255, 0.3);
+        }
+    
+        input::placeholder {
+            color: #bbbbbb;
+        }
+    
+        .button {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2em;
+            font-weight: 500;
+            border: none;
+            border-radius: 12px;
+            background-color: #6a8eff;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+        }
+    
+        .button:hover {
+            background-color: #5773e0;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.25);
+            transform: translateY(-2px);
+        }
+    
+        .button:active {
+            background-color: #4a5bc1;
+            transform: scale(0.98);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+    
+        /* Ajustes para dispositivos móviles */
+        /* Estilos específicos para dispositivos móviles */
+        /* Ajustes para dispositivos móviles */
+        @media (max-width: 768px) {
+            html, body {
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                min-height: 100vh;
+                background: linear-gradient(145deg, #B5EAD7, #86E3CE, #B2E4F9, #FFDAC1);
+                background-size: 400% 400%; /* Amplía el degradado para el efecto */
+                animation: gradientAnimation 12s ease infinite; /* Más rápida y llamativa */
+                overflow: hidden;
+                position: relative;
+            }
+        
+            @keyframes gradientAnimation {
+                0% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+                100% { background-position: 0% 50%; }
+            }
+        
+            /* Nuevas formas abstractas */
+            .mobile-shape-1,
+            .mobile-shape-2,
+            .mobile-shape-3 {
+                position: absolute;
+                border-radius: 50%;
+                filter: blur(70px);
+                opacity: 0.4;
+                z-index: 0;
+                animation: floatAnimation 6s ease-in-out infinite alternate;
+            }
+
+            @keyframes floatAnimation {
+                0% { transform: translateY(0) scale(1); }
+                100% { transform: translateY(-20px) scale(1.05); }
+            }
+        
+            /* Primera forma difuminada */
+            .mobile-shape-1 {
+                width: 350px;
+                height: 350px;
+                background: #B5EAD7;
+                top: -80px;
+                left: -60px;
+            }
+        
+            /* Segunda forma difuminada */
+            .mobile-shape-2 {
+                width: 300px;
+                height: 300px;
+                background: #86E3CE;
+                bottom: -100px;
+                right: -80px;
+            }
+
+            /* Forma 3: Rosa suave */
+            .mobile-shape-3 {
+                width: 250px;
+                height: 250px;
+                background: #96b6e7;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+            }
+        
+            /* Ajustes del contenedor */
+            .container {
+                background: none !important;
+                border: none !important;
+                box-shadow: none !important;
+                border-radius: 20px;
+                width: 90%;
+                max-width: 400px;
+                padding: 20px;
+                position: relative;
+                z-index: 2;
+                animation: fadeIn 1.5s ease-out; /* Animación de aparición */
+            }
+        
+            /* Animación de Fade In para el contenedor */
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        
+            /* Eliminar la sección de imagen */
+            .image-section {
+                display: none !important; /* Elimina por completo la imagen */
+            }
+        
+            /* Ajustes de la sección de texto */
+            .text-section {
+                background: none !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0;
+            }
+        
+            h1 {
+                font-size: 2.8rem; /* Tamaño del texto */
+                font-weight: 700; /* Grosor */
+                text-align: center;
+                color: #ffffff; /* Letras blancas */
+                text-shadow: 
+                    0 2px 4px rgba(0, 0, 0, 0.3), /* Sombra principal */
+                    0 0 10px rgba(133, 227, 206, 0.6); /* Sombra suave con toque turquesa */
+                letter-spacing: 2px; /* Espaciado entre letras */
+                margin-bottom: 20px; /* Espacio inferior */
+                animation: titleGlow 3s ease-in-out infinite alternate; /* Animación de brillo suave */
+            }
+
+            /* Animación de brillo sutil */
+            @keyframes titleGlow {
+                0% {
+                    text-shadow: 
+                        0 2px 4px rgba(0, 0, 0, 0.3),
+                        0 0 5px rgba(133, 227, 206, 0.6);
+                }
+                100% {
+                    text-shadow: 
+                        0 2px 4px rgba(0, 0, 0, 0.3),
+                        0 0 15px rgba(133, 227, 206, 0.8); /* Incremento del brillo */
+                }
+            }
+        
+            /* Campos de entrada */
+            .input-group {
+                position: relative;
+                margin-bottom: 35px;
+            }
+
+            .invalid-feedback {
+                font-size: 0.8em; /* Reduce el tamaño del texto */
+                position: sticky; /* Cambia a posición estática para evitar que se superponga */
+                margin-top: 16px; /* Agrega un poco de espacio debajo del campo */
+                text-align: center; /* Alinea el texto del mensaje */
+                color: #b24d4d; /* Asegúrate de mantener un color visible */
+            }
+        
+            .input-group input {
+                color: #ffffff; /* Texto blanco para mayor contraste */
+                font-weight: 500; /* Texto más grueso para mejor visibilidad */
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); /* Sombra sutil al texto */
+                background: rgba(255, 255, 255, 0.2); /* Fondo translúcido */
+                border: 1px solid rgba(248, 194, 194, 0.4); /* Borde blanco con opacidad */
+                border-radius: 12px; /* Bordes redondeados */
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Sombra alrededor del input */
+                transition: all 0.3s ease; /* Transición suave */
+            }
+        
+            .input-group input::placeholder {
+                color: rgba(116, 108, 108, 0.9); /* Placeholder más visible */
+                font-weight: 450;
+                text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+            }
+        
+
+        
+            input[type="email"],
+            input[type="password"] {
+                width: 100%;
+                padding: 15px;
+                padding-left: 30px; /* Aumenta el padding izquierdo para dar espacio al ícono */
+                border: none;
+                border-radius: 10px;
+                background: rgba(255, 255, 255, 0.2);
+                color: #ffffff;
+                font-size: 1rem;
+                outline: none;
+            }
+        
+            
+
+            
+            .input-group input:focus {
+                border: 1px solid #B2E4F9; /* Borde pastel azul al enfocar */
+                box-shadow: 0 4px 12px rgba(178, 228, 249, 0.5); /* Sombra más intensa */
+                outline: none; /* Elimina el borde azul predeterminado */
+            }
+            
+        
+            /* Botón */
+            .button {
+                width: 100%;
+                padding: 12px;
+                background: linear-gradient(to right, #8A76F7, #6A5BD8);
+                border: none;
+                border-radius: 12px;
+                color: #ffffff;
+                font-weight: bold;
+                text-align: center;
+                transition: transform 0.2s ease;
+            }
+
+        }
+        
+
+        
+
+
+
+        
+        
+        
+        
+
+
+
+
+        
