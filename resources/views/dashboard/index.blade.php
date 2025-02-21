@@ -8,6 +8,7 @@
 
         <!-- Sidebar Izquierdo -->
         <div id="sidebarPanel" class="col-md-3 sidebar">
+            <button id="toggleSidebar" class="btn btn-secondary sidebar-toggle">☰</button>
             <h4 class="fw-bold text-dark mt-3">📋 Información</h4>
             <ul class="nav flex-column">
 
@@ -40,7 +41,7 @@
         <!-- Contenido Principal -->
         <div id="mainContent" class="col-md-9">
 
-            <button id="toggleSidebar" class="btn btn-secondary sidebar-toggle">☰ Mostrar/Ocultar Sidebar</button>             
+                         
 
             <!-- Sección de Resumen -->
             <div id="section-resumen" class="content-section">
@@ -174,10 +175,11 @@
         height: 100vh;
         box-shadow: 2px 0px 10px rgba(0, 0, 0, 0.1);
         padding: 20px;
-        width: 250px; /* Asegura un ancho definido */
+        width: 250px; /* Mantener ancho fijo */
         transition: all 0.3s ease-in-out;
-        position: fixed; /* Fijarlo a la izquierda */
-        left: 0; /* Asegurar que inicie en la posición correcta */
+        position: fixed;
+        left: 0;
+        top: 0;
     }
 
     .sidebar-hidden {
@@ -185,11 +187,25 @@
     }
 
     .sidebar-toggle {
-        position: absolute;
-        left: 10px;
-        top: 10px;
-        z-index: 1000;
+        position: fixed;
+        left: 230px; /* Pegado al borde del sidebar */
+        top: 50%;
+        transform: translateY(-50%);
+        background-color: #007bff;
+        color: white;
+        border-radius: 5px;
+        padding: 8px 12px;
+        border: none;
+        cursor: pointer;
+        transition: left 0.3s ease-in-out;
+        z-index: 1000; /* Asegurar que el botón siempre esté encima */
     }
+
+    /* Cuando el sidebar está oculto, el botón se mueve más a la izquierda */
+    .sidebar-hidden + .sidebar-toggle {
+        left: 10px; /* Mover el botón hacia la izquierda */
+    }
+
 
     .nav-link {
         font-size: 16px;
@@ -302,17 +318,16 @@
 <script>
 
     $(document).ready(function () {
-        // Alternar visibilidad del sidebar
         $("#toggleSidebar").click(function () {
             let sidebar = $("#sidebarPanel");
-            let mainContent = $("#mainContent");
+            let button = $("#toggleSidebar");
 
             if (sidebar.hasClass("sidebar-hidden")) {
                 sidebar.removeClass("sidebar-hidden");
-                mainContent.css("margin-left", "250px");
+                button.css("left", "230px"); // Mueve el botón de regreso al borde del sidebar
             } else {
                 sidebar.addClass("sidebar-hidden");
-                mainContent.css("margin-left", "0px");
+                button.css("left", "10px"); // Mueve el botón a la izquierda cuando el sidebar está oculto
             }
         });
 
@@ -320,16 +335,15 @@
         $(".section-link").click(function (event) {
             event.preventDefault(); // Evita que se recargue la página al hacer clic
 
-            // Remover la clase "active" de todos los enlaces y añadirla solo al seleccionado
             $(".section-link").removeClass("active");
             $(this).addClass("active");
 
-            // Ocultar todas las secciones y mostrar solo la seleccionada
             $(".content-section").addClass("d-none");
             let sectionId = $(this).data("section");
             $("#section-" + sectionId).removeClass("d-none");
         });
     });
+
 
     
 </script>
