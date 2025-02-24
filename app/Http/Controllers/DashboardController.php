@@ -14,24 +14,11 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        // Obtener empleados con las relaciones necesarias
-        $empleados = Trabajador::select('id', 'Nombre', 'ApellidoPaterno', 'ApellidoMaterno', 'CorreoPersonal', 'fecha_inicio_trabajo', 'cargo_id')
-            ->with([
-                'cargo',
-                'vacaciones' => function ($query) {
-                    $query->whereHas('solicitud', fn($q) => $q->where('estado', 'aprobado')->where('tipo_dia', 'vacaciones'));
-                },
-                'historialVacaciones'
-            ])->get();
-
         // Obtener empleados desvinculados con su cargo
         $empleadosDesvinculados = Trabajador::where('situacion_id', 2)
             ->select('id', 'Nombre', 'ApellidoPaterno', 'cargo_id')
             ->with('cargo')
             ->get();
-
-        // Obtener el conteo de empleados por cargo
-        $cargos = \App\Models\Cargo::withCount('trabajadors')->get();
 
         // Obtener solicitudes pendientes con trabajadores
         $solicitudesPendientes = Solicitud::where('estado', 'pendiente')
@@ -43,30 +30,47 @@ class DashboardController extends Controller
             ->with('cargo')
             ->get();
 
-        // Calcular saldo de días proporcionales para cada empleado
-        $empleadosConSaldo = $empleados->map(function ($empleado) {
-            $empleado->saldo_dias = $this->calcularDiasProporcionales($empleado);
-            return $empleado;
-        });
-
-        // Filtrar empleados con saldo negativo (deuda de vacaciones)
-        $empleadosConDeuda = $empleadosConSaldo->filter(fn($empleado) => $empleado->saldo_dias < 0);
-
         // Obtener empleados por empresa
         $empresas = $this->totalEmpleadosPorEmpresa();
 
-        // Retornar la vista con los datos estructurados
-        return view('dashboard.index', compact(
-            'empleadosDesvinculados', 'empleadosConDeuda', 'empleadosConSaldo',
-            'empresas', 'solicitudesPendientes', 'empleadosNuevos', 'cargos'
-        ));
+        // Obtener datos generales
+        $listas = $this->obtenerListas();
+
+        // Obtener resumen (empleados con saldo, cargos optimizados)
+        $resumen = $this->obtenerResumen();
+
+        // Obtener validaciones para la vista
+        $validaciones = $this->validacionesVista(
+            $listas['solicitudesPendientes'], 
+            $listas['empleadosDesvinculados'], 
+            $listas['empleadosNuevos']
+        );
+
+        
+
+        return view('dashboard.index', array_merge([
+            'empleadosDesvinculados' => $empleadosDesvinculados,
+            'solicitudesPendientes' => $solicitudesPendientes,
+            'empleadosNuevos' => $empleadosNuevos,
+            'empresas' => $empresas,
+        ], $listas, $resumen, $validaciones));
     }
+
 
 
     public function totalEmpleadosPorEmpresa()
     {
         return Empresa::withCount('trabajadores')->get();
     }
+
+
+
+
+
+
+
+    // FUNCIONES PRIVADAS
+
 
     private function calcularDiasProporcionales($trabajador)
     {
@@ -90,4 +94,90 @@ class DashboardController extends Controller
 
         return round($diasProporcionalesCalculados - ($diasTomadosVacaciones + $diasTomadosHistoricos), 2);
     }
+
+
+
+    private function obtenerResumen()
+    {
+        // Obtener empleados con relaciones necesarias
+        $empleados = Trabajador::select('id', 'Nombre', 'ApellidoPaterno', 'ApellidoMaterno', 'CorreoPersonal', 'fecha_inicio_trabajo', 'cargo_id')
+            ->with([
+                'cargo',
+                'vacaciones' => function ($query) {
+                    $query->whereHas('solicitud', fn($q) => $q->where('estado', 'aprobado')->where('tipo_dia', 'vacaciones'));
+                },
+                'historialVacaciones'
+            ])->get();
+
+        // Calcular saldo de días proporcionales para cada empleado
+        $empleadosConSaldo = $empleados->map(function ($empleado) {
+            $empleado->saldo_dias = $this->calcularDiasProporcionales($empleado);
+            return $empleado;
+        });
+
+        // Filtrar empleados con saldo negativo (deuda de vacaciones)
+        $empleadosConDeuda = $empleadosConSaldo->filter(fn($empleado) => $empleado->saldo_dias < 0);
+
+        // Contar empleados con saldo (en lugar de usar `count()` en la vista)
+        $empleadosConSaldoCount = $empleadosConSaldo->count();
+
+        // Obtener cargos con cantidad de trabajadores y dividir en 3 grupos
+        $cargos = \App\Models\Cargo::withCount('trabajadors')->get();
+        $cargosChunked = $cargos->chunk(ceil($cargos->count() / 3));
+
+        return compact('empleadosConSaldo', 'empleadosConSaldoCount', 'empleadosConDeuda', 'cargosChunked');
+    }
+
+
+    private function obtenerListas()
+    {
+        return [
+            // Obtener empleados desvinculados con su cargo
+            'empleadosDesvinculados' => Trabajador::where('situacion_id', 2)
+                ->select('id', 'Nombre', 'ApellidoPaterno', 'cargo_id')
+                ->with('cargo')
+                ->get(),
+
+            // Obtener solicitudes pendientes con el trabajador
+            'solicitudesPendientes' => Solicitud::where('estado', 'pendiente')
+                ->with('trabajador:id,Nombre')
+                ->get()
+                ->map(function ($solicitud) {
+                    // Aplicamos ucfirst() en el controlador
+                    $solicitud->campo = ucfirst($solicitud->campo);
+                    return $solicitud;
+                }),
+
+            // Obtener empleados nuevos en el último mes con su cargo
+            'empleadosNuevos' => Trabajador::where('fecha_inicio_trabajo', '>=', now()->subMonth())
+                ->select('id', 'Nombre', 'cargo_id', 'fecha_inicio_trabajo')
+                ->with('cargo:id,Nombre')
+                ->get()
+                ->map(function ($empleado) {
+                    // Formateamos la fecha en el controlador
+                    $empleado->fecha_inicio_trabajo = \Carbon\Carbon::parse($empleado->fecha_inicio_trabajo)->format('d-m-Y');
+                    return $empleado;
+                }),
+
+            // Obtener empresas con conteo de empleados
+            'empresas' => Empresa::withCount('trabajadores')->get(),
+        ];
+    }
+
+
+    private function validacionesVista($solicitudesPendientes, $empleadosDesvinculados, $empleadosNuevos)
+    {
+        return [
+            'haySolicitudesPendientes' => $solicitudesPendientes->isNotEmpty(),
+            'hayEmpleadosDesvinculados' => $empleadosDesvinculados->isNotEmpty(),
+            'hayEmpleadosNuevos' => $empleadosNuevos->isNotEmpty(),
+        ];
+    }
+
+
+
+
+
+
+
 }

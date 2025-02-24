@@ -1,6 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
+
+@vite(['resources/css/dashboard.css'])
+
+
 <div class="container-fluid">
     <div class="row">
         <!-- Botón para ocultar/mostrar Sidebar -->
@@ -50,8 +54,11 @@
                     <div class="col-lg-3 col-md-4 col-sm-6">
                         <div class="stat-card p-4 text-center shadow-lg">
                             <h6 class="text-muted">Total de Empleados</h6>
-                            <h2 class="fw-bold text-primary">{{ count($empleadosConSaldo) }}</h2>
+
+                            <h2 class="fw-bold text-primary">{{ $empleadosConSaldoCount }}</h2>
+
                         </div>
+
                     </div>
             
                     <!-- Tarjetas de Empresas -->
@@ -71,7 +78,7 @@
                 <div class="container mt-4">
                     <h5 class="fw-bold text-dark">📋 Desglose por Cargo</h5>
                     <div class="row">
-                        @foreach ($cargos->chunk(ceil($cargos->count() / 3)) as $grupo)
+                        @foreach ($cargosChunked as $grupo)
                         <div class="col-md-4">
                             <ul class="list-group list-group-flush">
                                 @foreach ($grupo as $cargo)
@@ -107,22 +114,18 @@
 
 
 
-
-
-
-            
-            
-
+            <!-- Sección de Solicitudes Pendientes -->
             <!-- Sección de Solicitudes Pendientes -->
             <div id="section-solicitudes" class="content-section d-none">
                 <h5 class="fw-bold text-dark">📑 Solicitudes Pendientes</h5>
-                @if ($solicitudesPendientes->isEmpty())
+
+                @if (!$haySolicitudesPendientes)
                     <p class="text-muted">No hay solicitudes pendientes.</p>
                 @else
                     <ul class="list-group">
                         @foreach ($solicitudesPendientes as $solicitud)
                             <li class="list-group-item">
-                                {{ $solicitud->trabajador->Nombre }} - {{ ucfirst($solicitud->campo) }} 
+                                {{ $solicitud->trabajador->Nombre }} - {{ $solicitud->campo }}
                                 <span class="badge bg-warning text-dark">Pendiente</span>
                             </li>
                         @endforeach
@@ -130,10 +133,15 @@
                 @endif
             </div>
 
+
+
+
+
             <!-- Sección de Nuevos Empleados -->
             <div id="section-nuevos" class="content-section d-none">
                 <h5 class="fw-bold text-dark">🆕 Nuevos Empleados</h5>
-                @if ($empleadosNuevos->isEmpty())
+
+                @if (!$hayEmpleadosNuevos)
                     <p class="text-muted">No hay nuevos empleados en el último mes.</p>
                 @else
                     <ul class="list-group">
@@ -147,10 +155,15 @@
                 @endif
             </div>
 
+
+
+
+
             <!-- Sección de Empleados Desvinculados -->
             <div id="section-desvinculados" class="content-section d-none">
                 <h5 class="fw-bold text-dark">❌ Empleados Desvinculados</h5>
-                @if ($empleadosDesvinculados->isEmpty())
+            
+                @if (!$hayEmpleadosDesvinculados)
                     <p class="text-muted">No hay empleados desvinculados.</p>
                 @else
                     <ul class="list-group">
@@ -164,124 +177,13 @@
                     </ul>
                 @endif
             </div>
+            
+
+
+
         </div>
     </div>
 </div>
-
-<!-- Estilos Mejorados -->
-<style>
-    .sidebar {
-        background: white;
-        height: 100vh;
-        box-shadow: 2px 0px 10px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-        width: 250px; /* Mantener ancho fijo */
-        transition: all 0.3s ease-in-out;
-        position: fixed;
-        left: 0;
-        top: 0;
-    }
-
-    .sidebar-hidden {
-        left: -250px;
-    }
-
-    .sidebar-toggle {
-        position: fixed;
-        left: 230px; /* Pegado al borde del sidebar */
-        top: 50%;
-        transform: translateY(-50%);
-        background-color: #007bff;
-        color: white;
-        border-radius: 5px;
-        padding: 8px 12px;
-        border: none;
-        cursor: pointer;
-        transition: left 0.3s ease-in-out;
-        z-index: 1000; /* Asegurar que el botón siempre esté encima */
-    }
-
-    /* Cuando el sidebar está oculto, el botón se mueve más a la izquierda */
-    .sidebar-hidden + .sidebar-toggle {
-        left: 10px; /* Mover el botón hacia la izquierda */
-    }
-
-
-    .nav-link {
-        font-size: 16px;
-        font-weight: bold;
-        color: #333;
-        padding: 10px;
-        cursor: pointer;
-    }
-
-    .nav-link.active {
-        color: #007bff;
-    }
-
-    .content-section {
-        padding: 20px;
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .stat-card {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-        min-height: 140px; /* Para mantener las tarjetas del mismo tamaño */
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-    }
-
-    .empresa-logo {
-        max-width: 80px;
-        max-height: 50px;
-        object-fit: contain;
-        margin-bottom: 10px;
-    }
-
-    #mainContent {
-        transition: margin-left 0.3s ease-in-out;
-        margin-left: 250px;
-    }
-
-    .main-expanded {
-        margin-left: 0 !important;
-    }
-
-
-    .cargo-card {
-        background: white;
-        border-radius: 6px; /* Redondeamos un poco menos */
-        padding: 8px;  /* Reducimos el padding */
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-        min-height: 80px; /* Reducimos la altura */
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;  /* Hacemos el texto más pequeño */
-    }
-
-
-
-
-
-
-
-</style>
 
 <!-- Script de interacción -->
 <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
