@@ -158,9 +158,9 @@
         <nav class="navbar navbar-expand-md navbar-dark">
             <div class="container">
 
-                <a class="navbar-brand" href="{{ url('/') }}">
+                {{-- <a class="navbar-brand" href="{{ url('/') }}">
                     <img src="{{ asset('images/logo.png') }}" alt="4Nortes" style="height: 40px;">
-                </a>
+                </a> --}}
                 
 
 

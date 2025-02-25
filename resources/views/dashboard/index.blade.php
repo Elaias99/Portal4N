@@ -2,18 +2,62 @@
 
 @section('content')
 
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
 @vite(['resources/css/dashboard.css'])
 
 
 <div class="container-fluid">
     <div class="row">
         <!-- Botón para ocultar/mostrar Sidebar -->
-        
 
         <!-- Sidebar Izquierdo -->
         <div id="sidebarPanel" class="col-md-3 sidebar">
             <button id="toggleSidebar" class="btn btn-secondary sidebar-toggle">☰</button>
-            <h4 class="fw-bold text-dark mt-3">📋 Información</h4>
+
+            <!-- Tarjeta del Usuario Autenticado -->
+            <div class="card mt-3 shadow user-card">
+                <div class="card-body p-2">
+                    @php
+                        $correoPerfil = resolvePerfilEmail(Auth::user()->email);
+                        $usuario = \App\Models\User::where('email', $correoPerfil)->first();
+                        $empleado = $usuario ? \App\Models\Trabajador::where('user_id', $usuario->id)->first() : null;
+                    @endphp
+
+                    @if($empleado)
+                        <!-- Nombre y cargo -->
+                        <div class="text-center mb-2">
+                            <h5 class="card-title mb-1">
+                                {{ $empleado->Nombre }} {{ $empleado->ApellidoPaterno }}
+                            </h5>
+                            <small class="text-muted">
+                                {{ optional($empleado->cargo)->Nombre ?? 'Sin cargo' }}
+                            </small>
+                        </div>
+
+                        <!-- Logo de la Empresa o Estado -->
+                        <div class="text-center mb-2">
+                            @if(optional($empleado->sistemaTrabajo)->nombre === 'Desvinculado' 
+                                && optional($empleado->situacion)->Nombre === 'Desvinculado')
+                                <i class="fa-solid fa-triangle-exclamation text-warning fa-lg"></i>
+                                <h6 class="text-primary fw-bold">Desvinculado</h6>
+                            @else
+                                @if($empleado->empresa && $empleado->empresa->logo)
+                                    <img src="{{ asset('storage/' . $empleado->empresa->logo) }}" 
+                                        alt="Logo de {{ $empleado->empresa->Nombre }}" 
+                                        style="max-height: 50px;">
+                                @else
+                                    <p class="text-muted">No hay logo disponible</p>
+                                @endif
+                            @endif
+                        </div>
+
+                    @else
+                        <p class="text-muted text-center">No se encontró un perfil asociado.</p>
+                    @endif
+                </div>
+            </div>
+
             <ul class="nav flex-column">
 
                 <li class="nav-item">
@@ -24,9 +68,6 @@
                 <li class="nav-item">
                     <a class="nav-link section-link" href="#" data-section="asistencia">📌 Asistencia de Empleados</a>
                 </li>
-
-
-
 
                 <li class="nav-item">
                     <a class="nav-link section-link" href="#" data-section="solicitudes">📑 Solicitudes Pendientes</a>
@@ -40,12 +81,9 @@
             </ul>
         </div>
 
-        
-
         <!-- Contenido Principal -->
         <div id="mainContent" class="col-md-9">
-
-                         
+              
 
             <!-- Sección de Resumen -->
             <div id="section-resumen" class="content-section">
@@ -92,8 +130,6 @@
                         @endforeach
                     </div>
                 </div>
-
-
                 
             </div>
 
@@ -112,9 +148,6 @@
                 </div>
             </div>
 
-
-
-            <!-- Sección de Solicitudes Pendientes -->
             <!-- Sección de Solicitudes Pendientes -->
             <div id="section-solicitudes" class="content-section d-none">
                 <h5 class="fw-bold text-dark">📑 Solicitudes Pendientes</h5>
@@ -133,10 +166,6 @@
                 @endif
             </div>
 
-
-
-
-
             <!-- Sección de Nuevos Empleados -->
             <div id="section-nuevos" class="content-section d-none">
                 <h5 class="fw-bold text-dark">🆕 Nuevos Empleados</h5>
@@ -154,10 +183,6 @@
                     </ul>
                 @endif
             </div>
-
-
-
-
 
             <!-- Sección de Empleados Desvinculados -->
             <div id="section-desvinculados" class="content-section d-none">
@@ -200,11 +225,35 @@
 
         document.querySelector('[data-section="asistencia"]').addEventListener('click', function () {
             document.getElementById('section-asistencia').classList.remove('d-none');
+
             if (!calendar) {
                 calendar = new FullCalendar.Calendar(calendarEl, {
                     locale: 'es',
-                    initialView: 'dayGridMonth'
+                    initialView: 'dayGridMonth',
+                    events: [
+                        @foreach ($vacacionesAprobadas as $vacacion)
+                            @php
+                                $start = \Carbon\Carbon::parse($vacacion->fecha_inicio);
+                                $end = \Carbon\Carbon::parse($vacacion->fecha_fin);
+                            @endphp
+
+                            @while ($start->lte($end))
+                            {
+                                title: '{{ trim($vacacion->trabajador->Nombre . " " . $vacacion->trabajador->ApellidoPaterno) }}',
+                                start: '{{ $start->toDateString() }}',
+                                color: '#a2d9ff', // Azul claro como en la imagen
+                                textColor: '#000', // Texto negro para mejor visibilidad
+                                display: 'list-item', // Hace que aparezca como burbuja en cada día
+                                classNames: ['vacaciones-bubble'] // Agrega una clase personalizada
+                            },
+                            @php
+                                $start->addDay();
+                            @endphp
+                            @endwhile
+                        @endforeach
+                    ]
                 });
+
                 calendar.render();
             } else {
                 setTimeout(() => {
@@ -214,6 +263,17 @@
         });
     });
 </script>
+<style>
+    .vacaciones-bubble {
+        padding: 5px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: bold;
+        text-align: center;
+        background-color: #a2d9ff; /* Color azul claro */
+        color: black;
+    }
+</style>
 
 
 

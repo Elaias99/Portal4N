@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Trabajador;
 use App\Models\Vacacion;
 use App\Models\HistorialVacacion;
@@ -30,6 +31,11 @@ class DashboardController extends Controller
             ->with('cargo')
             ->get();
 
+        // Obtener todas las vacaciones aprobadas
+        $vacacionesAprobadas = Vacacion::whereHas('solicitud', function ($query) {
+            $query->where('estado', 'aprobado');
+        })->with('trabajador')->get();
+
         // Obtener empleados por empresa
         $empresas = $this->totalEmpleadosPorEmpresa();
 
@@ -46,14 +52,18 @@ class DashboardController extends Controller
             $listas['empleadosNuevos']
         );
 
-        
+        // Obtener el usuario autenticado
+        $user = Auth::user();
 
         return view('dashboard.index', array_merge([
             'empleadosDesvinculados' => $empleadosDesvinculados,
             'solicitudesPendientes' => $solicitudesPendientes,
             'empleadosNuevos' => $empleadosNuevos,
             'empresas' => $empresas,
+            'user' => $user, // Se envía directamente a la vista
+            'vacacionesAprobadas' => $vacacionesAprobadas, // ✅ Se pasa correctamente
         ], $listas, $resumen, $validaciones));
+        
     }
 
 
