@@ -157,6 +157,11 @@ Route::put('/facturas/{factura}/update-status', [FacturaController::class, 'upda
 
 // Ruta resource para gestionar todas las operaciones del HistorialVacacionController
 Route::resource('historial-vacacion', HistorialVacacionController::class);
+Route::post('/historial-vacacion/{id}/subir', [HistorialVacacionController::class, 'subirArchivo'])
+    ->name('historial-vacacion.subir');
+Route::get('/historial-vacacion/{id}/descargar', [HistorialVacacionController::class, 'descargarArchivo'])
+    ->name('historial-vacacion.descargar');
+
 
 // 8. Rutas para exportar PDF
 Route::get('empleados/export/pdf', [TrabajadorController::class, 'exportPdf'])->name('empleados.exportPdf');
@@ -193,3 +198,8 @@ Route::get('/assign-role-jefe-jp', function () {
 });
 
 
+
+
+// Investigar API
+// BACKCOFFE
+// 

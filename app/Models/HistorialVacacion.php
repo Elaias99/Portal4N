@@ -19,6 +19,7 @@ class HistorialVacacion extends Model
         'tipo_dia',
         'comentario_admin',
         'es_historico',
+        'archivo_respaldo',
     ];
 
     protected $casts = [

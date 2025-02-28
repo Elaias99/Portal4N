@@ -255,26 +255,40 @@ class SolicitudController extends Controller
         $estado = $request->get('estado');
         $jefeId = $user->jefe->id ?? null; // Obtener el ID del jefe si existe
 
-        // Filtrar solicitudes de vacaciones
-        $solicitudes = Solicitud::where('campo', 'Vacaciones')
-            ->when($jefeId, function ($query) use ($jefeId) {
-                $query->whereHas('trabajador', function ($query) use ($jefeId) {
-                    $query->where('id_jefe', $jefeId);
-                });
-            })
-            ->when($estado, function ($query, $estado) {
-                return $query->where('estado', $estado);
-            })
-            ->orderBy('created_at', 'desc')
-            ->get();
+        // Si el usuario es Benjamín Rojas (Jefe de Control RRHH), mostrar TODAS las solicitudes
+        if ($user->id == 376) {
+            $solicitudes = Solicitud::where('campo', 'Vacaciones')
+                ->when($estado, function ($query, $estado) {
+                    return $query->where('estado', $estado);
+                })
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } else {
+            // Si el usuario tiene un jefe, mostrar solo las solicitudes de sus empleados directos
+            if ($jefeId) {
+                $solicitudes = Solicitud::where('campo', 'Vacaciones')
+                    ->whereHas('trabajador', function ($query) use ($jefeId) {
+                        $query->where('id_jefe', $jefeId);
+                    })
+                    ->when($estado, function ($query, $estado) {
+                        return $query->where('estado', $estado);
+                    })
+                    ->orderBy('created_at', 'desc')
+                    ->get();
+            } else {
+                // Si el usuario no es jefe y no es RRHH, devolver solicitudes vacías
+                $solicitudes = collect();
+            }
+        }
 
         // Asociar días solicitados directamente desde la columna 'dias', validando la relación
         $solicitudes->each(function ($solicitud) {
-            $solicitud->dias_laborales = $solicitud->vacacion ? $solicitud->vacacion->dias : 0; // Validar relación antes de acceder
+            $solicitud->dias_laborales = $solicitud->vacacion ? $solicitud->vacacion->dias : 0;
         });
 
         return view('solicitudes.vacaciones', compact('solicitudes'));
     }
+
 
     // Función para eliminar acentos
     public function eliminarAcentos($cadena) {

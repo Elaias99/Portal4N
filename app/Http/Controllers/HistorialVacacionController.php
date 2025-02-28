@@ -37,7 +37,7 @@ class HistorialVacacionController extends Controller
 
         // Obtener todas las vacaciones históricas del empleado desde HistorialVacacion
         $historialVacaciones = HistorialVacacion::where('trabajador_id', $trabajador->id)
-            ->orderBy('fecha_inicio', 'desc')
+            ->orderBy('fecha_inicio', 'asc')
             ->get();
 
         // Obtener todas las solicitudes de vacaciones aprobadas desde el modelo Solicitud
@@ -103,6 +103,7 @@ class HistorialVacacionController extends Controller
             'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
             'dias_laborales' => 'required|integer|min:1',
             'tipo_dia' => 'required|string',
+            'archivo_respaldo' => 'nullable|file|mimes:pdf|max:2048',
         ]);
 
         // Obtener el trabajador
@@ -118,6 +119,43 @@ class HistorialVacacionController extends Controller
         }
 
         return redirect()->route('historial-vacacion.create')->with('success', 'Historial de vacaciones registrado y saldo actualizado.');
-}
+    }
+
+    
+    public function descargarArchivo($id)
+    {
+        // Buscar la vacación histórica
+        $historial = HistorialVacacion::findOrFail($id);
+
+        // Verificar si el archivo existe
+        if ($historial->archivo_respaldo) {
+            return response()->download(storage_path('app/' . $historial->archivo_respaldo));
+        }
+
+        return redirect()->back()->with('error', 'El archivo no está disponible.');
+    }
+
+
+
+    public function subirArchivo(Request $request, $id)
+    {
+        $request->validate([
+            'archivo_respaldo' => 'required|file|mimes:pdf|max:2048', // Validación del archivo
+        ]);
+
+        // Buscar la vacación histórica
+        $historial = HistorialVacacion::findOrFail($id);
+
+        // Guardar el archivo en storage/historial_vacaciones_respaldo
+        if ($request->hasFile('archivo_respaldo')) {
+            $archivoOriginal = $request->file('archivo_respaldo')->getClientOriginalName();
+            $archivoPath = $request->file('archivo_respaldo')->storeAs('historial_vacaciones_respaldo', $archivoOriginal);
+            $historial->archivo_respaldo = $archivoPath;
+            $historial->save();
+        }
+
+        return redirect()->back()->with('success', 'Archivo de respaldo subido correctamente.');
+    }
+
 
 }

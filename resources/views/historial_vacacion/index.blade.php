@@ -57,21 +57,41 @@
                     <table class="table table-bordered">
                         <thead>
                             <tr>
+                                <th>ID</th>
                                 <th>Fecha Inicio</th>
                                 <th>Fecha Fin</th>
                                 <th>Días Tomados</th>
                                 <th>Días Descontados</th>
                                 <th>Tipo de Día</th>
+                                <th>Archivo Respaldo</th> <!-- Nueva columna -->
                             </tr>
                         </thead>
                         <tbody>
                             @foreach ($historialVacaciones as $vacacion)
                                 <tr>
+                                    <td>{{ $vacacion->id }}</td>
                                     <td>{{ $vacacion->fecha_inicio->format('Y-m-d') }}</td>
                                     <td>{{ $vacacion->fecha_fin->format('Y-m-d') }}</td>
                                     <td>{{ $vacacion->dias_laborales }}</td>
                                     <td>{{ $vacacion->dias_descontados }}</td>
                                     <td>{{ ucfirst($vacacion->tipo_dia) }}</td>
+
+                                    <td>
+                                        @if ($vacacion->archivo_respaldo)
+                                            <a href="{{ route('historial-vacacion.descargar', $vacacion->id) }}" class="btn btn-sm btn-outline-primary">
+                                                Descargar PDF
+                                            </a>
+                                        @else
+                                            <!-- Formulario para subir archivo -->
+                                            <form action="{{ route('historial-vacacion.subir', $vacacion->id) }}" method="POST" enctype="multipart/form-data">
+                                                @csrf
+                                                <input type="file" name="archivo_respaldo" class="form-control mb-2" required>
+                                                <button type="submit" class="btn btn-sm btn-outline-success">Subir Archivo</button>
+                                            </form>
+                                        @endif
+                                    </td>
+                                    
+                                    
                                 </tr>
                             @endforeach
                         </tbody>
