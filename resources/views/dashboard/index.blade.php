@@ -232,24 +232,13 @@
                     initialView: 'dayGridMonth',
                     events: [
                         @foreach ($vacacionesAprobadas as $vacacion)
-                            @php
-                                $start = \Carbon\Carbon::parse($vacacion->fecha_inicio);
-                                $end = \Carbon\Carbon::parse($vacacion->fecha_fin);
-                            @endphp
-
-                            @while ($start->lte($end))
-                            {
-                                title: '{{ trim($vacacion->trabajador->Nombre . " " . $vacacion->trabajador->ApellidoPaterno) }}',
-                                start: '{{ $start->toDateString() }}',
-                                color: '#a2d9ff', // Azul claro como en la imagen
-                                textColor: '#000', // Texto negro para mejor visibilidad
-                                display: 'list-item', // Hace que aparezca como burbuja en cada día
-                                classNames: ['vacaciones-bubble'] // Agrega una clase personalizada
-                            },
-                            @php
-                                $start->addDay();
-                            @endphp
-                            @endwhile
+                        {
+                            title: '{{ trim($vacacion->trabajador->Nombre . " " . $vacacion->trabajador->ApellidoPaterno) }} (Hasta: {{ \Carbon\Carbon::parse($vacacion->fecha_fin)->format("d/m/Y") }})',
+                            start: '{{ $vacacion->fecha_inicio }}',
+                            color: '#a2d9ff', // Azul claro como en la imagen
+                            textColor: '#000', // Texto negro para mejor visibilidad
+                            classNames: ['vacaciones-bubble'] // Agrega una clase personalizada
+                        },
                         @endforeach
                     ]
                 });
@@ -263,11 +252,12 @@
         });
     });
 </script>
+
 <style>
     .vacaciones-bubble {
         padding: 5px;
-        border-radius: 10px;
-        font-size: 12px;
+        border-radius: 8px;
+        font-size: 8px;
         font-weight: bold;
         text-align: center;
         background-color: #a2d9ff; /* Color azul claro */
