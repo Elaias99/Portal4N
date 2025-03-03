@@ -2,96 +2,20 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solicitud de Días</title>
     <style>
-        /* Configuración de la página A4 con márgenes */
-        @page {
-            size: A4;
-            margin: 20mm; /* Ajusta según prefieras */
-        }
-
-        /* Ajustes generales */
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 14px; /* Incrementamos para mayor legibilidad */
-            margin: 0;
-            padding: 0;
-        }
-
-        .page {
-            /* El padding interno de la hoja */
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 10px;
-            position: relative; /* para posicionar el logo dentro de .header */
-        }
-
-        /* Ajustamos tamaño del logo para mayor visibilidad */
-        .logo {
-            position: absolute;
-            top: 0;   /* Ajusta si deseas que baje un poco */
-            right: 0;
-            width: 110px; /* Ajustado para ser más grande */
-            height: auto;
-        }
-
-        /* Título principal */
-        .title {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-        }
-
-        .nro-solicitud {
-            text-align: center;
-            font-size: 11px;
-            font-weight: bold;
-            border: 2px solid black;
-            width: 60px; /* Ajusta ancho según prefieras */
-            padding: 3px;
-            margin: 0 auto;
-            border-radius: 10px;
-        }
-
-        .info-table {
-            width: 100%;
-            margin-bottom: 10px;
-            border-collapse: collapse; /* Para minimizar espacios */
-        }
-
-        .info-table td {
-            padding: 3px 0; /* Reducimos padding vertical */
-        }
-
-        .signature-section {
-            margin-top: 20px; 
-            text-align: center;
-            display: flex; 
-            flex-direction: column; 
-            align-items: center;
-        }
-
-        .signature {
-            margin-top: 20px;
-            text-align: center;
-        }
-
-        .signature img {
-            width: 135px; /* Aumentamos para que se vea más grande */
-            height: auto;
-            margin-bottom: 5px;
-            background: none; /* si tu imagen es transparente, no se verá un fondo */
-        }
-
-        .divider {
-            border-top: 1px dashed black;
-            margin: 10px 0;
-        }
+        body { font-family: Montserrat, sans-serif; font-size: 11px; margin: 0; padding: 0; }
+        .page { padding: 10px; box-sizing: border-box; }
+        .header { text-align: center; margin-bottom: 5px; }
+        .logo { position: absolute; top: 5px; right: 10px; width: 100px; height: auto; }
+        .title { text-align: center; font-size: 13px; font-weight: bold; margin-bottom: 5px; }
+        .nro-solicitud { text-align: center; font-size: 11px; font-weight: bold; border: 1px solid black; width: 50px; padding: 2px; margin: 0 auto; border-radius: 8px; }
+        .info-table { width: 100%; margin-bottom: 5px; }
+        .info-table td { padding: 2px 0; }
+        .signature-section { margin-top: 10px; text-align: center; }
+        .signature img { width: 150px; height: auto; margin-bottom: 5px; }
+        .divider { border-top: 1px dashed black; margin: 5px 0; }
     </style>
 </head>
 <body>
@@ -141,8 +65,7 @@
             </tr>
         </table>
 
-        <p>
-            El trabajador hará uso de 
+        <p>El trabajador hará uso de 
             @if($solicitud->tipo_dia === 'vacaciones')
                 {{ $solicitud->vacacion->dias }} días hábiles legales por vacaciones,
             @elseif($solicitud->tipo_dia === 'administrativo')
@@ -157,22 +80,29 @@
             desde el {{ \Carbon\Carbon::parse($solicitud->vacacion->fecha_inicio)->format('d/m/Y') }} al {{ \Carbon\Carbon::parse($solicitud->vacacion->fecha_fin)->format('d/m/Y') }}.
         </p>
 
-        <div class="signature-section">
-            <div class="signature">
+        <br>
+        <br>
+        <br>
+        
+        <div class="signature-section" style="display: flex; flex-direction: column; align-items: center; gap: 7px;">
+            <div class="signature" style="font-size: 15px; margin-bottom: 7px;">
                 _______________________________ <br>
                 {{ $solicitud->trabajador->Nombre }} {{ $solicitud->trabajador->ApellidoPaterno }}<br>
                 {{ $solicitud->trabajador->Rut }}
             </div>
-
-            <div class="signature" style="margin-top: 10px;">
+        
+            <div class="signature" style="margin-top: 5px;">
                 @if(isset($firmaPath) && file_exists($firmaPath))
-                    <img src="{{ $firmaPath }}" alt="Firma del Jefe">
+                    <img src="{{ $firmaPath }}" alt="Firma del Jefe" style="width: 120px; height: auto; margin-bottom: 3px;">
                 @else
                     _______________________________ <br>
                 @endif
-                <span style="display: block; text-align: center;">Jefatura Directa</span>
+                <span style="display: block; text-align: center; font-size: 12px; margin-top: 2px;">Jefatura Directa</span>
             </div>
         </div>
+        
+
+
     </div>
 
     <div class="divider"></div>
@@ -220,8 +150,7 @@
             </tr>
         </table>
 
-        <p>
-            El trabajador hará uso de 
+        <p>El trabajador hará uso de 
             @if($solicitud->tipo_dia === 'vacaciones')
                 {{ $solicitud->vacacion->dias }} días hábiles legales por vacaciones,
             @elseif($solicitud->tipo_dia === 'administrativo')
@@ -236,22 +165,28 @@
             desde el {{ \Carbon\Carbon::parse($solicitud->vacacion->fecha_inicio)->format('d/m/Y') }} al {{ \Carbon\Carbon::parse($solicitud->vacacion->fecha_fin)->format('d/m/Y') }}.
         </p>
 
-        <div class="signature-section">
-            <div class="signature">
+        <br>
+        <br>
+        <br>
+
+        <div class="signature-section" style="display: flex; flex-direction: column; align-items: center; gap: 7px;">
+            <div class="signature" style="font-size: 15px; margin-bottom: 7px;">
                 _______________________________ <br>
                 {{ $solicitud->trabajador->Nombre }} {{ $solicitud->trabajador->ApellidoPaterno }}<br>
                 {{ $solicitud->trabajador->Rut }}
             </div>
-
-            <div class="signature" style="margin-top: 10px;">
+        
+            <div class="signature" style="margin-top: 5px;">
                 @if(isset($firmaPath) && file_exists($firmaPath))
-                    <img src="{{ $firmaPath }}" alt="Firma del Jefe">
+                    <img src="{{ $firmaPath }}" alt="Firma del Jefe" style="width: 120px; height: auto; margin-bottom: 3px;">
                 @else
                     _______________________________ <br>
                 @endif
-                <span style="display: block; text-align: center;">Jefatura Directa</span>
+                <span style="display: block; text-align: center; font-size: 12px; margin-top: 2px;">Jefatura Directa</span>
             </div>
         </div>
+
+
     </div>
 
 </div>
