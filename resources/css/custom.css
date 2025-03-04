@@ -1,0 +1,26 @@
+@media (max-width: 768px) {
+
+    .profile-picture {
+        width: 50%; /* Mantiene un tamaño relativo sin encogerse demasiado */
+        max-width: 150px; /* No dejar que sea más grande de lo necesario */
+        height: auto; /* Permite que mantenga su proporción original */
+        display: block; /* Asegura que no tenga espacios raros */
+        margin: 0 auto; /* Centrar la imagen en el contenedor */
+        border-radius: 50%; /* Hace que sea completamente circular */
+    }
+
+    .btn {
+        font-size: 0.9rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .btn-custom-width {
+        width: 75%;        /* Ajusta el porcentaje según prefieras */
+        margin: 0 auto;    /* Para centrarlo en su contenedor */
+        display: block;    /* Asegura que se comporte como bloque */
+    }
+    
+
+    
+
+}
