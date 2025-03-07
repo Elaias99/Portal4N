@@ -116,6 +116,10 @@ class Trabajador extends Model
     public function asistencias() {
         return $this->hasMany(Asistencia::class);
     }
+
+    public function reclamos() {
+        return $this->hasMany(Reclamos::class);
+    }
     
 
 
