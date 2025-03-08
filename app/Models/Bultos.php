@@ -11,7 +11,7 @@ class Bultos extends Model
 
     protected $table = 'bultos';
 
-    protected $fillable = ['codigo_bulto', 'direccion', 'comuna', 'fecha_carga', 'estado'];
+    protected $fillable = ['codigo_bulto', 'direccion', 'comuna', 'fecha_carga', 'estado', 'id_jefe'];
 
     // Relación con Reclamos (Un bulto puede tener muchos reclamos)
     public function reclamos()
@@ -19,4 +19,9 @@ class Bultos extends Model
         return $this->hasMany(Reclamos::class, 'id_bulto');
     }
 
+
+    public function jefe()
+    {
+        return $this->belongsTo(Jefe::class, 'id_jefe');
+    }
 }

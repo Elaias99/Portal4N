@@ -11,7 +11,7 @@ class Reclamos extends Model
 
     protected $table = 'reclamos';
 
-    protected $fillable = ['id_bulto', 'id_trabajador', 'descripcion', 'respuesta_admin', 'estado'];
+    protected $fillable = ['id_bulto', 'id_trabajador', 'descripcion', 'respuesta_admin', 'estado','id_jefe'];
 
     // Relación con Bultos (Cada reclamo pertenece a un bulto)
     public function bulto()
@@ -23,5 +23,10 @@ class Reclamos extends Model
     public function trabajador()
     {
         return $this->belongsTo(Trabajador::class, 'id_trabajador');
+    }
+
+    public function jefe()
+    {
+        return $this->belongsTo(Jefe::class, 'id_jefe');
     }
 }
