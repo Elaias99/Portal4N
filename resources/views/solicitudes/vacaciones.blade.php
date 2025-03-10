@@ -5,6 +5,7 @@
 <!-- Estilos personalizados para tarjetas -->
 <style>
     .card {
+        position: relative;
         border-radius: 10px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         margin-bottom: 20px;
@@ -31,6 +32,23 @@
     }
     .btn-danger:hover {
         background-color: #dc3545;
+    }
+
+    /* Contenedor del ID */
+    .id-container {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        padding: 5px 10px;
+    }
+
+    /* Estilo para el ID */
+    .id-label {
+        font-size: 14px;
+        font-weight: bold;
+        color: #333;
     }
 </style>
 
@@ -74,6 +92,14 @@
                                 @elseif($solicitud->estado === 'rechazado') border-danger 
                                 @else border-warning @endif">
                     <div class="card-body">
+
+                        <div class="id-container">
+                            <span class="id-label">ID {{ $solicitud->vacacion->id }}</span>
+                        </div>
+
+
+
+
                         <h5 class="card-title">{{ $solicitud->trabajador->Nombre }} {{ $solicitud->trabajador->ApellidoPaterno }}</h5>
                         <p><strong>Tipo de Día:</strong> {{ ucfirst($solicitud->tipo_dia) }}</p>
 

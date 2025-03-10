@@ -47,37 +47,46 @@ class TrabajadorController extends Controller
     public function index(Request $request)
     {
         $query = $request->input('search');
-
         $cargoId = $request->input('cargo_id');
         $empresaId = $request->input('empresa_id');
         $situacionId = $request->input('situacion_id');
-
-        // En lugar de 1, le asignamos 'Sí' si está marcado el checkbox
         $casino = $request->has('casino') ? 'Sí' : null;
         $contratoFirmado = $request->has('contrato_firmado') ? 'Sí' : null;
 
-    $empleados = Trabajador::when($query, function ($queryBuilder) use ($query) {
-            $queryBuilder->where('Nombre', 'like', "%$query%")
-                         ->orWhere('ApellidoPaterno', 'like', "%$query%")
-                         ->orWhere('ApellidoMaterno', 'like', "%$query%")
-                         ->orWhere('Rut', 'like', "%$query%");
-        })
-        ->when($cargoId, function ($queryBuilder) use ($cargoId) {
-            $queryBuilder->where('cargo_id', $cargoId);
-        })
-        ->when($empresaId, function ($queryBuilder) use ($empresaId) {
-            $queryBuilder->where('empresa_id', $empresaId);
-        })
-        ->when($situacionId, function ($queryBuilder) use ($situacionId) {
-            $queryBuilder->where('situacion_id', $situacionId);
-        })
-        ->when($casino, function ($queryBuilder) use ($casino) {
-            $queryBuilder->where('casino', $casino);
-        })
-        ->when($contratoFirmado, function ($queryBuilder) use ($contratoFirmado) {
-            $queryBuilder->where('ContratoFirmado', $contratoFirmado);
-        })
-        ->get();
+        // Comprobar si hay algún filtro activo
+        $hayFiltro = $query || $cargoId || $empresaId || $situacionId || $casino || $contratoFirmado;
+
+        $empleados = Trabajador::when($query, function ($queryBuilder) use ($query) {
+                $queryBuilder->where('Nombre', 'like', "%$query%")
+                            ->orWhere('ApellidoPaterno', 'like', "%$query%")
+                            ->orWhere('ApellidoMaterno', 'like', "%$query%")
+                            ->orWhere('Rut', 'like', "%$query%");
+            })
+            ->when($cargoId, function ($queryBuilder) use ($cargoId) {
+                $queryBuilder->where('cargo_id', $cargoId);
+            })
+            ->when($empresaId, function ($queryBuilder) use ($empresaId) {
+                $queryBuilder->where('empresa_id', $empresaId);
+            })
+            ->when($situacionId, function ($queryBuilder) use ($situacionId) {
+                $queryBuilder->where('situacion_id', $situacionId);
+            })
+            ->when($casino, function ($queryBuilder) use ($casino) {
+                $queryBuilder->where('casino', $casino);
+            })
+            ->when($contratoFirmado, function ($queryBuilder) use ($contratoFirmado) {
+                $queryBuilder->where('ContratoFirmado', $contratoFirmado);
+            })
+            ->when(!$hayFiltro, function ($queryBuilder) { 
+                // Si NO hay filtro, excluir a los empleados desvinculados
+                $queryBuilder->whereHas('sistemaTrabajo', function ($query) {
+                    $query->where('nombre', '!=', 'Desvinculado');
+                })
+                ->whereHas('situacion', function ($query) {
+                    $query->where('Nombre', '!=', 'Desvinculado');
+                });
+            })
+            ->get();
 
         // 2. Marcar empleados que están de cumpleaños
         $empleados = $this->markBirthdays($empleados);
@@ -98,6 +107,7 @@ class TrabajadorController extends Controller
             'situaciones' => $situaciones
         ]);
     }
+
 
 
 

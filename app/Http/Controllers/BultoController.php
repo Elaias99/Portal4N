@@ -13,7 +13,7 @@ class BultoController extends Controller
     public function index()
     { 
         // Obtener los últimos 10 bultos
-        $bultos = Bultos::orderBy('fecha_carga', 'desc')->take(10)->get();
+        $bultos = Bultos::orderBy('fecha_carga', 'asc')->take(10)->get();
 
         // Obtener todos los jefes disponibles para asignar reclamos
         $jefes = Jefe::all();

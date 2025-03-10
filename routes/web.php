@@ -131,7 +131,8 @@ Route::patch('/compras/{id}/status', [CompraController::class, 'updateStatus'])-
 // Ruta Dashboard
 Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
 
-
+Route::resource('bultos', 'App\Http\Controllers\BultoController')->middleware('auth');
+Route::resource('reclamos', 'App\Http\Controllers\ReclamoController')->middleware('auth');
 
 // Ruta PDF MANUAL
 Route::get('/rrhh/generar-pdf', [SolicitudManualController::class, 'formulario'])->name('rrhh.formulario');

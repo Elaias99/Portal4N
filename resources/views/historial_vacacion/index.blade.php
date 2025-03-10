@@ -26,12 +26,19 @@
                 <form action="{{ route('historial-vacacion.index') }}" method="GET">
                     <div class="form-group">
                         <label for="trabajador_id">Trabajador</label>
+
+
                         <select name="trabajador_id" class="form-control" required>
                             <option value="" disabled selected>Seleccione un trabajador</option>
                             @foreach ($trabajadores as $trabajador)
                                 <option value="{{ $trabajador->id }}">{{ $trabajador->Nombre }} {{ $trabajador->ApellidoPaterno }}</option>
                             @endforeach
                         </select>
+
+
+
+
+                        
                     </div>
                     <button type="submit" class="btn btn-primary mt-3">Ver Historial</button>
                 </form>

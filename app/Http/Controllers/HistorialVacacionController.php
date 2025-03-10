@@ -24,7 +24,14 @@ class HistorialVacacionController extends Controller
 
         if (!$trabajadorId) {
             // Si no se ha especificado un trabajador, obtener la lista de todos los trabajadores
-            $trabajadores = Trabajador::all();
+            $trabajadores = Trabajador::whereHas('sistemaTrabajo', function ($query) {
+                $query->where('nombre', '!=', 'Desvinculado');
+            })
+            ->whereHas('situacion', function ($query) {
+                $query->where('Nombre', '!=', 'Desvinculado');
+            })
+            ->get();
+        
             return view('historial_vacacion.index', compact('trabajadores'));
         }
 
