@@ -1,7 +1,8 @@
 vendor/
 node_modules/
 .env
-/storage/framework/views/
+storage/framework/views/*.php  # ⬅️ Ignorar solo los archivos, no la carpeta
+storage/framework/views/cache 
 /public/hot
 /storage/logs/laravel.log
 

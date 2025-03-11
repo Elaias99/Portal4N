@@ -9,13 +9,15 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
+    public function up()
     {
-        Schema::table('historial_vacacions', function (Blueprint $table) {
-            //
-            $table->string('archivo_respaldo')->nullable()->after('tipo_dia'); // Agregar campo después de tipo_dia
-        });
+        if (!Schema::hasColumn('historial_vacacions', 'archivo_respaldo')) {
+            Schema::table('historial_vacacions', function (Blueprint $table) {
+                $table->string('archivo_respaldo')->nullable()->after('tipo_dia');
+            });
+        }
     }
+
 
     /**
      * Reverse the migrations.
