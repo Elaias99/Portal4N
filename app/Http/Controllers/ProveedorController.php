@@ -12,11 +12,18 @@ class ProveedorController extends Controller
     /**
      * Mostrar la lista de proveedores.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $proveedores = Proveedor::all();
+        $query = Proveedor::query();
+
+        if ($request->has('search') && $request->search != '') {
+            $query->where('razon_social', 'LIKE', '%' . $request->search . '%');
+        }
+
+        $proveedores = $query->orderBy('razon_social', 'asc')->get();
         return view('proveedores.index', compact('proveedores'));
     }
+    
 
     /**
      * Mostrar el formulario para crear un nuevo proveedor.
@@ -34,7 +41,7 @@ class ProveedorController extends Controller
         $validatedData = $request->validate([
             // Campos requeridos
             'razon_social' => 'required|string|max:255',
-            'rut' => 'required|unique:proveedores,rut|max:12',
+            'rut' => 'nullable|string|max:12',
             'telefono_empresa' => 'required|string|max:15',
             'giro_comercial' => 'required|string|max:255',
             'banco' => 'required|string|max:255',
@@ -97,7 +104,8 @@ class ProveedorController extends Controller
         $validatedData = $request->validate([
             // Campos requeridos
             'razon_social' => 'required|string|max:255',
-            'rut' => 'required|unique:proveedores,rut,' . $id,
+            'rut' => 'required|string|max:12',
+
             'telefono_empresa' => 'required|string|max:15',
             'giro_comercial' => 'required|string|max:255',
             'banco' => 'required|string|max:255',
@@ -113,7 +121,11 @@ class ProveedorController extends Controller
     
             // Representante Legal
             'Nombre_RepresentanteLegal' => 'nullable|string|max:255',
-            'Rut_RepresentanteLegal' => 'nullable|unique:proveedores,Rut_RepresentanteLegal,' . $id,
+
+            'Rut_RepresentanteLegal' => 'nullable|string|max:255',
+
+
+
             'Telefono_RepresentanteLegal' => 'nullable|string|max:15',
             'Correo_RepresentanteLegal' => 'nullable|email|max:255',
     

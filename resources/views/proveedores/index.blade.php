@@ -18,13 +18,20 @@
         </div>
 
         <!-- Barra de búsqueda -->
-        <div class="d-flex align-items-center">
-            <input type="text" class="form-control shadow-sm me-2" placeholder="Buscar proveedor..." id="search">
-            <button class="btn btn-outline-primary shadow-sm">
+        <form method="GET" action="{{ route('proveedores.index') }}" class="d-flex align-items-center">
+            <input 
+                type="text" 
+                name="search" 
+                id="search" 
+                value="{{ request('search') }}"
+                class="form-control shadow-sm me-2" 
+                placeholder="Buscar proveedor..."
+                onkeyup="this.form.submit()">
+            <button type="submit" class="btn btn-outline-primary shadow-sm">
                 <i class="fa-solid fa-search"></i>
             </button>
-        </div>
-
+        </form>
+        
         <!-- Botón Agregar -->
         <div class="d-flex align-items-center">
             <a href="{{ route('proveedores.create') }}" 
@@ -56,6 +63,7 @@
                     <th>Representante Legal</th>
                     <th>Teléfono Representante</th>
                     <th class="text-center"></th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -73,6 +81,19 @@
                             <button class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" title="Ver Detalles">
                                 <i class="fa-solid fa-eye"></i>
                             </button>
+                        </td>
+                        <td>
+                            <a href="{{ route('proveedores.edit', $proveedor->id) }}" class="btn btn-warning btn-sm">
+                                Editar
+                            </a>
+                            <form action="{{ route('proveedores.destroy', $proveedor->id) }}" method="POST" style="display:inline;">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-danger btn-sm"
+                                        onclick="return confirm('¿Estás seguro de que deseas eliminar este proveedor?')">
+                                    Eliminar
+                                </button>
+                            </form>
                         </td>
                     </tr>
                     <!-- Detalles del proveedor -->

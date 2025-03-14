@@ -10,11 +10,13 @@ use App\Http\Controllers\VacacionController;
 use App\Http\Controllers\HistorialVacacionController;
 use App\Http\Controllers\FacturaController;
 use App\Http\Controllers\ProveedorController;
+use App\Http\Controllers\ProveedorImportController;
 use App\Http\Controllers\CompraController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AsistenciaController;
 use App\Models\User;
 use App\Http\Controllers\SolicitudManualController;
+use App\Http\Controllers\BultoController;
 
 
 
@@ -132,6 +134,7 @@ Route::patch('/compras/{id}/status', [CompraController::class, 'updateStatus'])-
 Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
 
 Route::resource('bultos', 'App\Http\Controllers\BultoController')->middleware('auth');
+Route::post('/bultos/import', [BultoController::class, 'importExcel'])->name('bultos.import');
 Route::resource('reclamos', 'App\Http\Controllers\ReclamoController')->middleware('auth');
 
 // Ruta PDF MANUAL
@@ -145,6 +148,11 @@ Route::get('/tutorial', function () {
 
 //Ruta para los proveedores
 Route::resource('proveedores', 'App\Http\Controllers\ProveedorController')->middleware('auth');
+Route::post('/importar-proveedores', [ProveedorImportController::class, 'importar'])->name('importar.proveedores');
+Route::get('/subir-proveedores', function () {
+    return view('importar');
+});
+
 
 //Ruta para compras
 Route::get('compras/{id}/archivo-oc', [CompraController::class, 'descargarArchivoOC'])->name('compras.descargarArchivoOC');

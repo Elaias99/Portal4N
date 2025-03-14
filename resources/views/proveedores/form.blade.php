@@ -158,13 +158,16 @@
 <div class="form-group">
     <label for="banco">Banco *</label>
     <select name="banco" id="banco" class="form-control">
+
         @foreach(['Banco Estado', 'Santander', 'Bci', 'Efectivo', 'Banco Chile', 'Banco Falabella', 'Banco BICE',
-        'Banco Consorcio', 'Banco Scotiabank', 'Banco Security','Banco Corpbanca','Banco Ripley','Banco Itau','Banco Paris','Banco del Desarrollo',
-        'Banco Copeuch','Banco BBVA','Web pago Online','Mercado Pago','Tenpo','Banco Edwars','Efectivo'] as $banco)
+           'Banco Consorcio', 'Banco Scotiabank', 'Banco Security','Banco Corpbanca','Banco Ripley','Itau','Banco Paris','Banco del Desarrollo',
+           'Banco Copeuch','Banco BBVA','Web pago Online','Mercado Pago','Tenpo','Banco Edwars','Efectivo'] as $banco)
             <option value="{{ $banco }}" {{ old('banco', $proveedor->banco ?? '') == $banco ? 'selected' : '' }}>
                 {{ $banco }}
             </option>
         @endforeach
+
+
     </select>
 </div>
 
@@ -205,7 +208,7 @@
 <div class="form-group">
     <label for="tipo_pago">Método de Pago *</label>
     <select name="tipo_pago" id="tipo_pago" class="form-control">
-        @foreach(['Transferencia', 'Cheque', 'Efectivo'] as $metodo)
+        @foreach(['Transferencia', 'Cheque', 'Efectivo', 'Factura', 'Boleta','Factura Exenta','Documento'] as $metodo)
             <option value="{{ $metodo }}" {{ old('tipo_pago', $proveedor->tipo_pago ?? '') == $metodo ? 'selected' : '' }}>
                 {{ $metodo }}
             </option>

@@ -11,7 +11,9 @@ class Bultos extends Model
 
     protected $table = 'bultos';
 
-    protected $fillable = ['codigo_bulto', 'direccion', 'comuna', 'fecha_carga', 'estado', 'id_jefe'];
+    protected $fillable = ['id_envio','atencion','numero_destino','depto_destino','codigo_bulto', 'direccion', 'comuna', 'fecha_carga', 'estado', 'id_jefe',
+                           'razon_social', 'fecha_entrega','ubicacion','region', 'nombre_campana', 'descripcion_bulto','observacion', 'referencia','peso',
+                            'telefono', 'mail', 'unidad'];
 
     // Relación con Reclamos (Un bulto puede tener muchos reclamos)
     public function reclamos()
