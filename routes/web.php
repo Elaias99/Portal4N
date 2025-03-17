@@ -170,6 +170,8 @@ Route::post('/historial-vacacion/{id}/subir', [HistorialVacacionController::clas
     ->name('historial-vacacion.subir');
 Route::get('/historial-vacacion/{id}/descargar', [HistorialVacacionController::class, 'descargarArchivo'])
     ->name('historial-vacacion.descargar');
+    
+
 
 
 // 8. Rutas para exportar PDF

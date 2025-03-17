@@ -165,4 +165,6 @@ class HistorialVacacionController extends Controller
     }
 
 
+
+
 }

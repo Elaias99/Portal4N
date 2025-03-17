@@ -10,8 +10,6 @@
                value="{{ \App\Models\Vacacion::max('id') + 1 }}" readonly>
     </div>
     
-    
-
     <form action="{{ route('rrhh.generar-pdf') }}" method="POST">
         @csrf
 
@@ -46,6 +44,22 @@
         </div>
 
         <div class="mb-3">
+            <label for="dias" class="form-label">Cantidad de Días</label>
+            <input type="number" name="dias" id="dias" class="form-control" required min="1">
+        </div>
+
+        <!-- 📌 Nuevo Campo para Seleccionar Firma -->
+        <div class="mb-3">
+            <label for="firma" class="form-label">Seleccionar Firma</label>
+            <select name="firma" id="firma" class="form-control" required>
+                <option value="">Seleccione una firma</option>
+                @foreach($firmas as $firma)
+                    <option value="{{ $firma }}">{{ $firma }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="mb-3">
             <label for="comentario" class="form-label">Comentario (Opcional)</label>
             <textarea name="comentario" id="comentario" class="form-control"></textarea>
         </div>
@@ -54,4 +68,3 @@
     </form>
 </div>
 @endsection
-

@@ -55,6 +55,13 @@
 <div class="container">
     <h1 class="text-center" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Solicitudes de Días</h1>
 
+    <!-- Botón para Generar PDF Manual -->
+    <div class="text-right mb-4">
+        <a href="{{ route('rrhh.formulario') }}" class="btn btn-outline-danger">
+            <i class="fas fa-file-pdf"></i> Generar PDF Manualmente
+        </a>
+    </div>
+
     <!-- Filtros por estado -->
     <form action="{{ route('solicitudes.vacaciones') }}" method="GET" class="mb-3">
         <div class="input-group">

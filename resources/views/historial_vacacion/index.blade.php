@@ -98,7 +98,6 @@
                                         @endif
                                     </td>
                                     
-                                    
                                 </tr>
                             @endforeach
                         </tbody>
@@ -123,6 +122,7 @@
                     <table class="table table-bordered">
                         <thead>
                             <tr>
+                                <th>id</th>
                                 <th>Fecha Inicio</th>
                                 <th>Fecha Fin</th>
                                 <th>Días Tomados</th> <!-- Nueva columna para los días tomados -->
@@ -134,6 +134,7 @@
                         <tbody>
                             @foreach ($solicitudesAprobadas as $solicitud)
                                 <tr>
+                                    <td>{{$solicitud->vacacion->id}}</td>
                                     <td>{{ $solicitud->vacacion->fecha_inicio->format('Y-m-d') }}</td>
                                     <td>{{ $solicitud->vacacion->fecha_fin->format('Y-m-d') }}</td>
                                     <td>{{ $solicitud->dias_tomados }}</td> <!-- Mostrar los días tomados -->

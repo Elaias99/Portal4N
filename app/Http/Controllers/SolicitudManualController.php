@@ -14,28 +14,34 @@ class SolicitudManualController extends Controller
     public function formulario()
     {
         $trabajadores = Trabajador::all();
-        return view('rrhh.solicitud_manual', compact('trabajadores'));
+
+        // Obtener todas las firmas disponibles en el almacenamiento
+        $firmaDirectory = storage_path('app/Firmas/');
+        $firmas = file_exists($firmaDirectory) ? array_diff(scandir($firmaDirectory), ['.', '..']) : [];
+
+        return view('rrhh.solicitud_manual', compact('trabajadores', 'firmas'));
     }
+
 
     
     public function generarPDF(Request $request)
     {
-        // Validación del formulario
+        // Validar formulario
         $request->validate([
             'trabajador_id' => 'required|exists:trabajadors,id',
             'tipo_dia' => 'required|string',
             'fecha_inicio' => 'required|date',
             'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
+            'dias' => 'required|integer|min:1',
+            'firma' => 'required|string', // Validar que la firma fue seleccionada
             'comentario' => 'nullable|string',
         ]);
 
-        // Obtener el trabajador
+        // Obtener trabajador
         $trabajador = Trabajador::findOrFail($request->trabajador_id);
-
-        // Obtener el próximo ID disponible en `vacacions`
         $vacacionId = Vacacion::max('id') + 1;
 
-        // Crear solicitud en la tabla 'solicitudes'
+        // Crear solicitud
         $solicitud = Solicitud::create([
             'trabajador_id' => $trabajador->id,
             'campo' => 'Vacaciones',
@@ -44,10 +50,12 @@ class SolicitudManualController extends Controller
             'tipo_dia' => $request->tipo_dia,
         ]);
 
-        // Crear registro en la tabla 'vacacions' con el ID manualmente asignado
-        $diasSolicitados = Carbon::parse($request->fecha_inicio)->diffInDays(Carbon::parse($request->fecha_fin)) + 1;
+        // Obtener días ingresados manualmente
+        $diasSolicitados = $request->dias;
+
+        // Crear vacación
         $vacacion = Vacacion::create([
-            'id' => $vacacionId, // Se asigna manualmente el ID
+            'id' => $vacacionId,
             'trabajador_id' => $trabajador->id,
             'fecha_inicio' => $request->fecha_inicio,
             'fecha_fin' => $request->fecha_fin,
@@ -56,11 +64,15 @@ class SolicitudManualController extends Controller
             'solicitud_id' => $solicitud->id,
         ]);
 
+        // Ruta de la firma seleccionada
+        $firmaPath = storage_path('app/Firmas/' . $request->firma);
+
         // Generar el PDF
         $data = [
             'trabajador' => $trabajador,
             'solicitud' => $solicitud,
             'vacacion' => $vacacion,
+            'firmaPath' => file_exists($firmaPath) ? $firmaPath : null, // Solo si la firma existe
         ];
 
         $rutaCarpeta = storage_path('app/solicitudes_manual/pdfs/');
@@ -78,6 +90,11 @@ class SolicitudManualController extends Controller
 
         return response()->download($rutaCarpeta . $fileName);
     }
+
+
+
+    
+
 
 
 
