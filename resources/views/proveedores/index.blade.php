@@ -74,7 +74,8 @@
                         <td>{{ $proveedor->razon_social }}</td>
                         <td>{{ $proveedor->rut }}</td>
                         <td>{{ $proveedor->telefono_empresa }}</td>
-                        <td>{{ $proveedor->banco }}</td>
+                        <td>{{ $proveedor->banco->nombre ?? 'Sin banco' }}</td>
+
                         <td>{{ $proveedor->Nombre_RepresentanteLegal }}</td>
                         <td>{{ $proveedor->Telefono_RepresentanteLegal }}</td>
                         <td class="text-center">
@@ -110,7 +111,8 @@
 
                                         <!-- Datos Bancarios -->
                                         <h4 class="mt-4 mb-3">Datos Bancarios</h4>
-                                        <p><strong>Banco:</strong> {{ $proveedor->banco }}</p>
+                                        <p><strong>Banco:</strong> {{ $proveedor->banco->nombre ?? 'Sin banco' }}</p>
+
                                         <p><strong>Tipo de Cuenta:</strong> {{ $proveedor->tipo_cuenta }}</p>
                                         <p><strong>Número de Cuenta:</strong> {{ $proveedor->nro_cuenta }}</p>
                                         <p><strong>Correo Bancario:</strong> {{ $proveedor->correo_banco }}</p>

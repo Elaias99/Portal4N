@@ -156,20 +156,17 @@
 <p class="text-muted">Información necesaria para registrar los pagos y transferencias.</p>
 
 <div class="form-group">
-    <label for="banco">Banco *</label>
-    <select name="banco" id="banco" class="form-control">
-
-        @foreach(['Banco Estado', 'Santander', 'Bci', 'Efectivo', 'Banco Chile', 'Banco Falabella', 'Banco BICE',
-           'Banco Consorcio', 'Banco Scotiabank', 'Banco Security','Banco Corpbanca','Banco Ripley','Itau','Banco Paris','Banco del Desarrollo',
-           'Banco Copeuch','Banco BBVA','Web pago Online','Mercado Pago','Tenpo','Banco Edwars','Efectivo'] as $banco)
-            <option value="{{ $banco }}" {{ old('banco', $proveedor->banco ?? '') == $banco ? 'selected' : '' }}>
-                {{ $banco }}
+    <label for="banco_id">Banco *</label>
+    <select name="banco_id" id="banco_id" class="form-control">
+        <option value="">Seleccione un banco</option>
+        @foreach($bancos as $banco)
+            <option value="{{ $banco->id }}" {{ old('banco_id', $proveedor->banco_id ?? '') == $banco->id ? 'selected' : '' }}>
+                {{ $banco->nombre }}
             </option>
         @endforeach
-
-
     </select>
 </div>
+
 
 
 

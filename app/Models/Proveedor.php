@@ -17,7 +17,7 @@ class Proveedor extends Model
         'razon_social', //Nombre legal de la empresa proveedora. Fundamental para identificarla en contratos y operaciones.
 
         'rut', //Identificación tributaria del proveedor. Se usa para cumplir con obligaciones legales y fiscales.
-        'banco',
+        'banco_id',
         'tipo_cuenta',
         'nro_cuenta',
         'tipo_pago',
@@ -52,4 +52,10 @@ class Proveedor extends Model
     {
         return $this->hasMany(Compra::class);
     }
+
+    public function banco()
+    {
+        return $this->belongsTo(Banco::class, 'banco_id');
+    }
+
 }

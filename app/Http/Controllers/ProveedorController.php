@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exports\ProveedorExport;
 use Illuminate\Http\Request;
 use App\Models\Proveedor;
+use App\Models\Banco;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ProveedorController extends Controller
@@ -30,8 +31,10 @@ class ProveedorController extends Controller
      */
     public function create()
     {
-        return view('proveedores.create');
+        $bancos = Banco::all(); // Obtener todos los bancos
+        return view('proveedores.create', compact('bancos'));
     }
+
 
     /**
      * Guardar un nuevo proveedor en la base de datos.
@@ -44,7 +47,8 @@ class ProveedorController extends Controller
             'rut' => 'nullable|string|max:12',
             'telefono_empresa' => 'required|string|max:15',
             'giro_comercial' => 'required|string|max:255',
-            'banco' => 'required|string|max:255',
+            'banco_id' => 'required|exists:bancos,id',
+
             'tipo_cuenta' => 'required|string|max:255',
             'nro_cuenta' => 'required|string|max:20',
             'tipo_pago' => 'required|string|max:255',
@@ -93,8 +97,10 @@ class ProveedorController extends Controller
     public function edit($id)
     {
         $proveedor = Proveedor::findOrFail($id);
-        return view('proveedores.edit', compact('proveedor'));
+        $bancos = Banco::all(); // Obtener todos los bancos
+        return view('proveedores.edit', compact('proveedor', 'bancos'));
     }
+
 
     /**
      * Actualizar un proveedor en la base de datos.
@@ -108,7 +114,8 @@ class ProveedorController extends Controller
 
             'telefono_empresa' => 'required|string|max:15',
             'giro_comercial' => 'required|string|max:255',
-            'banco' => 'required|string|max:255',
+            'banco_id' => 'required|exists:bancos,id',
+
             'tipo_cuenta' => 'required|string|max:255',
             'nro_cuenta' => 'required|string|max:20',
             'tipo_pago' => 'required|string|max:255',
