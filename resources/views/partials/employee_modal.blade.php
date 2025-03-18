@@ -64,7 +64,7 @@
 
                           <tr>
                             <th>Banco</th>
-                            <td>{{ $empleado->banco }}</td>
+                            <td>{{ $empleado->banco->nombre }}</td>
                           </tr>
 
                           <tr>

@@ -12,6 +12,8 @@ use App\Services\TrabajadorExportService; // Importa el servicio
 use App\Models\Trabajador;
 use App\Models\Empresa;
 use App\Models\Cargo;
+use App\Models\Banco;
+
 use App\Models\Situacion;
 use App\Models\EstadoCivil;
 use App\Models\Comuna;
@@ -126,8 +128,8 @@ class TrabajadorController extends Controller
         $tipoVestimentas = TipoVestimenta::all(); // Añadimos la lista de tipo de vestimentas
         $sistemasTrabajo = SistemaTrabajo::all();
         $jefes = Jefe::all(); // Obtener todos los jefes
-    
-        return view('empleados.create', compact('empresas', 'cargos', 'situacions', 'estadoCivils', 'comunas', 'afps', 'saluds', 'tipoVestimentas', 'regiones', 'turnos','sistemasTrabajo','jefes'));
+        $bancos = Banco::all();
+        return view('empleados.create', compact('empresas', 'cargos', 'situacions', 'estadoCivils', 'comunas', 'afps', 'saluds', 'tipoVestimentas', 'regiones', 'turnos','sistemasTrabajo','jefes', 'bancos'));
     }
 
 
@@ -203,6 +205,7 @@ class TrabajadorController extends Controller
         $saluds = Salud::all();
         $tipoVestimentas = TipoVestimenta::all();
         $sistemasTrabajo = SistemaTrabajo::all(); // Obtener todos los sistemas de trabajo
+        $bancos = Banco::all();
         
         // Obtener los hijos del empleado
         $hijos = Hijo::where('trabajador_id', $id)->get();
@@ -210,7 +213,7 @@ class TrabajadorController extends Controller
 
         $jefes = Jefe::all(); // Obtener todos los jefes
         
-        return view('empleados.edit', compact('empleado', 'empresas', 'cargos', 'situacions', 'estadoCivils', 'comunas', 'afps', 'saluds', 'tipoVestimentas', 'hijos', 'regiones', 'tallas', 'turnos','sistemasTrabajo','jefes'));
+        return view('empleados.edit', compact('empleado', 'empresas', 'cargos', 'situacions', 'estadoCivils', 'comunas', 'afps', 'saluds', 'tipoVestimentas', 'hijos', 'regiones', 'tallas', 'turnos','sistemasTrabajo','jefes', 'bancos'));
     }
 
     /**

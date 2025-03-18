@@ -134,36 +134,20 @@
                     <div class="accordion-body">
                         <div class="row">
                             <div class="col-md-6 form-group">
-                                <label for="banco">Banco {!! mostrarAsterisco('banco', $camposObligatorios) !!}</label>
-                                <select name="banco" id="banco" class="form-control">
+                                <label for="banco_id">Banco {!! mostrarAsterisco('banco_id', $camposObligatorios) !!}</label>
+                                <select name="banco_id" id="banco_id" class="form-control">
                                     <option value="">Seleccione un banco</option>
-                                    <option value="NOREGISTRO" {{ old('banco', $empleado->banco ?? '') == 'NOREGISTRO' ? 'selected' : '' }}>SIN REGISTRO</option>
-                                    <option value="BANCO ESTADO" {{ old('banco', $empleado->banco ?? '') == 'BANCO ESTADO' ? 'selected' : '' }}>BANCO ESTADO</option>
-                                    <option value="BANCO CHILE" {{ old('banco', $empleado->banco ?? '') == 'BANCO CHILE' ? 'selected' : '' }}>BANCO CHILE</option>
-                                    <option value="BANCO FALABELLA" {{ old('banco', $empleado->banco ?? '') == 'BANCO FALABELLA' ? 'selected' : '' }}>BANCO FALABELLA</option>
-                                    <option value="BANCO SANTANDER" {{ old('banco', $empleado->banco ?? '') == 'BANCO SANTANDER' ? 'selected' : '' }}>BANCO SANTANDER</option>
-                                    <option value="BANCO BCI" {{ old('banco', $empleado->banco ?? '') == 'BANCO BCI' ? 'selected' : '' }}>BANCO BCI</option>
-                                    <option value="BANCO BICE" {{ old('banco', $empleado->banco ?? '') == 'BANCO BICE' ? 'selected' : '' }}>BANCO BICE</option>
-                                    <option value="BANCO CONSORCIO" {{ old('banco', $empleado->banco ?? '') == 'BANCO CONSORCIO' ? 'selected' : '' }}>BANCO CONSORCIO</option>
-                                    <option value="BANCO SCOTIABANK" {{ old('banco', $empleado->banco ?? '') == 'BANCO SCOTIABANK' ? 'selected' : '' }}>BANCO SCOTIABANK</option>
-                                    <option value="BANCO SECURITY" {{ old('banco', $empleado->banco ?? '') == 'BANCO SECURITY' ? 'selected' : '' }}>BANCO SECURITY</option>
-                                    <option value="BANCO CORPBANCA" {{ old('banco', $empleado->banco ?? '') == 'BANCO CORPBANCA' ? 'selected' : '' }}>BANCO CORPBANCA</option>
-                                    <option value="BANCO RIPLEY" {{ old('banco', $empleado->banco ?? '') == 'BANCO RIPLEY' ? 'selected' : '' }}>BANCO RIPLEY</option>
-                                    <option value="BANCO ITAU" {{ old('banco', $empleado->banco ?? '') == 'BANCO ITAU' ? 'selected' : '' }}>BANCO ITAU</option>
-                                    <option value="BANCO PARIS" {{ old('banco', $empleado->banco ?? '') == 'BANCO PARIS' ? 'selected' : '' }}>BANCO PARIS</option>
-                                    <option value="BANCO DEL DESARROLLO" {{ old('banco', $empleado->banco ?? '') == 'BANCO DEL DESARROLLO' ? 'selected' : '' }}>BANCO DEL DESARROLLO</option>
-                                    <option value="BANCO COPEUCH" {{ old('banco', $empleado->banco ?? '') == 'BANCO COPEUCH' ? 'selected' : '' }}>BANCO COPEUCH</option>
-                                    <option value="BANCO BBVA" {{ old('banco', $empleado->banco ?? '') == 'BANCO BBVA' ? 'selected' : '' }}>BANCO BBVA</option>
-                                    <option value="WEBPAY PAGO ONLINE" {{ old('banco', $empleado->banco ?? '') == 'WEBPAY PAGO ONLINE' ? 'selected' : '' }}>WEBPAY PAGO ONLINE</option>
-                                    <option value="MERCADO PAGO" {{ old('banco', $empleado->banco ?? '') == 'MERCADO PAGO' ? 'selected' : '' }}>MERCADO PAGO</option>
-                                    <option value="TENPO" {{ old('banco', $empleado->banco ?? '') == 'TENPO' ? 'selected' : '' }}>TENPO</option>
-                                    
+                                    @foreach($bancos as $banco)
+                                        <option value="{{ $banco->id }}" {{ old('banco_id', $empleado->banco_id ?? '') == $banco->id ? 'selected' : '' }}>
+                                            {{ $banco->nombre }}
+                                        </option>
+                                    @endforeach
                                 </select>
-                                @if ($errors->has('banco'))
-                                    <span class="text-danger">{{ $errors->first('banco') }}</span>
-                                @endif
+                                @if ($errors->has('banco_id'))
+                                    <span class="text-danger">{{ $errors->first('banco_id') }}</span>
+                                @endif
                             </div>
-
+                            
                             <div class="col-md-6 form-group">
                                 <label for="numero_cuenta">Número de Cuenta {!! mostrarAsterisco('numero_cuenta', $camposObligatorios) !!}</label>
                                 <div class="input-group">
@@ -427,8 +411,8 @@
                                 <label for="empresa_id">Empresa {!! mostrarAsterisco('empresa_id', $camposObligatorios) !!}</label>
                                 <select name="empresa_id" id="empresa_id" class="form-control">
                                     <option value="">Seleccione una empresa</option>
-                                    <option value="7" data-rut="77.346.078-7" {{ old('empresa_id', $empleado->empresa_id ?? '') == '7' ? 'selected' : '' }}>4NORTES LOGISTICA SPA</option>
-                                    <option value="8" data-rut="77.639.015-1" {{ old('empresa_id', $empleado->empresa_id ?? '') == '8' ? 'selected' : '' }}>TRANSPORTES Y DISTRIBUCION PMCB</option>
+                                    <option value="1" data-rut="77.346.078-7" {{ old('empresa_id', $empleado->empresa_id ?? '') == '1' ? 'selected' : '' }}>4NORTES LOGISTICA SPA</option>
+                                    <option value="2" data-rut="77.639.015-1" {{ old('empresa_id', $empleado->empresa_id ?? '') == '2' ? 'selected' : '' }}>TRANSPORTES Y DISTRIBUCION PMCB</option>
                                 </select>
                                 @if ($errors->has('empresa_id'))
                                     <span class="text-danger">{{ $errors->first('empresa_id') }}</span>

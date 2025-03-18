@@ -82,7 +82,7 @@ class StoreTrabajadorRequest extends FormRequest
             'fecha_inicio_trabajo' => 'required|date',
             'fecha_inicio_contrato' => 'required|date',
 
-            'banco' => 'required|string|max:255', // Ahora obligatorio
+            'banco_id' => 'required|exists:bancos,id', // Ahora obligatorio
             'numero_cuenta' => 'required|string|max:255', // Ahora obligatorio
             'tipo_cuenta' => 'required|string|max:255', // Ahora obligatorio
             
@@ -136,9 +136,9 @@ class StoreTrabajadorRequest extends FormRequest
 
 
 
-            'banco.required' => 'El campo Banco es obligatorio.', // Nuevo mensaje
-            'banco.string' => 'El campo Banco debe ser una cadena de texto.',
-            'banco.max' => 'El nombre del Banco no puede exceder los 255 caracteres.',
+            'banco_id.required' => 'El campo Banco es obligatorio.',
+            'banco_id.exists' => 'El banco seleccionado no es válido.',
+
 
             'numero_cuenta.required' => 'El campo Número de cuenta es obligatorio.', // Nuevo mensaje
             'numero_cuenta.string' => 'El campo Número de Cuenta debe ser una cadena de texto.',

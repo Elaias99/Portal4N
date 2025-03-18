@@ -18,8 +18,8 @@ class Trabajador extends Model
         'FechaNacimiento', 'CorreoPersonal', 'Foto', 'Casino', 'ContratoFirmado', 'AnexoContrato', 
         'empresa_id', 'cargo_id', 'situacion_id', 'estado_civil_id', 'comuna_id', 'afp_id', 'salud_id',
         'salario_bruto', 'calle','numero_celular','nombre_emergencia','contacto_emergencia', 'fecha_inicio_trabajo',
-        'user_id', 'turno_id', 'sistema_trabajo_id', 'banco','numero_cuenta','tipo_cuenta','Rut_Empresa',
-        'fecha_inicio_contrato', 'id_jefe',
+        'user_id', 'turno_id', 'sistema_trabajo_id' ,'numero_cuenta','tipo_cuenta','Rut_Empresa',
+        'fecha_inicio_contrato', 'id_jefe','banco_id',
     ];
 
 
@@ -39,6 +39,12 @@ class Trabajador extends Model
     public function empresa() {
         return $this->belongsTo(Empresa::class);
     }
+
+    public function banco()
+    {
+        return $this->belongsTo(Banco::class, 'banco_id');
+    }
+
 
     
     public function cargo() {
@@ -120,6 +126,8 @@ class Trabajador extends Model
     public function reclamos() {
         return $this->hasMany(Reclamos::class);
     }
+
+    
     
 
 

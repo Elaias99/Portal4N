@@ -35,7 +35,7 @@ class UpdateTrabajadorRequest extends FormRequest
             'ApellidoPaterno' => 'required|string|max:255',
             'ApellidoMaterno' => 'required|string|max:255',
             'FechaNacimiento' => 'required|date',
-
+            // 'Correo' => 'required|email|max:255',
             'CorreoPersonal' => 'nullable|email|max:255',  // Nuevo campo para el correo personal, opcional
             'Foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'Casino' => 'required|string|max:255',
@@ -94,7 +94,7 @@ class UpdateTrabajadorRequest extends FormRequest
             'fecha_inicio_trabajo' => 'required|date',
             'fecha_inicio_contrato' => 'required|date',
             // otras reglas de validación...
-            'banco' => 'nullable|string|max:255',
+            'banco_id' => 'required|exists:bancos,id',
             'numero_cuenta' => 'nullable|string|max:255',
             'tipo_cuenta' => 'nullable|string|max:255',
             'Rut_Empresa' => 'nullable|string|max:255',
@@ -134,7 +134,8 @@ class UpdateTrabajadorRequest extends FormRequest
             'ApellidoMaterno.required' => 'El apellido materno es obligatorio.',
             'FechaNacimiento.required' => 'La fecha de nacimiento es obligatoria.',
             'FechaNacimiento.date' => 'La fecha de nacimiento debe ser una fecha válida.',
-
+            // 'Correo.required' => 'El correo electrónico es obligatorio.',
+            // 'Correo.email' => 'Debe proporcionar un correo electrónico válido.',
             'CorreoPersonal.email' => 'Debe ingresar un correo personal válido.',  // Mensaje para CorreoPersonal
             'CorreoPersonal.max' => 'El correo personal no puede exceder los 255 caracteres.',  // Mensaje para CorreoPersonal
             'Foto.image' => 'El archivo debe ser una imagen.',
@@ -174,8 +175,9 @@ class UpdateTrabajadorRequest extends FormRequest
             'fecha_inicio_contrato.required' => 'Debe ingresar la fecha de inicio de su contrato',
             'fecha_inicio_contrato.date'=>'La fecha de inicio de contrato no es válida',
 
-            'banco.string' => 'El campo Banco debe ser una cadena de texto.',
-            'banco.max' => 'El nombre del Banco no puede exceder los 255 caracteres.',
+            'banco_id.required' => 'El campo Banco es obligatorio.',
+            'banco_id.exists' => 'El banco seleccionado no es válido.',
+
             
             'numero_cuenta.string' => 'El campo Número de Cuenta debe ser una cadena de texto.',
             'numero_cuenta.max' => 'El Número de Cuenta no puede exceder los 255 caracteres.',
