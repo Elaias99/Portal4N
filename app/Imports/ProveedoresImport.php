@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Imports;
-
+use App\Models\Banco;
 use App\Models\Proveedor;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -13,6 +13,8 @@ class ProveedoresImport implements ToModel, WithHeadingRow
         return new Proveedor([
             'razon_social' => $row['razon_social'],
             'rut' => $row['rut'],
+            'banco_id' => $this->getBancoId($row['banco']),
+
             'banco' => $row['banco'],
             'tipo_cuenta' => $row['tipo_cuenta'],
             'nro_cuenta' => $row['nro_cuenta'],
@@ -38,6 +40,39 @@ class ProveedoresImport implements ToModel, WithHeadingRow
             'cargo_contacto2' => $row['cargo_contacto2'] ?? 'N/A',
         ]);
     }
+
+    private function getBancoId($nombreBanco)
+    {
+        if (!$nombreBanco) {
+            return null; // Si el campo está vacío en el Excel, dejar banco_id como NULL
+        }
+
+        // 🔹 Normalizar el nombre: Convertir a mayúsculas, quitar espacios extra y caracteres especiales
+        $nombreBanco = strtoupper(trim($nombreBanco));
+        $nombreBanco = str_replace(['Á', 'É', 'Í', 'Ó', 'Ú', 'Ñ'], ['A', 'E', 'I', 'O', 'U', 'N'], $nombreBanco);
+        
+        // 🔹 Manejo de errores tipográficos comunes (corrección manual)
+        $correcciones = [
+            'BANCOESTADO' => 'BANCO ESTADO',
+            'BANCOCHILE' => 'BANCO CHILE',
+            'BANCOCHLE' => 'BANCO CHILE',
+            'BANCOFALABELLA' => 'BANCO FALABELLA',
+            'BANCOBCI' => 'BANCO BCI',
+            'BANCOBICE' => 'BANCO BICE',
+        ];
+
+        if (isset($correcciones[$nombreBanco])) {
+            $nombreBanco = $correcciones[$nombreBanco];
+        }
+
+        // 🔹 Buscar si el banco ya existe con una coincidencia flexible
+        $banco = Banco::where('nombre', 'LIKE', "%$nombreBanco%")->first();
+
+        // 🔹 Si existe, devolver el ID; si no, crearlo y devolver el nuevo ID
+        return $banco ? $banco->id : Banco::create(['nombre' => $nombreBanco])->id;
+    }
+
+
 
 }
 

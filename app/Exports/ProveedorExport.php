@@ -20,7 +20,7 @@ class ProveedorExport implements FromCollection, WithHeadings, WithStyles, Shoul
             'id',
             'razon_social',
             'rut',
-            'banco',
+            'banco_id',
             'tipo_cuenta',
             'nro_cuenta',
             'tipo_pago',
