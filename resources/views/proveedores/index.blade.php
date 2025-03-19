@@ -113,11 +113,13 @@
                                         <h4 class="mt-4 mb-3">Datos Bancarios</h4>
                                         <p><strong>Banco:</strong> {{ $proveedor->banco->nombre ?? 'Sin banco' }}</p>
 
-                                        <p><strong>Tipo de Cuenta:</strong> {{ $proveedor->tipo_cuenta }}</p>
+                                        <p><strong>Tipo de Cuenta:</strong> {{ $proveedor->tipoCuenta->nombre ?? 'Sin Tipo de Cuenta' }}</p>
+
                                         <p><strong>Número de Cuenta:</strong> {{ $proveedor->nro_cuenta }}</p>
                                         <p><strong>Correo Bancario:</strong> {{ $proveedor->correo_banco }}</p>
                                         <p><strong>Razón Social Asociada a la Cuenta:</strong> {{ $proveedor->nombre_razon_social_banco }}</p>
-                                        <p><strong>Método de Pago:</strong> {{ $proveedor->tipo_pago }}</p>
+                                        <p><strong>Método de Pago:</strong> {{ $proveedor->tipoPago->nombre ?? 'Sin asignar' }}</p>
+
 
 
 

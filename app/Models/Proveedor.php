@@ -18,9 +18,10 @@ class Proveedor extends Model
 
         'rut', //Identificación tributaria del proveedor. Se usa para cumplir con obligaciones legales y fiscales.
         'banco_id',
-        'tipo_cuenta',
+        'tipo_cuenta_id',
         'nro_cuenta',
-        'tipo_pago',
+
+        'tipo_pago_id',
 
 
         'telefono_empresa', //Teléfono principal para consultas o negociaciones.
@@ -57,5 +58,17 @@ class Proveedor extends Model
     {
         return $this->belongsTo(Banco::class, 'banco_id');
     }
+
+    public function tipocuenta()
+    {
+        return $this->belongsTo(TipoCuenta::class, 'tipo_cuenta_id');
+    }
+
+    public function tipopago()
+    {
+        return $this->belongsTo(TipoPago::class, 'tipo_pago_id');
+    }
+
+
 
 }

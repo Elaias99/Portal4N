@@ -3,6 +3,8 @@
 namespace App\Imports;
 use App\Models\Banco;
 use App\Models\Proveedor;
+use App\Models\TipoCuenta;
+use App\Models\TipoPago;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
@@ -14,12 +16,11 @@ class ProveedoresImport implements ToModel, WithHeadingRow
             'razon_social' => $row['razon_social'],
             'rut' => $row['rut'],
             'banco_id' => $this->getBancoId($row['banco']),
-
-            'banco' => $row['banco'],
-            'tipo_cuenta' => $row['tipo_cuenta'],
+            'tipo_cuenta_id' => $this->getTipoCuentaId($row['tipo_cuenta']),
             'nro_cuenta' => $row['nro_cuenta'],
-            'tipo_pago' => $row['tipo_pago'],
-            'telefono_empresa' => $row['telefono_empresa'] ?? 'N/A', // 👈 Si es NULL, lo cambia a 'N/A'
+            'tipo_pago_id' => $this->getTipoPagoId($row['tipo_pago']),
+
+            'telefono_empresa' => $row['telefono_empresa'] ?? 'N/A',
             'Nombre_RepresentanteLegal' => $row['nombre_representantelegal'] ?? 'N/A',
             'Rut_RepresentanteLegal' => $row['rut_representantelegal'] ?? 'N/A',
             'Telefono_RepresentanteLegal' => $row['telefono_representantelegal'] ?? 'N/A',
@@ -41,17 +42,20 @@ class ProveedoresImport implements ToModel, WithHeadingRow
         ]);
     }
 
-    private function getBancoId($nombreBanco)
+    public function getBancoId($nombreBanco)
     {
         if (!$nombreBanco) {
-            return null; // Si el campo está vacío en el Excel, dejar banco_id como NULL
+            return null;
         }
 
-        // 🔹 Normalizar el nombre: Convertir a mayúsculas, quitar espacios extra y caracteres especiales
+        // 🔹 Si el valor recibido es un número, asumir que es un ID y verificar si existe
+        if (is_numeric($nombreBanco)) {
+            return Banco::find($nombreBanco)?->id; // Devolver el ID si existe en la tabla bancos
+        }
+
         $nombreBanco = strtoupper(trim($nombreBanco));
         $nombreBanco = str_replace(['Á', 'É', 'Í', 'Ó', 'Ú', 'Ñ'], ['A', 'E', 'I', 'O', 'U', 'N'], $nombreBanco);
-        
-        // 🔹 Manejo de errores tipográficos comunes (corrección manual)
+
         $correcciones = [
             'BANCOESTADO' => 'BANCO ESTADO',
             'BANCOCHILE' => 'BANCO CHILE',
@@ -65,14 +69,83 @@ class ProveedoresImport implements ToModel, WithHeadingRow
             $nombreBanco = $correcciones[$nombreBanco];
         }
 
-        // 🔹 Buscar si el banco ya existe con una coincidencia flexible
         $banco = Banco::where('nombre', 'LIKE', "%$nombreBanco%")->first();
 
-        // 🔹 Si existe, devolver el ID; si no, crearlo y devolver el nuevo ID
         return $banco ? $banco->id : Banco::create(['nombre' => $nombreBanco])->id;
+    }
+
+    public function getTipoCuentaId($nombreTipoCuenta)
+    {
+        if (!$nombreTipoCuenta) {
+            return null;
+        }
+
+        // 🔹 Si el valor recibido es un número, asumir que es un ID y verificar si existe
+        if (is_numeric($nombreTipoCuenta)) {
+            return TipoCuenta::find($nombreTipoCuenta)?->id; // Devolver el ID si existe en la tabla
+        }
+
+        // 🔹 Normalizar el nombre: Convertir a mayúsculas, eliminar espacios extra y caracteres especiales
+        $nombreTipoCuenta = strtoupper(trim(preg_replace('/\s+/', ' ', $nombreTipoCuenta))); 
+        $nombreTipoCuenta = str_replace(['Á', 'É', 'Í', 'Ó', 'Ú', 'Ñ'], ['A', 'E', 'I', 'O', 'U', 'N'], $nombreTipoCuenta);
+
+        // 🔹 Corrección de nombres comunes para evitar errores
+        $correcciones = [
+            'CUENTA CORRIENTE' => 'Cuenta Corriente',
+            'CUENTA VISTA' => 'Cuenta Vista',
+            'CUENTA RUT' => 'Cuenta Rut',
+            'CUENTA DE AHORRO' => 'Cuenta de Ahorro',
+            'CUENTA AHORRO' => 'Cuenta de Ahorro', // 🔹 Ahora también detectará CUENTA AHORRO
+            'AHORRO' => 'Cuenta de Ahorro',
+        ];
+
+        if (isset($correcciones[$nombreTipoCuenta])) {
+            $nombreTipoCuenta = $correcciones[$nombreTipoCuenta];
+        }
+
+        // 🔹 Buscar si el tipo de cuenta ya existe **exactamente**
+        $tipoCuenta = TipoCuenta::where('nombre', $nombreTipoCuenta)->first();
+
+        return $tipoCuenta ? $tipoCuenta->id : TipoCuenta::create(['nombre' => $nombreTipoCuenta])->id;
+    }
+
+
+    public function getTipoPagoId($nombreTipoPago)
+    {
+        if (!$nombreTipoPago) {
+            return null;
+        }
+
+        // 🔹 Si el valor recibido es un número, asumir que es un ID y verificar si existe
+        if (is_numeric($nombreTipoPago)) {
+            return TipoPago::find($nombreTipoPago)?->id; // Devolver el ID si existe en la tabla
+        }
+
+        // 🔹 Normalizar el nombre: Convertir a mayúsculas, eliminar espacios extra y caracteres especiales
+        $nombreTipoPago = strtoupper(trim(preg_replace('/\s+/', ' ', $nombreTipoPago))); 
+        $nombreTipoPago = str_replace(['Á', 'É', 'Í', 'Ó', 'Ú', 'Ñ'], ['A', 'E', 'I', 'O', 'U', 'N'], $nombreTipoPago);
+
+        // 🔹 Corrección de nombres comunes para evitar errores
+        $correcciones = [
+            'TRANSFERENCIA' => 'Transferencia',
+            'CHEQUE' => 'Cheque',
+            'EFECTIVO' => 'Efectivo',
+            'FACTURA' => 'Factura',
+            'BOLETA' => 'Boleta',
+            'FACTURA EXENTA' => 'Factura Exenta',
+            'DOCUMENTO' => 'Documento',
+        ];
+
+        if (isset($correcciones[$nombreTipoPago])) {
+            $nombreTipoPago = $correcciones[$nombreTipoPago];
+        }
+
+        // 🔹 Buscar si el tipo de pago ya existe en la base de datos
+        $tipoPago = TipoPago::where('nombre', $nombreTipoPago)->first();
+
+        return $tipoPago ? $tipoPago->id : TipoPago::create(['nombre' => $nombreTipoPago])->id;
     }
 
 
 
 }
-

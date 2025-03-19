@@ -21,9 +21,9 @@ class ProveedorExport implements FromCollection, WithHeadings, WithStyles, Shoul
             'razon_social',
             'rut',
             'banco_id',
-            'tipo_cuenta',
+            'tipo_cuenta_id',
             'nro_cuenta',
-            'tipo_pago',
+            'tipo_pago_id',
             'nombre_contacto',
             'rut_contacto',
         ]);

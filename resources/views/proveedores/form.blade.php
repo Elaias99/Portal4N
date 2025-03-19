@@ -182,15 +182,18 @@
 
 
 <div class="form-group">
-    <label for="tipo_cuenta">Tipo de Cuenta *</label>
-    <select name="tipo_cuenta" id="tipo_cuenta" class="form-control">
-        @foreach(['Cuenta Corriente', 'Cuenta Vista', 'Cuenta Rut' ,'Ahorro'] as $tipo_cuenta)
-            <option value="{{ $tipo_cuenta }}" {{ old('tipo_cuenta', $proveedor->tipo_cuenta ?? '') == $tipo_cuenta ? 'selected' : '' }}>
-                {{ $tipo_cuenta }}
+    <label for="tipo_cuenta_id">Tipo de Cuenta *</label>
+    <select name="tipo_cuenta_id" id="tipo_cuenta_id" class="form-control">
+        <option value="">Seleccione un tipo de cuenta</option>
+        @foreach($tiposCuentas as $tipoCuenta)
+            <option value="{{ $tipoCuenta->id }}" 
+                {{ old('tipo_cuenta_id', $proveedor->tipo_cuenta_id ?? '') == $tipoCuenta->id ? 'selected' : '' }}>
+                {{ $tipoCuenta->nombre }}
             </option>
         @endforeach
     </select>
 </div>
+
 
 
 
@@ -203,15 +206,17 @@
 
 
 <div class="form-group">
-    <label for="tipo_pago">Método de Pago *</label>
-    <select name="tipo_pago" id="tipo_pago" class="form-control">
-        @foreach(['Transferencia', 'Cheque', 'Efectivo', 'Factura', 'Boleta','Factura Exenta','Documento'] as $metodo)
-            <option value="{{ $metodo }}" {{ old('tipo_pago', $proveedor->tipo_pago ?? '') == $metodo ? 'selected' : '' }}>
-                {{ $metodo }}
+    <label for="tipo_pago_id">Método de Pago *</label>
+    <select name="tipo_pago_id" id="tipo_pago_id" class="form-control">
+        <option value="">Seleccione un método de pago</option>
+        @foreach($tiposPagos as $tipoPago)
+            <option value="{{ $tipoPago->id }}" {{ old('tipo_pago_id', $proveedor->tipo_pago_id ?? '') == $tipoPago->id ? 'selected' : '' }}>
+                {{ $tipoPago->nombre }}
             </option>
         @endforeach
     </select>
 </div>
+
 
 <div class="form-group">
     <label for="nombre_razon_social_banco">Razón Social Asociada a la Cuenta</label>

@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Exports\ProveedorExport;
 use Illuminate\Http\Request;
 use App\Models\Proveedor;
+use App\Models\TipoCuenta;
+use App\Models\TipoPago;
 use App\Models\Banco;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -31,9 +33,15 @@ class ProveedorController extends Controller
      */
     public function create()
     {
-        $bancos = Banco::all(); // Obtener todos los bancos
-        return view('proveedores.create', compact('bancos'));
+
+        $bancos = Banco::all();
+        $tiposCuentas = TipoCuenta::all();
+        $tiposPagos = TipoPago::all(); // 🔹 Obtener todos los tipos de pago
+
+        return view('proveedores.create', compact('bancos', 'tiposCuentas', 'tiposPagos'));
+
     }
+
 
 
     /**
@@ -49,9 +57,11 @@ class ProveedorController extends Controller
             'giro_comercial' => 'required|string|max:255',
             'banco_id' => 'required|exists:bancos,id',
 
-            'tipo_cuenta' => 'required|string|max:255',
+            'tipo_cuenta_id' => 'required|exists:tipo_cuentas,id',
+
             'nro_cuenta' => 'required|string|max:20',
-            'tipo_pago' => 'required|string|max:255',
+
+            'tipo_pago_id' => 'required|exists:tipo_pagos,id',
     
             // Campos opcionales
             'direccion_facturacion' => 'nullable|string|max:255',
@@ -97,8 +107,12 @@ class ProveedorController extends Controller
     public function edit($id)
     {
         $proveedor = Proveedor::findOrFail($id);
-        $bancos = Banco::all(); // Obtener todos los bancos
-        return view('proveedores.edit', compact('proveedor', 'bancos'));
+        $bancos = Banco::all();
+        $tiposCuentas = TipoCuenta::all();
+        $tiposPagos = TipoPago::all(); // 🔹 Obtener todos los tipos de pago
+
+        return view('proveedores.edit', compact('proveedor', 'bancos', 'tipoCuentas', 'tiposPagos'));
+
     }
 
 
@@ -116,9 +130,10 @@ class ProveedorController extends Controller
             'giro_comercial' => 'required|string|max:255',
             'banco_id' => 'required|exists:bancos,id',
 
-            'tipo_cuenta' => 'required|string|max:255',
+            'tipo_cuenta_id' => 'required|exists:tipo_cuentas,id',
+
             'nro_cuenta' => 'required|string|max:20',
-            'tipo_pago' => 'required|string|max:255',
+            'tipo_pago_id' => 'required|exists:tipo_pagos,id',
     
             // Campos opcionales
             'direccion_facturacion' => 'nullable|string|max:255',
