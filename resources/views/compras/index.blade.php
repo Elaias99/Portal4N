@@ -115,8 +115,14 @@
                     <tr>
                         <td>{{ $loop->iteration }}</td>
                         <td>{{ $compra->user->name ?? 'No especificado' }}</td>
-                        <td>{{ $compra->centro_costo }}</td>
+
+                        <td>{{ $compra->centroCosto?->nombre ?? 'No asignado' }}</td>
+
+                        
+                        
                         <td>{{ $compra->glosa }}</td>
+
+
                         <td>{{ $compra->observacion }}</td>
                         <td>{{ $compra->tipo_pago }}</td>
                         <td>{{ $compra->empresa->Nombre }}</td>
@@ -124,7 +130,13 @@
                         <td>{{ $compra->mes }}</td>
                         <td>{{ $compra->proveedor->razon_social }}</td>
                         <td>{{ $compra->proveedor->rut }}</td>
-                        <td>{{ $compra->tipo_documento }}</td>
+
+                        
+                        <td>{{ $compra->tipoPago->nombre ?? 'No especificado' }}</td>
+
+                        
+                        
+                        
                         <td>{{ $compra->fecha_documento }}</td>
                         <td>{{ $compra->numero_documento }}</td>
                         <td>{{ $compra->oc }}</td>

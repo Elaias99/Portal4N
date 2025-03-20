@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Compra;
 use App\Models\Proveedor;
 use App\Models\Empresa;
+use App\Models\CentroCosto;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 
@@ -83,20 +84,14 @@ class CompraController extends Controller
      */
     public function create()
     {
-        $proveedores = Proveedor::all();
+        $proveedores = Proveedor::with('tipoPago')->get();
         $empresas = Empresa::all();
+        $centrosCosto = CentroCosto::all();
+        $tiposPagos = \App\Models\TipoPago::all(); // 🔹 Obtener todos los tipos de pago desde la BD
 
-        // Centros de Costo predeterminados
-        $centrosCostoPredeterminados = ['Courier', 'Transporte', 'Suscripciones', 'Agencias'];
-
-        // Obtener los centros de costo únicos desde las compras
-        $centrosCostoDB = Compra::select('centro_costo')->distinct()->pluck('centro_costo')->toArray();
-
-        // Fusionar los valores predefinidos con los de la base de datos, evitando duplicados
-        $centrosCosto = array_unique(array_merge($centrosCostoPredeterminados, $centrosCostoDB));
-
-        return view('compras.create', compact('proveedores', 'empresas', 'centrosCosto'));
+        return view('compras.create', compact('proveedores', 'empresas', 'tiposPagos', 'centrosCosto'));
     }
+
 
 
 
@@ -106,11 +101,19 @@ class CompraController extends Controller
      */
     public function store(Request $request)
     {
+
+        // Si el usuario ingresó un nuevo centro de costo, lo creamos y lo asignamos a la compra
+        if ($request->filled('nuevo_centro_costo')) {
+            $centroCosto = CentroCosto::create(['nombre' => $request->nuevo_centro_costo]);
+            $request->merge(['centro_costo_id' => $centroCosto->id]);
+        }
+
+        
         // Validar los datos del formulario
         $validatedData = $request->validate([
             'empresa_id' => 'required|exists:empresas,id',
             'proveedor_id' => 'required|exists:proveedores,id',
-            'centro_costo' => 'required|string|max:255',
+            'centro_costo_id' => 'nullable|exists:centros_costos,id',
             'glosa' => 'required|string|max:1000',
             'observacion' => 'nullable|string|max:1000',
             'tipo_pago' => 'required|string|max:100',
@@ -124,7 +127,10 @@ class CompraController extends Controller
             'oc' => 'nullable|string|max:255',
             'archivo_oc' => 'nullable|file|mimes:pdf,jpg,jpeg,png',
             'archivo_documento' => 'nullable|file|mimes:pdf,jpg,jpeg,png',
-            'tipo_documento'=> 'nullable|string|max:1000',
+
+            'tipo_pago_id' => 'required|exists:tipo_pagos,id',
+
+
             'status' => 'required|in:Pendiente,Pagado,Abonado,No Pagar', // ✅ Agregado
         ]);
 
@@ -159,8 +165,6 @@ class CompraController extends Controller
             }
         }
 
-
-
         // Crear una nueva compra
         Compra::create($validatedData);
 
@@ -184,20 +188,15 @@ class CompraController extends Controller
      */
     public function edit(Compra $compra)
     {
-        $proveedores = Proveedor::all();
+        $proveedores = Proveedor::with('tipoPago')->get();
         $empresas = Empresa::all();
+        $centrosCosto = CentroCosto::all();
+        $tiposPagos = \App\Models\TipoPago::all(); 
 
-        // Centros de Costo predeterminados
-        $centrosCostoPredeterminados = ['Courier', 'Transporte', 'Suscripciones', 'Agencias'];
-
-        // Obtener los centros de costo únicos desde las compras
-        $centrosCostoDB = Compra::select('centro_costo')->distinct()->pluck('centro_costo')->toArray();
-
-        // Fusionar los valores predefinidos con los de la base de datos, evitando duplicados
-        $centrosCosto = array_unique(array_merge($centrosCostoPredeterminados, $centrosCostoDB));
-
-        return view('compras.edit', compact('compra', 'proveedores', 'empresas', 'centrosCosto'));
+        return view('compras.edit', compact('compra', 'proveedores', 'empresas', 'tiposPagos', 'centrosCosto'));
     }
+
+
 
 
 
@@ -207,11 +206,16 @@ class CompraController extends Controller
      */
     public function update(Request $request, Compra $compra)
     {
+
+        if ($request->filled('nuevo_centro_costo')) {
+            $centroCosto = CentroCosto::create(['nombre' => $request->nuevo_centro_costo]);
+            $request->merge(['centro_costo_id' => $centroCosto->id]);
+        }
         // Validar los datos del formulario
         $validatedData = $request->validate([
             'empresa_id' => 'required|exists:empresas,id',
             'proveedor_id' => 'required|exists:proveedores,id',
-            'centro_costo' => 'required|string|max:255',
+            'centro_costo_id' => 'nullable|exists:centros_costos,id',
             'glosa' => 'required|string|max:1000',
             'observacion' => 'nullable|string|max:1000',
             'tipo_pago' => 'required|string|max:100',
@@ -226,7 +230,8 @@ class CompraController extends Controller
             'archivo_oc' => 'nullable|file|mimes:pdf,jpg,jpeg,png',
             'archivo_documento' => 'nullable|file|mimes:pdf,jpg,jpeg,png',
 
-            'tipo_documento'=> 'nullable|string|max:1000',
+            'tipo_pago_id' => 'required|exists:tipo_pagos,id',
+
             'status' => 'required|in:Pendiente,Pagado,Abonado,No Pagar', // ✅ Agregado
         ]);
 
@@ -253,6 +258,8 @@ class CompraController extends Controller
                 $validatedData['fecha_vencimiento'] = $fechaDocumento;
             }
         }
+
+        
 
         // Actualizar la compra con los nuevos datos
         $compra->update($validatedData);

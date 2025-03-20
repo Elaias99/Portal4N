@@ -15,9 +15,13 @@ class Compra extends Model
     protected $fillable = [
         'empresa_id',
         'proveedor_id',
-        'centro_costo',
+
+        'centro_costo_id',
+
+
         'glosa',
         'observacion',
+        'tipo_pago_id',
         'tipo_pago',
         'forma_pago',
         'pago_total',
@@ -31,7 +35,7 @@ class Compra extends Model
         'archivo_oc',
         'archivo_documento',
 
-        'tipo_documento',
+  
         'user_id',
         'status',
     ];
@@ -50,6 +54,16 @@ class Compra extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function tipoPago()
+    {
+        return $this->belongsTo(TipoPago::class, 'tipo_pago_id');
+    }
+
+    public function centroCosto()
+    {
+        return $this->belongsTo(CentroCosto::class, 'centro_costo_id');
     }
 
 

@@ -1,6 +1,6 @@
 <!-- Propuesta para el formulario (form.blade.php) -->
 <div class="container">
-    <form action="{{ $action }}" method="POST" enctype="multipart/form-data">
+    <form action="{{ $action ?? '#' }}"  method="POST" enctype="multipart/form-data">
         @csrf
         @if ($method === 'PUT')
             @method('PUT')
@@ -8,31 +8,25 @@
 
         <!-- Ordenado según plantilla y modelo -->
         <div class="mb-3">
-            <label for="centro_costo" class="form-label">Centro de Costo</label>
+            <label for="centro_costo_id" class="form-label">Centro de Costo</label>
         
-            <select id="centro_costo_select" class="form-control" onchange="toggleInput()">
+            <select id="centro_costo_select" name="centro_costo_id" class="form-control" onchange="toggleInput()">
                 <option value="">Seleccione un Centro de Costo</option>
-                @php
-                    $valorCentroCosto = old('centro_costo', $compra->centro_costo ?? '');
-                    $centroCostoEnLista = in_array($valorCentroCosto, $centrosCosto);
-                @endphp
         
                 @foreach($centrosCosto as $centro)
-                    <option value="{{ $centro }}" {{ $valorCentroCosto == $centro ? 'selected' : '' }}>
-                        {{ $centro }}
+                    <option value="{{ $centro->id }}" {{ old('centro_costo_id', $compra->centro_costo_id ?? '') == $centro->id ? 'selected' : '' }}>
+                        {{ $centro->nombre }}
                     </option>
                 @endforeach
         
-                <option value="otro" {{ !$centroCostoEnLista && $valorCentroCosto ? 'selected' : '' }}>
-                    Otro (Ingresar manualmente)
-                </option>
+                <option value="otro">Otro (Ingresar manualmente)</option>
             </select>
         
-            <input type="text" name="centro_costo" id="centro_costo_input" class="form-control mt-2"
-                   value="{{ !$centroCostoEnLista ? $valorCentroCosto : '' }}" 
+            <!-- Campo de entrada manual para un nuevo centro de costo -->
+            <input type="text" name="nuevo_centro_costo" id="centro_costo_input" class="form-control mt-2"
+                   value="{{ old('nuevo_centro_costo') }}" 
                    placeholder="Ingrese un nuevo centro de costo" 
-                   style="{{ !$centroCostoEnLista && $valorCentroCosto ? 'display: block;' : 'display: none;' }}" 
-                   {{ !$centroCostoEnLista && $valorCentroCosto ? 'required' : '' }}>
+                   style="display: none;">
         </div>
 
         <div class="mb-3">
@@ -93,42 +87,36 @@
             </select>
         </div>
         
-
         <div class="mb-3">
-            <label for="proveedor_id" class="form-label">Razon Social (Proveedor)</label>
-            <select name="proveedor_id" id="proveedor_id" class="form-select" required>
-                <option value="">Seleccione un proveedor</option>
-                @foreach ($proveedores as $proveedor)
+            <label for="proveedor_id" class="form-label">Razón Social (Proveedor)</label>
+            <select name="proveedor_id" id="proveedor_id" class="form-control">
+                <option value="">Seleccione un Proveedor</option>
+                @foreach($proveedores as $proveedor)
                     <option value="{{ $proveedor->id }}" 
-                        {{ old('proveedor_id', $compra->proveedor_id ?? '') == $proveedor->id ? 'selected' : '' }}>
+                            data-tipo-pago="{{ $proveedor->tipo_pago_id }}" 
+                            {{ old('proveedor_id', $compra->proveedor_id ?? '') == $proveedor->id ? 'selected' : '' }}>
                         {{ $proveedor->razon_social }}
                     </option>
                 @endforeach
             </select>
         </div>
-
-
-
-
-
+        
+        
+        
         <div class="mb-3">
-            <label for="tipo_documento">Tipo de Documento</label>
-            <select name="tipo_documento" id="tipo_documento" class="form-control">
-                @foreach(['Boleta','Factura','Boleta Honorarios','Boleta de Tercero','Documento','Factura Exenta','Factura Pendiente'] as $tipo_documento )
-                <option value="{{$tipo_documento}}" {{ old('tipo_documento', $compra->tipo_documento ?? '') == $tipo_documento ? 'selected' : '' }} >
-                    {{ $tipo_documento }}
-                </option>
+            <label for="tipo_pago_id" class="form-label">Tipo de Documento</label>
+            <select name="tipo_pago_id" id="tipo_pago_id" class="form-control">
+                <option value="">Seleccione un Tipo de Documento</option>
+                @foreach($tiposPagos as $tipo)
+                    <option value="{{ $tipo->id }}" {{ old('tipo_pago_id', $compra->tipo_pago_id ?? '') == $tipo->id ? 'selected' : '' }}>
+                        {{ $tipo->nombre }}
+                    </option>
                 @endforeach
             </select>
         </div>
-
-
-
-
-
-
         
-
+        
+        
         <div class="mb-3">
             <label for="fecha_documento" class="form-label">Fecha del Documento</label>
             <input type="date" name="fecha_documento" id="fecha_documento" class="form-control"
@@ -203,22 +191,24 @@
         
     </form>
 </div>
+
+
+
+
+
 <script>
     function toggleInput() {
-        let select = document.getElementById("centro_costo_select");
-        let input = document.getElementById("centro_costo_input");
-        
+        var select = document.getElementById('centro_costo_select');
+        var input = document.getElementById('centro_costo_input');
+
         if (select.value === "otro") {
             input.style.display = "block";
-            input.setAttribute("required", "true");
-            input.value = "";
+            input.required = true;
         } else {
             input.style.display = "none";
-            input.removeAttribute("required");
-            input.value = select.value; // ✅ Asigna el valor del select al input oculto
+            input.required = false;
         }
     }
-
 </script>
 <!-- Script para manejar la lógica del menú de "Contado" -->
 <script>
@@ -311,4 +301,33 @@
         updateFechaVencimiento();
     });
 </script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        let proveedorSelect = document.getElementById("proveedor_id");
+        let tipoPagoSelect = document.getElementById("tipo_pago_id");
+
+        proveedorSelect.addEventListener("change", function() {
+            let selectedOption = proveedorSelect.options[proveedorSelect.selectedIndex];
+            let tipoPagoId = selectedOption.getAttribute("data-tipo-pago");
+
+            if (tipoPagoId) {
+                tipoPagoSelect.value = tipoPagoId;
+            } else {
+                tipoPagoSelect.value = "";
+            }
+        });
+
+        // Ejecutar cambio si ya hay un proveedor seleccionado (para ediciones)
+        if (proveedorSelect.value) {
+            let selectedOption = proveedorSelect.options[proveedorSelect.selectedIndex];
+            let tipoPagoId = selectedOption.getAttribute("data-tipo-pago");
+            if (tipoPagoId) {
+                tipoPagoSelect.value = tipoPagoId;
+            }
+        }
+    });
+</script>
+
+
     
