@@ -43,7 +43,7 @@ class Proveedor extends Model
         'giro_comercial', // Actividad económica principal del proveedor. Ayuda a clasificar y entender su rol en el negocio.
         'direccion_facturacion',
         'direccion_despacho',
-        'comuna_empresa',
+        'comuna_id',
         'correo_banco',
         'nombre_razon_social_banco',
         'rut_banco',
@@ -67,6 +67,11 @@ class Proveedor extends Model
     public function tipopago()
     {
         return $this->belongsTo(TipoPago::class, 'tipo_pago_id');
+    }
+
+    public function comuna()
+    {
+        return $this->belongsTo(Comuna::class, 'comuna_id');
     }
 
 

@@ -8,6 +8,7 @@ use App\Models\Proveedor;
 use App\Models\TipoCuenta;
 use App\Models\TipoPago;
 use App\Models\Banco;
+use App\Models\Comuna;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ProveedorController extends Controller
@@ -37,8 +38,9 @@ class ProveedorController extends Controller
         $bancos = Banco::all();
         $tiposCuentas = TipoCuenta::all();
         $tiposPagos = TipoPago::all(); // 🔹 Obtener todos los tipos de pago
+        $comunas = Comuna::all();
 
-        return view('proveedores.create', compact('bancos', 'tiposCuentas', 'tiposPagos'));
+        return view('proveedores.create', compact('bancos', 'tiposCuentas', 'tiposPagos','comunas'));
 
     }
 
@@ -67,7 +69,8 @@ class ProveedorController extends Controller
             'direccion_facturacion' => 'nullable|string|max:255',
             'direccion_despacho' => 'nullable|string|max:255',
 
-            'comuna_empresa' => 'nullable|string|max:255',
+            'comuna_id' => 'nullable|exists:comunas,id',
+
     
             // Representante Legal
             'Nombre_RepresentanteLegal' => 'nullable|string|max:255',
@@ -110,8 +113,9 @@ class ProveedorController extends Controller
         $bancos = Banco::all();
         $tiposCuentas = TipoCuenta::all();
         $tiposPagos = TipoPago::all(); // 🔹 Obtener todos los tipos de pago
+        $comunas = Comuna::all();
 
-        return view('proveedores.edit', compact('proveedor', 'bancos', 'tipoCuentas', 'tiposPagos'));
+        return view('proveedores.edit', compact('bancos', 'tiposCuentas', 'tiposPagos','comunas'));
 
     }
 
@@ -139,7 +143,8 @@ class ProveedorController extends Controller
             'direccion_facturacion' => 'nullable|string|max:255',
             'direccion_despacho' => 'nullable|string|max:255',
                                                                                                                                                                               
-            'comuna_empresa' => 'nullable|string|max:255',
+            'comuna_id' => 'nullable|exists:comunas,id',
+
     
             // Representante Legal
             'Nombre_RepresentanteLegal' => 'nullable|string|max:255',

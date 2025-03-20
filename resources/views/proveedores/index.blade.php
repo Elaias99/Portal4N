@@ -107,7 +107,8 @@
                                         <h4 class="mb-3">Direcciones</h4>
                                         <p><strong>Dirección Facturación:</strong> {{ $proveedor->direccion_facturacion }}</p>
                                         <p><strong>Dirección Despacho:</strong> {{ $proveedor->direccion_despacho }}</p>
-                                        <p><strong>Comuna Empresa:</strong> {{ $proveedor->comuna_empresa }}</p>
+                                        <p><strong>Comuna Empresa:</strong> {{ $proveedor->comuna->Nombre ?? 'No asignada' }}</p>
+
 
                                         <!-- Datos Bancarios -->
                                         <h4 class="mt-4 mb-3">Datos Bancarios</h4>

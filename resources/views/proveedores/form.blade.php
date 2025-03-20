@@ -49,11 +49,19 @@
 </div>
 
 <div class="form-group">
-    <label for="comuna_empresa">Comuna Empresa</label>
-    <input type="text" name="comuna_empresa" id="comuna_empresa" class="form-control"
-           value="{{ old('comuna_empresa', $proveedor->comuna_empresa ?? '') }}"
-           placeholder="Comuna donde está ubicada la empresa (Ejemplo: Providencia)">
+    <label for="comuna_id">Comuna</label>
+    <select name="comuna_id" id="comuna_id" class="form-control">
+        <option value="">Seleccione una comuna</option>
+        @foreach ($comunas as $comuna)
+            <option value="{{ $comuna->id }}" 
+                {{ old('comuna_id', $proveedor->comuna_id ?? '') == $comuna->id ? 'selected' : '' }}>
+                {{ $comuna->nombre }}
+            </option>
+        @endforeach
+    </select>
 </div>
+
+
 
 
 {{--  --}}

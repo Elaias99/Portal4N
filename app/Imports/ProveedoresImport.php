@@ -31,7 +31,7 @@ class ProveedoresImport implements ToModel, WithHeadingRow
             'giro_comercial' => $row['giro_comercial'] ?? 'N/A',
             'direccion_facturacion' => $row['direccion_facturacion'] ?? 'N/A',
             'direccion_despacho' => $row['direccion_despacho'] ?? 'N/A',
-            'comuna_empresa' => $row['comuna_empresa'] ?? 'N/A',
+            'comuna_id' => $this->getComunaId($row['comuna_empresa'] ?? null),
             'nombre_contacto2' => $row['nombre_contacto2'] ?? 'N/A',
             'telefono_contacto2' => $row['telefono_contacto2'] ?? 'N/A',
             'correo_contacto2' => $row['correo_contacto2'] ?? 'N/A',
@@ -145,6 +145,24 @@ class ProveedoresImport implements ToModel, WithHeadingRow
 
         return $tipoPago ? $tipoPago->id : TipoPago::create(['nombre' => $nombreTipoPago])->id;
     }
+
+
+    public function getComunaId($nombreComuna)
+    {
+        if (!$nombreComuna) {
+            return null; // Si no hay comuna, devolver null
+        }
+
+        // 🔹 Normalizar el nombre de la comuna (mayúsculas y eliminar tildes)
+        $nombreComuna = strtoupper(trim($nombreComuna));
+        $nombreComuna = str_replace(['Á', 'É', 'Í', 'Ó', 'Ú', 'Ñ'], ['A', 'E', 'I', 'O', 'U', 'N'], $nombreComuna);
+
+        // 🔹 Buscar si la comuna ya existe en la base de datos
+        $comuna = \App\Models\Comuna::where('nombre', 'LIKE', "%$nombreComuna%")->first();
+
+        return $comuna ? $comuna->id : null; // Devuelve el ID si existe, de lo contrario NULL
+    }
+
 
 
 
