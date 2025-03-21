@@ -142,7 +142,11 @@
                         <td>{{ $compra->oc }}</td>
                         <td>{{ number_format($compra->pago_total, 2) }}</td>
                         <td>{{ $compra->fecha_vencimiento }}</td>
-                        <td>{{ $compra->forma_pago }}</td>
+
+                        <td>{{ $compra->formaPago->nombre ?? 'No especificado' }}</td>
+
+
+
                         <td>
                             @if($compra->archivo_oc)
                                 <a href="{{ route('compras.descargarArchivoOC', $compra->id) }}" target="_blank">Ver O.C</a>

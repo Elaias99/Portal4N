@@ -23,7 +23,11 @@ class Compra extends Model
         'observacion',
         'tipo_pago_id',
         'tipo_pago',
-        'forma_pago',
+
+
+        'forma_pago_id',
+
+        
         'pago_total',
         'fecha_vencimiento',
         'año',
@@ -65,6 +69,12 @@ class Compra extends Model
     {
         return $this->belongsTo(CentroCosto::class, 'centro_costo_id');
     }
+
+    public function formaPago()
+    {
+        return $this->belongsTo(FormaPago::class, 'forma_pago_id');
+    }
+
 
 
 

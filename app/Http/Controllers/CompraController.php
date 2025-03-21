@@ -9,6 +9,7 @@ use App\Models\Empresa;
 use App\Models\CentroCosto;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use App\Models\FormaPago;
 
 
 
@@ -87,9 +88,10 @@ class CompraController extends Controller
         $proveedores = Proveedor::with('tipoPago')->get();
         $empresas = Empresa::all();
         $centrosCosto = CentroCosto::all();
-        $tiposPagos = \App\Models\TipoPago::all(); // 🔹 Obtener todos los tipos de pago desde la BD
+        $tiposPagos = \App\Models\TipoPago::all();
+        $formasPago = FormaPago::all(); // 🔹 Obtener las formas de pago
 
-        return view('compras.create', compact('proveedores', 'empresas', 'tiposPagos', 'centrosCosto'));
+        return view('compras.create', compact('proveedores', 'empresas', 'tiposPagos', 'centrosCosto', 'formasPago'));
     }
 
 
@@ -108,7 +110,7 @@ class CompraController extends Controller
             $request->merge(['centro_costo_id' => $centroCosto->id]);
         }
 
-        
+
         // Validar los datos del formulario
         $validatedData = $request->validate([
             'empresa_id' => 'required|exists:empresas,id',
@@ -117,7 +119,10 @@ class CompraController extends Controller
             'glosa' => 'required|string|max:1000',
             'observacion' => 'nullable|string|max:1000',
             'tipo_pago' => 'required|string|max:100',
-            'forma_pago' => 'required|string|max:100',
+
+            'forma_pago_id' => 'required|exists:forma_pago,id',
+
+
             'pago_total' => 'required|numeric|min:0',
             'fecha_vencimiento' => 'required|date',
             'año' => 'required|integer|min:1900|max:2100',
@@ -191,10 +196,12 @@ class CompraController extends Controller
         $proveedores = Proveedor::with('tipoPago')->get();
         $empresas = Empresa::all();
         $centrosCosto = CentroCosto::all();
-        $tiposPagos = \App\Models\TipoPago::all(); 
+        $tiposPagos = \App\Models\TipoPago::all();
+        $formasPago = FormaPago::all(); // 🔹 Obtener las formas de pago
 
-        return view('compras.edit', compact('compra', 'proveedores', 'empresas', 'tiposPagos', 'centrosCosto'));
+        return view('compras.edit', compact('compra', 'proveedores', 'empresas', 'tiposPagos', 'centrosCosto', 'formasPago'));
     }
+
 
 
 
@@ -219,7 +226,10 @@ class CompraController extends Controller
             'glosa' => 'required|string|max:1000',
             'observacion' => 'nullable|string|max:1000',
             'tipo_pago' => 'required|string|max:100',
-            'forma_pago' => 'required|string|max:100',
+
+            'forma_pago_id' => 'required|exists:forma_pago,id',
+
+
             'pago_total' => 'required|numeric|min:0',
             'fecha_vencimiento' => 'required|date',
             'año' => 'required|integer|min:1900|max:2100',

@@ -138,16 +138,17 @@
 
 
         <div class="mb-3">
-            <label for="forma_pago">Forma de pago</label>
-            <select name="forma_pago" id="forma_pago" class="form-control">
-                @foreach(['Tarjeta 4N','4N - Transferencia','Pmcb - Transferencia','Marcelo Godoy','Caja Chica','Caja Chica Negra',
-                'Cruce'] as $forma_pago)
-                    <option value="{{ $forma_pago }}" {{ old('forma_pago', $compra->forma_pago ?? '') == $forma_pago ? 'selected' : '' }}>
-                        {{ $forma_pago }}
+            <label for="forma_pago_id">Forma de pago</label>
+            <select name="forma_pago_id" id="forma_pago_id" class="form-control">
+                <option value="">Seleccione una opción</option>
+                @foreach($formasPago as $forma)
+                    <option value="{{ $forma->id }}" {{ old('forma_pago_id', $compra->forma_pago_id ?? '') == $forma->id ? 'selected' : '' }}>
+                        {{ $forma->nombre }}
                     </option>
                 @endforeach
             </select>
         </div>
+        
 
 
         <div class="mb-3">
