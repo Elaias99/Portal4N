@@ -54,27 +54,31 @@ class ProveedorController extends Controller
         $validatedData = $request->validate([
             // Campos requeridos
             'razon_social' => 'required|string|max:255',
-            'rut' => 'nullable|string|max:12',
+            'rut' => 'required|string|max:12',
+
             'telefono_empresa' => 'required|string|max:15',
             'giro_comercial' => 'required|string|max:255',
-            'banco_id' => 'required|exists:bancos,id',
+            'banco_id.required' => 'Debes seleccionar un banco.',
 
             'tipo_cuenta_id' => 'required|exists:tipo_cuentas,id',
 
             'nro_cuenta' => 'required|string|max:20',
-
             'tipo_pago_id' => 'required|exists:tipo_pagos,id',
     
             // Campos opcionales
-            'direccion_facturacion' => 'nullable|string|max:255',
-            'direccion_despacho' => 'nullable|string|max:255',
-
-            'comuna_id' => 'nullable|exists:comunas,id',
+            'direccion_facturacion' => 'required|string|max:255',
+            'direccion_despacho' => 'required|string|max:255',
+                                                                                                                                                                              
+            'comuna_id' => 'required|exists:comunas,id',
 
     
             // Representante Legal
             'Nombre_RepresentanteLegal' => 'nullable|string|max:255',
-            'Rut_RepresentanteLegal' => 'nullable|unique:proveedores,Rut_RepresentanteLegal|max:12',
+
+            'Rut_RepresentanteLegal' => 'nullable|string|max:255',
+
+
+
             'Telefono_RepresentanteLegal' => 'nullable|string|max:15',
             'Correo_RepresentanteLegal' => 'nullable|email|max:255',
     
@@ -89,9 +93,9 @@ class ProveedorController extends Controller
             'correo_contacto2' => 'nullable|email|max:255',
     
             // Datos bancarios adicionales
-            'correo_banco' => 'nullable|email|max:255',
+            'correo_banco' => 'required|email|max:255',
             'nombre_razon_social_banco' => 'nullable|string|max:255',
-            'rut_banco' => 'nullable|string|max:12',
+            // 'rut_banco' => 'required|string|max:12',
 
             'cargo_contacto1' => 'nullable|string|max:255',
             'cargo_contacto2' => 'nullable|string|max:255',
@@ -115,7 +119,8 @@ class ProveedorController extends Controller
         $tiposPagos = TipoPago::all(); // 🔹 Obtener todos los tipos de pago
         $comunas = Comuna::all();
 
-        return view('proveedores.edit', compact('bancos', 'tiposCuentas', 'tiposPagos','comunas'));
+        return view('proveedores.edit', compact('proveedor', 'bancos', 'tiposCuentas', 'tiposPagos', 'comunas'));
+
 
     }
 
@@ -140,10 +145,10 @@ class ProveedorController extends Controller
             'tipo_pago_id' => 'required|exists:tipo_pagos,id',
     
             // Campos opcionales
-            'direccion_facturacion' => 'nullable|string|max:255',
-            'direccion_despacho' => 'nullable|string|max:255',
+            'direccion_facturacion' => 'required|string|max:255',
+            'direccion_despacho' => 'required|string|max:255',
                                                                                                                                                                               
-            'comuna_id' => 'nullable|exists:comunas,id',
+            'comuna_id' => 'required|exists:comunas,id',
 
     
             // Representante Legal
@@ -167,9 +172,9 @@ class ProveedorController extends Controller
             'correo_contacto2' => 'nullable|email|max:255',
     
             // Datos bancarios adicionales
-            'correo_banco' => 'nullable|email|max:255',
+            'correo_banco' => 'required|email|max:255',
             'nombre_razon_social_banco' => 'nullable|string|max:255',
-            'rut_banco' => 'nullable|string|max:12',
+            // 'rut_banco' => 'required|string|max:12',
 
             'cargo_contacto1' => 'nullable|string|max:255',
             'cargo_contacto2' => 'nullable|string|max:255',

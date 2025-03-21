@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use app\Models\Compra;
 
 class Proveedor extends Model
 {
@@ -46,7 +47,7 @@ class Proveedor extends Model
         'comuna_id',
         'correo_banco',
         'nombre_razon_social_banco',
-        'rut_banco',
+
     ];
 
     public function compras()
