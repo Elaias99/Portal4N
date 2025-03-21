@@ -18,12 +18,13 @@ class BultosImport implements ToModel, WithHeadingRow
                 'numero_destino' => $row['numero_destino'] ?? null,
                 'depto_destino'  => $row['depto_destino'] ?? null,
                 'direccion'      => $row['direccion'] ?? null,
-                'comuna'         => $row['comuna_destino'] ?? null,
+                'comuna_id' => $this->getComunaId($row['comuna_destino']),
+
                 'razon_social'   => $row['razon_social'] ?? null,
                 'fecha_entrega'  => isset($row['fecha_entrega']) ? 
                                     \Carbon\Carbon::parse($row['fecha_entrega'])->format('Y-m-d') : null,
                 'ubicacion'      => $row['ubicacion'] ?? null,
-                'region'         => $row['region'] ?? null,
+                // 'region'         => $row['region'] ?? null,
                 'nombre_campana' => $row['nombre_campana'] ?? null,
                 'descripcion_bulto' => $row['descripcion_bulto'] ?? null,
                 'observacion'    => $row['observacion'] ?? null,
@@ -38,4 +39,11 @@ class BultosImport implements ToModel, WithHeadingRow
             ]
         );
     }
+
+
+    private function getComunaId($nombreComuna)
+    {
+        return \App\Models\Comuna::whereRaw('LOWER(Nombre) = ?', [strtolower(trim($nombreComuna))])->value('id');
+    }
+
 }

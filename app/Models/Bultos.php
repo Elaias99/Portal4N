@@ -11,8 +11,8 @@ class Bultos extends Model
 
     protected $table = 'bultos';
 
-    protected $fillable = ['id_envio','atencion','numero_destino','depto_destino','codigo_bulto', 'direccion', 'comuna', 'fecha_carga', 'estado', 'id_jefe',
-                           'razon_social', 'fecha_entrega','ubicacion','region', 'nombre_campana', 'descripcion_bulto','observacion', 'referencia','peso',
+    protected $fillable = ['id_envio','atencion','numero_destino','depto_destino','codigo_bulto', 'direccion', 'comuna_id', 'fecha_carga', 'estado', 'id_jefe',
+                           'razon_social', 'fecha_entrega','ubicacion', 'nombre_campana', 'descripcion_bulto','observacion', 'referencia','peso',
                             'telefono', 'mail', 'unidad'];
 
     // Relación con Reclamos (Un bulto puede tener muchos reclamos)
@@ -26,4 +26,11 @@ class Bultos extends Model
     {
         return $this->belongsTo(Jefe::class, 'id_jefe');
     }
+
+    public function comuna()
+    {
+        return $this->belongsTo(Comuna::class, 'comuna_id');
+    }
+
+
 }
