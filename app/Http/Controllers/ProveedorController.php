@@ -53,23 +53,23 @@ class ProveedorController extends Controller
     {
         $validatedData = $request->validate([
             // Campos requeridos
-            'razon_social' => 'required|string|max:255',
-            'rut' => 'required|string|max:12',
+            'razon_social' => 'required|string|max:255',//obligaotrio
+            'rut' => 'required|string|max:12',//obligaotrio
 
-            'telefono_empresa' => 'required|string|max:15',
-            'giro_comercial' => 'required|string|max:255',
-            'banco_id.required' => 'Debes seleccionar un banco.',
+            'telefono_empresa' => 'required|string|max:15',//obligaotrio
+            'giro_comercial' => 'required|string|max:255',//obligaotrio
+            'banco_id' => 'required|exists:bancos,id',//obligaotrio
 
-            'tipo_cuenta_id' => 'required|exists:tipo_cuentas,id',
+            'tipo_cuenta_id' => 'required|exists:tipo_cuentas,id',//obligaotrio
 
-            'nro_cuenta' => 'required|string|max:20',
-            'tipo_pago_id' => 'required|exists:tipo_pagos,id',
+            'nro_cuenta' => 'required|string|max:20',//obligaotrio
+            'tipo_pago_id' => 'required|exists:tipo_pagos,id',//obligaotrio
     
             // Campos opcionales
-            'direccion_facturacion' => 'required|string|max:255',
-            'direccion_despacho' => 'required|string|max:255',
+            'direccion_facturacion' => 'required|string|max:255',//obligaotrio
+            'direccion_despacho' => 'required|string|max:255',//obligaotrio
                                                                                                                                                                               
-            'comuna_id' => 'required|exists:comunas,id',
+            'comuna_id' => 'required|exists:comunas,id',//obligaotrio
 
     
             // Representante Legal
@@ -93,12 +93,12 @@ class ProveedorController extends Controller
             'correo_contacto2' => 'nullable|email|max:255',
     
             // Datos bancarios adicionales
-            'correo_banco' => 'required|email|max:255',
+            'correo_banco' => 'required|email|max:255',//obligaotrio
             'nombre_razon_social_banco' => 'nullable|string|max:255',
             // 'rut_banco' => 'required|string|max:12',
 
-            'cargo_contacto1' => 'nullable|string|max:255',
-            'cargo_contacto2' => 'nullable|string|max:255',
+            'cargo_contacto1' => 'nullable|string|max:255',//obligaotrio
+            'cargo_contacto2' => 'nullable|string|max:255',//obligaotrio
         ]);
         
         
@@ -132,52 +132,52 @@ class ProveedorController extends Controller
     {
         $validatedData = $request->validate([
             // Campos requeridos
-            'razon_social' => 'required|string|max:255',
-            'rut' => 'required|string|max:12',
+            'razon_social' => 'required|string|max:255', //obligaotrio
+            'rut' => 'required|string|max:12', //obligaotrio
 
-            'telefono_empresa' => 'required|string|max:15',
-            'giro_comercial' => 'required|string|max:255',
-            'banco_id' => 'required|exists:bancos,id',
+            'telefono_empresa' => 'required|string|max:15',//obligaotrio
+            'giro_comercial' => 'required|string|max:255',//obligaotrio
 
-            'tipo_cuenta_id' => 'required|exists:tipo_cuentas,id',
+            'banco_id' => 'required|exists:bancos,id',//obligaotrio
 
-            'nro_cuenta' => 'required|string|max:20',
-            'tipo_pago_id' => 'required|exists:tipo_pagos,id',
+            'tipo_cuenta_id' => 'required|exists:tipo_cuentas,id',//obligaotrio
+
+            'nro_cuenta' => 'required|string|max:20',//obligaotrio
+            'tipo_pago_id' => 'required|exists:tipo_pagos,id',//obligaotrio
     
             // Campos opcionales
-            'direccion_facturacion' => 'required|string|max:255',
-            'direccion_despacho' => 'required|string|max:255',
+            'direccion_facturacion' => 'required|string|max:255',//obligaotrio
+            'direccion_despacho' => 'required|string|max:255',//obligaotrio
                                                                                                                                                                               
-            'comuna_id' => 'required|exists:comunas,id',
+            'comuna_id' => 'required|exists:comunas,id',//obligaotrio
 
     
             // Representante Legal
-            'Nombre_RepresentanteLegal' => 'nullable|string|max:255',
+            'Nombre_RepresentanteLegal' => 'nullable|string|max:255',//opcionales
 
-            'Rut_RepresentanteLegal' => 'nullable|string|max:255',
+            'Rut_RepresentanteLegal' => 'nullable|string|max:255',//opcionales
 
 
 
-            'Telefono_RepresentanteLegal' => 'nullable|string|max:15',
-            'Correo_RepresentanteLegal' => 'nullable|email|max:255',
+            'Telefono_RepresentanteLegal' => 'nullable|string|max:15',//opcionales
+            'Correo_RepresentanteLegal' => 'nullable|email|max:255',//opcionales
     
             // Contacto Empresa 1
-            'contacto_nombre' => 'nullable|string|max:255',
-            'contacto_telefono' => 'nullable|string|max:15',
-            'contacto_correo' => 'nullable|email|max:255',
+            'contacto_nombre' => 'nullable|string|max:255',//opcionales
+            'contacto_telefono' => 'nullable|string|max:15',//opcionales
+            'contacto_correo' => 'nullable|email|max:255',//opcionales
     
             // Contacto Empresa 2
-            'nombre_contacto2' => 'nullable|string|max:255',
-            'telefono_contacto2' => 'nullable|string|max:15',
-            'correo_contacto2' => 'nullable|email|max:255',
+            'nombre_contacto2' => 'nullable|string|max:255',//opcionales
+            'telefono_contacto2' => 'nullable|string|max:15',//opcionales
+            'correo_contacto2' => 'nullable|email|max:255',//opcionales
     
             // Datos bancarios adicionales
-            'correo_banco' => 'required|email|max:255',
-            'nombre_razon_social_banco' => 'nullable|string|max:255',
-            // 'rut_banco' => 'required|string|max:12',
+            'correo_banco' => 'required|email|max:255',//obligaotrio
+            'nombre_razon_social_banco' => 'nullable|string|max:255',//opcionales
 
-            'cargo_contacto1' => 'nullable|string|max:255',
-            'cargo_contacto2' => 'nullable|string|max:255',
+            'cargo_contacto1' => 'nullable|string|max:255',//opcionales
+            'cargo_contacto2' => 'nullable|string|max:255',//opcionales
         ]);
         
 

@@ -9,6 +9,11 @@
     </div>
 @endif
 
+{{-- ⚠️ Mensaje de campos obligatorios --}}
+<div class="alert alert-info shadow-sm">
+    <strong>Atención:</strong> Los campos marcados con <span class="text-danger">*</span> son obligatorios.
+</div>
+
 <h3 class="mt-4">Datos Básicos</h3>
 <hr>
 <div class="form-group">
@@ -75,7 +80,7 @@
 
 
 <div class="form-group">
-    <label for="direccion_despacho">Dirección Despacho</label>
+    <label for="direccion_despacho">Dirección Despacho *</label>
     <input type="text" name="direccion_despacho" id="direccion_despacho" class="form-control"
            value="{{ old('direccion_despacho', $proveedor->direccion_despacho ?? '') }}"
            placeholder="Lugar donde se entregan productos (Ejemplo: Av. Los Leones 456)">
@@ -85,7 +90,7 @@
 </div>
 
 <div class="form-group">
-    <label for="comuna_id">Comuna</label>
+    <label for="comuna_id">Comuna *</label>
     <select name="comuna_id" id="comuna_id" class="form-control">
         <option value="">Seleccione una comuna</option>
         @foreach ($comunas as $comuna)

@@ -15,9 +15,12 @@ class ProveedoresImport implements ToModel, WithHeadingRow
         return new Proveedor([
             'razon_social' => $row['razon_social'],
             'rut' => $row['rut'],
+
             'banco_id' => $this->getBancoId($row['banco']),
             'tipo_cuenta_id' => $this->getTipoCuentaId($row['tipo_cuenta']),
+
             'nro_cuenta' => $row['nro_cuenta'],
+            
             'tipo_pago_id' => $this->getTipoPagoId($row['tipo_pago']),
 
             'telefono_empresa' => $row['telefono_empresa'] ?? 'N/A',
@@ -31,7 +34,9 @@ class ProveedoresImport implements ToModel, WithHeadingRow
             'giro_comercial' => $row['giro_comercial'] ?? 'N/A',
             'direccion_facturacion' => $row['direccion_facturacion'] ?? 'N/A',
             'direccion_despacho' => $row['direccion_despacho'] ?? 'N/A',
-            'comuna_id' => $this->getComunaId($row['comuna_empresa'] ?? null),
+
+            
+
             'nombre_contacto2' => $row['nombre_contacto2'] ?? 'N/A',
             'telefono_contacto2' => $row['telefono_contacto2'] ?? 'N/A',
             'correo_contacto2' => $row['correo_contacto2'] ?? 'N/A',
@@ -39,6 +44,8 @@ class ProveedoresImport implements ToModel, WithHeadingRow
             'nombre_razon_social_banco' => $row['nombre_razon_social_banco'] ?? 'N/A',
             'cargo_contacto1' => $row['cargo_contacto1'] ?? 'N/A',
             'cargo_contacto2' => $row['cargo_contacto2'] ?? 'N/A',
+
+            'comuna_id' => $this->getComunaId($row['comuna_empresa'] ?? null),
         ]);
     }
 
@@ -150,18 +157,23 @@ class ProveedoresImport implements ToModel, WithHeadingRow
     public function getComunaId($nombreComuna)
     {
         if (!$nombreComuna) {
-            return null; // Si no hay comuna, devolver null
+            return null;
         }
 
-        // 🔹 Normalizar el nombre de la comuna (mayúsculas y eliminar tildes)
+        // 🔹 Si es numérico, lo tomamos como ID
+        if (is_numeric($nombreComuna)) {
+            return \App\Models\Comuna::find($nombreComuna)?->id;
+        }
+
+        // 🔹 Si no es numérico, asumimos que es nombre y buscamos por nombre
         $nombreComuna = strtoupper(trim($nombreComuna));
         $nombreComuna = str_replace(['Á', 'É', 'Í', 'Ó', 'Ú', 'Ñ'], ['A', 'E', 'I', 'O', 'U', 'N'], $nombreComuna);
 
-        // 🔹 Buscar si la comuna ya existe en la base de datos
         $comuna = \App\Models\Comuna::where('nombre', 'LIKE', "%$nombreComuna%")->first();
 
-        return $comuna ? $comuna->id : null; // Devuelve el ID si existe, de lo contrario NULL
+        return $comuna ? $comuna->id : null;
     }
+
 
 
 
