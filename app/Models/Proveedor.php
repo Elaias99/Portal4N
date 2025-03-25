@@ -19,7 +19,9 @@ class Proveedor extends Model
 
         'rut', //Identificación tributaria del proveedor. Se usa para cumplir con obligaciones legales y fiscales.
         'banco_id',
+
         'tipo_cuenta_id',
+
         'nro_cuenta',
 
         'tipo_pago_id',

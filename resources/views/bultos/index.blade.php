@@ -159,7 +159,7 @@
                                 <input type="text" class="form-control" id="modal-bulto-codigo" disabled>
                             </div>
                             
-                            <div class="form-group">
+                            {{-- <div class="form-group">
                                 <label for="id_jefe" class="form-label">Asignar a:</label>
                                 <select class="form-control" name="id_jefe" required>
                                     <option value="" disabled selected>Seleccione un responsable</option>
@@ -167,7 +167,18 @@
                                         <option value="{{ $jefe->id }}">{{ $jefe->nombre }} - {{ $jefe->area }}</option>
                                     @endforeach
                                 </select>
+                            </div> --}}
+
+                            <div class="form-group">
+                                <label for="area_id" class="form-label">Asignar a Área:</label>
+                                <select class="form-control" name="area_id" required>
+                                    <option value="" disabled selected>Seleccione un área</option>
+                                    @foreach ($areas as $area)
+                                        <option value="{{ $area->id }}">{{ $area->nombre }}</option>
+                                    @endforeach
+                                </select>
                             </div>
+                            
                             
                             <div class="form-group">
                                 <label for="descripcion" class="form-label">Descripción del Problema</label>

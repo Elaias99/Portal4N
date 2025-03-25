@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use App\Models\Bultos;
 use App\Models\Jefe;
+use App\Models\Area;
 use Illuminate\Support\Facades\Storage;
 use App\Jobs\ImportBultosJob;
 
@@ -24,10 +25,10 @@ class BultoController extends Controller
             $bultos = Bultos::where('codigo_bulto', 'like', '%' . $codigo . '%')->get();
         }
 
-        // Obtener todos los jefes disponibles para asignar reclamos
-        $jefes = Jefe::all();
+        // Obtener todas las áreas para asignar reclamos
+        $areas = Area::all();
 
-        return view('bultos.index', compact('bultos', 'jefes'));
+        return view('bultos.index', compact('bultos', 'areas'));
     }
 
 

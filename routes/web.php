@@ -17,11 +17,8 @@ use App\Http\Controllers\AsistenciaController;
 use App\Models\User;
 use App\Http\Controllers\SolicitudManualController;
 use App\Http\Controllers\BultoController;
-
-
-
-
-
+use App\Http\Controllers\AreaController;
+use Illuminate\Support\Facades\Mail;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -126,6 +123,11 @@ Route::resource('tipo_vestimentas', 'App\Http\Controllers\TipoVestimentaControll
 Route::resource('tallas', 'App\Http\Controllers\TallaController')->middleware('auth');
 Route::resource('hijos', 'App\Http\Controllers\HijoController')->middleware('auth');
 
+// Áreas
+Route::resource('areas', 'App\Http\Controllers\AreaController')->middleware('auth');
+Route::post('/areas/{area}/asignar', [AreaController::class, 'asignar'])->name('areas.asignar');
+
+
 // Ruta para las compras
 Route::resource('compras', CompraController::class);
 Route::patch('/compras/{id}/status', [CompraController::class, 'updateStatus'])->name('compras.updateStatus');
@@ -210,7 +212,14 @@ Route::get('/assign-role-jefe-jp', function () {
 
 
 
+Route::get('/test-mail', function () {
+    Mail::raw('Este es un correo de prueba enviado desde Laravel usando Outlook SMTP.', function ($message) {
+        $message->to('eliascorrea@4nlogistica.cl') // <-- Reemplaza con un correo que puedas revisar
+                ->subject('📧 Correo de Prueba - Laravel SMTP');
+    });
 
+    return '✅ Correo enviado (si todo salió bien).';
+});
 // Investigar API
 // BACKCOFFE
 // 

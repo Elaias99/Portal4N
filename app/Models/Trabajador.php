@@ -19,7 +19,7 @@ class Trabajador extends Model
         'empresa_id', 'cargo_id', 'situacion_id', 'estado_civil_id', 'comuna_id', 'afp_id', 'salud_id',
         'salario_bruto', 'calle','numero_celular','nombre_emergencia','contacto_emergencia', 'fecha_inicio_trabajo',
         'user_id', 'turno_id', 'sistema_trabajo_id' ,'numero_cuenta','tipo_cuenta','Rut_Empresa',
-        'fecha_inicio_contrato', 'id_jefe','banco_id',
+        'fecha_inicio_contrato', 'id_jefe','banco_id','area_id',
     ];
 
 
@@ -43,6 +43,11 @@ class Trabajador extends Model
     public function banco()
     {
         return $this->belongsTo(Banco::class, 'banco_id');
+    }
+
+    public function area()
+    {
+        return $this->belongsTo(Area::class, 'area_id');
     }
 
 
