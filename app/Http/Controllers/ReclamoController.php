@@ -13,14 +13,17 @@ class ReclamoController extends Controller
     // Listar los reclamos del trabajador autenticado
     public function index()
     {
-        // Obtener el trabajador autenticado
-        $trabajador = Auth::all(); 
+        // Obtener todas las áreas, si las necesitas para filtros, select, etc.
         $areas = Area::all();
-        // Obtener los reclamos del trabajador (usando la relación definida en el modelo)
-        $reclamos = $trabajador->reclamos; 
 
-        return view('reclamos.index', compact('reclamos','areas'));
+        // Obtener todos los reclamos pendientes del sistema (sin filtrar por trabajador)
+        $reclamos = Reclamos::where('estado', 'pendiente')->get();
+
+        return view('reclamos.index', compact('reclamos', 'areas'));
     }
+
+
+
 
     // Mostrar formulario para crear un reclamo asociado a un bulto
     public function create($id_bulto)
