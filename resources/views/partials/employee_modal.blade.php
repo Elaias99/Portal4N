@@ -100,8 +100,9 @@
 
                           <tr>
                             <th>Rut Empresa</th>
-                            <td>{{ $empleado->Rut_Empresa }}</td>
+                            <td>{{ $empleado->empresa->rut ?? '' }}</td>
                           </tr>
+                        
 
 
                           <tr>

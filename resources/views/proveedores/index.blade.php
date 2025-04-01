@@ -5,17 +5,33 @@
     <h1 class="text-center" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Lista de Proveedores</h1>
 
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
-        <!-- Exportar Dropdown -->
-        <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle shadow-sm" type="button" id="exportDropdown" data-toggle="dropdown" aria-expanded="false">
-                <i class="fa-regular fa-file-excel me-2"></i> Exportar
+
+
+
+        <div class="dropdown me-2">
+            <button class="btn btn-outline-secondary dropdown-toggle shadow-sm" type="button" id="accionesDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fa-solid fa-gear me-2"></i> Acciones
             </button>
-            <div class="dropdown-menu shadow-sm fade" aria-labelledby="exportDropdown">
+            <div class="dropdown-menu shadow-sm fade" aria-labelledby="accionesDropdown">
+        
+                <!-- Exportar -->
                 <a class="dropdown-item d-flex align-items-center" href="{{ route('proveedores.export') }}">
                     <i class="fa-solid fa-file-export me-2 text-success"></i> Exportar a Excel
                 </a>
+        
+                <!-- Importar -->
+                <label class="dropdown-item d-flex align-items-center mb-0" for="archivoInput" style="cursor: pointer;">
+                    <i class="fa-solid fa-file-import me-2 text-primary"></i> Importar desde Excel
+                </label>
             </div>
         </div>
+        
+        <!-- Input oculto para importación -->
+        <form id="importForm" action="{{ route('importar.proveedores') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            <input type="file" name="archivo" id="archivoInput" accept=".xlsx,.xls" style="display: none;" onchange="document.getElementById('importForm').submit();">
+        </form>
+        
 
         <!-- Barra de búsqueda -->
         <form method="GET" action="{{ route('proveedores.index') }}" class="d-flex align-items-center">
@@ -182,6 +198,8 @@
         </table>
     </div>
 </div>
+
+
 
 <!-- Activación de Tooltips -->
 <script>

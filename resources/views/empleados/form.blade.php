@@ -407,20 +407,33 @@
                 <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#accordionExample">
                     <div class="accordion-body">
                         <div class="row">
+
                             <div class="col-md-6 form-group">
                                 <label for="empresa_id">Empresa {!! mostrarAsterisco('empresa_id', $camposObligatorios) !!}</label>
+
                                 <select name="empresa_id" id="empresa_id" class="form-control">
                                     <option value="">Seleccione una empresa</option>
-                                    <option value="1" data-rut="77.346.078-7" {{ old('empresa_id', $empleado->empresa_id ?? '') == '1' ? 'selected' : '' }}>4NORTES LOGISTICA SPA</option>
-                                    <option value="2" data-rut="77.639.015-1" {{ old('empresa_id', $empleado->empresa_id ?? '') == '2' ? 'selected' : '' }}>TRANSPORTES Y DISTRIBUCION PMCB</option>
+                                    @foreach($empresas as $empresa)
+                                        <option 
+                                            value="{{ $empresa->id }}" 
+                                            data-rut="{{ $empresa->rut }}"
+                                            {{ old('empresa_id', $empleado->empresa_id ?? '') == $empresa->id ? 'selected' : '' }}>
+                                            {{ $empresa->Nombre }}
+                                        </option>
+                                    @endforeach
                                 </select>
+                                
+
                                 @if ($errors->has('empresa_id'))
                                     <span class="text-danger">{{ $errors->first('empresa_id') }}</span>
                                 @endif
                             </div>
                             <div class="col-md-6 form-group">
                                 <label for="Rut_Empresa">Rut de la empresa {!! mostrarAsterisco('Rut_Empresa', $camposObligatorios) !!}</label>
-                                <input type="text" name="Rut_Empresa" id="Rut_Empresa" class="form-control" value="{{ isset($empleado->Rut_Empresa) ? $empleado->Rut_Empresa : old('Rut_Empresa') }}" readonly>
+
+                                <input type="text" id="Rut_Empresa" class="form-control" readonly>
+
+                                
                                 @if ($errors->has('Rut_Empresa'))
                                     <span class="text-danger">{{ $errors->first('Rut_Empresa') }}</span>
                                 @endif
@@ -529,12 +542,20 @@
 
 <!-- Script para rellenar automáticamente el campo Rut_Empresa -->
 <script>
-    document.getElementById('empresa_id').addEventListener('change', function() {
-        var selectedOption = this.options[this.selectedIndex];
-        var rutEmpresa = selectedOption.getAttribute('data-rut');
-        document.getElementById('Rut_Empresa').value = rutEmpresa || '';
+    document.addEventListener('DOMContentLoaded', function () {
+        const selectEmpresa = document.getElementById('empresa_id');
+        const inputRut = document.getElementById('Rut_Empresa');
+
+        function actualizarRut() {
+            const selected = selectEmpresa.options[selectEmpresa.selectedIndex];
+            inputRut.value = selected.getAttribute('data-rut') || '';
+        }
+
+        selectEmpresa.addEventListener('change', actualizarRut);
+        actualizarRut(); // ejecutarlo una vez al cargar la página
     });
 </script>
+
 
 <!-- Script para mostrar campo adicional en Cargo si se selecciona "otro" -->
 <script>

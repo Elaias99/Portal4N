@@ -59,7 +59,7 @@ class AreaController extends Controller
         //
         $area = Area::findOrFail($id);
         $trabajadores = Trabajador::all();
-        return view('areas.create', compact('areas','trabajadores'));
+        return view('areas.edit', compact('areas','trabajadores'));
     }
 
     /**
