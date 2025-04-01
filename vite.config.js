@@ -10,6 +10,7 @@ export default defineConfig({
                 'resources/css/loader.css',
                 'resources/css/login.css',
                 'resources/css/dashboard.css',
+                'resources/css/appcustom.css',
                 'resources/sass/app.scss',
                 'resources/js/app.js',  // Mantén el archivo JS si lo usas
             ],

@@ -18,153 +18,16 @@
     <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-    @vite([
-        'resources/css/app.css'
-    ])
-
-    <!-- Custom Styles -->
-    <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #ffffff; /* Fondo blanco para el body */
-            color: #333333;
-            overflow-x: hidden;
-        }
-
-        /* Barra Superior con estilo futurista (manteniendo los cambios anteriores) */
-        .navbar {
-            background: linear-gradient(145deg, #231F21, #5CBABC, #0a9396);
-            background-size: 300% 300%;
-            animation: gradientAnimation 15s ease infinite;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-            padding: 10px 20px;
-        }
-
-        @keyframes gradientAnimation {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        /* Barra lateral (sidebar) restaurada al estilo original) */
-        .offcanvas {
-            background-color: #f8f9fa; /* Fondo claro */
-            color: #333333; /* Color de texto oscuro */
-        }
-
-        .offcanvas-header {
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
-        }
-
-        .offcanvas-title {
-            font-weight: 700;
-        }
-
-        .offcanvas-body .list-group-item {
-            border: none;
-            padding: 15px;
-            transition: background-color 0.3s ease;
-        }
-
-        .offcanvas-body .list-group-item:hover {
-            background-color: rgba(0, 123, 255, 0.1);
-            border-radius: 5px;
-        }
-
-        /* Logo del sidebar */
-        .logo-container {
-            text-align: center;
-            margin-bottom: 20px;
-            padding: 20px;
-            background: #f8f9fa; /* Fondo unificado con el sidebar */
-            border-radius: 15px;
-        }
-
-        .logo-guirnalda {
-            max-width: 80%;
-            height: auto;
-        }
-
-        /* Botón de cierre del sidebar */
-        .btn-close {
-            color: #333333;
-            opacity: 0.8;
-        }
-
-        .btn-close:hover {
-            opacity: 1;
-        }
-
-        /* Estilos de los enlaces en el sidebar */
-        .nav-link {
-            color: #333333; /* Enlaces oscuros */
-            transition: all 0.3s ease;
-        }
-
-        .nav-link:hover {
-            color: #007bff; /* Color azul para el hover */
-            background-color: rgba(0, 123, 255, 0.1);
-            border-radius: 5px;
-        }
-
-        /* Botón de "Menú" del sidebar */
-        .btn-outline-secondary {
-            color: #333333;
-            border: none;
-        }
-
-        .btn-outline-secondary:hover {
-            color: #007bff;
-            background-color: rgba(0, 123, 255, 0.1);
-        }
-
-        .sidebar-footer {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            text-align: center;
-        }
-
-        .sidebar-footer i {
-            color: #007bff; /* Color azul para el icono */
-        }
-
-        .sidebar-footer a:hover i {
-            color: #0056b3; /* Un azul más oscuro en hover */
-        }
-
-        .sidebar-footer p {
-            font-size: 14px;
-            font-weight: bold;
-            margin-top: 5px;
-            color: #333;
-        }
-
-    </style>
-
+    <link rel="stylesheet" href="{{ asset('build/assets/app-DOpGuOCh.css') }}">
+    <link rel="stylesheet" href="{{ asset('build/assets/appcustom-0pNL7IKs.css') }}">
+    <link rel="stylesheet" href="{{ asset('build/assets/app-7v_sDFtm.css') }}">
+    <script src="{{ asset('build/assets/app-BkDPDVeP.js') }}" defer></script>
     
-
-
-
-
-
-    <!-- Scripts -->
-    @vite(['resources/sass/app.scss', 'resources/js/app.js'])
 </head>
 <body>
     <div id="app">
         <nav class="navbar navbar-expand-md navbar-dark">
             <div class="container">
-
-                {{-- <a class="navbar-brand" href="{{ url('/') }}">
-                    <img src="{{ asset('images/logo.png') }}" alt="4Nortes" style="height: 40px;">
-                </a> --}}
-                
-
-
-
                 <!-- Off-canvas Sidebar Menu Button (only for roles admin and jefe) -->
                 @role('admin|jefe')
                 <button class="btn btn-outline-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#menuSidebar" aria-controls="menuSidebar">

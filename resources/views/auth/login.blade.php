@@ -22,6 +22,10 @@
             <img src="{{ asset('images/logo1.png') }}" alt="Logo de 4N Logística" class="logo">
         </div>
         <div class="text-section">
+            <!-- Logo para móviles -->
+            <img src="{{ asset('images/logo.png') }}" alt="Logo de 4N Logística" class="logo-top">
+
+            
             <header>
                 <h1>Inicio de Sesión</h1>
             </header>
