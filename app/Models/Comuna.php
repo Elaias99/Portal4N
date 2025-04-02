@@ -17,5 +17,10 @@ class Comuna extends Model
         return $this->belongsTo(Region::class);
     }
 
+    public function empresa()
+    {
+        return $this->hasMany(Empresa::class);
+    }
+
 
 }

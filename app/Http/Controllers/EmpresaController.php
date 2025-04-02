@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Empresa;
+use App\Models\Banco;
+use App\Models\Comuna;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\Empresas\StoreEmpresaRequest;
@@ -16,8 +18,8 @@ class EmpresaController extends Controller
     public function index()
     {
         //
-        $empresas=Empresa::all();
-        return view('empresas.index',compact('empresas'));
+        $empresas = Empresa::with(['banco', 'comuna.region'])->get(); // Incluye relaciones
+        return view('empresas.index', compact('empresas'));
     }
 
     /**
@@ -26,7 +28,9 @@ class EmpresaController extends Controller
     public function create()
     {
         //
-        return view('empresas.create');
+        $bancos = Banco::all();
+        $comunas = Comuna::all();
+        return view('empresas.create', compact('bancos', 'comunas'));
     }
 
     /**
@@ -62,7 +66,9 @@ class EmpresaController extends Controller
     public function edit(Empresa $empresa)
     {
         //
-        return view('empresas.edit',compact('empresa'));
+        $bancos = Banco::all();
+        $comunas = Comuna::all();
+        return view('empresas.edit',compact('empresa', compact('empresa', 'bancos', 'comunas')));
     }
 
     /**

@@ -14,5 +14,12 @@ class Banco extends Model
         'nombre'
     ];
 
+    public function empresa()
+    {
+        return $this->hasMany(Empresa::class);
+    }
+
+
+
 
 }
