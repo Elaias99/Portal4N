@@ -153,7 +153,7 @@
 
         <div class="mb-3">
             <label for="pago_total" class="form-label">Pago Total</label>
-            <input type="number" step="0.01" name="pago_total" id="pago_total" class="form-control"
+            <input type="number" step="1" name="pago_total" id="pago_total" class="form-control"
                    value="{{ old('pago_total', $compra->pago_total ?? '') }}" required>
         </div>
 

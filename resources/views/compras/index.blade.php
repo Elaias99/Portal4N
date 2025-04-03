@@ -140,7 +140,12 @@
                         <td>{{ $compra->fecha_documento }}</td>
                         <td>{{ $compra->numero_documento }}</td>
                         <td>{{ $compra->oc }}</td>
-                        <td>{{ number_format($compra->pago_total, 2) }}</td>
+
+
+                        <td>${{ number_format($compra->pago_total, 0, ',', '.') }}</td>
+
+
+
                         <td>{{ $compra->fecha_vencimiento }}</td>
 
                         <td>{{ $compra->formaPago->nombre ?? 'No especificado' }}</td>

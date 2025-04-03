@@ -23,22 +23,44 @@ class ProveedorExport implements FromCollection, WithHeadings, WithStyles, Shoul
         $filas = [];
 
         foreach ($proveedor->compras as $compra) {
-            $nombreBanco = $proveedor->banco->nombre ?? 'N/A';
+            $nombreBanco = $proveedor->banco->id ?? 'N/A';
             $nombreTipoPago = $compra->tipoPago->nombre ?? 'N/A';
 
-            $glosa = "{$compra->pago_total} + {$nombreTipoPago} + {$compra->numero_documento}";
+            $glosa = "Pago + {$nombreTipoPago} + {$compra->numero_documento}";
+            $clp = "CLP";
+
+            $cuentaEmpresa = $compra->empresa->cta_corriente ?? '';
+            $ctaCorrienteFormateada = str_pad($cuentaEmpresa, 15, '0', STR_PAD_LEFT);
+
+
 
             $filas[] = [
-                $proveedor->nro_cuenta,
+                $ctaCorrienteFormateada,
+
+                $clp,
+
+                str_pad($proveedor->nro_cuenta, 22, '0', STR_PAD_LEFT),
+
+                $clp,
+
                 $nombreBanco,
-                $proveedor->rut,
+
+                preg_replace('/[.\-]/', '', $proveedor->rut),
+
                 $proveedor->razon_social,
-                $proveedor->correo_banco,
+
                 $compra->pago_total,
+
+                $glosa,
+
+                $proveedor->correo_banco,
+                
+                
                 $glosa,
                 $glosa,
                 $glosa,
-                $glosa,
+
+
             ];
         }
 
@@ -46,16 +68,27 @@ class ProveedorExport implements FromCollection, WithHeadings, WithStyles, Shoul
             $nombreBanco = $proveedor->banco->nombre ?? 'N/A';
 
             $filas[] = [
+                $ctaCorrienteFormateada,
+
+                $clp,
+
                 $proveedor->nro_cuenta,
+
+                $clp,
+
                 $nombreBanco,
+
                 $proveedor->rut,
+
                 $proveedor->razon_social,
+
                 $proveedor->correo_banco,
                 'N/A',
                 'N/A',
                 'N/A',
                 'N/A',
                 'N/A',
+
             ];
             
         }
@@ -66,16 +99,24 @@ class ProveedorExport implements FromCollection, WithHeadings, WithStyles, Shoul
     public function headings(): array
     {
         return [
+            'Cuenta Origen',
+            'Moneda Cuenta de Origen',
             'Número de Cuenta',
+            'Moneda Cuenta de Destino',
             'Banco',
             'RUT',
             'Razón Social',
-            'Correo Banco',
             'Pago Total',
+
             'Glosa Transferencia',
+            'Correo Banco',
+  
+            
             'Glosa Correo Beneficiario',
             'Glosa Cartola Cliente',
             'Glosa Cartola Beneficiario',
+            
+            
         ];
     }
 
@@ -86,7 +127,7 @@ class ProveedorExport implements FromCollection, WithHeadings, WithStyles, Shoul
                 'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
                 'fill' => [
                     'fillType' => 'solid',
-                    'startColor' => ['rgb' => '4CAF50'],
+                    'startColor' => ['rgb' => '020201'],
                 ],
             ],
             'A:Z' => [
