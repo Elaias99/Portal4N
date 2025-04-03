@@ -140,7 +140,9 @@
                         <!-- Formularios de aprobación y rechazo con comentario -->
                         <div class="mt-3">
                             <!-- Formulario de aprobación, visible solo si el estado es 'pendiente' -->
-                            @if($solicitud->estado === 'pendiente')
+                            @if($solicitud->estado === 'pendiente' && Auth::id() !== 376)
+
+
                                 <form action="{{ route('solicitudes.vacaciones.approve', $solicitud->id) }}" method="POST" enctype="multipart/form-data">
                                     @csrf
                                     <div class="form-group">
@@ -158,6 +160,7 @@
                                     </div>
                                     <button type="submit" class="btn btn-sm btn-outline-danger mt-2">Rechazar</button>
                                 </form>
+
                             @endif
 
                             <!-- Campo para subir archivo de respaldo, solo visible cuando el estado es 'aprobado' o 'rechazado' y no existe ya un archivo de respaldo -->

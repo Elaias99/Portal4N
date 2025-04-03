@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 use App\Notifications\NotificacionAdminVacaciones;
 use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
+use App\Mail\VacacionesSolicitadas;
+use Illuminate\Support\Facades\Mail;
 
 class VacacionController extends Controller
 {
@@ -77,7 +79,14 @@ class VacacionController extends Controller
 
         $jefe = $trabajador->jefe->user ?? null;
         if ($jefe) {
+            // Notificación interna (ya está)
             $jefe->notify(new NotificacionAdminVacaciones($solicitud));
+        
+            // Enviar correo al jefe directo
+            Mail::to($jefe->email)
+                ->cc('benjaminrojas@4nlogistica.cl')
+                ->send(new VacacionesSolicitadas($solicitud));
+
         }
 
         return redirect()->route('vacaciones.create')->with('success', 'Solicitud de días enviada correctamente.');

@@ -17,10 +17,11 @@
 
     <p>
         Su solicitud de vacaciones correspondiente al periodo del
-        <strong>{{ $solicitud->vacacion->fecha_inicio }}</strong> al
-        <strong>{{ $solicitud->vacacion->fecha_fin }}</strong>
+        <strong>{{ \Carbon\Carbon::parse($solicitud->vacacion->fecha_inicio)->locale('es')->translatedFormat('d \d\e F \d\e Y') }}</strong> al
+        <strong>{{ \Carbon\Carbon::parse($solicitud->vacacion->fecha_fin)->locale('es')->translatedFormat('d \d\e F \d\e Y') }}</strong>
         ha sido <strong>{{ $estado }}</strong>.
     </p>
+    
 
     <p><strong>Comentario del administrador:</strong></p>
     <blockquote>{{ $solicitud->comentario_admin ?? 'Sin comentarios adicionales.' }}</blockquote>

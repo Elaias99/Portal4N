@@ -8,7 +8,10 @@ use Illuminate\Support\Facades\Auth;
 use App\Notifications\SolicitudActualizada;
 use App\Notifications\NotificacionAdmin;
 use Barryvdh\DomPDF\Facade\Pdf;
-
+use App\Mail\EstadoVacacionesActualizado;
+use App\Mail\ModificacionSolicitada;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\EstadoModificacionActualizado;
 
 class SolicitudController extends Controller
 {
@@ -67,6 +70,7 @@ class SolicitudController extends Controller
 
         // Notificar solo al jefe directo si existe
         if ($jefe) {
+            Mail::to($jefe->email)->send(new ModificacionSolicitada($solicitud));
             $jefe->notify(new NotificacionAdmin($solicitud));
         }
     }
@@ -112,6 +116,9 @@ class SolicitudController extends Controller
         // Notificar a los administradores
         $this->notificarAdminSolicitud($solicitud);
 
+        // Mail::to('hansdelabarra@4nlogistica.cl')->send(new ModificacionSolicitada($solicitud));
+
+
         return redirect()->route('empleados.perfil')->with('success', 'Solicitud enviada con éxito.');
     }
 
@@ -135,6 +142,11 @@ class SolicitudController extends Controller
 
             // Notificar al empleado solo si el estado cambia a aprobado
             $solicitud->trabajador->user->notify(new SolicitudActualizada('aprobada'));
+
+            $correoDestino = resolveCorreoNotificacion($solicitud->trabajador->user);
+            Mail::to($correoDestino)->send(new EstadoModificacionActualizado($solicitud, 'aprobada'));
+
+
         }
 
         // Si el administrador ha subido un archivo adicional, guardarlo
@@ -173,6 +185,14 @@ class SolicitudController extends Controller
 
             // Notificar al empleado solo si el estado cambia a rechazado
             $solicitud->trabajador->user->notify(new SolicitudActualizada('rechazada'));
+
+            $correoDestino = resolveCorreoNotificacion($solicitud->trabajador->user);
+            Mail::to($correoDestino)->send(new EstadoModificacionActualizado($solicitud, 'rechazada'));
+
+
+            
+
+
         }
 
         // Guardar el archivo adicional si se proporciona
@@ -322,27 +342,25 @@ class SolicitudController extends Controller
             $solicitud->comentario_admin = $request->comentario_admin;
             $solicitud->fecha_respuesta = now();
             $solicitud->save();
-
-            // Obtener los días descontados basados en el tipo de día
+        
             if ($solicitud->tipo_dia === 'vacaciones') {
                 $trabajador = $solicitud->trabajador;
-
-                // Descuento de días proporcionales
-                $diasDescontados = $vacacion->dias; // Guardar los días solicitados para el PDF
+                $diasDescontados = $vacacion->dias;
                 $diasProporcionalesRestantes = max(0, $trabajador->dias_proporcionales - $diasDescontados);
                 $trabajador->update(['dias_proporcionales' => $diasProporcionalesRestantes]);
             }
-
+        
             // Generar PDF de confirmación
             $jefeAutenticado = Auth::user();
             $firmaPath = $jefeAutenticado ? storage_path("app/Firmas/Firma" . str_replace(' ', '', $this->eliminarAcentos($jefeAutenticado->name)) . ".png") : null;
-
+        
             $pdf = PDF::loadView('pdf.solicitud_vacaciones', compact('solicitud', 'firmaPath', 'diasDescontados'));
             $fileName = 'vacacion_solicitud_' . $vacacion->id . '.pdf';
-            $pdf->save(storage_path('app/vacaciones_adjuntos_admin/pdfs/' . $fileName));
-
-            $vacacion->archivo_admin = 'vacaciones_adjuntos_admin/pdfs/' . $fileName;
-            $notificar = true; // Solo notificar si se aprueba
+            $pdfPath = 'vacaciones_adjuntos_admin/pdfs/' . $fileName;
+            $pdf->save(storage_path('app/' . $pdfPath));
+        
+            $vacacion->archivo_admin = $pdfPath;
+            $notificar = true;
         }
 
         // Guardar archivo adicional si se proporciona
@@ -353,9 +371,19 @@ class SolicitudController extends Controller
 
         $vacacion->save();
 
+        
+
+
+
         // Notificar solo si el estado cambió a "aprobado"
         if ($notificar) {
             $solicitud->trabajador->user->notify(new SolicitudActualizada('aprobada'));
+
+            $correoDestino = resolveCorreoNotificacion($solicitud->trabajador->user);
+            Mail::to($correoDestino)->send(new EstadoVacacionesActualizado($solicitud, 'aprobada', $pdfPath));
+
+
+
         }
 
         return redirect()->route('solicitudes.vacaciones')->with('success', 'Solicitud procesada con éxito.');
@@ -396,6 +424,13 @@ class SolicitudController extends Controller
         // Notificar solo si el estado cambió a "rechazado"
         if ($notificar) {
             $solicitud->trabajador->user->notify(new SolicitudActualizada('rechazada'));
+
+            $correoDestino = resolveCorreoNotificacion($solicitud->trabajador->user);
+            Mail::to($correoDestino)->send(new EstadoVacacionesActualizado($solicitud, 'rechazada'));
+
+            
+
+            
         }
 
         return redirect()->route('solicitudes.vacaciones')->with('success', 'Solicitud rechazada con éxito.');
