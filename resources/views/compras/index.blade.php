@@ -12,6 +12,14 @@
            title="Agregar Compra">
             <i class="fa-solid fa-plus fa-lg"></i>
         </a>
+
+        <form action="{{ route('compras.importar') }}" method="POST" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
+            @csrf
+            <input type="file" name="archivo_excel" class="form-control form-control-sm" required>
+            <button type="submit" class="btn btn-outline-success btn-sm shadow-sm" title="Importar Excel">
+                <i class="fa-solid fa-file-import me-1"></i> Importar
+            </button>
+        </form>
     </div>
 
     <!-- Filtros -->
@@ -91,13 +99,19 @@
                     <th>Centro de Costo</th>
                     <th>Glosa</th>
                     <th>Observacion</th>
-                    <th>Tipo Pago</th>
+
+                    <th>Plazo de Pago</th>
+
+
                     <th>Empresa Facturadora</th>
                     <th>Año</th>
                     <th>Mes de servicio</th>
                     <th>Razón Social</th>
                     <th>Rut Razón Social</th>
+
                     <th>Tipo de Documento</th>
+
+
                     <th>Fecha del Documento</th>
                     <th>Número del Documento</th>
                     <th>Orden de Compra (O.C)</th>
@@ -115,16 +129,13 @@
                     <tr>
                         <td>{{ $loop->iteration }}</td>
                         <td>{{ $compra->user->name ?? 'No especificado' }}</td>
-
                         <td>{{ $compra->centroCosto?->nombre ?? 'No asignado' }}</td>
-
-                        
-                        
                         <td>{{ $compra->glosa }}</td>
-
-
                         <td>{{ $compra->observacion }}</td>
-                        <td>{{ $compra->tipo_pago }}</td>
+
+                        <td>{{ $compra->plazoPago->nombre ?? 'No especificado' }}</td>
+
+
                         <td>{{ $compra->empresa->Nombre }}</td>
                         <td>{{ $compra->año }}</td>
                         <td>{{ $compra->mes }}</td>

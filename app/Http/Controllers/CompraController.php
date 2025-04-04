@@ -6,10 +6,15 @@ use Illuminate\Http\Request;
 use App\Models\Compra;
 use App\Models\Proveedor;
 use App\Models\Empresa;
+use App\Models\PlazoPago;
 use App\Models\CentroCosto;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use App\Models\FormaPago;
+use Illuminate\Support\Facades\Log;
+
+use App\Imports\CompraImport;
+use Maatwebsite\Excel\Facades\Excel;
 
 
 
@@ -85,13 +90,14 @@ class CompraController extends Controller
      */
     public function create()
     {
+        $plazosPago = PlazoPago::all();
         $proveedores = Proveedor::with('tipoPago')->get();
         $empresas = Empresa::all();
         $centrosCosto = CentroCosto::all();
         $tiposPagos = \App\Models\TipoPago::all();
         $formasPago = FormaPago::all(); // 🔹 Obtener las formas de pago
 
-        return view('compras.create', compact('proveedores', 'empresas', 'tiposPagos', 'centrosCosto', 'formasPago'));
+        return view('compras.create', compact('proveedores', 'empresas', 'tiposPagos', 'centrosCosto', 'formasPago', 'plazosPago'));
     }
 
 
@@ -118,10 +124,11 @@ class CompraController extends Controller
             'centro_costo_id' => 'nullable|exists:centros_costos,id',
             'glosa' => 'required|string|max:1000',
             'observacion' => 'nullable|string|max:1000',
-            'tipo_pago' => 'required|string|max:100',
+            // 'tipo_pago' => 'required|string|max:100',
 
             'forma_pago_id' => 'required|exists:forma_pago,id',
 
+            'plazo_pago_id' => 'required|exists:plazo_pago,id',
 
             'pago_total' => 'required|numeric|min:0',
             'fecha_vencimiento' => 'required|date',
@@ -158,17 +165,17 @@ class CompraController extends Controller
         
 
         // --- Bloque de integración para "Contado" ---
-        if ($validatedData['tipo_pago'] === 'Contado' && $request->has('opcion_contado')) {
-            // Si el usuario eligió la opción "viernes" se calcula el siguiente viernes a partir de la fecha del documento.
-            // Si se eligió "hoy", se asigna la fecha del documento.
-            $fechaDocumento = $validatedData['fecha_documento'] ?? date('Y-m-d');
+        // if ($validatedData['tipo_pago'] === 'Contado' && $request->has('opcion_contado')) {
+        //     // Si el usuario eligió la opción "viernes" se calcula el siguiente viernes a partir de la fecha del documento.
+        //     // Si se eligió "hoy", se asigna la fecha del documento.
+        //     $fechaDocumento = $validatedData['fecha_documento'] ?? date('Y-m-d');
             
-            if ($request->opcion_contado === 'viernes') {
-                $validatedData['fecha_vencimiento'] = calcularSiguienteViernes($fechaDocumento);
-            } elseif ($request->opcion_contado === 'hoy') {
-                $validatedData['fecha_vencimiento'] = $fechaDocumento;
-            }
-        }
+        //     if ($request->opcion_contado === 'viernes') {
+        //         $validatedData['fecha_vencimiento'] = calcularSiguienteViernes($fechaDocumento);
+        //     } elseif ($request->opcion_contado === 'hoy') {
+        //         $validatedData['fecha_vencimiento'] = $fechaDocumento;
+        //     }
+        // }
 
         // Crear una nueva compra
         Compra::create($validatedData);
@@ -193,13 +200,14 @@ class CompraController extends Controller
      */
     public function edit(Compra $compra)
     {
+        $plazosPago = PlazoPago::all();
         $proveedores = Proveedor::with('tipoPago')->get();
         $empresas = Empresa::all();
         $centrosCosto = CentroCosto::all();
         $tiposPagos = \App\Models\TipoPago::all();
         $formasPago = FormaPago::all(); // 🔹 Obtener las formas de pago
 
-        return view('compras.edit', compact('compra', 'proveedores', 'empresas', 'tiposPagos', 'centrosCosto', 'formasPago'));
+        return view('compras.edit', compact('compra', 'proveedores', 'empresas', 'tiposPagos', 'centrosCosto', 'formasPago','plazosPago'));
     }
 
 
@@ -225,9 +233,12 @@ class CompraController extends Controller
             'centro_costo_id' => 'nullable|exists:centros_costos,id',
             'glosa' => 'required|string|max:1000',
             'observacion' => 'nullable|string|max:1000',
-            'tipo_pago' => 'required|string|max:100',
+            // 'tipo_pago' => 'required|string|max:100',
 
             'forma_pago_id' => 'required|exists:forma_pago,id',
+
+            'plazo_pago_id' => 'required|exists:plazo_pago,id',
+
 
 
             'pago_total' => 'required|numeric|min:0',
@@ -259,15 +270,15 @@ class CompraController extends Controller
         }
         
 
-        if ($validatedData['tipo_pago'] === 'Contado' && $request->has('opcion_contado')) {
-            $fechaDocumento = $validatedData['fecha_documento'] ?? date('Y-m-d');
+        // if ($validatedData['tipo_pago'] === 'Contado' && $request->has('opcion_contado')) {
+        //     $fechaDocumento = $validatedData['fecha_documento'] ?? date('Y-m-d');
             
-            if ($request->opcion_contado === 'viernes') {
-                $validatedData['fecha_vencimiento'] = calcularSiguienteViernes($fechaDocumento);
-            } elseif ($request->opcion_contado === 'hoy') {
-                $validatedData['fecha_vencimiento'] = $fechaDocumento;
-            }
-        }
+        //     if ($request->opcion_contado === 'viernes') {
+        //         $validatedData['fecha_vencimiento'] = calcularSiguienteViernes($fechaDocumento);
+        //     } elseif ($request->opcion_contado === 'hoy') {
+        //         $validatedData['fecha_vencimiento'] = $fechaDocumento;
+        //     }
+        // }
 
         
 
@@ -353,6 +364,20 @@ class CompraController extends Controller
 
         // Redirigir con un mensaje de éxito
         return redirect()->route('compras.index')->with('success', 'Estado actualizado correctamente.');
+    }
+
+    public function importar(Request $request)
+    {
+        $request->validate([
+            'archivo_excel' => 'required|file|mimes:xlsx,xls,csv'
+        ]);
+
+        try {
+            Excel::import(new CompraImport, $request->file('archivo_excel'));
+            return redirect()->route('compras.index')->with('success', 'Compras importadas correctamente.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al importar el archivo: ' . $e->getMessage());
+        }
     }
 
 

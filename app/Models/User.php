@@ -58,6 +58,11 @@ class User extends Authenticatable
         return $this->hasOne(Jefe::class);
     }
 
+    public function user()
+    {
+        return $this->hasOne(User::class);
+    }
+
 
 
     

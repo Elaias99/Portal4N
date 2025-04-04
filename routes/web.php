@@ -130,6 +130,7 @@ Route::post('/areas/{area}/asignar', [AreaController::class, 'asignar'])->name('
 
 // Ruta para las compras
 Route::resource('compras', CompraController::class);
+Route::post('/compras/importar', [CompraController::class, 'importar'])->name('compras.importar');
 Route::patch('/compras/{id}/status', [CompraController::class, 'updateStatus'])->name('compras.updateStatus');
 
 // Ruta Dashboard

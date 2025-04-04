@@ -39,24 +39,30 @@
             <textarea name="observacion" id="observacion" class="form-control" rows="3">{{ old('observacion', $compra->observacion ?? '') }}</textarea>
         </div>
 
+        <!-- Plazo de Pago -->
         <div class="mb-3">
-            <label for="tipo_pago">Tipo de Pago</label>
-            <select name="tipo_pago" id="tipo_pago" class="form-control">
-                @foreach(['Contado','Quincena','30 Días','45 Días','60 Días'] as $tipopago)
-                    <option value="{{ $tipopago }}" {{ old('tipo_pago', $compra->tipo_pago ?? '') == $tipopago ? 'selected' : '' }}>
-                        {{ $tipopago }}
+            <label for="plazo_pago_id" class="form-label">Plazo de Pago</label>
+            <select name="plazo_pago_id" id="plazo_pago_id" class="form-select" required>
+                <option value="">Seleccionar</option>
+                @foreach($plazosPago as $plazo)
+                    <option value="{{ $plazo->id }}" 
+                            data-nombre="{{ $plazo->nombre }}"
+                            {{ old('plazo_pago_id', $compra->plazo_pago_id ?? '') == $plazo->id ? 'selected' : '' }}>
+                        {{ $plazo->nombre }}
                     </option>
                 @endforeach
             </select>
         </div>
 
+        <!-- Menú adicional solo si es 'Contado' -->
         <div class="mb-3" id="menu_contado" style="display: none;">
             <label for="opcion_contado" class="form-label">Pago al contado</label>
-            <select name="opcion_contado" id="opcion_contado" class="form-control">
+            <select name="opcion_contado" id="opcion_contado" class="form-select">
                 <option value="hoy" {{ old('opcion_contado', 'hoy') == 'hoy' ? 'selected' : '' }}>Pagar hoy (Fecha del Documento)</option>
                 <option value="viernes" {{ old('opcion_contado') == 'viernes' ? 'selected' : '' }}>Pagar al Viernes más cercano</option>
             </select>
         </div>
+
 
         <div class="form-group">
             <label for="empresa_id">Empresa Facturadora</label>
@@ -214,94 +220,74 @@
 <!-- Script para manejar la lógica del menú de "Contado" -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const tipoPagoSelect = document.getElementById('tipo_pago');
-        const menuContado = document.getElementById('menu_contado'); // Este menú se muestra solo para "Contado"
+        const plazoPagoSelect = document.getElementById('plazo_pago_id');
+        const menuContado = document.getElementById('menu_contado');
         const opcionContado = document.getElementById('opcion_contado');
         const fechaDocumentoInput = document.getElementById('fecha_documento');
         const fechaVencimientoInput = document.getElementById('fecha_vencimiento');
     
-        // Función que calcula el siguiente viernes a partir de una fecha dada
         function getNextFriday(date) {
-            const day = date.getDay(); // Domingo=0, Lunes=1, ... Sábado=6
+            const day = date.getDay();
             let diff = (5 - day + 7) % 7;
-            // Si el día ya es viernes, diff será 0 y se quedará en esa fecha.
             return new Date(date.getFullYear(), date.getMonth(), date.getDate() + diff);
         }
     
-        // Función para formatear una fecha en formato YYYY-MM-DD
         function formatDate(date) {
             const year = date.getFullYear();
-            let month = (date.getMonth() + 1).toString();
-            let day = date.getDate().toString();
-            if (month.length < 2) month = '0' + month;
-            if (day.length < 2) day = '0' + day;
+            let month = (date.getMonth() + 1).toString().padStart(2, '0');
+            let day = date.getDate().toString().padStart(2, '0');
             return `${year}-${month}-${day}`;
         }
     
-        // Función que actualiza la fecha de vencimiento según el tipo de pago seleccionado
         function updateFechaVencimiento() {
             const fechaDocumento = fechaDocumentoInput.value;
             if (!fechaDocumento) return;
-            let nuevaFecha;
-            const tipoPago = tipoPagoSelect.value;
     
-            if (tipoPago === 'Contado') {
-                // Para "Contado", se usa el submenú: "hoy" o "viernes"
+            const selectedOption = plazoPagoSelect.options[plazoPagoSelect.selectedIndex];
+            const nombrePlazo = selectedOption.getAttribute('data-nombre');
+    
+            let nuevaFecha;
+            let offsetDays = 0;
+    
+            if (nombrePlazo === 'Contado') {
                 menuContado.style.display = 'block';
-                if (opcionContado.value === 'hoy') {
+    
+                if (opcionContado && opcionContado.value === 'hoy') {
                     nuevaFecha = fechaDocumento;
-                } else if (opcionContado.value === 'viernes') {
+                } else if (opcionContado && opcionContado.value === 'viernes') {
                     const docDate = new Date(fechaDocumento);
-                    const nextFriday = getNextFriday(docDate);
-                    nuevaFecha = formatDate(nextFriday);
+                    nuevaFecha = formatDate(getNextFriday(docDate));
                 }
+    
             } else {
-                // Para los otros tipos, se calcula automáticamente:
-                // Determinar el offset en días según el tipo de pago
-                let offsetDays = 0;
-                switch (tipoPago) {
-                    case 'Quincena':
-                        offsetDays = 15;
-                        break;
-                    case '30 Días':
-                        offsetDays = 30;
-                        break;
-                    case '45 Días':
-                        offsetDays = 45;
-                        break;
-                    case '60 Días':
-                        offsetDays = 60;
-                        break;
-                    default:
-                        offsetDays = 0;
-                }
-                // Ocultamos el menú adicional de "Contado" si no es ese tipo de pago
                 menuContado.style.display = 'none';
     
+                switch (nombrePlazo) {
+                    case 'Quincena': offsetDays = 15; break;
+                    case '30 Días': offsetDays = 30; break;
+                    case '45 Días': offsetDays = 45; break;
+                    case '60 Días': offsetDays = 60; break;
+                    default: offsetDays = 0;
+                }
+    
                 const docDate = new Date(fechaDocumento);
-                // Sumamos el número de días correspondiente
                 docDate.setDate(docDate.getDate() + offsetDays);
-                // Ahora, calculamos el viernes más cercano a esa fecha
-                const nextFriday = getNextFriday(docDate);
-                nuevaFecha = formatDate(nextFriday);
+                nuevaFecha = formatDate(getNextFriday(docDate));
             }
     
-            // Actualizar el campo de Fecha de Vencimiento
             fechaVencimientoInput.value = nuevaFecha;
         }
     
-        // Asignar eventos:
-        tipoPagoSelect.addEventListener('change', updateFechaVencimiento);
+        plazoPagoSelect.addEventListener('change', updateFechaVencimiento);
         fechaDocumentoInput.addEventListener('change', updateFechaVencimiento);
-        // Si el tipo de pago es Contado, también se actualiza al cambiar la opción
         if (opcionContado) {
             opcionContado.addEventListener('change', updateFechaVencimiento);
         }
     
-        // Al cargar la página, ejecutamos la función para establecer la fecha inicialmente.
-        updateFechaVencimiento();
+        updateFechaVencimiento(); // Ejecutar al cargar
     });
-</script>
+    </script>
+    
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {

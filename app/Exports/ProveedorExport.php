@@ -26,7 +26,7 @@ class ProveedorExport implements FromCollection, WithHeadings, WithStyles, Shoul
             $nombreBanco = $proveedor->banco->id ?? 'N/A';
             $nombreTipoPago = $compra->tipoPago->nombre ?? 'N/A';
 
-            $glosa = "Pago + {$nombreTipoPago} + {$compra->numero_documento}";
+            $glosa = "Pago  {$nombreTipoPago}  {$compra->numero_documento}";
             $clp = "CLP";
 
             $cuentaEmpresa = $compra->empresa->cta_corriente ?? '';

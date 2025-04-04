@@ -22,7 +22,8 @@ class Compra extends Model
         'glosa',
         'observacion',
         'tipo_pago_id',
-        'tipo_pago',
+        // 'tipo_pago',
+        'plazo_pago_id',
 
 
         'forma_pago_id',
@@ -74,6 +75,12 @@ class Compra extends Model
     {
         return $this->belongsTo(FormaPago::class, 'forma_pago_id');
     }
+
+    public function plazoPago()
+    {
+        return $this->belongsTo(PlazoPago::class, 'plazo_pago_id');
+    }
+
 
 
 
