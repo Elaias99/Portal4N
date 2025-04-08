@@ -19,6 +19,7 @@ use App\Http\Controllers\SolicitudManualController;
 use App\Http\Controllers\BultoController;
 use App\Http\Controllers\AreaController;
 use Illuminate\Support\Facades\Mail;
+use App\Http\Controllers\PagoController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -174,7 +175,9 @@ Route::post('/historial-vacacion/{id}/subir', [HistorialVacacionController::clas
 Route::get('/historial-vacacion/{id}/descargar', [HistorialVacacionController::class, 'descargarArchivo'])
     ->name('historial-vacacion.descargar');
     
-
+// Pagos
+Route::resource('pagos','App\Http\Controllers\PagoController')->middleware('auth');
+Route::post('/pagos/exportar', [PagoController::class, 'exportarSeleccionados'])->name('pagos.exportar');
 
 
 // 8. Rutas para exportar PDF
