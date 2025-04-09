@@ -86,7 +86,7 @@ class StoreTrabajadorRequest extends FormRequest
             'numero_cuenta' => 'required|string|max:255', // Ahora obligatorio
             'tipo_cuenta' => 'required|string|max:255', // Ahora obligatorio
             
-            'Rut_Empresa' => 'required|string|max:255', // Ahora obligatorio
+             // Ahora obligatorio
 
             'id_jefe' => 'required|exists:jefes,id',
         ];
@@ -148,9 +148,9 @@ class StoreTrabajadorRequest extends FormRequest
             'tipo_cuenta.string' => 'El campo Tipo de Cuenta debe ser una cadena de texto.',
             'tipo_cuenta.max' => 'El Tipo de Cuenta no puede exceder los 255 caracteres.',
 
-            'Rut_Empresa.required' => 'El campo Rut de la Empresa es obligatorio.', // Nuevo mensaje
-            'Rut_Empresa.string' => 'El campo Rut de la Empresa debe ser una cadena de texto.',
-            'Rut_Empresa.max' => 'El Rut de la empresa no puede exceder los 255 caracteres.',
+            // 'Rut_Empresa.required' => 'El campo Rut de la Empresa es obligatorio.', // Nuevo mensaje
+            // 'Rut_Empresa.string' => 'El campo Rut de la Empresa debe ser una cadena de texto.',
+            // 'Rut_Empresa.max' => 'El Rut de la empresa no puede exceder los 255 caracteres.',
 
             'nombre_emergencia.required' => 'El campo nombre de emergencia es obligatorio.', // Nuevo mensaje
             'contacto_emergencia.required' => 'El campo contacto de emergencia es obligatorio.', // Nuevo mensaje

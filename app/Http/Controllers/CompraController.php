@@ -368,14 +368,23 @@ class CompraController extends Controller
 
     public function importar(Request $request)
     {
+        Log::info('Inicio de importación de compras');
+
         $request->validate([
             'archivo_excel' => 'required|file|mimes:xlsx,xls,csv'
         ]);
 
         try {
+            Log::info('Archivo recibido:', [
+                'nombre' => $request->file('archivo_excel')->getClientOriginalName()
+            ]);
+
             Excel::import(new CompraImport, $request->file('archivo_excel'));
+
+            Log::info('Importación finalizada correctamente');
             return redirect()->route('compras.index')->with('success', 'Compras importadas correctamente.');
         } catch (\Exception $e) {
+            Log::error('Error durante importación: ' . $e->getMessage());
             return back()->with('error', 'Error al importar el archivo: ' . $e->getMessage());
         }
     }
