@@ -104,8 +104,9 @@ Route::get('/empleados/exportExcel', [TrabajadorController::class, 'exportExcel'
 
 //Ruta para exportar en Excel el listado de las facturas
 Route::get('/facturas/export', [FacturaController::class, 'export'])->name('facturas.export');
-//Ruta para exportar en Excel el listado de los proveedores
-Route::get('/proveedores/export', [ProveedorController::class, 'export'])->name('proveedores.export');
+
+
+
 
 // 7. Rutas para otros modelos
 Route::resource('empresas', '\App\Http\Controllers\EmpresaController')->middleware('auth');
@@ -155,6 +156,10 @@ Route::get('/tutorial', function () {
 })->name('tutorial');
 
 //Ruta para los proveedores
+// Ruta para descargar la plantilla vacía de proveedores
+Route::get('/proveedores/descargar-plantilla', [App\Http\Controllers\ProveedorController::class, 'descargarPlantilla'])->name('proveedores.plantilla');
+//Ruta para exportar en Excel el listado de los proveedores
+Route::get('/proveedores/export', [ProveedorController::class, 'export'])->name('proveedores.export');
 Route::resource('proveedores', 'App\Http\Controllers\ProveedorController')->middleware('auth');
 Route::post('/importar-proveedores', [ProveedorImportController::class, 'importar'])->name('importar.proveedores');
 Route::get('/subir-proveedores', function () {

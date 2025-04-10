@@ -10,6 +10,7 @@ use App\Models\TipoPago;
 use App\Models\Banco;
 use App\Models\Comuna;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\PlantillaProveedoresExport;
 
 class ProveedorController extends Controller
 {
@@ -203,6 +204,11 @@ class ProveedorController extends Controller
         
         return Excel::download(new ProveedorExport, 'proveedores.xlsx');
 
+    }
+
+    public function descargarPlantilla()
+    {
+        return Excel::download(new PlantillaProveedoresExport, 'plantilla_proveedores.xlsx');
     }
 
 }

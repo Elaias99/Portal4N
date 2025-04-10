@@ -6,6 +6,10 @@
 
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
 
+        <a href="{{ route('proveedores.plantilla') }}" class="btn btn-outline-primary btn-sm mt-3">
+            <i class="fa fa-download me-1"></i> Descargar Plantilla de Proveedores
+        </a>
+
 
 
         <div class="dropdown me-2">
@@ -15,9 +19,12 @@
             <div class="dropdown-menu shadow-sm fade" aria-labelledby="accionesDropdown">
         
                 <!-- Exportar -->
-                <a class="dropdown-item d-flex align-items-center" href="{{ route('proveedores.export') }}">
+                {{-- <a class="dropdown-item d-flex align-items-center" href="{{ route('proveedores.export') }}">
                     <i class="fa-solid fa-file-export me-2 text-success"></i> Exportar a Excel
-                </a>
+                </a> --}}
+
+                
+                
         
                 <!-- Importar -->
                 <label class="dropdown-item d-flex align-items-center mb-0" for="archivoInput" style="cursor: pointer;">

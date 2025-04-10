@@ -22,12 +22,14 @@ class ProveedorExport implements FromCollection, WithHeadings, WithStyles, Shoul
     {
         $filas = [];
 
+        $clp = "CLP";
+
         foreach ($proveedor->compras as $compra) {
             $nombreBanco = $proveedor->banco->id ?? 'N/A';
             $nombreTipoPago = $compra->tipoPago->nombre ?? 'N/A';
 
             $glosa = "Pago  {$nombreTipoPago}  {$compra->numero_documento}";
-            $clp = "CLP";
+            
 
             $cuentaEmpresa = $compra->empresa->cta_corriente ?? '';
             $ctaCorrienteFormateada = str_pad($cuentaEmpresa, 15, '0', STR_PAD_LEFT);
@@ -65,35 +67,29 @@ class ProveedorExport implements FromCollection, WithHeadings, WithStyles, Shoul
         }
 
         if (empty($filas)) {
+            $cuentaEmpresa = $proveedor->empresa->cta_corriente ?? '';
+            $ctaCorrienteFormateada = str_pad($cuentaEmpresa, 15, '0', STR_PAD_LEFT);
             $nombreBanco = $proveedor->banco->nombre ?? 'N/A';
-
+        
             $filas[] = [
                 $ctaCorrienteFormateada,
-
                 $clp,
-
-                $proveedor->nro_cuenta,
-
+                str_pad($proveedor->nro_cuenta ?? '', 22, '0', STR_PAD_LEFT),
                 $clp,
-
                 $nombreBanco,
-
-                $proveedor->rut,
-
+                preg_replace('/[.\-]/', '', $proveedor->rut),
                 $proveedor->razon_social,
-
-                $proveedor->correo_banco,
+                0, // No hay pago_total
+                'Sin compras',
+                $proveedor->correo_banco ?? 'N/A',
                 'N/A',
                 'N/A',
                 'N/A',
-                'N/A',
-                'N/A',
-
             ];
-            
         }
+        
 
-        return $filas[0];
+        return $filas;
     }
 
     public function headings(): array
