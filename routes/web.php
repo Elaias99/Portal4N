@@ -130,9 +130,13 @@ Route::post('/areas/{area}/asignar', [AreaController::class, 'asignar'])->name('
 
 
 // Ruta para las compras
+Route::get('/compras/descargar-plantilla', [CompraController::class, 'descargarPlantilla'])->name('compras.plantilla');
+
 Route::resource('compras', CompraController::class);
 Route::post('/compras/importar', [CompraController::class, 'importar'])->name('compras.importar');
 Route::patch('/compras/{id}/status', [CompraController::class, 'updateStatus'])->name('compras.updateStatus');
+
+
 
 // Ruta Dashboard
 Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard.index');

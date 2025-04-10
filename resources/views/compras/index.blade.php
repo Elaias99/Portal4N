@@ -4,9 +4,16 @@
 <div class="container">
     <h1 class="text-center" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Lista de Compras</h1>
 
-    <a href="{{ asset('plantillas/plantilla_compras_modelo.xlsx') }}" class="btn btn-outline-primary">
-        Descargar ejemplo de estructura
-    </a>
+    <div class="mt-3">
+        <a href="{{ route('compras.plantilla') }}" class="btn btn-outline-primary btn-sm">
+            <i class="fa fa-download me-1"></i> Descargar Plantilla Excel
+        </a>
+    </div>
+    
+    @php
+        \Illuminate\Support\Facades\Log::info('✅ Vista de compras cargada correctamente — botón de descarga visible');
+    @endphp
+    
 
     <!-- Botón Agregar -->
     @if (session('import_result'))
@@ -31,6 +38,12 @@
 
     {{-- ✅ ACCIONES PRINCIPALES --}}
     <div class="d-flex justify-content-between align-items-center mb-3">
+
+
+        
+
+
+
         <div>
             <button id="toggleFiltrosBtn" class="btn btn-outline-secondary btn-sm me-2">
                 <i class="fa fa-sliders-h mr-1"></i> Filtros
@@ -124,14 +137,6 @@
             </div>
         @endif
     
-        {{-- Mensaje de éxito --}}
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-                <i class="fa-regular fa-circle-check me-2"></i>{{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-
     <!-- Tabla Scrollable -->
     <div class="table-responsive shadow-sm rounded" style="overflow-x: auto;">
         <table class="table table-hover align-middle table-striped">

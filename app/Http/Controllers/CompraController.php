@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 
 use App\Imports\CompraImport;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\PlantillaComprasExport;
 
 
 
@@ -380,6 +381,21 @@ class CompraController extends Controller
             return back()->with('error', 'Error al importar el archivo: ' . $e->getMessage());
         }
     }
+
+    public function descargarPlantilla()
+    {
+        Log::info('📥 Se ejecutó el método descargarPlantilla');
+
+        try {
+            return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\PlantillaComprasExport, 'plantilla_compras.xlsx');
+        } catch (\Throwable $e) {
+            Log::error('❌ Error al generar la plantilla: ' . $e->getMessage());
+            return response('Error al generar la plantilla. Revisa los logs.', 500);
+        }
+    }
+
+
+
 
 
 
