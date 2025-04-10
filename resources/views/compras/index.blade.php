@@ -4,90 +4,133 @@
 <div class="container">
     <h1 class="text-center" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Lista de Compras</h1>
 
-    <!-- Botón Agregar -->
-    <div class="d-flex align-items-center mb-3">
-        <a href="{{ route('compras.create') }}" 
-           class="btn btn-outline-primary shadow-sm" 
-           data-bs-toggle="tooltip" 
-           title="Agregar Compra">
-            <i class="fa-solid fa-plus fa-lg"></i>
-        </a>
+    <a href="{{ asset('plantillas/plantilla_compras_modelo.xlsx') }}" class="btn btn-outline-primary">
+        Descargar ejemplo de estructura
+    </a>
 
-        <form action="{{ route('compras.importar') }}" method="POST" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
-            @csrf
-            <input type="file" name="archivo_excel" class="form-control form-control-sm" required>
-            <button type="submit" class="btn btn-outline-success btn-sm shadow-sm" title="Importar Excel">
-                <i class="fa-solid fa-file-import me-1"></i> Importar
+    <!-- Botón Agregar -->
+    @if (session('import_result'))
+    <div class="alert alert-info shadow-sm">
+        <strong>📦 Importación finalizada</strong>
+        <ul>
+            <li>✅ Compras importadas: <strong>{{ session('import_result.importadas') }}</strong></li>
+            <li>⚠️ Compras omitidas: <strong>{{ session('import_result.omitidas') }}</strong></li>
+        </ul>
+        @if (count(session('import_result.errores')))
+            <details>
+                <summary>Ver errores ({{ count(session('import_result.errores')) }})</summary>
+                <ul class="mt-2">
+                    @foreach (session('import_result.errores') as $error)
+                        <li>❌ {{ $error }}</li>
+                    @endforeach
+                </ul>
+            </details>
+        @endif
+    </div>
+    @endif
+
+    {{-- ✅ ACCIONES PRINCIPALES --}}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <button id="toggleFiltrosBtn" class="btn btn-outline-secondary btn-sm me-2">
+                <i class="fa fa-sliders-h mr-1"></i> Filtros
             </button>
-        </form>
+
+            <button id="toggleImportarBtn" class="btn btn-outline-success btn-sm">
+                <i class="fa fa-file-import mr-1"></i> Importar Excel
+            </button>
+        </div>
+
+        <a href="{{ route('compras.create') }}" class="btn btn-primary shadow-sm">
+            <i class="fa fa-plus mr-1"></i> Agregar Compra Manual
+        </a>
     </div>
 
-    <!-- Filtros -->
-    <form method="GET" action="{{ route('compras.index') }}" class="mb-4">
-        <div class="row g-3">
-            <!-- Filtro Año -->
-            <div class="col-md-3">
-                <label for="year" class="form-label">Año</label>
-                <select name="year" id="year" class="form-select">
-                    <option value="">Todos</option>
-                    <option value="2025" {{ request('year') == '2025' ? 'selected' : '' }}>2025</option>
-                    <option value="2024" {{ request('year') == '2024' ? 'selected' : '' }}>2024</option>
-                    <option value="2023" {{ request('year') == '2023' ? 'selected' : '' }}>2023</option>
-                </select>
-            </div>
+    
 
-            <!-- Filtro Mes -->
-            <div class="col-md-3">
-                <label for="month" class="form-label">Mes</label>
-                <select name="month" id="month" class="form-select">
-                    <option value="">Todos</option>
-                    <option value="Enero" {{ request('month') == 'Enero' ? 'selected' : '' }}>Enero</option>
-                    <option value="Febrero" {{ request('month') == 'Febrero' ? 'selected' : '' }}>Febrero</option>
-                    <option value="Marzo" {{ request('month') == 'Marzo' ? 'selected' : '' }}>Marzo</option>
-                    <option value="Abril" {{ request('month') == 'Abril' ? 'selected' : '' }}>Abril</option>
-                </select>
-            </div>
 
-            <!-- Filtro Proveedor -->
-            <div class="col-md-3">
-                <label for="provider" class="form-label">Proveedor</label>
-                <select name="provider" id="provider" class="form-select">
-                    <option value="">Todos</option>
-                    @foreach ($proveedores as $proveedor)
-                        <option value="{{ $proveedor->razon_social }}" {{ request('provider') == $proveedor->razon_social ? 'selected' : '' }}>
-                            {{ $proveedor->razon_social }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <!-- Filtro Estado -->
-            <div class="col-md-3">
-                <label for="status" class="form-label">Estado</label>
-                <select name="status" id="status" class="form-select">
-                    <option value="">Todos</option>
-                    <option value="Pendiente" {{ request('status') == 'Pendiente' ? 'selected' : '' }}>Pendiente</option>
-                    <option value="Pagado" {{ request('status') == 'Pagado' ? 'selected' : '' }}>Pagado</option>
-                    <option value="Abonado" {{ request('status') == 'Abonado' ? 'selected' : '' }}>Abonado</option>
-                    <option value="No Pagar" {{ request('status') == 'No Pagar' ? 'selected' : '' }}>No Pagar</option>
-                </select>
+    
+        {{-- Botón toggle de filtros --}}
+        {{-- ✅ PANEL: FILTROS --}}
+        <div class="collapse show mb-3" id="filtrosPanel">
+            <div class="card card-body shadow-sm">
+                <form method="GET" action="{{ route('compras.index') }}">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label for="year" class="form-label">Año</label>
+                            <select name="year" id="year" class="form-select">
+                                <option value="">Todos</option>
+                                @foreach ([2025, 2024, 2023] as $año)
+                                    <option value="{{ $año }}" {{ request('year') == $año ? 'selected' : '' }}>{{ $año }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="month" class="form-label">Mes</label>
+                            <select name="month" id="month" class="form-select">
+                                <option value="">Todos</option>
+                                @foreach (['Enero','Febrero','Marzo','Abril'] as $mes)
+                                    <option value="{{ $mes }}" {{ request('month') == $mes ? 'selected' : '' }}>{{ $mes }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="provider" class="form-label">Proveedor</label>
+                            <select name="provider" id="provider" class="form-select">
+                                <option value="">Todos</option>
+                                @foreach ($proveedores as $proveedor)
+                                    <option value="{{ $proveedor->razon_social }}" {{ request('provider') == $proveedor->razon_social ? 'selected' : '' }}>
+                                        {{ $proveedor->razon_social }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">Estado</label>
+                            <select name="status" id="status" class="form-select">
+                                <option value="">Todos</option>
+                                @foreach (['Pendiente','Pagado','Abonado','No Pagar'] as $estado)
+                                    <option value="{{ $estado }}" {{ request('status') == $estado ? 'selected' : '' }}>{{ $estado }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">Filtrar</button>
+                        <a href="{{ route('compras.index') }}" class="btn btn-secondary">Limpiar Filtros</a>
+                    </div>
+                </form>
             </div>
         </div>
 
-        <!-- Botones -->
-        <div class="mt-3">
-            <button type="submit" class="btn btn-primary">Filtrar</button>
-            <a href="{{ route('compras.index') }}" class="btn btn-secondary">Limpiar Filtros</a>
+        {{-- ✅ PANEL: IMPORTACIÓN --}}
+        <div class="collapse mb-4" id="importarPanel">
+            <div class="card card-body shadow-sm border-left-success">
+                <form action="{{ route('compras.importar') }}" method="POST" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
+                    @csrf
+                    <input type="file" name="archivo_excel" class="form-control form-control-sm" required>
+                    <button type="submit" class="btn btn-success btn-sm shadow-sm">
+                        <i class="fa-solid fa-file-import me-1"></i> Importar
+                    </button>
+                </form>
+            </div>
         </div>
-    </form>
 
-    <!-- Mensaje de éxito -->
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-            <i class="fa-regular fa-circle-check me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
+        {{-- ✅ ALERTA ÉXITO --}}
+        @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+                <i class="fa-regular fa-circle-check me-2"></i>{{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+    
+        {{-- Mensaje de éxito --}}
+        @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+                <i class="fa-regular fa-circle-check me-2"></i>{{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
 
     <!-- Tabla Scrollable -->
     <div class="table-responsive shadow-sm rounded" style="overflow-x: auto;">
@@ -220,3 +263,15 @@
     </div>
 </div>
 @endsection
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#toggleFiltrosBtn').on('click', function () {
+            $('#filtrosPanel').slideToggle();
+        });
+
+        $('#toggleImportarBtn').on('click', function () {
+            $('#importarPanel').slideToggle();
+        });
+    });
+</script>

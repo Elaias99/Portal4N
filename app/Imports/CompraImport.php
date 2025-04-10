@@ -8,32 +8,51 @@ use App\Models\Empresa;
 use App\Models\CentroCosto;
 use App\Models\FormaPago;
 use App\Models\TipoPago;
-use Maatwebsite\Excel\Concerns\ToModel;
-use Maatwebsite\Excel\Concerns\WithHeadingRow;
-
+use App\Models\PlazoPago;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
-class CompraImport implements ToModel, WithHeadingRow
+use Maatwebsite\Excel\Concerns\ToModel;
+use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\WithEvents;
+
+class CompraImport implements ToModel, WithHeadingRow, WithEvents
 {
+    public $importadas = 0;
+    public $omitidas = 0;
+    public $errores = [];
+
     public function model(array $row)
     {
         Log::info('Procesando fila:', $row);
-        // Función de ayuda para buscar por nombre flexible
+
         $buscar = fn($model, $col, $valor) =>
             $model::whereRaw("LOWER($col) = ?", [Str::lower(trim($valor))])->first()?->id;
 
-        $empresa_id       = $buscar(\App\Models\Empresa::class, 'nombre', $row['empresa']);
-        $proveedor_id     = $buscar(\App\Models\Proveedor::class, 'razon_social', $row['proveedor']);
-        $centro_costo_id  = $buscar(\App\Models\CentroCosto::class, 'nombre', $row['centro_costo']);
-        $tipo_pago_id     = $buscar(\App\Models\TipoPago::class, 'nombre', $row['tipo_pago']);
-        $plazo_pago_id    = $buscar(\App\Models\PlazoPago::class, 'nombre', $row['plazo_pago']);
-        $forma_pago_id    = $buscar(\App\Models\FormaPago::class, 'nombre', $row['forma_pago']);
+        $empresa_id       = $buscar(Empresa::class, 'nombre', $row['empresa']);
+        $proveedor_id     = $buscar(Proveedor::class, 'razon_social', $row['proveedor']);
+        $centro_costo_id  = $buscar(CentroCosto::class, 'nombre', $row['centro_costo']);
+        $tipo_pago_id     = $buscar(TipoPago::class, 'nombre', $row['tipo_pago']);
+        $plazo_pago_id    = $buscar(PlazoPago::class, 'nombre', $row['plazo_pago']);
+        $forma_pago_id    = $buscar(FormaPago::class, 'nombre', $row['forma_pago']);
 
-        if (!$empresa_id || !$proveedor_id || !$centro_costo_id) {
-            Log::info('Fila omitida por datos no encontrados', $row);
+        // Validación
+        if (!$empresa_id || !$proveedor_id || !$centro_costo_id || !$tipo_pago_id || !$plazo_pago_id || !$forma_pago_id) {
+            $this->errores[] = "Fila omitida — proveedor: {$row['proveedor']}, documento: {$row['numero_documento']}";
+            $this->omitidas++;
             return null;
         }
+
+        $fecha_vencimiento = is_numeric($row['fecha_vencimiento'])
+            ? Carbon::createFromDate(1899, 12, 30)->addDays($row['fecha_vencimiento'])
+            : null;
+
+        $fecha_documento = is_numeric($row['fecha_documento'])
+            ? Carbon::createFromDate(1899, 12, 30)->addDays($row['fecha_documento'])
+            : now();
+
+        $this->importadas++;
 
         return new Compra([
             'empresa_id'        => $empresa_id,
@@ -45,10 +64,10 @@ class CompraImport implements ToModel, WithHeadingRow
             'glosa'             => $row['glosa'],
             'observacion'       => $row['observacion'],
             'pago_total'        => $row['pago_total'],
-            'fecha_vencimiento' => $this->excelDateToCarbon($row['fecha_vencimiento']),
+            'fecha_vencimiento' => $fecha_vencimiento,
             'año'               => $row['ano'],
             'mes'               => $row['mes'],
-            'fecha_documento' => $row['fecha_documento'] ? $this->excelDateToCarbon($row['fecha_documento']) : now(),
+            'fecha_documento'   => $fecha_documento,
             'numero_documento'  => $row['numero_documento'],
             'oc'                => $row['oc'],
             'archivo_oc'        => null,
@@ -58,17 +77,16 @@ class CompraImport implements ToModel, WithHeadingRow
         ]);
     }
 
-    private function excelDateToCarbon($excelDate)
+    public function registerEvents(): array
     {
-        try {
-            // Excel starts counting from Jan 1, 1900
-            return \Carbon\Carbon::createFromDate(1899, 12, 30)->addDays($excelDate);
-        } catch (\Exception $e) {
-            Log::warning("Fecha inválida: " . $excelDate);
-            return null;
-        }
+        return [
+            \Maatwebsite\Excel\Events\AfterImport::class => function () {
+                session()->flash('import_result', [
+                    'importadas' => $this->importadas,
+                    'omitidas' => $this->omitidas,
+                    'errores' => $this->errores,
+                ]);
+            },
+        ];
     }
-
-    
 }
-
