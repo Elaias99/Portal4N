@@ -31,13 +31,10 @@
     </div>
     @endif
 
+
+
     {{-- ✅ ACCIONES PRINCIPALES --}}
     <div class="d-flex justify-content-between align-items-center mb-3">
-
-
-        
-
-
 
         <div>
             <button id="toggleFiltrosBtn" class="btn btn-outline-secondary btn-sm me-2">
@@ -54,10 +51,6 @@
         </a>
     </div>
 
-    
-
-
-    
         {{-- Botón toggle de filtros --}}
         {{-- ✅ PANEL: FILTROS --}}
         <div class="collapse show mb-3" id="filtrosPanel">

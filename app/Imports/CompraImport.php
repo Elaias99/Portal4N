@@ -27,8 +27,13 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
     {
         Log::info('Procesando fila:', $row);
 
-        $buscar = fn($model, $col, $valor) =>
-            $model::whereRaw("LOWER($col) = ?", [Str::lower(trim($valor))])->first()?->id;
+        $buscar = function ($model, $col, $valor) {
+            if (is_numeric($valor)) {
+                return $model::find($valor)?->id;
+            }
+        
+            return $model::whereRaw("LOWER($col) = ?", [Str::lower(trim($valor))])->first()?->id;
+        };
 
         $empresa_id       = $buscar(Empresa::class, 'nombre', $row['empresa']);
         $proveedor_id     = $buscar(Proveedor::class, 'razon_social', $row['proveedor']);

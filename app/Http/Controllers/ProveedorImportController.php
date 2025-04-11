@@ -14,10 +14,23 @@ class ProveedorImportController extends Controller
             'archivo' => 'required|mimes:xlsx,xls'
         ]);
 
-        Excel::import(new ProveedoresImport, $request->file('archivo'));
+        $importador = new ProveedoresImport();
 
-        return back()->with('success', 'Los proveedores fueron importados correctamente.');
+        try {
+            Excel::import($importador, $request->file('archivo'));
+
+            session()->flash('import_result', [
+                'importadas' => $importador->importadas,
+                'omitidas' => $importador->omitidas,
+                'errores' => $importador->errores,
+            ]);
+
+            return back();
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error durante la importación: ' . $e->getMessage());
+        }
     }
+
 
 
 

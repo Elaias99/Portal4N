@@ -7,22 +7,46 @@ use App\Models\TipoCuenta;
 use App\Models\TipoPago;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Illuminate\Support\Str;
 
 class ProveedoresImport implements ToModel, WithHeadingRow
 {
+
+    public $importadas = 0;
+    public $omitidas = 0;
+    public $errores = [];
+
     public function model(array $row)
     {
+        $buscar = function ($model, $col, $valor) {
+            if (is_numeric($valor)) {
+                return $model::find($valor)?->id;
+            }
+
+            return $model::whereRaw("LOWER($col) = ?", [Str::lower(trim($valor))])->first()?->id;
+        };
+
+        $banco_id        = $buscar(Banco::class, 'nombre', $row['banco'] ?? null);
+        $tipo_cuenta_id  = $buscar(TipoCuenta::class, 'nombre', $row['tipo_cuenta'] ?? null);
+        $tipo_pago_id    = $buscar(TipoPago::class, 'nombre', $row['tipo_pago'] ?? null);
+        $comuna_id       = $buscar(\App\Models\Comuna::class, 'nombre', $row['comuna_empresa'] ?? null);
+
+        // Validación
+        if (!$row['razon_social'] || !$row['rut'] || !$banco_id || !$tipo_cuenta_id || !$tipo_pago_id) {
+            $this->errores[] = "Fila omitida — proveedor: {$row['razon_social']}, rut: {$row['rut']}";
+            $this->omitidas++;
+            return null;
+        }
+
+        $this->importadas++;
+
         return new Proveedor([
             'razon_social' => $row['razon_social'],
             'rut' => $row['rut'],
-
-            'banco_id' => $this->getBancoId($row['banco']),
-            'tipo_cuenta_id' => $this->getTipoCuentaId($row['tipo_cuenta']),
-
-            'nro_cuenta' => $row['nro_cuenta'],
-            
-            'tipo_pago_id' => $this->getTipoPagoId($row['tipo_pago']),
-
+            'banco_id' => $banco_id,
+            'tipo_cuenta_id' => $tipo_cuenta_id,
+            'tipo_pago_id' => $tipo_pago_id,
+            'nro_cuenta' => $row['nro_cuenta'] ?? null,
             'telefono_empresa' => $row['telefono_empresa'] ?? 'N/A',
             'Nombre_RepresentanteLegal' => $row['nombre_representantelegal'] ?? 'N/A',
             'Rut_RepresentanteLegal' => $row['rut_representantelegal'] ?? 'N/A',
@@ -34,9 +58,6 @@ class ProveedoresImport implements ToModel, WithHeadingRow
             'giro_comercial' => $row['giro_comercial'] ?? 'N/A',
             'direccion_facturacion' => $row['direccion_facturacion'] ?? 'N/A',
             'direccion_despacho' => $row['direccion_despacho'] ?? 'N/A',
-
-            
-
             'nombre_contacto2' => $row['nombre_contacto2'] ?? 'N/A',
             'telefono_contacto2' => $row['telefono_contacto2'] ?? 'N/A',
             'correo_contacto2' => $row['correo_contacto2'] ?? 'N/A',
@@ -44,10 +65,11 @@ class ProveedoresImport implements ToModel, WithHeadingRow
             'nombre_razon_social_banco' => $row['nombre_razon_social_banco'] ?? 'N/A',
             'cargo_contacto1' => $row['cargo_contacto1'] ?? 'N/A',
             'cargo_contacto2' => $row['cargo_contacto2'] ?? 'N/A',
-
-            'comuna_id' => $this->getComunaId($row['comuna_empresa'] ?? null),
+            'comuna_id' => $comuna_id,
         ]);
     }
+
+
 
     public function getBancoId($nombreBanco)
     {

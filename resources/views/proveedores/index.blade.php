@@ -4,6 +4,26 @@
 <div class="container">
     <h1 class="text-center mb-4" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Lista de Proveedores</h1>
 
+    @if (session('import_result'))
+        <div class="alert alert-info shadow-sm">
+            <strong>📋 Importación de proveedores finalizada</strong>
+            <ul>
+                <li>✅ Proveedores importados: <strong>{{ session('import_result.importadas') }}</strong></li>
+                <li>⚠️ Proveedores omitidos: <strong>{{ session('import_result.omitidas') }}</strong></li>
+            </ul>
+            @if (count(session('import_result.errores')))
+                <details>
+                    <summary>Ver errores ({{ count(session('import_result.errores')) }})</summary>
+                    <ul class="mt-2">
+                        @foreach (session('import_result.errores') as $error)
+                            <li>❌ {{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </details>
+            @endif
+        </div>
+    @endif
+
     <div class="row">
         {{-- Filtros a la izquierda --}}
         <div class="col-lg-2 mb-4">
@@ -52,6 +72,10 @@
                 </form>
             </div>
         </div>
+
+
+
+
 
         {{-- Contenido principal: acciones + tabla --}}
         <div class="col-lg-9">
