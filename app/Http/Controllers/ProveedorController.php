@@ -21,13 +21,33 @@ class ProveedorController extends Controller
     {
         $query = Proveedor::query();
 
-        if ($request->has('search') && $request->search != '') {
-            $query->where('razon_social', 'LIKE', '%' . $request->search . '%');
+        // Filtro por Razón Social
+        if ($request->has('razon_social') && $request->razon_social != '') {
+            $query->where('razon_social', 'LIKE', '%' . $request->razon_social . '%');
+        }
+
+        // Filtro por RUT
+        if ($request->has('rut') && $request->rut != '') {
+            $query->where('rut', 'LIKE', '%' . $request->rut . '%');
+        }
+
+        // Filtro por Banco
+        if ($request->has('banco') && $request->banco != '') {
+            $query->where('banco_id', $request->banco);
+        }
+
+        // Filtro por Comuna
+        if ($request->has('comuna') && $request->comuna != '') {
+            $query->where('comuna_id', $request->comuna);
         }
 
         $proveedores = $query->orderBy('razon_social', 'asc')->get();
-        return view('proveedores.index', compact('proveedores'));
+        $bancos = Banco::all();
+        $comunas = Comuna::all();
+
+        return view('proveedores.index', compact('proveedores', 'bancos', 'comunas'));
     }
+
     
 
     /**

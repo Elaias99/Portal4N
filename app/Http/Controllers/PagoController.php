@@ -17,6 +17,7 @@ class PagoController extends Controller
     public function index(Request $request)
     {
         $query = Compra::with(['proveedor', 'empresa'])
+            ->where('status', 'pendiente')
             ->orderBy('fecha_vencimiento', 'asc');
 
         // Filtro por empresa

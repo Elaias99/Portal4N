@@ -9,11 +9,6 @@
             <i class="fa fa-download me-1"></i> Descargar Plantilla Excel
         </a>
     </div>
-    
-    @php
-        \Illuminate\Support\Facades\Log::info('✅ Vista de compras cargada correctamente — botón de descarga visible');
-    @endphp
-    
 
     <!-- Botón Agregar -->
     @if (session('import_result'))
