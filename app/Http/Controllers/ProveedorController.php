@@ -19,34 +19,38 @@ class ProveedorController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Proveedor::query();
+        $query = Proveedor::with(['banco', 'comuna', 'tipoCuenta', 'tipoPago']);
 
         // Filtro por Razón Social
-        if ($request->has('razon_social') && $request->razon_social != '') {
+        if ($request->filled('razon_social')) {
             $query->where('razon_social', 'LIKE', '%' . $request->razon_social . '%');
         }
 
         // Filtro por RUT
-        if ($request->has('rut') && $request->rut != '') {
+        if ($request->filled('rut')) {
             $query->where('rut', 'LIKE', '%' . $request->rut . '%');
         }
 
         // Filtro por Banco
-        if ($request->has('banco') && $request->banco != '') {
+        if ($request->filled('banco')) {
             $query->where('banco_id', $request->banco);
         }
 
         // Filtro por Comuna
-        if ($request->has('comuna') && $request->comuna != '') {
+        if ($request->filled('comuna')) {
             $query->where('comuna_id', $request->comuna);
         }
 
-        $proveedores = $query->orderBy('razon_social', 'asc')->get();
+        // ✅ Aplica paginación al final
+        $proveedores = $query->orderBy('razon_social', 'asc')->paginate(10);
+
+        // Extras
         $bancos = Banco::all();
         $comunas = Comuna::all();
 
         return view('proveedores.index', compact('proveedores', 'bancos', 'comunas'));
     }
+
 
     
 

@@ -26,46 +26,41 @@ class CompraController extends Controller
      */
     public function index(Request $request)
     {
-        // Crear una consulta base con las relaciones necesarias
         $query = Compra::with(['user', 'empresa', 'proveedor']);
 
-        // Filtro por Año
+        // Filtros
         if ($request->filled('year')) {
             $query->where('año', $request->year);
         }
 
-        // Filtro por Mes
         if ($request->filled('month')) {
             $query->where('mes', $request->month);
         }
 
-        // Filtro por Proveedor
         if ($request->filled('provider')) {
             $query->whereHas('proveedor', function ($q) use ($request) {
                 $q->where('razon_social', $request->provider);
             });
         }
 
-        // Filtro por Tipo de Documento
         if ($request->filled('document_type')) {
             $query->where('tipo_documento', $request->document_type);
         }
 
-        // Mantener la funcionalidad de búsqueda general
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('año', 'like', "%$search%")
-                ->orWhere('mes', 'like', "%$search%")
-                ->orWhere('tipo_documento', 'like', "%$search%")
-                ->orWhere('centro_costo', 'like', "%$search%")
-                ->orWhereHas('empresa', function ($q) use ($search) {
-                    $q->where('Nombre', 'like', "%$search%");
-                })
-                ->orWhereHas('proveedor', function ($q) use ($search) {
-                    $q->where('razon_social', 'like', "%$search%")
+                    ->orWhere('mes', 'like', "%$search%")
+                    ->orWhere('tipo_documento', 'like', "%$search%")
+                    ->orWhere('centro_costo', 'like', "%$search%")
+                    ->orWhereHas('empresa', function ($q) use ($search) {
+                        $q->where('Nombre', 'like', "%$search%");
+                    })
+                    ->orWhereHas('proveedor', function ($q) use ($search) {
+                        $q->where('razon_social', 'like', "%$search%")
                         ->orWhere('rut', 'like', "%$search%");
-                });
+                    });
             });
         }
 
@@ -73,10 +68,10 @@ class CompraController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Obtener los resultados finales
-        $compras = $query->get();
+        // ✅ Paginar resultados
+        $compras = $query->orderBy('created_at', 'desc')->paginate(15);
 
-        // Obtener los proveedores para el filtro desplegable
+        // Proveedores para filtros
         $proveedores = Proveedor::all();
 
         return view('compras.index', compact('compras', 'proveedores'));

@@ -105,7 +105,7 @@
             </div>
 
             {{-- Buscador --}}
-            <div class="mb-3">
+            <!-- <div class="mb-3">
                 <form method="GET" action="{{ route('proveedores.index') }}" class="d-flex align-items-center gap-2">
                     <input 
                         type="text" 
@@ -118,7 +118,7 @@
                         <i class="fa-solid fa-search"></i>
                     </button>
                 </form>
-            </div>
+            </div> -->
 
             {{-- Alerta de éxito --}}
             @if(session('success'))
@@ -242,6 +242,14 @@
                     </tbody>
                 </table>
             </div>
+            <div class="mt-3 d-flex justify-content-center">
+                {{ $proveedores->appends(request()->query())->links('pagination::bootstrap-4') }}
+            </div>
+
+
+
+
+
         </div>
     </div>
 </div>

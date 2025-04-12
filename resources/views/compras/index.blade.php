@@ -254,6 +254,16 @@
             </tbody>
         </table>
     </div>
+    <div class="mt-3 d-flex justify-content-center">
+        {{ $compras->appends(request()->query())->links('pagination::bootstrap-4') }}
+    </div>
+
+
+
+
+
+
+
 </div>
 @endsection
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
