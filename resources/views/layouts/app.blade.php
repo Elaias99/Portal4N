@@ -163,34 +163,42 @@
                     </li>
 
                     <li class="list-group-item">
-                        <a href="#" class="text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a href="#submenuProveedores" class="text-decoration-none" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="submenuProveedores">
                             <i class="fas fa-building me-2"></i> Gestión de Proveedores
                         </a>
-                        <ul class="dropdown-menu">
-                            <li>
-                                <a href="{{ route('proveedores.index') }}" class="dropdown-item">
-                                    <i class="fas fa-list me-2"></i> Ver Proveedores
-                                </a>
-                            </li>
-                            <li>
-                                <a href="{{ route('proveedores.create') }}" class="dropdown-item">
-                                    <i class="fas fa-plus me-2"></i> Crear Proveedor
-                                </a>
-                            </li>
+                        <div class="collapse ps-4" id="submenuProveedores">
+                            <ul class="list-unstyled">
+                                <li class="my-2">
+                                    <a href="{{ route('proveedores.index') }}" class="text-decoration-none">
+                                        <i class="fas fa-list me-2"></i> Ver Proveedores
+                                    </a>
+                                </li>
+                                <li class="my-2">
+                                    <a href="{{ route('proveedores.create') }}" class="text-decoration-none">
+                                        <i class="fas fa-plus me-2"></i> Crear Proveedor
+                                    </a>
+                                </li>
+                                <li class="my-2">
+                                    <a href="{{ route('compras.index') }}" class="text-decoration-none">
+                                        <i class="fa-solid fa-store me-2"></i> Compras
+                                    </a>
+                                </li>
+                                <li class="my-2">
+                                    <a href="{{ route('compras.create') }}" class="text-decoration-none">
+                                        <i class="fa-solid fa-cart-plus me-2"></i> Crear Compra
+                                    </a>
+                                </li>
 
-                            <li>
-                                <a href="{{ route('compras.index') }}" class="dropdown-item">
-                                    <i class="fa-solid fa-store"></i> Compras
-                                </a>
-
-                            </li>
-
-                            <a href="{{ route('compras.create') }}" class="dropdown-item">
-                                <i class="fa-solid fa-cart-plus"></i></i> Crear Compra
-                            </a>
-
-                        </ul>
+                                <li class="my-2">
+                                    <a href="{{ route('pagos.index') }}" class="text-decoration-none">
+                                        <i class="fas fa-money-check-alt me-2"></i> Pagos
+                                    </a>
+                                </li>
+                                
+                            </ul>
+                        </div>
                     </li>
+                    
                     
 
                     <li class="list-group-item">
