@@ -108,7 +108,7 @@
                         </h2>
                         <div id="collapsePersonal" class="accordion-collapse collapse show"
                              aria-labelledby="headingPersonal" data-bs-parent="#accordionPerfil">
-                            <div class="accordion-body">
+                            <div class="table-responsive">
                                 <table class="table table-borderless">
                                     <tbody>
                                         <tr>
@@ -150,7 +150,7 @@
                                         </tr>
                                         <tr>
                                             <th><i class="fa-solid fa-university me-2"></i>Banco</th>
-                                            <td>{{ $trabajador->banco }}</td>
+                                            <td>{{ $trabajador->banco->nombre }}</td>
                                         </tr>
                                         <tr>
                                             <th><i class="fa-solid fa-credit-card me-2"></i>Tipo de Cuenta</th>
@@ -172,7 +172,7 @@
                         </h2>
                         <div id="collapseEmpleo" class="accordion-collapse collapse"
                              aria-labelledby="headingEmpleo" data-bs-parent="#accordionPerfil">
-                            <div class="accordion-body">
+                            <div class="table-responsive">
                                 <table class="table table-borderless">
                                     <tbody>
                                         <tr>

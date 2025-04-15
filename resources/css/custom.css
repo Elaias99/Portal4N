@@ -19,6 +19,25 @@
         margin: 0 auto;    /* Para centrarlo en su contenedor */
         display: block;    /* Asegura que se comporte como bloque */
     }
+
+    /* Evita que el contenido de las tablas se salga en móvil */
+    .accordion-body {
+        overflow-x: auto;      /* Scroll horizontal si es necesario */
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Hace que el texto dentro de celdas se quiebre si es muy largo */
+    table td, table th {
+        word-break: break-word;
+        white-space: normal;
+    }
+
+    /* Limita el ancho interno de las tarjetas para evitar que el contenido las expanda */
+    .card {
+        max-width: 100%;
+        overflow-wrap: break-word;
+    }
+
     
 
     

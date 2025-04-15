@@ -436,19 +436,26 @@ class TrabajadorController extends Controller
     //Método privado para manejar la lógica para subir y actualizar imagen
     private function uploadFoto($request, $trabajador = null)
     {
-        // Verificar si se ha proporcionado una foto
         if ($request->hasFile('Foto')) {
-            // Si ya existe una foto y estamos actualizando, eliminar la foto anterior
             if ($trabajador && $trabajador->Foto) {
-                Storage::delete('public/' . $trabajador->Foto);
+                // Elimina la foto anterior manualmente
+                $oldPath = public_path('storage/' . $trabajador->Foto);
+                if (file_exists($oldPath)) {
+                    unlink($oldPath);
+                }
             }
 
-            // Subir y guardar la nueva foto
-            return $request->file('Foto')->store('uploads', 'public');
+            // Guarda la nueva foto directamente en public_html/storage/uploads
+            $filename = $request->file('Foto')->hashName();
+            $request->file('Foto')->move(public_path('storage/uploads'), $filename);
+
+            return 'uploads/' . $filename;
         }
 
-        return null; // Si no se proporciona ninguna foto, retornamos null
+        return null;
     }
+
+
 
     private function deleteOldPhoto($oldPhoto)
     {
