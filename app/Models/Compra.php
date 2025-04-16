@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\TipoDocumento;
+
 
 class Compra extends Model
 {
@@ -63,7 +65,7 @@ class Compra extends Model
 
     public function tipoPago()
     {
-        return $this->belongsTo(TipoPago::class, 'tipo_pago_id');
+        return $this->belongsTo(TipoDocumento ::class, 'tipo_pago_id');
     }
 
     public function centroCosto()

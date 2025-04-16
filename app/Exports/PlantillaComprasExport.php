@@ -17,7 +17,7 @@ class PlantillaComprasExport implements FromCollection, WithHeadings
     public function headings(): array
     {
         return [
-            'empresa', 'proveedor', 'centro_costo', 'glosa', 'observacion', 'tipo_pago',
+            'empresa', 'proveedor', 'centro_costo', 'glosa', 'observacion', 'tipo_de_documento',
             'plazo_pago', 'forma_pago', 'pago_total', 'fecha_vencimiento', 'ano', 'mes',
             'fecha_documento', 'numero_documento', 'oc', 'status'
         ];

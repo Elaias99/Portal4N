@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use App\Models\FormaPago;
 use Illuminate\Support\Facades\Log;
+use App\Models\TipoDocumento;
 
 use App\Imports\CompraImport;
 use Maatwebsite\Excel\Facades\Excel;
@@ -90,7 +91,7 @@ class CompraController extends Controller
         $proveedores = Proveedor::with('tipoPago')->get();
         $empresas = Empresa::all();
         $centrosCosto = CentroCosto::all();
-        $tiposPagos = \App\Models\TipoPago::all();
+        $tiposPagos = TipoDocumento::all();
         $formasPago = FormaPago::all(); // 🔹 Obtener las formas de pago
 
         return view('compras.create', compact('proveedores', 'empresas', 'tiposPagos', 'centrosCosto', 'formasPago', 'plazosPago'));
@@ -136,7 +137,7 @@ class CompraController extends Controller
             'archivo_oc' => 'nullable|file|mimes:pdf,jpg,jpeg,png',
             'archivo_documento' => 'nullable|file|mimes:pdf,jpg,jpeg,png',
 
-            'tipo_pago_id' => 'required|exists:tipo_pagos,id',
+            'tipo_pago_id' => 'required|exists:tipo_documentos,id',
 
 
             'status' => 'required|in:Pendiente,Pagado,Abonado,No Pagar', // ✅ Agregado
@@ -200,7 +201,7 @@ class CompraController extends Controller
         $proveedores = Proveedor::with('tipoPago')->get();
         $empresas = Empresa::all();
         $centrosCosto = CentroCosto::all();
-        $tiposPagos = \App\Models\TipoPago::all();
+        $tiposPagos = TipoDocumento::all();
         $formasPago = FormaPago::all(); // 🔹 Obtener las formas de pago
 
         return view('compras.edit', compact('compra', 'proveedores', 'empresas', 'tiposPagos', 'centrosCosto', 'formasPago','plazosPago'));
@@ -247,7 +248,8 @@ class CompraController extends Controller
             'archivo_oc' => 'nullable|file|mimes:pdf,jpg,jpeg,png',
             'archivo_documento' => 'nullable|file|mimes:pdf,jpg,jpeg,png',
 
-            'tipo_pago_id' => 'required|exists:tipo_pagos,id',
+            'tipo_pago_id' => 'required|exists:tipo_documentos,id',
+
 
             'status' => 'required|in:Pendiente,Pagado,Abonado,No Pagar', // ✅ Agregado
         ]);

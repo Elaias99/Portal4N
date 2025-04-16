@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Compra;
+use App\Models\TipoDocumento; 
 
 class Proveedor extends Model
 {
@@ -69,7 +70,7 @@ class Proveedor extends Model
 
     public function tipopago()
     {
-        return $this->belongsTo(TipoPago::class, 'tipo_pago_id');
+        return $this->belongsTo(TipoDocumento::class, 'tipo_pago_id');
     }
 
     public function comuna()

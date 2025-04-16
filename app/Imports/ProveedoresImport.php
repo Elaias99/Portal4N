@@ -4,10 +4,14 @@ namespace App\Imports;
 use App\Models\Banco;
 use App\Models\Proveedor;
 use App\Models\TipoCuenta;
-use App\Models\TipoPago;
+use App\Models\TipoDocumento;
+
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
+
+
 
 class ProveedoresImport implements ToModel, WithHeadingRow
 {
@@ -19,17 +23,30 @@ class ProveedoresImport implements ToModel, WithHeadingRow
     public function model(array $row)
     {
         $buscar = function ($model, $col, $valor) {
+            Log::info("Buscando en {$model} por {$col} = '{$valor}'");
+        
             if (is_numeric($valor)) {
                 return $model::find($valor)?->id;
             }
-
+        
             return $model::whereRaw("LOWER($col) = ?", [Str::lower(trim($valor))])->first()?->id;
         };
 
-        $banco_id        = $buscar(Banco::class, 'nombre', $row['banco'] ?? null);
+        $banco_id = $this->getBancoId($row['banco'] ?? null);
+
         $tipo_cuenta_id  = $buscar(TipoCuenta::class, 'nombre', $row['tipo_cuenta'] ?? null);
-        $tipo_pago_id    = $buscar(TipoPago::class, 'nombre', $row['tipo_pago'] ?? null);
+        $tipo_pago_id = $buscar(TipoDocumento::class, 'nombre', $row['tipo_de_documento'] ?? null);
+
+
         $comuna_id       = $buscar(\App\Models\Comuna::class, 'nombre', $row['comuna_empresa'] ?? null);
+
+        Log::info('Valores obtenidos para validación:', [
+            'razon_social' => $row['razon_social'],
+            'rut' => $row['rut'],
+            'banco_id' => $banco_id,
+            'tipo_cuenta_id' => $tipo_cuenta_id,
+            'tipo_pago_id' => $tipo_pago_id,
+        ]);
 
         // Validación
         if (!$row['razon_social'] || !$row['rut'] || !$banco_id || !$tipo_cuenta_id || !$tipo_pago_id) {
@@ -45,6 +62,7 @@ class ProveedoresImport implements ToModel, WithHeadingRow
             'rut' => $row['rut'],
             'banco_id' => $banco_id,
             'tipo_cuenta_id' => $tipo_cuenta_id,
+
             'tipo_pago_id' => $tipo_pago_id,
             'nro_cuenta' => $row['nro_cuenta'] ?? null,
             'telefono_empresa' => $row['telefono_empresa'] ?? 'N/A',
@@ -82,8 +100,9 @@ class ProveedoresImport implements ToModel, WithHeadingRow
             return Banco::find($nombreBanco)?->id; // Devolver el ID si existe en la tabla bancos
         }
 
-        $nombreBanco = strtoupper(trim($nombreBanco));
+        $nombreBanco = strtoupper(trim(preg_replace('/\s+/', ' ', $nombreBanco)));
         $nombreBanco = str_replace(['Á', 'É', 'Í', 'Ó', 'Ú', 'Ñ'], ['A', 'E', 'I', 'O', 'U', 'N'], $nombreBanco);
+        $nombreBanco = str_replace(' ', '', $nombreBanco); // <-- normalizar sin espacios
 
         $correcciones = [
             'BANCOESTADO' => 'BANCO ESTADO',
@@ -147,7 +166,7 @@ class ProveedoresImport implements ToModel, WithHeadingRow
 
         // 🔹 Si el valor recibido es un número, asumir que es un ID y verificar si existe
         if (is_numeric($nombreTipoPago)) {
-            return TipoPago::find($nombreTipoPago)?->id; // Devolver el ID si existe en la tabla
+            return TipoDocumento::find($nombreTipoPago)?->id; // Devolver el ID si existe en la tabla
         }
 
         // 🔹 Normalizar el nombre: Convertir a mayúsculas, eliminar espacios extra y caracteres especiales
@@ -170,9 +189,9 @@ class ProveedoresImport implements ToModel, WithHeadingRow
         }
 
         // 🔹 Buscar si el tipo de pago ya existe en la base de datos
-        $tipoPago = TipoPago::where('nombre', $nombreTipoPago)->first();
+        $tipoPago = TipoDocumento::where('nombre', $nombreTipoPago)->first();
 
-        return $tipoPago ? $tipoPago->id : TipoPago::create(['nombre' => $nombreTipoPago])->id;
+        return $tipoPago ? $tipoPago->id : TipoDocumento::create(['nombre' => $nombreTipoPago])->id;
     }
 
 

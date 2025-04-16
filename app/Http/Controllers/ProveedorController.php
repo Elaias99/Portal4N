@@ -6,7 +6,7 @@ use App\Exports\ProveedorExport;
 use Illuminate\Http\Request;
 use App\Models\Proveedor;
 use App\Models\TipoCuenta;
-use App\Models\TipoPago;
+use App\Models\TipoDocumento;
 use App\Models\Banco;
 use App\Models\Comuna;
 use Maatwebsite\Excel\Facades\Excel;
@@ -62,7 +62,7 @@ class ProveedorController extends Controller
 
         $bancos = Banco::all();
         $tiposCuentas = TipoCuenta::all();
-        $tiposPagos = TipoPago::all(); // 🔹 Obtener todos los tipos de pago
+        $tiposPagos = TipoDocumento::all(); // 🔹 Obtener todos los tipos de pago
         $comunas = Comuna::all();
 
         return view('proveedores.create', compact('bancos', 'tiposCuentas', 'tiposPagos','comunas'));
@@ -88,7 +88,7 @@ class ProveedorController extends Controller
             'tipo_cuenta_id' => 'required|exists:tipo_cuentas,id',//obligaotrio
 
             'nro_cuenta' => 'required|string|max:20',//obligaotrio
-            'tipo_pago_id' => 'required|exists:tipo_pagos,id',//obligaotrio
+            'tipo_pago_id' => 'required|exists:tipo_documentos,id',
     
             // Campos opcionales
             'direccion_facturacion' => 'required|string|max:255',//obligaotrio
@@ -141,7 +141,7 @@ class ProveedorController extends Controller
         $proveedor = Proveedor::findOrFail($id);
         $bancos = Banco::all();
         $tiposCuentas = TipoCuenta::all();
-        $tiposPagos = TipoPago::all(); // 🔹 Obtener todos los tipos de pago
+        $tiposPagos = TipoDocumento::all(); // 🔹 Obtener todos los tipos de pago
         $comunas = Comuna::all();
 
         return view('proveedores.edit', compact('proveedor', 'bancos', 'tiposCuentas', 'tiposPagos', 'comunas'));
@@ -168,7 +168,7 @@ class ProveedorController extends Controller
             'tipo_cuenta_id' => 'required|exists:tipo_cuentas,id',//obligaotrio
 
             'nro_cuenta' => 'required|string|max:20',//obligaotrio
-            'tipo_pago_id' => 'required|exists:tipo_pagos,id',//obligaotrio
+            'tipo_pago_id' => 'required|exists:tipo_documentos,id',
     
             // Campos opcionales
             'direccion_facturacion' => 'required|string|max:255',//obligaotrio

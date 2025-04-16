@@ -22,7 +22,7 @@ class PlantillaProveedoresExport implements FromCollection, WithHeadings
             'banco',
             'tipo_cuenta',
             'nro_cuenta',
-            'tipo_pago',
+            'tipo_de_documento',
             'telefono_empresa',
             'nombre_representantelegal',
             'rut_representantelegal',

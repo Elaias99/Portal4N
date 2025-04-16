@@ -7,7 +7,11 @@ use App\Models\Proveedor;
 use App\Models\Empresa;
 use App\Models\CentroCosto;
 use App\Models\FormaPago;
-use App\Models\TipoPago;
+
+use App\Models\TipoDocumento;
+
+
+
 use App\Models\PlazoPago;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
@@ -38,12 +42,23 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
         $empresa_id       = $buscar(Empresa::class, 'nombre', $row['empresa']);
         $proveedor_id     = $buscar(Proveedor::class, 'razon_social', $row['proveedor']);
         $centro_costo_id  = $buscar(CentroCosto::class, 'nombre', $row['centro_costo']);
-        $tipo_pago_id     = $buscar(TipoPago::class, 'nombre', $row['tipo_pago']);
+        
+        $tipo_documento_id = $buscar(TipoDocumento::class, 'nombre', $row['tipo_de_documento']);
+
+
         $plazo_pago_id    = $buscar(PlazoPago::class, 'nombre', $row['plazo_pago']);
         $forma_pago_id    = $buscar(FormaPago::class, 'nombre', $row['forma_pago']);
 
-        // Validación
-        if (!$empresa_id || !$proveedor_id || !$centro_costo_id || !$tipo_pago_id || !$plazo_pago_id || !$forma_pago_id) {
+        Log::info('Valores obtenidos para validación:', [
+            'empresa_id' => $empresa_id,
+            'proveedor_id' => $proveedor_id,
+            'centro_costo_id' => $centro_costo_id,
+            'tipo_documento_id' => $tipo_documento_id,
+            'plazo_pago_id' => $plazo_pago_id,
+            'forma_pago_id' => $forma_pago_id,
+        ]);
+        
+        if (!$empresa_id || !$proveedor_id || !$centro_costo_id || !$tipo_documento_id || !$plazo_pago_id || !$forma_pago_id) {
             $this->errores[] = "Fila omitida — proveedor: {$row['proveedor']}, documento: {$row['numero_documento']}";
             $this->omitidas++;
             return null;
@@ -63,7 +78,7 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
             'empresa_id'        => $empresa_id,
             'proveedor_id'      => $proveedor_id,
             'centro_costo_id'   => $centro_costo_id,
-            'tipo_pago_id'      => $tipo_pago_id,
+            'tipo_pago_id' => $tipo_documento_id,
             'plazo_pago_id'     => $plazo_pago_id,
             'forma_pago_id'     => $forma_pago_id,
             'glosa'             => $row['glosa'],

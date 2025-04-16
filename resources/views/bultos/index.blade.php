@@ -8,6 +8,23 @@
     <div class="container">
         <h2>Listado de Bultos Importados</h2>
 
+        @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+                <i class="fa-solid fa-circle-check me-2"></i>
+                {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+            </div>
+        @endif
+
+
         <!-- Sección de Importación -->
         <!-- Contenedor opcional para alinear a la derecha -->
         <div class="d-flex justify-content-end mb-4">
@@ -41,18 +58,20 @@
         </div>
 
         <!-- Sección de Búsqueda -->
-        <div class="d-flex justify-content-center align-items-center my-4">
-            <div class="text-center">
-                <h3>Buscar Bulto</h3>
-                <form action="{{ route('bultos.index') }}" method="GET">
-                    <div class="form-group">
-                        <input type="text" name="codigo_bulto" id="codigo_bulto" class="form-control text-center" 
-                            placeholder="Ingrese el código a buscar" style="width: 400px; margin: auto;">
+        <div class="card shadow-sm p-4 mx-auto mb-4" style="max-width: 500px;">
+            <h3 class="text-center mb-3">🔍 Buscar Bulto</h3>
+            <form action="{{ route('bultos.index') }}" method="GET">
+                <div class="input-group">
+                    <input type="text" name="codigo_bulto" id="codigo_bulto" class="form-control" placeholder="Ingrese el código a buscar" required>
+                    <div class="input-group-append">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-magnifying-glass"></i> Buscar
+                        </button>
                     </div>
-                    <button type="submit" class="btn btn-primary">Buscar</button>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
+        
 
 
         

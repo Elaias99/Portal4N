@@ -438,20 +438,18 @@ class TrabajadorController extends Controller
     {
         if ($request->hasFile('Foto')) {
             if ($trabajador && $trabajador->Foto) {
-                // Elimina la foto anterior manualmente
-                $oldPath = public_path('storage/' . $trabajador->Foto);
+                $oldPath = storage_path('app/public/' . $trabajador->Foto);
                 if (file_exists($oldPath)) {
                     unlink($oldPath);
                 }
             }
-
-            // Guarda la nueva foto directamente en public_html/storage/uploads
-            $filename = $request->file('Foto')->hashName();
-            $request->file('Foto')->move(public_path('storage/uploads'), $filename);
-
-            return 'uploads/' . $filename;
+    
+            // Guarda el archivo en storage/app/public/uploads y genera un nombre único
+            $path = $request->file('Foto')->store('uploads', 'public');
+    
+            return $path; // Devuelve la ruta relativa como 'uploads/archivo.png'
         }
-
+    
         return null;
     }
 
