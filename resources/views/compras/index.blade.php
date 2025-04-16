@@ -8,7 +8,13 @@
         <a href="{{ route('compras.plantilla') }}" class="btn btn-outline-primary btn-sm">
             <i class="fa fa-download me-1"></i> Descargar Plantilla Excel
         </a>
+
+
+
     </div>
+
+
+    
 
     <!-- Botón Agregar -->
     @if (session('import_result'))
@@ -30,6 +36,20 @@
         @endif
     </div>
     @endif
+
+    {{-- ✅ ERRORES DE VALIDACIÓN --}}
+    @if ($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm mt-2" role="alert">
+        <strong>❌ Se encontraron errores:</strong>
+        <ul class="mt-2 mb-0">
+            @foreach ($errors->all() as $error)
+                <li>• {{ $error }}</li>
+            @endforeach
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+    @endif
+
 
 
 

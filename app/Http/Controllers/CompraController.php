@@ -143,6 +143,17 @@ class CompraController extends Controller
             'status' => 'required|in:Pendiente,Pagado,Abonado,No Pagar', // ✅ Agregado
         ]);
 
+        // 🔐 Validación de duplicado
+        $existe = Compra::where('tipo_pago_id', $validatedData['tipo_pago_id'])
+        ->where('numero_documento', $validatedData['numero_documento'])
+        ->exists();
+
+        if ($existe) {
+        return back()->withErrors([
+            'numero_documento' => 'Ya existe una compra con ese número y tipo de documento.',
+        ])->withInput();
+        }
+
         // Agregar el ID del usuario autenticado
         $user = Auth::user();
         $validatedData['user_id'] = $user->id; // Usar el ID del usuario autenticado
@@ -159,24 +170,9 @@ class CompraController extends Controller
             $nombreDoc = $archivoDoc->getClientOriginalName(); // Obtener el nombre original del archivo
             $validatedData['archivo_documento'] = $archivoDoc->storeAs('documentos', $nombreDoc); // Guardar con el nombre original
         }
-        
-
-        // --- Bloque de integración para "Contado" ---
-        // if ($validatedData['tipo_pago'] === 'Contado' && $request->has('opcion_contado')) {
-        //     // Si el usuario eligió la opción "viernes" se calcula el siguiente viernes a partir de la fecha del documento.
-        //     // Si se eligió "hoy", se asigna la fecha del documento.
-        //     $fechaDocumento = $validatedData['fecha_documento'] ?? date('Y-m-d');
-            
-        //     if ($request->opcion_contado === 'viernes') {
-        //         $validatedData['fecha_vencimiento'] = calcularSiguienteViernes($fechaDocumento);
-        //     } elseif ($request->opcion_contado === 'hoy') {
-        //         $validatedData['fecha_vencimiento'] = $fechaDocumento;
-        //     }
-        // }
 
         // Crear una nueva compra
         Compra::create($validatedData);
-
         // Redirigir con un mensaje de éxito
         return redirect()->route('compras.index')->with('success', 'Compra creada con éxito.');
     }
