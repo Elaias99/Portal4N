@@ -102,7 +102,9 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
         // 🔍 Validar duplicados
         $existe = Compra::where('tipo_pago_id', $tipo_documento_id)
             ->where('numero_documento', $row['numero_documento'])
+            ->where('proveedor_id', $proveedor_id)
             ->exists();
+
 
         if ($existe) {
             $tipoNombre      = \App\Models\TipoDocumento::find($tipo_documento_id)?->nombre ?? $row['tipo_de_documento'];
