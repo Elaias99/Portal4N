@@ -45,6 +45,8 @@ class Compra extends Model
   
         'user_id',
         'status',
+
+        'importante',
     ];
 
     // Relación con el modelo Proveedor

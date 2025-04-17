@@ -171,6 +171,9 @@ Route::get('/subir-proveedores', function () {
 Route::get('compras/{id}/archivo-oc', [CompraController::class, 'descargarArchivoOC'])->name('compras.descargarArchivoOC');
 Route::get('compras/{id}/archivo-documento', [CompraController::class, 'descargarArchivoDocumento'])->name('compras.descargarArchivoDocumento');
 
+
+
+
 //Ruta para las facturas
 Route::resource('facturas', 'App\Http\Controllers\FacturaController')->middleware('auth')->except(['show']);
 Route::get('/facturas/detalle/{id}', [FacturaController::class, 'showFacturaDetail'])->name('facturas.detail');
@@ -185,8 +188,10 @@ Route::get('/historial-vacacion/{id}/descargar', [HistorialVacacionController::c
     ->name('historial-vacacion.descargar');
     
 // Pagos
+Route::post('/pagos/{id}/importante', [PagoController::class, 'toggleImportante'])->name('pagos.toggleImportante');
 Route::resource('pagos','App\Http\Controllers\PagoController')->middleware('auth');
 Route::post('/pagos/exportar', [PagoController::class, 'exportarSeleccionados'])->name('pagos.exportar');
+
 
 
 // 8. Rutas para exportar PDF

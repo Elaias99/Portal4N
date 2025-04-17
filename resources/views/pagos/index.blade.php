@@ -1,6 +1,13 @@
 @extends('layouts.app')
 
 @section('content')
+
+@if(!empty($mensaje))
+    <div class="alert alert-success shadow-sm">
+        <strong>✅ {{ $mensaje }}</strong>
+    </div>
+@endif
+
 <div class="container py-4">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
         <h2 class="fw-bold m-0">Gestión de Pagos</h2>
@@ -98,7 +105,27 @@
             <tbody>
                 @foreach($compras as $compra)
                     <tr>
-                        <td>{{ $compra->proveedor->razon_social ?? '—' }}</td>
+                        <td class="d-flex align-items-center gap-2">
+
+
+                            <form action="{{ route('pagos.toggleImportante', $compra->id) }}" method="POST" style="display:inline;">
+                                @csrf
+                                @method('POST')
+                                <button 
+                                    type="submit" 
+                                    class="btn btn-sm {{ $compra->importante ? 'btn-warning' : 'btn-outline-warning' }}"
+                                    title="Marcar como importante"
+                                >
+                                    <i class="fa-solid fa-star"></i>
+                                </button>
+                            </form>
+                            
+
+
+
+                            <span>{{ $compra->proveedor->razon_social }}</span>
+                        </td>
+                        
                         <td>{{ $compra->empresa->Nombre ?? '—' }}</td>
                         <td>{{ \Carbon\Carbon::parse($compra->fecha_vencimiento)->format('d-m-Y') }}</td>
                         <td class="text-end monto">${{ number_format($compra->pago_total, 0, ',', '.') }}</td>
@@ -179,7 +206,58 @@
             }
 
             exportInput.value = JSON.stringify(seleccionados);
+
+            // Enviamos el formulario
             exportForm.submit();
+
+            // Después de 2 segundos, redirige a la misma vista para refrescar y limpiar
+            setTimeout(() => {
+                window.location.href = "{{ route('pagos.index', ['exportado' => 'ok']) }}";
+            }, 2000);
         });
+
     });
 </script>
+
+<script>
+    // Elimina el parámetro 'exportado' de la URL después de cargar la página
+    if (window.location.search.includes('exportado=ok')) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('exportado');
+        window.history.replaceState({}, document.title, url.toString());
+    }
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.toggle-importante').forEach(button => {
+            button.addEventListener('click', function () {
+                const id = this.dataset.id;
+                const button = this;
+    
+                fetch(`/pagos/${id}/importante`, {
+                    method: 'PATCH',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        button.classList.toggle('btn-warning', data.importante);
+                        button.classList.toggle('btn-outline-warning', !data.importante);
+                    }
+                })
+                .catch(error => {
+                    alert('Error al marcar como importante');
+                    console.error(error);
+                });
+            });
+        });
+    });
+    </script>
+    
+

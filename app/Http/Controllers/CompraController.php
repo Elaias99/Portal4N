@@ -388,6 +388,20 @@ class CompraController extends Controller
     }
 
 
+    public function toggleImportante($id)
+    {
+        $compra = Compra::findOrFail($id);
+        $compra->importante = !$compra->importante;
+        $compra->save();
+
+        return response()->json([
+            'success' => true,
+            'importante' => $compra->importante
+        ]);
+    }
+
+
+
 
 
 

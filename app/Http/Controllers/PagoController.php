@@ -36,15 +36,20 @@ class PagoController extends Controller
         }
 
         $compras = $query->get();
-
-        // Recalcula el total general con los resultados filtrados
         $totalGeneral = $this->calcularTotalGeneral($compras);
 
         $proveedores = Proveedor::all();
         $empresas = Empresa::all();
 
-        return view('pagos.index', compact('compras', 'totalGeneral', 'proveedores', 'empresas'));
+        // ✅ Detectar si se acaba de exportar
+        $mensaje = null;
+        if ($request->query('exportado') === 'ok') {
+            $mensaje = 'Pagos exportados correctamente y marcados como Pagado.';
+        }
+
+        return view('pagos.index', compact('compras', 'totalGeneral', 'proveedores', 'empresas', 'mensaje'));
     }
+
 
 
 
@@ -56,14 +61,30 @@ class PagoController extends Controller
     public function exportarSeleccionados(Request $request)
     {
         $rawIds = $request->input('ids');
-
         $ids = is_array($rawIds) ? $rawIds : json_decode($rawIds, true);
 
         if (!is_array($ids) || empty($ids)) {
             return back()->with('error', 'No se seleccionaron compras para exportar.');
         }
 
+        // ✅ Paso nuevo: actualizar el estado a "Pagado"
+        Compra::whereIn('id', $ids)->update(['status' => 'Pagado']);
+
+        // Luego, proceder con la exportación
         return Excel::download(new PagosSeleccionadosExport($ids), 'pagos_seleccionados.xlsx');
     }
+
+
+    public function toggleImportante($id)
+    {
+        $compra = Compra::findOrFail($id);
+        $compra->importante = !$compra->importante;
+        $compra->save();
+
+        return redirect()->back()->with('success', 'Compra marcada como importante');
+    }
+
+
+
 
 }
