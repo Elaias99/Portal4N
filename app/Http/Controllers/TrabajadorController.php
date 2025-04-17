@@ -381,8 +381,24 @@ class TrabajadorController extends Controller
 
     //Método que genera automáticamente el correo corporativo limpiando el nombre y apellido
     private function generateCorporateEmail($nombre, $apellidoPaterno, $apellidoMaterno) {
-        return $this->cleanString($nombre) . '.' . $this->cleanString($apellidoPaterno) .'.'.$this->cleanString($apellidoMaterno). '@4nlogistica.cl';
+        $nombreInicial = substr($this->cleanString($nombre), 0, 1); // Solo la primera letra del nombre
+        $apellidoP = $this->cleanString($apellidoPaterno);
+        $apellidoMInicial = substr($this->cleanString($apellidoMaterno), 0, 1); // Primera letra del apellido materno
+    
+        $base = $nombreInicial . '.' . $apellidoP . '.' . $apellidoMInicial;
+        $dominio = '@4nlogistica.cl';
+        $email = $base . $dominio;
+        $contador = 1;
+    
+        // Si el correo ya existe, agrega un número incremental
+        while (User::where('email', $email)->exists()) {
+            $email = $base . $contador . $dominio;
+            $contador++;
+        }
+    
+        return $email;
     }
+    
 
     //Método para guardar hijos:
     private function saveHijos($request, $trabajadorId) {
