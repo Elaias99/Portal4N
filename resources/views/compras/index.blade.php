@@ -4,18 +4,6 @@
 <div class="container">
     <h1 class="text-center" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Lista de Compras</h1>
 
-    <div class="mt-3">
-        <a href="{{ route('compras.plantilla') }}" class="btn btn-outline-primary btn-sm">
-            <i class="fa fa-download me-1"></i> Descargar Plantilla Excel
-        </a>
-
-
-
-    </div>
-
-
-    
-
     <!-- Botón Agregar -->
     @if (session('import_result'))
     <div class="alert alert-info shadow-sm">
@@ -24,26 +12,29 @@
             <li>✅ Compras importadas: <strong>{{ session('import_result.importadas') }}</strong></li>
             <li>⚠️ Compras omitidas: <strong>{{ session('import_result.omitidas') }}</strong></li>
         </ul>
-        @if (count(session('import_result.errores')))
-            <details>
-                <summary>Ver errores ({{ count(session('import_result.errores')) }})</summary>
-                <ul class="mt-2">
-                    @foreach (session('import_result.errores') as $error)
-                        <li>❌ {{ $error }}</li>
-                    @endforeach
-                </ul>
-            </details>
-        @endif
+
     </div>
     @endif
 
     {{-- ✅ ERRORES DE VALIDACIÓN --}}
     @if ($errors->any())
     <div class="alert alert-danger alert-dismissible fade show shadow-sm mt-2" role="alert">
-        <strong>❌ Se encontraron errores:</strong>
+        <strong>❌ Se encontraron errores en el formulario:</strong>
         <ul class="mt-2 mb-0">
             @foreach ($errors->all() as $error)
-                <li>• {{ $error }}</li>
+                <li>{{ $error }}</li> {{-- Este se queda escapado --}}
+            @endforeach
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+    @endif
+
+    @if (session('import_result.errores'))
+    <div class="alert alert-warning alert-dismissible fade show shadow-sm mt-2" role="alert">
+        <strong>⚠️ Se encontraron errores al importar el archivo:</strong>
+        <ul class="mt-2 mb-0">
+            @foreach (session('import_result.errores') as $error)
+                <li>{!! $error !!}</li> {{-- Aquí sí usamos HTML sin escapar --}}
             @endforeach
         </ul>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
@@ -51,7 +42,11 @@
     @endif
 
 
-
+    <div class="mt-3">
+        <a href="{{ route('compras.plantilla') }}" class="btn btn-outline-primary btn-sm">
+            <i class="fa fa-download me-1"></i> Descargar Plantilla Excel
+        </a>
+    </div>
 
     {{-- ✅ ACCIONES PRINCIPALES --}}
     <div class="d-flex justify-content-between align-items-center mb-3">

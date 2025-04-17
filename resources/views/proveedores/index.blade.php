@@ -133,7 +133,7 @@
                 <table class="table table-hover align-middle">
                     <thead class="bg-secondary text-white">
                         <tr>
-                            <th>#</th>
+                            <th>ID</th>
                             <th>Razón Social</th>
                             <th>RUT Razón Social</th>
                             <th>Teléfono Empresa</th>
@@ -147,7 +147,7 @@
                     <tbody>
                         @forelse ($proveedores as $proveedor)
                             <tr class="accordion-toggle" data-toggle="collapse" data-target="#details-{{ $proveedor->id }}">
-                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $proveedor->id }}</td>
                                 <td>{{ $proveedor->razon_social }}</td>
                                 <td>{{ $proveedor->rut }}</td>
                                 <td>{{ $proveedor->telefono_empresa }}</td>

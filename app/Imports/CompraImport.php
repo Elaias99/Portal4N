@@ -23,6 +23,7 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
     public $importadas = 0;
     public $omitidas = 0;
     public $errores = [];
+    
 
     public function model(array $row)
     {
@@ -59,11 +60,44 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
             $proveedor_id = $buscar(Proveedor::class, 'razon_social', $row['proveedor']);
         }
 
-        if (!$empresa_id || !$proveedor_id || !$centro_costo_id || !$tipo_documento_id || !$plazo_pago_id || !$forma_pago_id) {
-            $this->errores[] = "Fila omitida — proveedor: {$row['proveedor']}, documento: {$row['numero_documento']}";
+        $erroresCampos = [];
+
+        if (!$empresa_id) {
+            $erroresCampos[] = 'La empresa ingresada <strong>"' . e($row['empresa']) . '"</strong> no existe.';
+        }
+        if (!$proveedor_id) {
+            $erroresCampos[] = 'El proveedor ingresado <strong>"' . e($row['proveedor']) . '"</strong> no existe.';
+        }
+        if (!$centro_costo_id) {
+            $erroresCampos[] = 'El centro de costo <strong>"' . e($row['centro_costo']) . '"</strong> no está registrado.';
+        }
+        if (!$tipo_documento_id) {
+            $erroresCampos[] = 'El tipo de documento <strong>"' . e($row['tipo_de_documento']) . '"</strong> no coincide con los existentes.';
+        }
+        if (!$plazo_pago_id) {
+            $erroresCampos[] = 'El plazo de pago <strong>"' . e($row['plazo_pago']) . '"</strong> no es válido.';
+        }
+        if (!$forma_pago_id) {
+            $erroresCampos[] = 'La forma de pago <strong>"' . e($row['forma_pago']) . '"</strong> no está registrada.';
+        }
+
+        if (count($erroresCampos)) {
+            $docNumero = $row['numero_documento'] ?? 'Sin número';
+            $mensaje = "<strong>❌ No se pudo importar la fila con el documento \"{$docNumero}\".</strong><br>";
+            $mensaje .= "Motivo:<ul>";
+            foreach ($erroresCampos as $error) {
+                $mensaje .= "<li>{$error}</li>";
+            }
+            $mensaje .= "</ul>";
+            $mensaje .= '<em>💡 Sugerencia: Revisa si hay errores de escritura o si falta registrar estos valores en el sistema.</em>';
+
+            $this->errores[] = $mensaje;
             $this->omitidas++;
             return null;
         }
+
+
+
 
         // 🔍 Validar duplicados
         $existe = Compra::where('tipo_pago_id', $tipo_documento_id)
