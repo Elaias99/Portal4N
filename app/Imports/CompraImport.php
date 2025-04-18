@@ -148,8 +148,12 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
             'fecha_documento'   => $fecha_documento,
             'numero_documento'  => $row['numero_documento'],
             'oc'                => $row['oc'],
-            'archivo_oc'        => null,
-            'archivo_documento' => null,
+
+            'archivo_oc'        => $this->esUrlValida($row['archivo_oc']) ? $row['archivo_oc'] : null,
+            'archivo_documento' => $this->esUrlValida($row['archivo_documento']) ? $row['archivo_documento'] : null,
+
+
+
             'user_id'           => $user_id,
             'status'            => $row['status'] ?? 'Pendiente',
         ]);
@@ -176,4 +180,10 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
             ->trim()
             ->__toString();
     }
+
+    private function esUrlValida($valor)
+    {
+        return filter_var($valor, FILTER_VALIDATE_URL);
+    }
+
 }

@@ -29,7 +29,9 @@ class PlantillaComprasExport implements FromCollection, WithHeadings
                 'Número del documento (Ej: F123456)',
                 'Orden de compra si aplica (Ej: OC-2025-01)',
                 'Estado inicial: Pendiente, Pagado, Abonado, No Pagar',
-                'Nombre del usuario que figura en el sistema (Ej: B.Rojas)', 
+                'Nombre del usuario que figura en el sistema (Ej: B.Rojas)',
+                'https://ejemplo.com/orden.pdf o deja vacío',
+                'https://ejemplo.com/documento.pdf o deja vacío',
             ]
         ]);
     }
@@ -55,6 +57,8 @@ class PlantillaComprasExport implements FromCollection, WithHeadings
             'oc',
             'status',
             'usuario',
+            'archivo_oc',
+            'archivo_documento',
         ];
     }
 }

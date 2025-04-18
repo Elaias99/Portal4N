@@ -1,5 +1,5 @@
 @extends('layouts.app')
-
+@php use Illuminate\Support\Str; @endphp
 @section('content')
 <div class="container">
     <h1 class="text-center" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Lista de Compras</h1>
@@ -214,16 +214,28 @@
 
 
 
+                        
+
                         <td>
                             @if($compra->archivo_oc)
-                                <a href="{{ route('compras.descargarArchivoOC', $compra->id) }}" target="_blank">Ver O.C</a>
+                                @if(Str::startsWith($compra->archivo_oc, ['http://', 'https://']))
+                                    <a href="{{ $compra->archivo_oc }}" target="_blank">Ver O.C</a>
+                                @else
+                                    <a href="{{ route('compras.descargarArchivoOC', $compra->id) }}" target="_blank">Ver O.C</a>
+                                @endif
                             @endif
                         </td>
+
                         <td>
                             @if($compra->archivo_documento)
-                                <a href="{{ route('compras.descargarArchivoDocumento', $compra->id) }}" target="_blank">Ver Documento</a>
+                                @if(Str::startsWith($compra->archivo_documento, ['http://', 'https://']))
+                                    <a href="{{ $compra->archivo_documento }}" target="_blank">Ver Documento</a>
+                                @else
+                                    <a href="{{ route('compras.descargarArchivoDocumento', $compra->id) }}" target="_blank">Ver Documento</a>
+                                @endif
                             @endif
                         </td>
+
 
 
                         <td>
