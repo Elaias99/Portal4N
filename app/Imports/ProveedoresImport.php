@@ -49,13 +49,15 @@ class ProveedoresImport implements ToModel, WithHeadingRow
         ]);
 
         // Validación
-        if (!$row['razon_social'] || !$row['rut'] || !$banco_id || !$tipo_cuenta_id || !$tipo_pago_id) {
-            $this->errores[] = "Fila omitida — proveedor: {$row['razon_social']}, rut: {$row['rut']}";
+        if (!$row['razon_social'] || !$row['rut']) {
+            $this->errores[] = "Fila omitida — proveedor: {$row['razon_social']}, rut: {$row['rut']} (falta razón social o rut)";
             $this->omitidas++;
             return null;
         }
-
+        
+        // Si banco o tipo_cuenta son null, aún se guarda el proveedor
         $this->importadas++;
+        
 
         return new Proveedor([
             'razon_social' => $row['razon_social'],
