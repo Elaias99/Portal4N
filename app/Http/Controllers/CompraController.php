@@ -50,20 +50,12 @@ class CompraController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('año', 'like', "%$search%")
-                    ->orWhere('mes', 'like', "%$search%")
-                    ->orWhere('tipo_documento', 'like', "%$search%")
-                    ->orWhere('centro_costo', 'like', "%$search%")
-                    ->orWhereHas('empresa', function ($q) use ($search) {
-                        $q->where('Nombre', 'like', "%$search%");
-                    })
-                    ->orWhereHas('proveedor', function ($q) use ($search) {
-                        $q->where('razon_social', 'like', "%$search%")
-                        ->orWhere('rut', 'like', "%$search%");
-                    });
+            $query->whereHas('proveedor', function ($q) use ($search) {
+                $q->where('razon_social', 'like', "%$search%")
+                  ->orWhere('rut', 'like', "%$search%");
             });
         }
+        
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);

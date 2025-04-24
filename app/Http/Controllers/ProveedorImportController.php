@@ -23,6 +23,7 @@ class ProveedorImportController extends Controller
                 'importadas' => $importador->importadas,
                 'omitidas' => $importador->omitidas,
                 'errores' => $importador->errores,
+                'exitosos' => $importador->exitosos,
             ]);
 
             return back();

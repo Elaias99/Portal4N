@@ -16,6 +16,23 @@
     </div>
     @endif
 
+
+    <form method="GET" action="{{ route('compras.index') }}" class="mb-4">
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="🔍 Buscar por año, mes, proveedor, empresa..." style="flex: 1; min-width: 250px;">
+    
+            <select name="status" class="form-control" style="min-width: 150px;">
+                <option value="">Todos los estados</option>
+                <option value="Pendiente" {{ request('status') == 'Pendiente' ? 'selected' : '' }}>Pendiente</option>
+                <option value="Pagado" {{ request('status') == 'Pagado' ? 'selected' : '' }}>Pagado</option>
+            </select>
+    
+            <button type="submit" class="btn btn-primary">Buscar</button>
+            <a href="{{ route('compras.index') }}" class="btn btn-secondary">Limpiar</a>
+        </div>
+    </form>
+    
+
     {{-- ✅ ERRORES DE VALIDACIÓN --}}
     @if ($errors->any())
     <div class="alert alert-danger alert-dismissible fade show shadow-sm mt-2" role="alert">
@@ -40,6 +57,21 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
     </div>
     @endif
+
+    @if(session('import_result'))
+        @if(session('import_result')['importadas'])
+            <div class="alert alert-success">
+                ✅ Compras importadas correctamente: {{ session('import_result')['importadas'] }}
+
+                <ul style="margin-top:10px;">
+                    @foreach(session('import_result')['detalles'] as $detalle)
+                        <li>{{ $detalle }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+    @endif
+
 
 
     <div class="mt-3">

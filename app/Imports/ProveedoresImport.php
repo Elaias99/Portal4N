@@ -19,52 +19,84 @@ class ProveedoresImport implements ToModel, WithHeadingRow
     public $importadas = 0;
     public $omitidas = 0;
     public $errores = [];
+    public $exitosos = [];
+
 
     public function model(array $row)
     {
+        $rut = $this->normalizarRut($row['rut'] ?? '');
+        $razon_social = $this->normalizarRazonSocial($row['razon_social'] ?? '');
+
         $buscar = function ($model, $col, $valor) {
-            Log::info("Buscando en {$model} por {$col} = '{$valor}'");
-        
             if (is_numeric($valor)) {
                 return $model::find($valor)?->id;
             }
-        
             return $model::whereRaw("LOWER($col) = ?", [Str::lower(trim($valor))])->first()?->id;
         };
 
-        $banco_id = $this->getBancoId($row['banco'] ?? null);
+        // Validación obligatoria de razón social y RUT
+        if (!$razon_social || !$rut) {
+            $this->errores[] = "Fila omitida — falta información obligatoria: se necesita RUT y razón social. Datos detectados: Razón Social: '" . ($row['razon_social'] ?? 'N/A') . "', RUT: '" . ($row['rut'] ?? 'N/A') . "'";
 
-        $tipo_cuenta_id  = $buscar(TipoCuenta::class, 'nombre', $row['tipo_cuenta'] ?? null);
-        $tipo_pago_id = $buscar(TipoDocumento::class, 'nombre', $row['tipo_de_documento'] ?? null);
-
-
-        $comuna_id       = $buscar(\App\Models\Comuna::class, 'nombre', $row['comuna_empresa'] ?? null);
-
-        Log::info('Valores obtenidos para validación:', [
-            'razon_social' => $row['razon_social'],
-            'rut' => $row['rut'],
-            'banco_id' => $banco_id,
-            'tipo_cuenta_id' => $tipo_cuenta_id,
-            'tipo_pago_id' => $tipo_pago_id,
-        ]);
-
-        // Validación
-        if (!$row['razon_social'] || !$row['rut']) {
-            $this->errores[] = "Fila omitida — proveedor: {$row['razon_social']}, rut: {$row['rut']} (falta razón social o rut)";
             $this->omitidas++;
             return null;
         }
-        
-        // Si banco o tipo_cuenta son null, aún se guarda el proveedor
+
+        if (Proveedor::where('rut', $rut)
+            ->orWhereRaw('UPPER(TRIM(razon_social)) = ?', [$razon_social])
+            ->exists())
+        {
+
+            $this->errores[] = "Fila omitida — ya existe un proveedor con el mismo RUT o razón social: '{$row['razon_social']}' (RUT: {$row['rut']})";
+            $this->omitidas++;
+            return null;
+        }
+
+
+        // Normalización y validación del banco
+        $banco_id = $this->getBancoId($row['banco'] ?? null);
+
+        // Validación de tipo de cuenta
+        $tipoCuentaRaw = strtoupper(trim($row['tipo_cuenta'] ?? ''));
+        if (empty($tipoCuentaRaw) || in_array($tipoCuentaRaw, ['NO APLICA', ''])) {
+            $this->errores[] = "Fila omitida — tipo de cuenta inválido o vacía para proveedor '{$row['razon_social']}' (RUT: {$row['rut']})";
+            $this->omitidas++;
+            return null;
+        }
+        $tipo_cuenta_id = $this->getTipoCuentaId($row['tipo_cuenta']);
+
+        // Validación de tipo de documento
+        $tipo_pago_id = $this->getTipoPagoId($row['tipo_de_documento'] ?? null);
+        if (!$tipo_pago_id) {
+            $this->errores[] = "Fila omitida — tipo de documento inválido para '{$row['razon_social']}' (RUT: {$row['rut']})";
+            $this->omitidas++;
+            return null;
+        }
+
+        // Validación del número de cuenta
+        $nroCuenta = $row['nro_cuenta'] ?? '';
+        if (!is_numeric($nroCuenta) && strtoupper($nroCuenta) !== 'NO APLICA') {
+            $this->errores[] = "Fila omitida — número de cuenta inválido para '{$row['razon_social']}' (RUT: {$row['rut']})";
+            $this->omitidas++;
+            return null;
+        }
+
+        $comuna_id = $buscar(\App\Models\Comuna::class, 'nombre', $row['comuna_empresa'] ?? null);
+
         $this->importadas++;
-        
+
+        $this->exitosos[] = "{$razon_social} (RUT: {$rut})";
+
+
+
 
         return new Proveedor([
-            'razon_social' => $row['razon_social'],
-            'rut' => $row['rut'],
+            'razon_social' => $razon_social,
+
+            'rut' => $rut,
+
             'banco_id' => $banco_id,
             'tipo_cuenta_id' => $tipo_cuenta_id,
-
             'tipo_pago_id' => $tipo_pago_id,
             'nro_cuenta' => $row['nro_cuenta'] ?? null,
             'telefono_empresa' => $row['telefono_empresa'] ?? 'N/A',
@@ -88,6 +120,7 @@ class ProveedoresImport implements ToModel, WithHeadingRow
             'comuna_id' => $comuna_id,
         ]);
     }
+
 
 
 
@@ -216,6 +249,27 @@ class ProveedoresImport implements ToModel, WithHeadingRow
 
         return $comuna ? $comuna->id : null;
     }
+
+    private function normalizarRut($rut)
+    {
+        // Extrae el formato correcto: números + guion + dígito verificador
+        if (preg_match('/\b(\d{7,8}-[0-9kK])\b/', $rut, $match)) {
+            return strtoupper($match[1]);
+        }
+
+        // Como fallback, limpia caracteres raros y deja formato básico
+        return strtoupper(trim(preg_replace('/[^0-9kK-]/', '', $rut)));
+    }
+
+    private function normalizarRazonSocial($razon)
+    {
+        $razon = strtoupper(trim($razon));                  // mayúsculas y sin espacios extremos
+        $razon = preg_replace('/\s+/', ' ', $razon);        // unifica espacios múltiples
+        $razon = rtrim($razon, '.');                        // quita punto final si lo hay
+        return $razon;
+    }
+
+
 
 
 

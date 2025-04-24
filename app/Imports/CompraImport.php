@@ -23,6 +23,8 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
     public $importadas = 0;
     public $omitidas = 0;
     public $errores = [];
+    public $importadasDetalle = [];
+
     
 
     public function model(array $row)
@@ -45,20 +47,42 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
 
         $empresa_id        = $buscar(Empresa::class, 'Nombre', $row['empresa']);
         $centro_costo_id   = $buscar(CentroCosto::class, 'nombre', $row['centro_costo']);
+
+        $proveedor_id = null;
+        $proveedor_rut = null;
+
+
+        if (!empty($row['rut'])) {
+            $rut_normalizado = Str::lower(str_replace('-', '', trim($row['rut'])));
+            $proveedor = Proveedor::all()->first(function ($p) use ($rut_normalizado) {
+                return Str::lower(str_replace('-', '', trim($p->rut))) === $rut_normalizado;
+            });
+
+            $proveedor_id = $proveedor?->id;
+            $proveedor_rut = $proveedor?->rut;
+        }
+
+        if (!$proveedor_id) {
+            $proveedor = Proveedor::all()->first(function ($p) use ($row) {
+                return $this->normalizarNombre($p->razon_social) === $this->normalizarNombre($row['proveedor']);
+            });
+
+            $proveedor_id = $proveedor?->id;
+            $proveedor_rut = $proveedor?->rut;
+        }
+
+        // Buscar tipo_documento_id luego de tener proveedor_id
         $tipo_documento_id = $buscar(TipoDocumento::class, 'nombre', $row['tipo_de_documento']);
+
+        if (!$tipo_documento_id && $proveedor_id) {
+            $tipo_documento_id = Proveedor::find($proveedor_id)?->tipo_pago_id;
+        }
+
+        
         $plazo_pago_id     = $buscar(PlazoPago::class, 'nombre', $row['plazo_pago']);
         $forma_pago_id     = $buscar(FormaPago::class, 'nombre', $row['forma_pago']);
 
-        $proveedor_id = null;
-        if (!empty($row['rut'])) {
-            $rut_normalizado = Str::lower(str_replace('-', '', trim($row['rut'])));
-            $proveedor_id = Proveedor::all()->first(function ($p) use ($rut_normalizado) {
-                return Str::lower(str_replace('-', '', trim($p->rut))) === $rut_normalizado;
-            })?->id;
-        }
-        if (!$proveedor_id) {
-            $proveedor_id = $buscar(Proveedor::class, 'razon_social', $row['proveedor']);
-        }
+
 
         $erroresCampos = [];
 
@@ -83,13 +107,28 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
 
         if (count($erroresCampos)) {
             $docNumero = $row['numero_documento'] ?? 'Sin número';
-            $mensaje = "<strong>❌ No se pudo importar la fila con el documento \"{$docNumero}\".</strong><br>";
-            $mensaje .= "Motivo:<ul>";
+
+
+            $mensaje = <<<HTML
+            <div style="background-color:#fff5f5; border-left:4px solid #f44336; padding:15px; margin-bottom:15px; font-family:sans-serif;">
+                <p style="margin:0 0 8px;"><strong>❌ Error al importar la fila</strong> — <strong>Documento:</strong> {$docNumero}</p>
+                <ul style="margin:0 0 10px 20px; padding:0;">
+            HTML;
+
             foreach ($erroresCampos as $error) {
-                $mensaje .= "<li>{$error}</li>";
+                $mensaje .= "<li style=\"margin-bottom:5px;\">{$error}</li>";
             }
-            $mensaje .= "</ul>";
-            $mensaje .= '<em>💡 Sugerencia: Revisa si hay errores de escritura o si falta registrar estos valores en el sistema.</em>';
+
+            $mensaje .= <<<HTML
+                </ul>
+                <p style="color:#555; font-size:13px; margin:0;">
+                    💡 <em>Revisa si hay errores de escritura o si falta registrar estos valores en el sistema.</em>
+                </p>
+            </div>
+            HTML;
+
+
+
 
             $this->errores[] = $mensaje;
             $this->omitidas++;
@@ -132,6 +171,9 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
 
         $this->importadas++;
 
+        $this->importadasDetalle[] = "{$row['empresa']} — {$row['proveedor']} — Doc: {$row['tipo_de_documento']} N° {$row['numero_documento']}";
+
+
         return new Compra([
             'empresa_id'        => $empresa_id,
             'proveedor_id'      => $proveedor_id,
@@ -167,6 +209,7 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
                     'importadas' => $this->importadas,
                     'omitidas' => $this->omitidas,
                     'errores'   => $this->errores,
+                    'detalles'   => $this->importadasDetalle,
                 ]);
             },
         ];

@@ -21,6 +21,17 @@
                     </ul>
                 </details>
             @endif
+            @if (count(session('import_result.exitosos', [])))
+                <details class="mt-2">
+                    <summary>Ver proveedores importados ({{ count(session('import_result.exitosos')) }})</summary>
+                    <ul class="mt-2">
+                        @foreach (session('import_result.exitosos') as $exito)
+                            <li>✅ {{ $exito }}</li>
+                        @endforeach
+                    </ul>
+                </details>
+            @endif
+
         </div>
     @endif
 
