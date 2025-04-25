@@ -99,7 +99,15 @@ class UpdateTrabajadorRequest extends FormRequest
             'tipo_cuenta' => 'nullable|string|max:255',
             'Rut_Empresa' => 'nullable|string|max:255',
 
-            'id_jefe' => 'required|exists:jefes,id',
+            'id_jefe' => [
+                'required',
+                function ($attribute, $value, $fail) {
+                    if ($value !== 'otro' && !\App\Models\Jefe::where('id', $value)->exists()) {
+                        $fail('El jefe seleccionado no es válido.');
+                    }
+                }
+            ],
+
 
         ];
     }

@@ -177,6 +177,26 @@ class TrabajadorController extends Controller
             'password' => bcrypt('12345678'),
         ]);
 
+        // Manejar la opción "Otro" para Jefe
+        if ($request->input('id_jefe') === 'otro') {
+            $nuevoNombre = $request->input('nuevo_jefe_nombre');
+            $nuevaArea = $request->input('nuevo_jefe_area');
+
+            if ($nuevoNombre && $nuevaArea) {
+                $nuevoJefe = Jefe::create([
+                    'nombre' => $nuevoNombre,
+                    'area' => $nuevaArea
+                ]);
+                $validated['id_jefe'] = $nuevoJefe->id; // Reemplazar 'otro' por el ID real
+            } else {
+                return back()->withErrors([
+                    'nuevo_jefe_nombre' => 'Debe ingresar el nombre del nuevo jefe.',
+                    'nuevo_jefe_area' => 'Debe ingresar el área del nuevo jefe.'
+                ])->withInput();
+            }
+        }
+
+
         // 6. Crear el trabajador en la tabla `trabajadors` y vincularlo con el usuario
         $trabajador = Trabajador::create(array_merge(
             $validated,
@@ -265,6 +285,25 @@ class TrabajadorController extends Controller
             $validated['Foto'] = $this->uploadFoto($request, $trabajador);
         } else {
             unset($validated['Foto']); // Remover 'Foto' del array si no se sube una nueva
+        }
+
+        // Manejar la opción "Otro" para Jefe en la edición
+        if ($request->input('id_jefe') === 'otro') {
+            $nuevoNombre = $request->input('nuevo_jefe_nombre');
+            $nuevaArea = $request->input('nuevo_jefe_area');
+
+            if ($nuevoNombre && $nuevaArea) {
+                $nuevoJefe = Jefe::create([
+                    'nombre' => $nuevoNombre,
+                    'area' => $nuevaArea
+                ]);
+                $validated['id_jefe'] = $nuevoJefe->id;
+            } else {
+                return back()->withErrors([
+                    'nuevo_jefe_nombre' => 'Debe ingresar el nombre del nuevo jefe.',
+                    'nuevo_jefe_area' => 'Debe ingresar el área del nuevo jefe.'
+                ])->withInput();
+            }
         }
 
 

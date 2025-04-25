@@ -88,7 +88,15 @@ class StoreTrabajadorRequest extends FormRequest
             
              // Ahora obligatorio
 
-            'id_jefe' => 'required|exists:jefes,id',
+            'id_jefe' => [
+                'required',
+                function ($attribute, $value, $fail) {
+                    if ($value !== 'otro' && !\App\Models\Jefe::where('id', $value)->exists()) {
+                        $fail('El jefe seleccionado no es válido.');
+                    }
+                }
+            ],
+
         ];
     }
 

@@ -378,6 +378,8 @@
                                     <span class="text-danger">{{ $errors->first('AnexoContrato') }}</span>
                                 @endif
                             </div>
+
+
                             <div class="col-md-6 form-group">
                                 <label for="id_jefe">Jefe de Área {!! mostrarAsterisco('id_jefe', $camposObligatorios) !!}</label>
                                 <select name="id_jefe" id="id_jefe" class="form-control">
@@ -387,11 +389,35 @@
                                             {{ $jefe->nombre }} - {{ $jefe->area }}
                                         </option>
                                     @endforeach
+                                    <option value="otro" {{ old('id_jefe') == 'otro' ? 'selected' : '' }}>Otro (Agregar nuevo jefe)</option>
                                 </select>
                                 @if ($errors->has('id_jefe'))
                                     <span class="text-danger">{{ $errors->first('id_jefe') }}</span>
                                 @endif
                             </div>
+                            
+                            {{-- Campos adicionales para "otro jefe" --}}
+                            <div id="nuevo-jefe-campos" style="display: none;">
+                                <div class="col-md-6 form-group">
+                                    <label for="nuevo_jefe_nombre">Nombre del nuevo jefe</label>
+                                    <input type="text" name="nuevo_jefe_nombre" id="nuevo_jefe_nombre" class="form-control" value="{{ old('nuevo_jefe_nombre') }}">
+                                    @error('nuevo_jefe_nombre')
+                                        <span class="text-danger">{{ $message }}</span>
+                                    @enderror
+                                </div>
+                            
+                                <div class="col-md-6 form-group">
+                                    <label for="nuevo_jefe_area">Área del nuevo jefe</label>
+                                    <input type="text" name="nuevo_jefe_area" id="nuevo_jefe_area" class="form-control" value="{{ old('nuevo_jefe_area') }}">
+                                    @error('nuevo_jefe_area')
+                                        <span class="text-danger">{{ $message }}</span>
+                                    @enderror
+                                </div>
+                            </div>
+                            
+
+
+
                         </div>
                     </div>
                 </div>
@@ -569,3 +595,20 @@
         }
     }
 </script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const selectJefe = document.getElementById('id_jefe');
+        const camposNuevoJefe = document.getElementById('nuevo-jefe-campos');
+    
+        function toggleNuevoJefe() {
+            camposNuevoJefe.style.display = (selectJefe.value === 'otro') ? 'block' : 'none';
+        }
+    
+        // Al cargar la página por si se seleccionó 'otro' anteriormente
+        toggleNuevoJefe();
+    
+        // Detectar cambio en el select
+        selectJefe.addEventListener('change', toggleNuevoJefe);
+    });
+    </script>
+    
