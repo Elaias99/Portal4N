@@ -16,7 +16,7 @@
     @vite('resources/css/login.css')
 
 </head>
-<body>
+<body class="login-body">
     <div class="container">
         <div class="image-section">
             <img src="{{ asset('images/logo1.png') }}" alt="Logo de 4N Logística" class="logo">

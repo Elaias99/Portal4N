@@ -18,10 +18,17 @@
     <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-    <link rel="stylesheet" href="{{ asset('build/assets/app-DOpGuOCh.css') }}">
-    <link rel="stylesheet" href="{{ asset('build/assets/appcustom-0pNL7IKs.css') }}">
-    <link rel="stylesheet" href="{{ asset('build/assets/app-7v_sDFtm.css') }}">
-    <script src="{{ asset('build/assets/app-BkDPDVeP.js') }}" defer></script>
+    {{-- <link rel="stylesheet" href="{{ asset('build/assets/app-B1RL6IaH.css') }}">
+    <link rel="stylesheet" href="{{ asset('build/assets/appcustom-0pNL7IKs') }}">
+    <link rel="stylesheet" href="{{ asset('build/assets/app-DOpGuOCh') }}">
+    <script src="{{ asset('build/assets/app-BkDPDVeP.js') }}" defer></script> --}}
+
+    @vite([
+        'resources/css/app.css',
+        'resources/css/appcustom.css',
+        'resources/sass/app.scss',
+        'resources/js/app.js',
+    ])
     
 </head>
 <body>

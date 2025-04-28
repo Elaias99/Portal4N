@@ -2,10 +2,12 @@ import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 
 export default defineConfig({
+    // base: '/Portal4N/public/',
     plugins: [
         laravel({
             input: [
                 'resources/css/app.css',
+                'resources/css/custom.css',
                 'resources/css/landing.css',
                 'resources/css/loader.css',
                 'resources/css/login.css',
