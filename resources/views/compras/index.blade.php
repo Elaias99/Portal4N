@@ -2,108 +2,112 @@
 @php use Illuminate\Support\Str; @endphp
 @section('content')
 <div class="container">
-    <h1 class="text-center" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Lista de Compras</h1>
+    {{-- ✅ TÍTULO PRINCIPAL --}}
+    <h1 class="text-center mb-5" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Lista de Compras</h1>
 
-    <!-- Botón Agregar -->
+    {{-- ✅ MENSAJES DEL SISTEMA --}}
     @if (session('import_result'))
-    <div class="alert alert-info shadow-sm">
-        <strong>📦 Importación finalizada</strong>
-        <ul>
-            <li>✅ Compras importadas: <strong>{{ session('import_result.importadas') }}</strong></li>
-            <li>⚠️ Compras omitidas: <strong>{{ session('import_result.omitidas') }}</strong></li>
-        </ul>
-
-    </div>
-    @endif
-
-
-    <form method="GET" action="{{ route('compras.index') }}" class="mb-4">
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="🔍 Buscar por año, mes, proveedor, empresa..." style="flex: 1; min-width: 250px;">
-    
-            <select name="status" class="form-control" style="min-width: 150px;">
-                <option value="">Todos los estados</option>
-                <option value="Pendiente" {{ request('status') == 'Pendiente' ? 'selected' : '' }}>Pendiente</option>
-                <option value="Pagado" {{ request('status') == 'Pagado' ? 'selected' : '' }}>Pagado</option>
-            </select>
-    
-            <button type="submit" class="btn btn-primary">Buscar</button>
-            <a href="{{ route('compras.index') }}" class="btn btn-secondary">Limpiar</a>
+        <div class="alert alert-info shadow-sm mb-4">
+            <strong>📦 Importación finalizada</strong>
+            <ul class="mb-0">
+                <li>✅ Compras importadas: <strong>{{ session('import_result.importadas') }}</strong></li>
+                <li>⚠️ Compras omitidas: <strong>{{ session('import_result.omitidas') }}</strong></li>
+            </ul>
         </div>
-    </form>
-    
+    @endif
 
     {{-- ✅ ERRORES DE VALIDACIÓN --}}
     @if ($errors->any())
-    <div class="alert alert-danger alert-dismissible fade show shadow-sm mt-2" role="alert">
-        <strong>❌ Se encontraron errores en el formulario:</strong>
-        <ul class="mt-2 mb-0">
-            @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li> {{-- Este se queda escapado --}}
-            @endforeach
-        </ul>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-    </div>
+        <div class="alert alert-danger shadow-sm mb-4">
+            <strong>❌ Se encontraron errores en el formulario:</strong>
+            <ul class="mb-0">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
     @endif
 
+    {{-- ERRORES DE IMPORTACIÓN --}}
     @if (session('import_result.errores'))
-    <div class="alert alert-warning alert-dismissible fade show shadow-sm mt-2" role="alert">
-        <strong>⚠️ Se encontraron errores al importar el archivo:</strong>
-        <ul class="mt-2 mb-0">
-            @foreach (session('import_result.errores') as $error)
-                <li>{!! $error !!}</li> {{-- Aquí sí usamos HTML sin escapar --}}
-            @endforeach
-        </ul>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-    </div>
-    @endif
+        <div class="alert alert-warning shadow-sm mt-2 position-relative" role="alert">
+            <strong>⚠️ Se encontraron errores al importar el archivo:</strong>
 
-    @if(session('import_result'))
-        @if(session('import_result')['importadas'])
-            <div class="alert alert-success">
-                ✅ Compras importadas correctamente: {{ session('import_result')['importadas'] }}
+            {{-- 🔽 Botón para ver más --}}
+            <button class="btn btn-sm btn-outline-dark position-absolute end-0 top-0 m-2" type="button" data-bs-toggle="collapse" data-bs-target="#errorListCollapse" aria-expanded="false">
+                Ver detalles
+            </button>
 
-                <ul style="margin-top:10px;">
-                    @foreach(session('import_result')['detalles'] as $detalle)
-                        <li>{{ $detalle }}</li>
+            {{-- 🔽 Lista colapsable con scroll interno --}}
+            <div class="collapse mt-3" id="errorListCollapse" style="max-height: 300px; overflow-y: auto; border-top: 1px solid #ccc; padding-top: 10px;">
+                <ul class="mb-0">
+                    @foreach (session('import_result.errores') as $error)
+                        <li>{!! $error !!}</li>
                     @endforeach
                 </ul>
             </div>
-        @endif
+        </div>
     @endif
 
 
+    {{-- MENSAJE DE IMPORTADAS CORRECTAMENTE --}}
+    @if (session('import_result.importadas'))
+        <div class="alert alert-success shadow-sm position-relative" role="alert">
+            ✅ Compras importadas correctamente: <strong>{{ session('import_result.importadas') }}</strong>
 
-    <div class="mt-3">
-        <a href="{{ route('compras.plantilla') }}" class="btn btn-outline-primary btn-sm">
-            <i class="fa fa-download me-1"></i> Descargar Plantilla Excel
+            {{-- Botón para mostrar detalles --}}
+            @if(session('import_result.detalles') && count(session('import_result.detalles')) > 0)
+                <button class="btn btn-sm btn-outline-dark position-absolute end-0 top-0 m-2" type="button" data-bs-toggle="collapse" data-bs-target="#importSuccessCollapse" aria-expanded="false">
+                    Ver detalles
+                </button>
+
+                <div class="collapse mt-3" id="importSuccessCollapse" style="max-height: 300px; overflow-y: auto; border-top: 1px solid #ccc; padding-top: 10px;">
+                    <ul class="mb-0">
+                        @foreach (session('import_result.detalles', []) as $detalle)
+                            <li>{{ $detalle }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+        </div>
+    @endif
+
+
+    {{-- BOTÓN PARA DESCARGAR PROVEEDORES FALTANTES --}}
+    @if (session('import_result.proveedores_faltantes') && count(session('import_result.proveedores_faltantes')) > 0)
+        <a href="{{ route('compras.exportarProveedoresFaltantes') }}" class="btn btn-warning mb-4">
+            📥 Descargar proveedores faltantes
         </a>
-    </div>
+    @endif
+
 
     {{-- ✅ ACCIONES PRINCIPALES --}}
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex flex-wrap gap-3 mb-4">
+        <a href="{{ route('compras.plantilla') }}" class="btn btn-outline-primary">
+            <i class="fa fa-download me-1"></i> Descargar Plantilla Excel
+        </a>
 
-        <div>
-            <button id="toggleFiltrosBtn" class="btn btn-outline-secondary btn-sm me-2">
-                <i class="fa fa-sliders-h mr-1"></i> Filtros
-            </button>
+        <button id="toggleFiltrosBtn" class="btn btn-outline-secondary">
+            <i class="fa fa-sliders-h me-1"></i> Filtros
+        </button>
 
-            <button id="toggleImportarBtn" class="btn btn-outline-success btn-sm">
-                <i class="fa fa-file-import mr-1"></i> Importar Excel
-            </button>
-        </div>
+        <button id="toggleImportarBtn" class="btn btn-outline-success">
+            <i class="fa fa-file-import me-1"></i> Importar Excel
+        </button>
 
-        <a href="{{ route('compras.create') }}" class="btn btn-primary shadow-sm">
-            <i class="fa fa-plus mr-1"></i> Agregar Compra Manual
+        <a href="{{ route('compras.create') }}" class="btn btn-primary ms-auto">
+            <i class="fa fa-plus me-1"></i> Agregar Compra Manual
         </a>
     </div>
 
-        {{-- Botón toggle de filtros --}}
-        {{-- ✅ PANEL: FILTROS --}}
-        <div class="collapse show mb-3" id="filtrosPanel">
-            <div class="card card-body shadow-sm">
+            {{-- ✅ PANEL: FILTROS --}}
+    <div class="collapse show mb-4" id="filtrosPanel">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title mb-4">🎯 Filtros de Búsqueda Avanzada</h5>
+
                 <form method="GET" action="{{ route('compras.index') }}">
-                    <div class="row g-3">
+                    <div class="row g-4">
                         <div class="col-md-3">
                             <label for="year" class="form-label">Año</label>
                             <select name="year" id="year" class="form-select">
@@ -113,15 +117,17 @@
                                 @endforeach
                             </select>
                         </div>
+
                         <div class="col-md-3">
                             <label for="month" class="form-label">Mes</label>
                             <select name="month" id="month" class="form-select">
                                 <option value="">Todos</option>
-                                @foreach (['Enero','Febrero','Marzo','Abril'] as $mes)
+                                @foreach (['Enero', 'Febrero', 'Marzo', 'Abril'] as $mes)
                                     <option value="{{ $mes }}" {{ request('month') == $mes ? 'selected' : '' }}>{{ $mes }}</option>
                                 @endforeach
                             </select>
                         </div>
+
                         <div class="col-md-3">
                             <label for="provider" class="form-label">Proveedor</label>
                             <select name="provider" id="provider" class="form-select">
@@ -133,34 +139,41 @@
                                 @endforeach
                             </select>
                         </div>
+
                         <div class="col-md-3">
                             <label for="status" class="form-label">Estado</label>
                             <select name="status" id="status" class="form-select">
                                 <option value="">Todos</option>
-                                @foreach (['Pendiente','Pagado','Abonado','No Pagar'] as $estado)
+                                @foreach (['Pendiente', 'Pagado', 'Abonado', 'No Pagar'] as $estado)
                                     <option value="{{ $estado }}" {{ request('status') == $estado ? 'selected' : '' }}>{{ $estado }}</option>
                                 @endforeach
                             </select>
                         </div>
                     </div>
-                    <div class="mt-3">
+
+                    <div class="mt-4 d-flex gap-3">
                         <button type="submit" class="btn btn-primary">Filtrar</button>
                         <a href="{{ route('compras.index') }}" class="btn btn-secondary">Limpiar Filtros</a>
                     </div>
                 </form>
             </div>
         </div>
+    </div>
 
         {{-- ✅ PANEL: IMPORTACIÓN --}}
-        <div class="collapse mb-4" id="importarPanel">
-            <div class="card card-body shadow-sm border-left-success">
-                <form action="{{ route('compras.importar') }}" method="POST" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
-                    @csrf
-                    <input type="file" name="archivo_excel" class="form-control form-control-sm" required>
-                    <button type="submit" class="btn btn-success btn-sm shadow-sm">
-                        <i class="fa-solid fa-file-import me-1"></i> Importar
-                    </button>
-                </form>
+        <div class="collapse mb-5" id="importarPanel">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">⬆ Importar Compras desde Excel</h5>
+    
+                    <form action="{{ route('compras.importar') }}" method="POST" enctype="multipart/form-data" class="d-flex align-items-center gap-3">
+                        @csrf
+                        <input type="file" name="archivo_excel" class="form-control form-control-sm" required>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fa-solid fa-file-import me-1"></i> Importar
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
 

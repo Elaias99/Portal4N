@@ -16,7 +16,7 @@ use App\Models\TipoDocumento;
 
 use App\Imports\CompraImport;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\PlantillaComprasExport;
+use App\Exports\ProveedoresFaltantesExport;
 
 
 
@@ -391,6 +391,26 @@ class CompraController extends Controller
             'importante' => $compra->importante
         ]);
     }
+
+    public function exportarProveedoresFaltantes()
+    {
+        $faltantes = session('import_result.proveedores_faltantes', []);
+
+        if (empty($faltantes)) {
+            return redirect()->route('compras.index')->with('error', 'No hay proveedores faltantes para exportar.');
+        }
+
+        // ✅ Limpiamos todo el import_result después de descargar
+        session()->forget('import_result');
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\ProveedoresFaltantesExport($faltantes),
+            'proveedores_faltantes.xlsx'
+        );
+    }
+
+
+
 
 
 

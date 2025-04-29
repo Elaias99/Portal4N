@@ -13,7 +13,7 @@ use App\Models\User;
 
 use Illuminate\Support\Str;
 use Carbon\Carbon;
-
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -24,6 +24,7 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
     public $omitidas = 0;
     public $errores = [];
     public $importadasDetalle = [];
+    public $proveedoresFaltantes = [];
 
     
 
@@ -89,9 +90,71 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
         if (!$empresa_id) {
             $erroresCampos[] = 'La empresa ingresada <strong>"' . e($row['empresa']) . '"</strong> no existe.';
         }
+
+
+
+
+
         if (!$proveedor_id) {
             $erroresCampos[] = 'El proveedor ingresado <strong>"' . e($row['proveedor']) . '"</strong> no existe.';
+        
+            $nombreProveedor = $row['proveedor'] ?? '';
+        
+            // ✅ Solo agregamos si no existe aún
+            if (!collect($this->proveedoresFaltantes)->pluck('razon_social')->contains($nombreProveedor)) {
+                Log::info('Proveedor faltante registrado (único)', ['proveedor' => $nombreProveedor]);
+        
+                $this->proveedoresFaltantes[] = [
+                    'razon_social' => $nombreProveedor,
+                    'rut' => '',
+                    'banco' => '',
+                    'tipo_cuenta' => '',
+                    'nro_cuenta' => '',
+                    'tipo_de_documento' => '',
+                    'telefono_empresa' => '',
+                    'nombre_representantelegal' => '',
+                    'rut_representantelegal' => '',
+                    'telefono_representantelegal' => '',
+                    'correo_representantelegal' => '',
+                    'contacto_nombre' => '',
+                    'contacto_telefono' => '',
+                    'contacto_correo' => '',
+                    'giro_comercial' => '',
+                    'direccion_facturacion' => '',
+                    'direccion_despacho' => '',
+                    'nombre_contacto2' => '',
+                    'telefono_contacto2' => '',
+                    'correo_contacto2' => '',
+                    'correo_banco' => '',
+                    'nombre_razon_social_banco' => '',
+                    'cargo_contacto1' => '',
+                    'cargo_contacto2' => '',
+                    'comuna_empresa' => '',
+                ];
+            } else {
+                Log::info('Proveedor faltante ya registrado anteriormente.', ['proveedor' => $nombreProveedor]);
+            }
         }
+        
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         if (!$centro_costo_id) {
             $erroresCampos[] = 'El centro de costo <strong>"' . e($row['centro_costo']) . '"</strong> no está registrado.';
         }
@@ -205,11 +268,12 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
     {
         return [
             \Maatwebsite\Excel\Events\AfterImport::class => function () {
-                session()->flash('import_result', [
+                session()->put('import_result', [
                     'importadas' => $this->importadas,
                     'omitidas' => $this->omitidas,
                     'errores'   => $this->errores,
                     'detalles'   => $this->importadasDetalle,
+                    'proveedores_faltantes' => $this->proveedoresFaltantes,
                 ]);
             },
         ];
