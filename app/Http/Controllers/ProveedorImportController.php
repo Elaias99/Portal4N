@@ -19,7 +19,7 @@ class ProveedorImportController extends Controller
         try {
             Excel::import($importador, $request->file('archivo'));
 
-            session()->flash('import_result', [
+            session()->flash('import_result_proveedores', [
                 'importadas' => $importador->importadas,
                 'omitidas' => $importador->omitidas,
                 'errores' => $importador->errores,

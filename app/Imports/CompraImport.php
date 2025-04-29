@@ -18,7 +18,7 @@ use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithEvents;
 
-class CompraImport implements ToModel, WithHeadingRow, WithEvents
+class CompraImport implements ToModel, WithHeadingRow
 {
     public $importadas = 0;
     public $omitidas = 0;
@@ -105,53 +105,39 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
                 Log::info('Proveedor faltante registrado (único)', ['proveedor' => $nombreProveedor]);
         
                 $this->proveedoresFaltantes[] = [
-                    'razon_social' => $nombreProveedor,
-                    'rut' => '',
-                    'banco' => '',
-                    'tipo_cuenta' => '',
-                    'nro_cuenta' => '',
-                    'tipo_de_documento' => '',
-                    'telefono_empresa' => '',
-                    'nombre_representantelegal' => '',
-                    'rut_representantelegal' => '',
+                    'razon_social'             => $row['proveedor'] ?? '',
+                    'rut'                      => $row['rut'] ?? '',
+                    'banco'                    => '',
+                    'tipo_cuenta'              => '',
+                    'nro_cuenta'               => '',
+                    'tipo_de_documento'        => $row['tipo_de_documento'] ?? '',
+                    'telefono_empresa'         => '',
+                    'nombre_representantelegal'=> '',
+                    'rut_representantelegal'   => '',
                     'telefono_representantelegal' => '',
-                    'correo_representantelegal' => '',
-                    'contacto_nombre' => '',
-                    'contacto_telefono' => '',
-                    'contacto_correo' => '',
-                    'giro_comercial' => '',
-                    'direccion_facturacion' => '',
-                    'direccion_despacho' => '',
-                    'nombre_contacto2' => '',
-                    'telefono_contacto2' => '',
-                    'correo_contacto2' => '',
-                    'correo_banco' => '',
-                    'nombre_razon_social_banco' => '',
-                    'cargo_contacto1' => '',
-                    'cargo_contacto2' => '',
-                    'comuna_empresa' => '',
+                    'correo_representantelegal'=> '',
+                    'contacto_nombre'          => '',
+                    'contacto_telefono'        => '',
+                    'contacto_correo'          => '',
+                    'giro_comercial'           => '',
+                    'direccion_facturacion'    => '',
+                    'direccion_despacho'       => '',
+                    'nombre_contacto2'         => '',
+                    'telefono_contacto2'       => '',
+                    'correo_contacto2'         => '',
+                    'correo_banco'             => '',
+                    'nombre_razon_social_banco'=> '',
+                    'cargo_contacto1'          => '',
+                    'cargo_contacto2'          => '',
+                    'comuna_empresa'           => '',
                 ];
+                
             } else {
                 Log::info('Proveedor faltante ya registrado anteriormente.', ['proveedor' => $nombreProveedor]);
             }
         }
         
         
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -262,21 +248,6 @@ class CompraImport implements ToModel, WithHeadingRow, WithEvents
             'user_id'           => $user_id,
             'status'            => $row['status'] ?? 'Pendiente',
         ]);
-    }
-
-    public function registerEvents(): array
-    {
-        return [
-            \Maatwebsite\Excel\Events\AfterImport::class => function () {
-                session()->put('import_result', [
-                    'importadas' => $this->importadas,
-                    'omitidas' => $this->omitidas,
-                    'errores'   => $this->errores,
-                    'detalles'   => $this->importadasDetalle,
-                    'proveedores_faltantes' => $this->proveedoresFaltantes,
-                ]);
-            },
-        ];
     }
 
     private function normalizarNombre($valor)

@@ -132,6 +132,8 @@ Route::post('/areas/{area}/asignar', [AreaController::class, 'asignar'])->name('
 
 // Ruta para las compras
 Route::get('/compras/exportar-proveedores-faltantes', [CompraController::class, 'exportarProveedoresFaltantes'])->name('compras.exportarProveedoresFaltantes');
+Route::post('/compras/limpiar-proveedores-faltantes', [CompraController::class, 'limpiarProveedoresFaltantes'])->name('compras.limpiarProveedoresFaltantes');
+
 
 Route::get('/compras/descargar-plantilla', [CompraController::class, 'descargarPlantilla'])->name('compras.plantilla');
 

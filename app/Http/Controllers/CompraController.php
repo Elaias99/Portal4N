@@ -359,13 +359,26 @@ class CompraController extends Controller
         ]);
 
         try {
-            Excel::import(new CompraImport, $request->file('archivo_excel'));
+            $import = new CompraImport;
+            Excel::import($import, $request->file('archivo_excel'));
 
-            return redirect()->route('compras.index')->with('success', 'Compras importadas correctamente.');
+            // 👉 Guardar proveedores faltantes en sesión normal
+            if (count($import->proveedoresFaltantes) > 0) {
+                session()->put('proveedores_faltantes', $import->proveedoresFaltantes);
+            }
+
+            return redirect()->route('compras.index')
+                ->with('import_result', [
+                    'importadas' => $import->importadas,
+                    'omitidas' => $import->omitidas,
+                    'errores' => $import->errores,
+                    'detalles' => $import->importadasDetalle,
+                ]);
         } catch (\Exception $e) {
             return back()->with('error', 'Error al importar el archivo: ' . $e->getMessage());
         }
     }
+
 
     public function descargarPlantilla()
     {
@@ -394,20 +407,29 @@ class CompraController extends Controller
 
     public function exportarProveedoresFaltantes()
     {
-        $faltantes = session('import_result.proveedores_faltantes', []);
+        $faltantes = session('proveedores_faltantes', []);
 
         if (empty($faltantes)) {
             return redirect()->route('compras.index')->with('error', 'No hay proveedores faltantes para exportar.');
         }
 
-        // ✅ Limpiamos todo el import_result después de descargar
-        session()->forget('import_result');
+        // ✅ Limpiamos la sesión de proveedores faltantes después de exportar
+        // session()->forget('proveedores_faltantes');
 
         return \Maatwebsite\Excel\Facades\Excel::download(
             new \App\Exports\ProveedoresFaltantesExport($faltantes),
             'proveedores_faltantes.xlsx'
         );
     }
+
+
+    public function limpiarProveedoresFaltantes()
+    {
+        session()->forget('proveedores_faltantes');
+        return redirect()->route('compras.index')->with('success', 'Lista de proveedores faltantes limpiada.');
+    }
+
+
 
 
 

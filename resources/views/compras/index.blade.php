@@ -74,11 +74,20 @@
 
 
     {{-- BOTÓN PARA DESCARGAR PROVEEDORES FALTANTES --}}
-    @if (session('import_result.proveedores_faltantes') && count(session('import_result.proveedores_faltantes')) > 0)
-        <a href="{{ route('compras.exportarProveedoresFaltantes') }}" class="btn btn-warning mb-4">
+    @if (session('proveedores_faltantes') && count(session('proveedores_faltantes')) > 0)
+        <a href="{{ route('compras.exportarProveedoresFaltantes') }}" class="btn btn-warning mb-2">
             📥 Descargar proveedores faltantes
         </a>
+
+        <form action="{{ route('compras.limpiarProveedoresFaltantes') }}" method="POST" style="display:inline;">
+            @csrf
+            <button class="btn btn-outline-danger btn-sm" type="submit">
+                ❌ Limpiar lista de proveedores faltantes
+            </button>
+        </form>
     @endif
+
+
 
 
     {{-- ✅ ACCIONES PRINCIPALES --}}

@@ -4,36 +4,38 @@
 <div class="container">
     <h1 class="text-center mb-4" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Lista de Proveedores</h1>
 
-    @if (session('import_result'))
+    @if (session('import_result_proveedores'))
         <div class="alert alert-info shadow-sm">
             <strong>📋 Importación de proveedores finalizada</strong>
             <ul>
-                <li>✅ Proveedores importados: <strong>{{ session('import_result.importadas') }}</strong></li>
-                <li>⚠️ Proveedores omitidos: <strong>{{ session('import_result.omitidas') }}</strong></li>
+                <li>✅ Proveedores importados: <strong>{{ session('import_result_proveedores.importadas') }}</strong></li>
+                <li>⚠️ Proveedores omitidos: <strong>{{ session('import_result_proveedores.omitidas') }}</strong></li>
             </ul>
-            @if (count(session('import_result.errores')))
+
+            @if (count(session('import_result_proveedores.errores', [])))
                 <details>
-                    <summary>Ver errores ({{ count(session('import_result.errores')) }})</summary>
+                    <summary>Ver errores ({{ count(session('import_result_proveedores.errores')) }})</summary>
                     <ul class="mt-2">
-                        @foreach (session('import_result.errores') as $error)
+                        @foreach (session('import_result_proveedores.errores') as $error)
                             <li>❌ {{ $error }}</li>
                         @endforeach
                     </ul>
                 </details>
             @endif
-            @if (count(session('import_result.exitosos', [])))
+
+            @if (count(session('import_result_proveedores.exitosos', [])))
                 <details class="mt-2">
-                    <summary>Ver proveedores importados ({{ count(session('import_result.exitosos')) }})</summary>
+                    <summary>Ver proveedores importados ({{ count(session('import_result_proveedores.exitosos')) }})</summary>
                     <ul class="mt-2">
-                        @foreach (session('import_result.exitosos') as $exito)
+                        @foreach (session('import_result_proveedores.exitosos') as $exito)
                             <li>✅ {{ $exito }}</li>
                         @endforeach
                     </ul>
                 </details>
             @endif
-
         </div>
     @endif
+
 
     <div class="row">
         {{-- Filtros a la izquierda --}}
@@ -115,21 +117,7 @@
                 </a>
             </div>
 
-            {{-- Buscador --}}
-            <!-- <div class="mb-3">
-                <form method="GET" action="{{ route('proveedores.index') }}" class="d-flex align-items-center gap-2">
-                    <input 
-                        type="text" 
-                        name="search" 
-                        id="search" 
-                        value="{{ request('search') }}"
-                        class="form-control shadow-sm" 
-                        placeholder="Buscar proveedor...">
-                    <button type="submit" class="btn btn-outline-primary shadow-sm">
-                        <i class="fa-solid fa-search"></i>
-                    </button>
-                </form>
-            </div> -->
+
 
             {{-- Alerta de éxito --}}
             @if(session('success'))
