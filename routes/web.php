@@ -48,11 +48,17 @@ Auth::routes();
 route::get('/empleados/perfil', [PerfilController::class, 'show'])->middleware('auth')->name('empleados.perfil'); //Muestra el Perfil completo del empleado
 route::get('/perfiles/{trabajador}/editar', [PerfilController::class, 'edit'])->middleware('auth')->name('perfiles.editar'); //Ruta para poder editar algunos campos del perfil del empleado
 route::put('/empleados/perfil', [PerfilController::class, 'update'])->middleware('auth')->name('empleados.perfil.update'); //Valida los datos que se están editando
+
 route::get('/empleados/solicitudes', [PerfilController::class, 'verSolicitudes'])->name('perfiles.solicitudes');//Muestra todas las solicitudes que a echo el empleado ya sea Cambios|Vacaciones
+
+
+
 // Ruta para ver el formulario de cambio de contraseña
 Route::get('/perfil/cambiar_contraseña', [PerfilController::class, 'showChangePasswordForm'])->middleware('auth')->name('perfiles.cambiar_contraseña');
 // Ruta para procesar el cambio de contraseña
 Route::put('/perfil/cambiar_contraseña', [PerfilController::class, 'changePassword'])->middleware('auth')->name('perfiles.cambiar_contraseña.update');
+Route::get('/perfil/reclamos-area', [PerfilController::class, 'verReclamosArea'])->name('perfiles.reclamos.area');
+
 
 
 // 4. Rutas para solicitudes
@@ -72,7 +78,7 @@ route::post('/notifications/mark-all-read', function () {
     Auth::user()->unreadNotifications->markAsRead();
     return back();
 })->name('notifications.markAllAsRead');
-route::get('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
+// route::get('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
 //
 Route::get('/notifications/mark-as-read/{id}', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
 Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');

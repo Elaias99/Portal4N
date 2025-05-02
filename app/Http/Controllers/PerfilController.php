@@ -48,14 +48,13 @@ class PerfilController extends Controller
     }
 
 
-    public function verSolicitudes() //tiene como objetivo principal mostrar al empleado todas las solicitudes que ha realizado
+    public function verSolicitudes()
     {
-        // Obtener las solicitudes del empleado actual
         $solicitudes = Auth::user()->trabajador->solicitudes()->orderBy('created_at', 'desc')->get();
-
-        // Retornar la vista con las solicitudes
         return view('perfiles.solicitudes', compact('solicitudes'));
     }
+
+
 
     public function show()
     {
@@ -70,13 +69,18 @@ class PerfilController extends Controller
             $query->where('email', $resolvedEmail);
         })->first();
 
+
+
         // Si no se encuentra un trabajador, redirigir con un error
         if (!$trabajador) {
             return redirect('/')->with('error', 'No se pudo encontrar el perfil asociado.');
         }
 
+        $reclamosArea = \App\Models\Reclamos::where('area_id', $trabajador->area_id)->get();
+
+
         // Retornar la vista del perfil con el trabajador encontrado
-        return view('perfiles.perfil', compact('trabajador'));
+        return view('perfiles.perfil', compact('trabajador', 'reclamosArea'));
     }
 
 
@@ -110,6 +114,25 @@ class PerfilController extends Controller
 
         return redirect()->route('empleados.perfil')->with('success', 'Contraseña cambiada con éxito.');
     }
+
+    public function verReclamosArea()
+    {
+        $user = Auth::user();
+        $resolvedEmail = resolvePerfilEmail($user->email);
+
+        $trabajador = \App\Models\Trabajador::whereHas('user', function ($query) use ($resolvedEmail) {
+            $query->where('email', $resolvedEmail);
+        })->first();
+
+        if (!$trabajador) {
+            return redirect('/')->with('error', 'No se pudo encontrar el perfil asociado.');
+        }
+
+        $reclamosArea = \App\Models\Reclamos::where('area_id', $trabajador->area_id)->latest()->get();
+
+        return view('perfiles.reclamos_area', compact('trabajador', 'reclamosArea'));
+    }
+
 
 
     

@@ -12,15 +12,17 @@ class SolicitudActualizada extends Notification
     use Queueable;
 
     public $estado;
+    public $solicitud;
 
     /**
      * Create a new notification instance.
      * 
      * @param string $estado
      */
-    public function __construct($estado)
+    public function __construct($estado, $solicitud)
     {
         $this->estado = $estado;
+        $this->solicitud = $solicitud;
     }
 
     /**
@@ -41,11 +43,24 @@ class SolicitudActualizada extends Notification
      */
     public function toDatabase($notifiable)
     {
-        // Aquí definimos los datos que guardaremos en la base de datos
+        $tipo = 'solicitud';
+        $icono = '✅'; // Ícono por defecto
+
+        if ($this->solicitud->campo && strtolower($this->solicitud->campo) !== 'vacaciones') {
+            $tipo = 'modificar tu ' . strtolower($this->solicitud->campo);
+            $icono = '✏️';
+        } elseif ($this->solicitud->tipo_dia) {
+            $tipo = 'permiso ' . str_replace('_', ' ', strtolower($this->solicitud->tipo_dia));
+            $icono = '🗓️';
+        }
+
         return [
-            'mensaje' => 'Tu solicitud ha sido ' . $this->estado,
+            'mensaje' => "{$icono} Tu solicitud de {$tipo} fue {$this->estado}.",
             'estado' => $this->estado,
-            'url' => url('/empleados/perfil'), // URL a la que puede ir el empleado
+            'url' => url('/empleados/solicitudes')
         ];
     }
+
+
+
 }

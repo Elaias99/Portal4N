@@ -141,7 +141,8 @@ class SolicitudController extends Controller
             $solicitud->save();
 
             // Notificar al empleado solo si el estado cambia a aprobado
-            $solicitud->trabajador->user->notify(new SolicitudActualizada('aprobada'));
+            $solicitud->trabajador->user->notify(new SolicitudActualizada('aprobada', $solicitud));
+
 
             $correoDestino = resolveCorreoNotificacion($solicitud->trabajador->user);
             Mail::to($correoDestino)->send(new EstadoModificacionActualizado($solicitud, 'aprobada'));
@@ -184,7 +185,8 @@ class SolicitudController extends Controller
             $solicitud->save();
 
             // Notificar al empleado solo si el estado cambia a rechazado
-            $solicitud->trabajador->user->notify(new SolicitudActualizada('rechazada'));
+            $solicitud->trabajador->user->notify(new SolicitudActualizada('rechazada', $solicitud));
+
 
             $correoDestino = resolveCorreoNotificacion($solicitud->trabajador->user);
             Mail::to($correoDestino)->send(new EstadoModificacionActualizado($solicitud, 'rechazada'));
@@ -377,7 +379,8 @@ class SolicitudController extends Controller
 
         // Notificar solo si el estado cambió a "aprobado"
         if ($notificar) {
-            $solicitud->trabajador->user->notify(new SolicitudActualizada('aprobada'));
+            $solicitud->trabajador->user->notify(new SolicitudActualizada('aprobada', $solicitud));
+
 
             $correoDestino = resolveCorreoNotificacion($solicitud->trabajador->user);
             Mail::to($correoDestino)->send(new EstadoVacacionesActualizado($solicitud, 'aprobada', $pdfPath));
@@ -423,7 +426,8 @@ class SolicitudController extends Controller
 
         // Notificar solo si el estado cambió a "rechazado"
         if ($notificar) {
-            $solicitud->trabajador->user->notify(new SolicitudActualizada('rechazada'));
+            $solicitud->trabajador->user->notify(new SolicitudActualizada('rechazada', $solicitud));
+
 
             $correoDestino = resolveCorreoNotificacion($solicitud->trabajador->user);
             Mail::to($correoDestino)->send(new EstadoVacacionesActualizado($solicitud, 'rechazada'));

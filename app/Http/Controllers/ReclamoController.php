@@ -9,6 +9,7 @@ use App\Models\Area;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth; // Importamos Auth para manejar la autenticación
+use App\Notifications\NuevoReclamoAreaNotification;
 
 class ReclamoController extends Controller
 {
@@ -69,8 +70,16 @@ class ReclamoController extends Controller
             'estado' => 'pendiente',
         ]);
 
+
+        
+
+
+
         // Obtener el área del reclamo
         $area = $reclamo->area;
+
+
+
 
         // Obtener los correos reales de los trabajadores del área
         $correosDeEnvio = $area->trabajadores
@@ -85,12 +94,16 @@ class ReclamoController extends Controller
 
         // Loguear en modo debug
         // Log::info('Correos que se notificarían para el área: ' . $area->nombre, $correosDeEnvio->toArray());
+        Log::debug('Cantidad de trabajadores en el área:', ['count' => $area->trabajadores->count()]);
 
-        foreach ($correosDeEnvio as $correo) {
-            Mail::raw("Se ha registrado un nuevo reclamo en el área: {$area->nombre}.", function ($message) use ($correo) {
-                $message->to($correo)->subject('🔔 Nuevo Reclamo Registrado');
-            });
+        foreach ($area->trabajadores as $trabajador) {
+            if ($trabajador->user) {
+                Log::debug('Notificando a', ['email' => $trabajador->user->email]);
+                $trabajador->user->notify(new NuevoReclamoAreaNotification($area->nombre));
+            }
         }
+        
+        
         
 
         return redirect()->route('reclamos.index')->with('success', 'Reclamo enviado correctamente.');

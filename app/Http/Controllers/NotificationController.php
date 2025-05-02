@@ -19,8 +19,10 @@ class NotificationController extends Controller
         if ($notification) {
             $notification->markAsRead();
         }
-        return redirect($notification->data['url']);
+
+        return back(); // ✅ Quédate en la misma vista
     }
+
 
 
     public function markAllAsRead()

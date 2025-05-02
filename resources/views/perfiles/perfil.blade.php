@@ -1,5 +1,12 @@
 @extends('layouts.app')
 
+{{-- Notificaciones de Solicitudes --}}
+@php
+$solicitudes = Auth::user()->unreadNotifications->where('type', 'App\Notifications\SolicitudActualizada');
+$reclamos = Auth::user()->unreadNotifications->where('type', 'App\Notifications\NuevoReclamoAreaNotification');
+@endphp
+
+
 @vite(['resources/css/custom.css'])
 
 @section('content')
@@ -15,22 +22,48 @@
     </div>
 @endif
 
-@if (Auth::user()->unreadNotifications->count() > 0)
+@if ($solicitudes->count() > 0)
     <div class="container mb-4">
-        <h4 class="mb-3">Notificaciones</h4>
+        <h4 class="mb-3">📋 Notificaciones de Solicitudes</h4>
         <div class="list-group">
-            @foreach (Auth::user()->unreadNotifications as $notification)
+            @foreach ($solicitudes as $notification)
                 <div class="list-group-item d-flex justify-content-between align-items-center shadow-sm p-3 mb-3 bg-light rounded">
-                    <!-- Icono y mensaje de notificación -->
                     <div class="d-flex align-items-center">
-                        <i class="fa-solid fa-info-circle fa-lg text-info me-3"></i>
+                        <i class="fa-solid fa-file-signature fa-lg text-primary me-3"></i>
                         <span>{{ $notification->data['mensaje'] }}</span>
                     </div>
-
-                    <!-- Acciones -->
                     <div class="d-flex align-items-center">
-                        <a href="{{ route('perfiles.solicitudes') }}" class="btn btn-sm btn-outline-primary me-2">
+
+                        <a href="{{ $notification->data['url'] }}" class="btn btn-sm btn-outline-primary me-2">
                             Ver solicitudes
+                        </a>
+                        
+
+                        <a href="{{ route('notifications.markAsRead', $notification->id) }}" class="btn btn-sm btn-primary">
+                            Marcar como leída
+                        </a>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+@endif
+
+
+{{-- 🔔 Notificaciones de Reclamos de Área --}}
+@if ($reclamos->count() > 0)
+    <div class="container mb-4">
+        <h4 class="mb-3">📦 Notificaciones de Reclamos de Área</h4>
+        <div class="list-group">
+            @foreach ($reclamos as $notification)
+                <div class="list-group-item d-flex justify-content-between align-items-center shadow-sm p-3 mb-3 bg-light rounded">
+                    <div class="d-flex align-items-center">
+                        <i class="fa-solid fa-box fa-lg text-warning me-3"></i>
+                        <span>{{ $notification->data['mensaje'] }}</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <a href="{{ $notification->data['link'] }}" class="btn btn-sm btn-outline-warning me-2">
+                            Ver reclamos
                         </a>
                         <a href="{{ route('notifications.markAsRead', $notification->id) }}" class="btn btn-sm btn-primary">
                             Marcar como leída
@@ -40,11 +73,17 @@
             @endforeach
         </div>
     </div>
-@else
-    <div class="container">
-        <p class="alert alert-info">No tienes notificaciones nuevas.</p>
-    </div>
 @endif
+
+
+{{-- 🔔 Botón de acceso manual (por si no hay notificaciones) --}}
+{{-- @if ($trabajador->area_id && $trabajador->area)
+    <a href="{{ route('perfiles.reclamos.area') }}" 
+       class="btn btn-outline-info btn-custom-width mb-3">
+       Ver Reclamos de Mi Área
+    </a>
+@endif --}}
+
 
 <div class="container">
     <h1 class="mb-4 text-center">Perfil del Empleado</h1>
@@ -53,6 +92,7 @@
     <div class="row">
         <!-- Columna izquierda: Foto del empleado -->
         <div class="col-12 col-md-4">
+
             <div class="card p-3 mb-4 text-center">
                 @if($trabajador->Foto)
                     <img 
