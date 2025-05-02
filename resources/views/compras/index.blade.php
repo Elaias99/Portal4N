@@ -1,5 +1,10 @@
 @extends('layouts.app')
 @php use Illuminate\Support\Str; @endphp
+
+@php
+    $importResult = (array) session('import_result');
+@endphp
+
 @section('content')
 <div class="container">
     {{-- ✅ TÍTULO PRINCIPAL --}}
@@ -29,19 +34,18 @@
     @endif
 
     {{-- ERRORES DE IMPORTACIÓN --}}
-    @if (session('import_result.errores'))
+    @if ($importResult && isset($importResult['errores']) && count($importResult['errores']) > 0)
+
         <div class="alert alert-warning shadow-sm mt-2 position-relative" role="alert">
             <strong>⚠️ Se encontraron errores al importar el archivo:</strong>
 
-            {{-- 🔽 Botón para ver más --}}
             <button class="btn btn-sm btn-outline-dark position-absolute end-0 top-0 m-2" type="button" data-bs-toggle="collapse" data-bs-target="#errorListCollapse" aria-expanded="false">
                 Ver detalles
             </button>
 
-            {{-- 🔽 Lista colapsable con scroll interno --}}
             <div class="collapse mt-3" id="errorListCollapse" style="max-height: 300px; overflow-y: auto; border-top: 1px solid #ccc; padding-top: 10px;">
                 <ul class="mb-0">
-                    @foreach (session('import_result.errores') as $error)
+                    @foreach ($importResult['errores'] as $error)
                         <li>{!! $error !!}</li>
                     @endforeach
                 </ul>

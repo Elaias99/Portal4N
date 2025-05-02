@@ -193,8 +193,35 @@ class CompraImport implements ToModel, WithHeadingRow
             ->where('proveedor_id', $proveedor_id)
             ->exists();
 
+        $numeroDocumento = trim((string)($row['numero_documento'] ?? ''));
+
+        if ($numeroDocumento === '' || $numeroDocumento === '0') {
+            $proveedorNombre = $row['proveedor'] ?? 'Desconocido';
+
+            $this->errores[] = <<<HTML
+                <div style="background-color:#fff5f5; border-left:4px solid #f44336; padding:15px; margin-bottom:15px;">
+                    <p><strong>❌ Número de documento inválido</strong></p>
+                    <ul>
+                        <li>Proveedor: <strong>{$proveedorNombre}</strong></li>
+                        <li>Documento: <strong>{$numeroDocumento}</strong></li>
+                        <li>💡 El número de documento no puede estar vacío ni ser igual a "0".</li>
+                    </ul>
+                </div>
+            HTML;
+
+            $this->omitidas++;
+            return null;
+        }
+
+
 
         if ($existe) {
+
+            Log::info('⚠️ Compra omitida por duplicado', [
+                'proveedor_id' => $proveedor_id,
+                'numero_documento' => $row['numero_documento']
+            ]);
+            
             $tipoNombre      = \App\Models\TipoDocumento::find($tipo_documento_id)?->nombre ?? $row['tipo_de_documento'];
             $empresaNombre   = \App\Models\Empresa::find($empresa_id)?->Nombre ?? $row['empresa'];
             $proveedorNombre = \App\Models\Proveedor::find($proveedor_id)?->razon_social ?? $row['proveedor'];
