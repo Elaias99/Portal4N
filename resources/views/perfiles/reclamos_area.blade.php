@@ -12,11 +12,23 @@
         <div class="list-group">
             @foreach ($reclamosArea as $reclamo)
                 <div class="list-group-item mb-2">
+
+
                     <strong>Bulto:</strong> {{ $reclamo->bulto->codigo_bulto ?? 'Sin código' }}<br>
                     <strong>Descripción:</strong> {{ $reclamo->descripcion }}<br>
+                    <strong>Descripción del Bulto:</strong> {{ $reclamo->bulto->descripcion_bulto ?? 'No disponible' }}<br>
+                    <strong>Atención a:</strong> {{ $reclamo->bulto->atencion ?? 'No disponible' }}<br>
+                    <strong>Dirección:</strong> {{ $reclamo->bulto->direccion ?? 'No disponible' }}<br>
+                    <strong>Comuna:</strong> {{ $reclamo->bulto->comuna->Nombre ?? 'Sin comuna' }}<br>
+                    <strong>Razón Social:</strong> {{ $reclamo->bulto->razon_social ?? 'No disponible' }}<br>
+                    <strong>Nombre Campaña:</strong> {{ $reclamo->bulto->nombre_campana ?? 'No disponible' }}<br>
+                    <strong>Ubicación Actual:</strong> {{ $reclamo->bulto->ubicacion ?? 'No disponible' }}<br>
+
                     <strong>Estado:</strong> <span class="badge bg-warning text-dark">{{ ucfirst($reclamo->estado) }}</span><br>
                     <small class="text-muted">Creado el {{ $reclamo->created_at->format('d-m-Y H:i') }}</small>
                 </div>
+
+
             @endforeach
         </div>
     @endif
