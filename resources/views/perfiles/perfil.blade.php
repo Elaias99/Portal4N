@@ -4,6 +4,7 @@
 @php
 $solicitudes = Auth::user()->unreadNotifications->where('type', 'App\Notifications\SolicitudActualizada');
 $reclamos = Auth::user()->unreadNotifications->where('type', 'App\Notifications\NuevoReclamoAreaNotification');
+$respuestasReclamos = Auth::user()->unreadNotifications->where('type', 'App\Notifications\ReclamoRespondidoNotification');
 @endphp
 
 
@@ -49,6 +50,32 @@ $reclamos = Auth::user()->unreadNotifications->where('type', 'App\Notifications\
     </div>
 @endif
 
+{{-- 📬 Notificaciones de Respuestas a Reclamos --}}
+@if ($respuestasReclamos->count() > 0)
+    <div class="container mb-4">
+        <h4 class="mb-3">📬 Respuestas a Reclamos de tu Área</h4>
+        <div class="list-group">
+            @foreach ($respuestasReclamos as $notification)
+                <div class="list-group-item d-flex justify-content-between align-items-center shadow-sm p-3 mb-3 bg-light rounded">
+                    <div class="d-flex align-items-center">
+                        <i class="fa-solid fa-reply fa-lg text-success me-3"></i>
+                        <span>{{ $notification->data['mensaje'] }}</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <a href="{{ $notification->data['link'] }}" class="btn btn-sm btn-outline-success me-2">
+                            Ver respuesta
+                        </a>
+                        <a href="{{ route('notifications.markAsRead', $notification->id) }}" class="btn btn-sm btn-primary">
+                            Marcar como leída
+                        </a>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+@endif
+
+
 
 {{-- 🔔 Notificaciones de Reclamos de Área --}}
 @if ($reclamos->count() > 0)
@@ -74,16 +101,6 @@ $reclamos = Auth::user()->unreadNotifications->where('type', 'App\Notifications\
         </div>
     </div>
 @endif
-
-
-{{-- 🔔 Botón de acceso manual (por si no hay notificaciones) --}}
-{{-- @if ($trabajador->area_id && $trabajador->area)
-    <a href="{{ route('perfiles.reclamos.area') }}" 
-       class="btn btn-outline-info btn-custom-width mb-3">
-       Ver Reclamos de Mi Área
-    </a>
-@endif --}}
-
 
 <div class="container">
     <h1 class="mb-4 text-center">Perfil del Empleado</h1>

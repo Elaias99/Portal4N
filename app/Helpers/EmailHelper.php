@@ -26,6 +26,35 @@ if (!function_exists('resolvePerfilEmail')) {
         return $mapping[$adminEmail] ?? $adminEmail; // Devuelve el mismo correo si no hay mapeo
     }
 }
+
+
+if (!function_exists('resolveAdminEmail')) {
+    /**
+     * Devuelve el correo administrativo correspondiente a un correo de empleado.
+     *
+     * @param string $empleadoEmail
+     * @return string|null
+     */
+    function resolveAdminEmail($empleadoEmail)
+    {
+        $mapping = [
+            'luisdelabarra@4nlogistica.cl' => 'l.delabarra.b@4nlogistica.cl',
+            'raul.suazo@4nlogistica.cl' => 'r.suazo.m@4nlogistica.cl',
+            'jp.soza@4nlogistica.cl' => 'j.soza.b@4nlogistica.cl',
+            'benjaminrojas@4nlogistica.cl' => 'b.rojas.s@4nlogistica.cl',
+            'hansdelabarra@4nlogistica.cl' => 'h.delabarra.b@4nlogistica.cl',
+            'Marcelo@4nlogistica.cl' => 'o.godoy.s@4nlogistica.cl',
+        ];
+
+        // Invertimos el arreglo
+        $reverse = array_flip($mapping);
+
+        return $reverse[$empleadoEmail] ?? null;
+    }
+}
+
+
+
 if (! function_exists('calcularSiguienteViernes')) {
     /**
      * Calcula el siguiente viernes a partir de una fecha dada.

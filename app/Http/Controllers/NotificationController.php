@@ -16,23 +16,23 @@ class NotificationController extends Controller
     public function markAsRead($id)
     {
         $notification = Auth::user()->notifications->find($id);
+    
         if ($notification) {
             $notification->markAsRead();
         }
-
-        return back(); // ✅ Quédate en la misma vista
+    
+        // 🔁 Siempre quedarse en la misma vista
+        return back();
     }
-
-
-
+    
     public function markAllAsRead()
     {
-        // Marca todas las notificaciones no leídas como leídas
         Auth::user()->unreadNotifications->markAsRead();
-
-        // Redirigir a la página anterior con un mensaje de éxito
-        return redirect()->back()->with('success', 'Todas las notificaciones han sido marcadas como leídas.');
+    
+        // 🔁 También mantenerse en la misma vista
+        return back()->with('success', 'Todas las notificaciones han sido marcadas como leídas.');
     }
+    
 
 
 

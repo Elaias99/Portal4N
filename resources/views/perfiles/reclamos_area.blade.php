@@ -28,6 +28,23 @@
                     <small class="text-muted">Creado el {{ $reclamo->created_at->format('d-m-Y H:i') }}</small>
                 </div>
 
+                @if(is_null($reclamo->respuesta_admin))
+                    <form action="{{ route('reclamos.responder', $reclamo->id) }}" method="POST" class="mt-3">
+                        @csrf
+                        <div class="mb-2">
+                            <label for="respuesta_{{ $reclamo->id }}" class="form-label fw-semibold">Responder Reclamo:</label>
+                            <textarea name="respuesta_admin" id="respuesta_{{ $reclamo->id }}" class="form-control" rows="2" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-success">Enviar Respuesta</button>
+                    </form>
+                @else
+                    <div class="mt-2">
+                        <strong>Respuesta enviada:</strong>
+                        <p class="text-muted">{{ $reclamo->respuesta_admin }}</p>
+                    </div>
+                @endif
+
+
 
             @endforeach
         </div>

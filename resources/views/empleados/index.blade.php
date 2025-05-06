@@ -1,5 +1,18 @@
 @extends('layouts.app')
 
+
+@php
+
+$solicitudesMod = Auth::user()->unreadNotifications->where('type', 'App\Notifications\NotificacionAdmin');
+$solicitudesVac = Auth::user()->unreadNotifications->where('type', 'App\Notifications\NotificacionAdminVacaciones');
+
+
+$nuevos = Auth::user()->unreadNotifications->where('type', 'App\Notifications\NuevoReclamoAreaNotification');
+
+$respuestas = Auth::user()->unreadNotifications->where('type', 'App\Notifications\ReclamoRespondidoNotification');
+@endphp
+
+
 @section('content')
 <div class="container"> {{-- O si quieres ocupar todo el ancho: container-fluid --}}
     <!-- Barra de notificaciones con campana -->
@@ -12,15 +25,48 @@
                 @endif
             </button>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
-                @if (Auth::user()->unreadNotifications->count() > 0)
-                    @foreach (Auth::user()->unreadNotifications as $notification)
+
+                @if ($solicitudesMod->count() > 0 || $solicitudesVac->count() > 0 || $nuevos->count() > 0 || $respuestas->count() > 0)
+                {{-- Solicitudes de modificación --}}
+                    @foreach ($solicitudesMod as $notification)
                         <li class="dropdown-item">
-                            <a href="{{ route('notifications.markAsRead', $notification->id) }}" class="d-flex align-items-center">
-                                <i class="fas fa-info-circle text-primary"></i>
+                            <a href="{{ $notification->data['url'] ?? '#' }}" class="d-flex align-items-center">
+                                <i class="fas fa-edit text-primary"></i>
                                 <span class="ms-2">{{ $notification->data['mensaje'] }}</span>
                             </a>
                         </li>
                     @endforeach
+            
+                    {{-- Solicitudes de vacaciones --}}
+                    @foreach ($solicitudesVac as $notification)
+                        <li class="dropdown-item">
+                            <a href="{{ $notification->data['url'] ?? '#' }}" class="d-flex align-items-center">
+                                <i class="fas fa-umbrella-beach text-info"></i>
+                                <span class="ms-2">{{ $notification->data['mensaje'] }}</span>
+                            </a>
+                        </li>
+                    @endforeach
+
+                    
+                    @foreach ($respuestas as $notification)
+                        <li class="dropdown-item">
+                            <a href="{{ $notification->data['link'] ?? '#' }}" class="d-flex align-items-center">
+                                <i class="fas fa-reply text-success"></i>
+                                <span class="ms-2">{{ $notification->data['mensaje'] }}</span>
+                            </a>
+                        </li>
+                    @endforeach
+                
+                    @foreach ($nuevos as $notification)
+                        <li class="dropdown-item">
+                            <a href="{{ $notification->data['link'] ?? '#' }}" class="d-flex align-items-center">
+                                <i class="fas fa-box text-warning"></i>
+                                <span class="ms-2">{{ $notification->data['mensaje'] }}</span>
+                            </a>
+                        </li>
+                    @endforeach
+                
+
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <form method="POST" action="{{ route('notifications.markAllAsRead') }}">
@@ -31,7 +77,9 @@
                 @else
                     <li class="dropdown-item text-center">No tienes notificaciones nuevas.</li>
                 @endif
+                
             </ul>
+
         </div>
     </div>
 

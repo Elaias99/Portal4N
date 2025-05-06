@@ -6,7 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\Reclamos;
 use App\Models\Bultos;
 use App\Models\Area;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
+use App\Helpers\EmailHelper;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth; // Importamos Auth para manejar la autenticación
 use App\Notifications\NuevoReclamoAreaNotification;
@@ -100,6 +101,16 @@ class ReclamoController extends Controller
             if ($trabajador->user) {
                 Log::debug('Notificando a', ['email' => $trabajador->user->email]);
                 $trabajador->user->notify(new NuevoReclamoAreaNotification($area->nombre));
+                // Notificar también al correo administrativo si existe
+                $adminEmail = resolveAdminEmail($trabajador->user->email);
+                if ($adminEmail) {
+                    $adminUser = \App\Models\User::where('email', $adminEmail)->first();
+                    if ($adminUser) {
+                        Log::debug('Notificando a usuario administrativo', ['email' => $adminUser->email]);
+                        $adminUser->notify(new NuevoReclamoAreaNotification($area->nombre));
+                    }
+                }
+
             }
         }
         
@@ -108,5 +119,39 @@ class ReclamoController extends Controller
 
         return redirect()->route('reclamos.index')->with('success', 'Reclamo enviado correctamente.');
     }
+
+
+    public function responder(Request $request, $id)
+    {
+        $request->validate([
+            'respuesta_admin' => 'required|string|max:1000',
+        ]);
+
+        $reclamo = \App\Models\Reclamos::findOrFail($id);
+        $reclamo->respuesta_admin = $request->respuesta_admin;
+        $reclamo->estado = 'resuelto';
+        $reclamo->save();
+
+        $usuariosArea = \App\Models\User::whereHas('trabajador', function ($query) use ($reclamo) {
+            $query->where('area_id', $reclamo->area_id);
+        })->get();
+
+        foreach ($usuariosArea as $usuario) {
+            $usuario->notify(new \App\Notifications\ReclamoRespondidoNotification($reclamo));
+
+            // 🔁 Buscar si existe su correo administrativo y notificarlo también
+            $adminEmail = resolveAdminEmail($usuario->email);
+            if ($adminEmail) {
+                $adminUser = \App\Models\User::where('email', $adminEmail)->first();
+                if ($adminUser) {
+                    $adminUser->notify(new \App\Notifications\ReclamoRespondidoNotification($reclamo));
+                }
+            }
+        }
+
+        return redirect()->back()->with('success', 'Reclamo respondido correctamente.');
+    }
+
+
 
 }
