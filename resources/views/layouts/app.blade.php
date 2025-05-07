@@ -18,11 +18,6 @@
     <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-    {{-- <link rel="stylesheet" href="{{ asset('build/assets/app-B1RL6IaH.css') }}">
-    <link rel="stylesheet" href="{{ asset('build/assets/appcustom-0pNL7IKs') }}">
-    <link rel="stylesheet" href="{{ asset('build/assets/app-DOpGuOCh') }}">
-    <script src="{{ asset('build/assets/app-BkDPDVeP.js') }}" defer></script> --}}
-
     @vite([
         'resources/css/app.css',
         'resources/css/appcustom.css',
@@ -220,12 +215,54 @@
                         </a>
                     </li>
 
-                    <div class="sidebar-footer text-center mt-4">
+
+                    <!-- Sección: Gestión de Bultos -->
+                    <!-- Sección: Gestión de Bultos -->
+                    <li class="list-group-item">
+                        <a class="text-decoration-none dropdown-toggle" data-bs-toggle="collapse" href="#gestionBultos" role="button" aria-expanded="false" aria-controls="gestionBultos">
+                            <i class="fas fa-boxes me-2"></i> Gestión de Bultos
+                        </a>
+                        <div class="collapse" id="gestionBultos">
+                            <ul class="list-group">
+                                <li class="list-group-item">
+                                    <a href="{{ route('bultos.index') }}" class="text-decoration-none">
+                                        <i class="fas fa-search me-2"></i> Buscar Bulto
+                                    </a>
+                                </li>
+
+                                <!-- Subgrupo: Reclamos -->
+                                <li class="list-group-item">
+                                    <a class="text-decoration-none dropdown-toggle" data-bs-toggle="collapse" href="#gestionReclamos" role="button" aria-expanded="false" aria-controls="gestionReclamos">
+                                        <i class="fas fa-clipboard-list me-2"></i> Reclamos
+                                    </a>
+                                    <div class="collapse ps-3" id="gestionReclamos">
+                                        <ul class="list-group">
+                                            <li class="list-group-item">
+                                                <a href="{{ route('reclamos.index') }}" class="text-decoration-none">
+                                                    <i class="fas fa-tasks me-2"></i> Pendientes
+                                                </a>
+                                            </li>
+                                            <li class="list-group-item">
+                                                <a href="{{ route('perfiles.reclamos.area') }}" class="text-decoration-none">
+                                                    <i class="fas fa-comments me-2"></i> Conversaciones de Área
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </li>
+
+                            </ul>
+                        </div>
+                    </li>
+
+
+
+                    {{-- <div class="sidebar-footer text-center mt-4">
                         <a href="{{ route('tutorial') }}" class="d-block text-decoration-none text-dark">
                             <i class="fas fa-info-circle fa-2x"></i> <!-- Ícono de información -->
                             <p class="m-0">Ver Tutorial</p>
                         </a>
-                    </div>
+                    </div> --}}
 
 
 

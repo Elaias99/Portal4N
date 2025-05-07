@@ -24,6 +24,8 @@
                         <th>Descripción</th>
                         <th>Fecha</th>
                         <th>Estado</th>
+                        <th>Acciones</th>
+
                     </tr>
                 </thead>
                 <tbody>
@@ -37,11 +39,43 @@
                             </td>
                             <td>{{ $reclamo->descripcion }}</td>
                             <td>{{ $reclamo->created_at->format('d-m-Y H:i') }}</td>
+
+
                             <td>
                                 <span class="badge badge-warning text-dark text-uppercase">
                                     {{ $reclamo->estado }}
                                 </span>
                             </td>
+
+                            <td>
+                                @php
+                                    // Usamos el correo interno asociado
+                                    $correoInterno = resolvePerfilEmail(Auth::user()->email);
+                            
+                                    // Buscamos el trabajador correspondiente
+                                    $trabajadorActual = \App\Models\Trabajador::whereHas('user', function ($q) use ($correoInterno) {
+                                        $q->where('email', $correoInterno);
+                                    })->first();
+                            
+                                    $esCreador = $trabajadorActual && $trabajadorActual->id === $reclamo->id_trabajador;
+                                @endphp
+                            
+                                @if ($esCreador && $reclamo->estado !== 'cerrado')
+                                    <form action="{{ route('reclamos.cerrar', $reclamo->id) }}" method="POST">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Estás seguro de cerrar este reclamo?')">
+                                            Cerrar
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
+                            
+                            
+
+
+                            
                         </tr>
                     @endforeach
                 </tbody>

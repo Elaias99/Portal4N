@@ -10,6 +10,11 @@ $solicitudesVac = Auth::user()->unreadNotifications->where('type', 'App\Notifica
 $nuevos = Auth::user()->unreadNotifications->where('type', 'App\Notifications\NuevoReclamoAreaNotification');
 
 $respuestas = Auth::user()->unreadNotifications->where('type', 'App\Notifications\ReclamoRespondidoNotification');
+
+$comentariosReclamos = Auth::user()->unreadNotifications->where('type', 'App\Notifications\NuevoComentarioReclamoNotification');
+
+$reclamosCerrados = Auth::user()->unreadNotifications->where('type', 'App\Notifications\ReclamoCerradoNotification');
+
 @endphp
 
 
@@ -26,7 +31,7 @@ $respuestas = Auth::user()->unreadNotifications->where('type', 'App\Notification
             </button>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
 
-                @if ($solicitudesMod->count() > 0 || $solicitudesVac->count() > 0 || $nuevos->count() > 0 || $respuestas->count() > 0)
+                @if ($solicitudesMod->count() > 0 || $solicitudesVac->count() > 0 || $nuevos->count() > 0 || $respuestas->count() > 0 || $comentariosReclamos->count() > 0 || $reclamosCerrados->count() > 0)
                 {{-- Solicitudes de modificación --}}
                     @foreach ($solicitudesMod as $notification)
                         <li class="dropdown-item">
@@ -65,6 +70,25 @@ $respuestas = Auth::user()->unreadNotifications->where('type', 'App\Notification
                             </a>
                         </li>
                     @endforeach
+
+                    @foreach ($comentariosReclamos as $notification)
+                        <li class="dropdown-item">
+                            <a href="{{ $notification->data['link'] ?? '#' }}" class="d-flex align-items-center">
+                                <i class="fas fa-comment text-secondary"></i>
+                                <span class="ms-2">{{ $notification->data['mensaje'] }}</span>
+                            </a>
+                        </li>
+                    @endforeach
+
+                    @foreach ($reclamosCerrados as $notification)
+                        <li class="dropdown-item">
+                            <a href="{{ $notification->data['link'] ?? '#' }}" class="d-flex align-items-center">
+                                <i class="fas fa-lock text-danger"></i>
+                                <span class="ms-2">{{ $notification->data['mensaje'] }}</span>
+                            </a>
+                        </li>
+                    @endforeach
+
                 
 
                     <li><hr class="dropdown-divider"></li>

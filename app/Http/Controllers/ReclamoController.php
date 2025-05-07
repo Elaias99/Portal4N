@@ -11,6 +11,7 @@ use App\Helpers\EmailHelper;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth; // Importamos Auth para manejar la autenticación
 use App\Notifications\NuevoReclamoAreaNotification;
+use App\Notifications\ReclamoCerradoNotification;
 
 class ReclamoController extends Controller
 {
@@ -151,6 +152,102 @@ class ReclamoController extends Controller
 
         return redirect()->back()->with('success', 'Reclamo respondido correctamente.');
     }
+
+
+    public function comentar(Request $request, $id)
+    {
+        $request->validate([
+            'comentario' => 'required|string|max:1000',
+        ]);
+
+        $reclamo = \App\Models\Reclamos::findOrFail($id);
+
+        $nuevoComentario = \App\Models\ReclamoComentario::create([
+            'reclamo_id' => $reclamo->id,
+            'user_id' => Auth::id(),
+            'comentario' => $request->comentario,
+        ]);
+
+        $usuariosArea = \App\Models\User::whereHas('trabajador', function ($query) use ($reclamo) {
+            $query->where('area_id', $reclamo->area_id);
+        })->get();
+
+        foreach ($usuariosArea as $usuario) {
+            $usuario->notify(new \App\Notifications\NuevoComentarioReclamoNotification($nuevoComentario));
+
+            $adminEmail = resolveAdminEmail($usuario->email);
+            if ($adminEmail) {
+                $adminUser = \App\Models\User::where('email', $adminEmail)->first();
+                if ($adminUser) {
+                    $adminUser->notify(new \App\Notifications\NuevoComentarioReclamoNotification($nuevoComentario));
+                }
+            }
+        }
+
+        return back()->with('success', 'Comentario agregado correctamente.');
+    }
+
+
+    public function cerrar($id)
+    {
+        $reclamo = \App\Models\Reclamos::findOrFail($id);
+
+        if ($reclamo->estado === 'cerrado') {
+            return back()->with('error', 'Este reclamo está cerrado y no puede recibir más comentarios.');
+        }
+        
+
+        // Obtener el correo del usuario autenticado
+        $correoUsuario = Auth::user()->email;
+
+        // Usar resolvePerfilEmail para obtener el correo interno si es necesario
+        $correoInterno = resolvePerfilEmail($correoUsuario);
+
+        // Buscar el trabajador correspondiente al correo interno
+        $trabajador = \App\Models\Trabajador::whereHas('user', function ($q) use ($correoInterno) {
+            $q->where('email', $correoInterno);
+        })->first();
+
+        // Verificar si ese trabajador es el creador del reclamo
+        if ($trabajador && $trabajador->id === $reclamo->id_trabajador) {
+            $reclamo->estado = 'cerrado';
+            $reclamo->save();
+        
+            // Crear comentario automático
+            \App\Models\ReclamoComentario::create([
+                'reclamo_id' => $reclamo->id,
+                'user_id' => Auth::id(),
+                'comentario' => '🛑 Reclamo cerrado por ' . Auth::user()->name . ' el ' . now()->format('d-m-Y') . '.',
+            ]);
+        
+            // Notificar a usuarios del área
+            $usuariosArea = \App\Models\User::whereHas('trabajador', function ($query) use ($reclamo) {
+                $query->where('area_id', $reclamo->area_id);
+            })->get();
+        
+            foreach ($usuariosArea as $usuario) {
+                $usuario->notify(new ReclamoCerradoNotification($reclamo));
+        
+                // Notificar también al correo administrativo, si aplica
+                $adminEmail = resolveAdminEmail($usuario->email);
+                if ($adminEmail) {
+                    $adminUser = \App\Models\User::where('email', $adminEmail)->first();
+                    if ($adminUser) {
+                        $adminUser->notify(new ReclamoCerradoNotification($reclamo));
+                    }
+                }
+            }
+        
+            return back()->with('success', 'Reclamo cerrado correctamente.');
+        }
+        
+
+        return back()->with('error', 'No tienes permiso para cerrar este reclamo.');
+    }
+
+
+
+
 
 
 

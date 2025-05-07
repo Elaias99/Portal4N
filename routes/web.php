@@ -20,6 +20,7 @@ use App\Http\Controllers\BultoController;
 use App\Http\Controllers\AreaController;
 use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\PagoController;
+use App\Http\Controllers\ReclamoController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -155,8 +156,9 @@ Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard.
 Route::resource('bultos', 'App\Http\Controllers\BultoController')->middleware('auth');
 Route::post('/bultos/import', [BultoController::class, 'importExcel'])->name('bultos.import');
 
-
+Route::post('/reclamos/{id}/cerrar', [App\Http\Controllers\ReclamoController::class, 'cerrar'])->name('reclamos.cerrar');
 Route::post('/reclamos/{id}/responder', [App\Http\Controllers\ReclamoController::class, 'responder'])->name('reclamos.responder');
+Route::post('/reclamos/{id}/comentar', [ReclamoController::class, 'comentar'])->name('reclamos.comentar');
 Route::resource('reclamos', 'App\Http\Controllers\ReclamoController')->middleware('auth');
 
 // Ruta PDF MANUAL

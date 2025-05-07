@@ -5,6 +5,10 @@
 $solicitudes = Auth::user()->unreadNotifications->where('type', 'App\Notifications\SolicitudActualizada');
 $reclamos = Auth::user()->unreadNotifications->where('type', 'App\Notifications\NuevoReclamoAreaNotification');
 $respuestasReclamos = Auth::user()->unreadNotifications->where('type', 'App\Notifications\ReclamoRespondidoNotification');
+$comentariosNuevos = Auth::user()->unreadNotifications->where('type', 'App\Notifications\NuevoComentarioReclamoNotification');
+$reclamosCerrados = Auth::user()->unreadNotifications->where('type', 'App\Notifications\ReclamoCerradoNotification');
+
+
 @endphp
 
 
@@ -102,6 +106,57 @@ $respuestasReclamos = Auth::user()->unreadNotifications->where('type', 'App\Noti
     </div>
 @endif
 
+
+@if ($comentariosNuevos->count() > 0)
+    <div class="container mb-4">
+        <h4 class="mb-3">💬 Comentarios en Reclamos</h4>
+        <div class="list-group">
+            @foreach ($comentariosNuevos as $notification)
+                <div class="list-group-item d-flex justify-content-between align-items-center shadow-sm p-3 mb-3 bg-light rounded">
+                    <div class="d-flex align-items-center">
+                        <i class="fa-solid fa-comment-dots fa-lg text-secondary me-3"></i>
+                        <span>{{ $notification->data['mensaje'] }}</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <a href="{{ $notification->data['link'] }}" class="btn btn-sm btn-outline-secondary me-2">
+                            Ver comentario
+                        </a>
+                        <a href="{{ route('notifications.markAsRead', $notification->id) }}" class="btn btn-sm btn-primary">
+                            Marcar como leída
+                        </a>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+@endif
+
+@if ($reclamosCerrados->count() > 0)
+    <div class="container mb-4">
+        <h4 class="mb-3">🛑 Reclamos Cerrados</h4>
+        <div class="list-group">
+            @foreach ($reclamosCerrados as $notification)
+                <div class="list-group-item d-flex justify-content-between align-items-center shadow-sm p-3 mb-3 bg-light rounded">
+                    <div class="d-flex align-items-center">
+                        <i class="fa-solid fa-lock fa-lg text-danger me-3"></i>
+                        <span>{{ $notification->data['mensaje'] }}</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <a href="{{ $notification->data['link'] }}" class="btn btn-sm btn-outline-danger me-2">
+                            Ver reclamos
+                        </a>
+                        <a href="{{ route('notifications.markAsRead', $notification->id) }}" class="btn btn-sm btn-primary">
+                            Marcar como leída
+                        </a>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+@endif
+
+
+
 <div class="container">
     <h1 class="mb-4 text-center">Perfil del Empleado</h1>
 
@@ -142,6 +197,12 @@ $respuestasReclamos = Auth::user()->unreadNotifications->where('type', 'App\Noti
                    class="btn btn-primary btn-custom-width mb-3">
                    Solicitar cambio de datos
                 </a>
+
+                <a href="{{ route('perfiles.reclamos.area') }}" 
+                    class="btn btn-primary btn-custom-width mb-3">
+                        Ver Reclamos del Área
+                </a>
+
 
                 <a href="{{ route('vacaciones.create') }}" 
                    class="btn btn-primary btn-custom-width">

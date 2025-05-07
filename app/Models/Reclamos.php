@@ -35,4 +35,11 @@ class Reclamos extends Model
         return $this->belongsTo(Area::class, 'area_id');
     }
 
+    public function comentarios()
+    {
+        return $this->hasMany(\App\Models\ReclamoComentario::class, 'reclamo_id');
+    }
+
+
+
 }
