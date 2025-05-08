@@ -1,174 +1,204 @@
 @extends('layouts.app')
 
-
-
-
-
 @section('content')
-    <div class="container">
-        <h2>Listado de Bultos Importados</h2>
+<div class="container">
 
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
-                <i class="fa-solid fa-circle-check me-2"></i>
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-            </div>
-        @endif
+    {{-- CABECERA ORGANIZADA CON TÍTULO + ACCIÓN DE IMPORTACIÓN INTEGRADA --}}
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
 
-        @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
-                <i class="fa-solid fa-triangle-exclamation me-2"></i>
-                {{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-            </div>
-        @endif
+        {{-- TÍTULO --}}
+        <div>
+            <h3 class="text-dark fw-semibold mb-1">
+                <i class="fa-solid fa-box-open me-2 text-secondary"></i> Gestión de Bultos del Día
+            </h3>
+            <p class="text-muted small mb-0">Administra, busca o carga los bultos del día desde un archivo Excel</p>
+        </div>
+
+        {{-- BLOQUE DE IMPORTACIÓN COMO UN COMPONENTE --}}
+        <form action="{{ route('bultos.import') }}" method="POST" enctype="multipart/form-data"
+            class="bg-light rounded shadow-sm px-3 py-2 d-flex align-items-center gap-2"
+            style="max-width: 100%;">
+            @csrf
+            <i class="fa-solid fa-file-excel text-success"></i>
+            <input type="file" name="file" class="form-control form-control-sm" required style="max-width: 180px;">
+            <button type="submit" class="btn btn-success btn-sm">
+                <i class="fa-solid fa-upload me-1"></i> Importar
+            </button>
+        </form>
+    </div>
 
 
-        <!-- Sección de Importación -->
-        <!-- Contenedor opcional para alinear a la derecha -->
-        <div class="d-flex justify-content-end mb-4">
-            <div class="dropdown">
-                <!-- Botón que despliega el menú -->
-                <button class="btn btn-outline-secondary dropdown-toggle shadow-sm" 
-                        type="button" 
-                        id="importDropdown" 
-                        data-bs-toggle="dropdown" 
-                        aria-expanded="false">
-                    <i class="fa-regular fa-file-excel me-2"></i> Importar
+
+
+    {{-- ALERTAS DE ÉXITO O ERROR --}}
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fa-solid fa-circle-check me-2"></i>
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fa-solid fa-triangle-exclamation me-2"></i>
+            {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    @endif
+
+    <!-- Buscador -->
+    {{-- BUSCADOR DE BULTOS EN TARJETA --}}
+    <div class="card shadow-sm p-3 mb-4" style="max-width: 600px; margin: 0 auto;">
+        <h6 class="mb-3 text-center text-muted">
+            <i class="fa-solid fa-magnifying-glass me-2"></i> Buscar Bulto por Código
+        </h6>
+        <form action="{{ route('bultos.index') }}" method="GET">
+            <div class="input-group input-group-sm">
+                <input type="text" name="codigo_bulto" autofocus class="form-control" 
+                       placeholder="Ej: 003936646 — Ingrese el código exacto del bulto" required>
+                <button class="btn btn-primary" type="submit">
+                    <i class="fa-solid fa-search me-1"></i> Buscar
                 </button>
+            </div>
+        </form>
+    </div>
 
-                <!-- Menú desplegable con el formulario dentro -->
-                <div class="dropdown-menu shadow-sm fade" aria-labelledby="importDropdown">
-                    <!-- Clase p-3 para un padding cómodo dentro del dropdown -->
-                    <div class="p-3">
-                        <form action="{{ route('bultos.import') }}" method="POST" enctype="multipart/form-data">
-                            @csrf
-                            <div class="mb-3">
-                                <label for="file" class="form-label">Subir archivo Excel:</label>
-                                <input type="file" name="file" id="file" class="form-control" required>
-                            </div>
-                            <button type="submit" class="btn btn-success btn-sm w-100">
-                                Importar Bultos
+    @if ($bultos && count($bultos) > 0)
+    <div class="row justify-content-center">
+        @foreach ($bultos as $bulto)
+            @php
+                $ultimoReclamo = $bulto->reclamos()->latest()->first();
+            @endphp
+
+            <div class="card shadow-sm mb-4" style="max-width: 800px;">
+                <div class="card-body">
+
+                    {{-- Cabecera --}}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="mb-0 fw-bold text-primary">
+                            <i class="fa-solid fa-box me-1"></i> {{ $bulto->codigo_bulto }}
+                        </h5>
+                        <small class="text-muted">ID #{{ $bulto->id }}</small>
+                    </div>
+
+                    {{-- Info agrupada --}}
+                    <div class="row small text-muted">
+                        <div class="col-md-6 mb-2">
+                            <strong>Dirección:</strong> {{ $bulto->direccion }}, {{ $bulto->comuna->Nombre ?? '—' }} ({{ $bulto->depto_destino }})
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Región:</strong> {{ $bulto->comuna->region->Nombre ?? '—' }}
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <strong>Campaña:</strong> {{ $bulto->nombre_campana }}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Entrega:</strong>
+                            <span class="badge bg-light text-dark">{{ $bulto->fecha_entrega }}</span>
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <strong>Atención:</strong> {{ $bulto->atencion }} ({{ $bulto->numero_destino }})
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Ubicación:</strong> {{ $bulto->ubicacion }}
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <strong>Razón Social:</strong> {{ $bulto->razon_social }}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Peso:</strong> {{ $bulto->peso }} kg
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <strong>Teléfono:</strong> {{ $bulto->telefono }}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Email:</strong> {{ $bulto->mail }}
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <strong>Observación:</strong> {{ $bulto->observacion }}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Referencia:</strong> {{ $bulto->referencia }}
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <strong>Descripción:</strong> {{ $bulto->descripcion_bulto }}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <strong>Unidad:</strong> {{ $bulto->unidad }}
+                        </div>
+
+                        <div class="col-md-6 mb-2">
+                            <strong>Estado Reclamo:</strong>
+                            @if ($ultimoReclamo)
+                                @if ($ultimoReclamo->estado === 'cerrado')
+                                    <span class="badge bg-success">Cerrado</span>
+                                @elseif ($ultimoReclamo->estado === 'pendiente')
+                                    <span class="badge bg-warning text-dark">Pendiente</span>
+                                @else
+                                    <span class="badge bg-info">Otro</span>
+                                @endif
+                            @else
+                                <span class="badge bg-secondary">Sin Reclamo</span>
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- Acción --}}
+                    <div class="mt-3 d-flex flex-column gap-2">
+                        @if (!$ultimoReclamo || $ultimoReclamo->estado === 'cerrado')
+                            <button type="button" class="btn btn-outline-danger btn-sm"
+                                    data-toggle="modal"
+                                    data-target="#reclamoModal"
+                                    data-bulto-id="{{ $bulto->id }}"
+                                    data-bulto-codigo="{{ $bulto->codigo_bulto }}">
+                                <i class="fa-solid fa-circle-exclamation me-1"></i> Reportar Reclamo
                             </button>
-                        </form>
+                        @else
+                            <button class="btn btn-secondary btn-sm" disabled title="Ya existe un reclamo pendiente">
+                                <i class="fa-solid fa-ban me-1"></i> Reclamo en curso
+                            </button>
+                        @endif
+                    
+                        @if ($ultimoReclamo)
+                            <a href="{{ route('reclamos.ver', $ultimoReclamo->id) }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fa-solid fa-comments me-1"></i> Ver Historial de Reclamo
+                            </a>
+                        @endif
                     </div>
+                    
+
+
+
+
                 </div>
             </div>
-        </div>
+        @endforeach
 
-        <!-- Sección de Búsqueda -->
-        <div class="card shadow-sm p-4 mx-auto mb-4" style="max-width: 500px;">
-            <h3 class="text-center mb-3">🔍 Buscar Bulto</h3>
-            <form action="{{ route('bultos.index') }}" method="GET">
-                <div class="input-group">
-                    <input type="text" name="codigo_bulto" id="codigo_bulto" class="form-control" placeholder="Ingrese el código a buscar" required>
-                    <div class="input-group-append">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fa-solid fa-magnifying-glass"></i> Buscar
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
-        
-
-
-        
-
-        <!-- Resultados de la Búsqueda -->
-        @if(request()->has('codigo_bulto'))
-            <div class="d-flex justify-content-center">
-                <div class="w-100">
-                    <h4 class="text-center mt-2 mb-3">Resultado de la Búsqueda</h4>
-
-                    @if ($bultos && count($bultos) > 0)
-                        <div class="table-responsive mx-auto" style="max-height: 450px; overflow-y: auto; width: 90%;">
-
-                            <table class="table table-striped table-bordered">
-                                <thead class="thead-dark">
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Código Bulto</th>
-                                        <th>ID Envío</th>
-                                        <th>Atención</th>
-                                        <th>Número Destino</th>
-                                        <th>Depto Destino</th>
-                                        <th>Dirección</th>
-                                        <th>Comuna</th>
-                                        <th>Razón Social</th>
-                                        <th>Fecha Entrega</th>
-                                        <th>Ubicación</th>
-                                        <th>Región</th>
-                                        <th>Nombre Campaña</th>
-                                        <th>Descripción Bulto</th>
-                                        <th>Observación</th>
-                                        <th>Referencia</th>
-                                        <th>Peso</th>
-                                        <th>Teléfono</th>
-                                        <th>Mail</th>
-                                        <th>Unidad</th>
-                                        <th>Estado</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($bultos as $bulto)
-                                        <tr>
-                                            <td>{{ $bulto->id }}</td>
-                                            <td>{{ $bulto->codigo_bulto }}</td>
-                                            <td>{{ $bulto->id_envio }}</td>
-                                            <td>{{ $bulto->atencion }}</td>
-                                            <td>{{ $bulto->numero_destino }}</td>
-                                            <td>{{ $bulto->depto_destino }}</td>
-                                            <td>{{ $bulto->direccion }}</td>
-                                            <td>{{ $bulto->comuna->Nombre ?? '—' }}</td>
-                                            <td>{{ $bulto->razon_social }}</td>
-                                            <td>{{ $bulto->fecha_entrega }}</td>
-                                            <td>{{ $bulto->ubicacion }}</td>
-                                            <td>{{ $bulto->comuna->region->Nombre ?? '—' }}</td>
-                                            <td>{{ $bulto->nombre_campana }}</td>
-                                            <td>{{ $bulto->descripcion_bulto }}</td>
-                                            <td>{{ $bulto->observacion }}</td>
-                                            <td>{{ $bulto->referencia }}</td>
-                                            <td>{{ $bulto->peso }}</td>
-                                            <td>{{ $bulto->telefono }}</td>
-                                            <td>{{ $bulto->mail }}</td>
-                                            <td>{{ $bulto->unidad }}</td>
-                                            <td>{{ ucfirst($bulto->estado) }}</td>
-                                            <td>
-                                                <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#reclamoModal"
-                                                        data-bulto-id="{{ $bulto->id }}"
-                                                        data-bulto-codigo="{{ $bulto->codigo_bulto }}">
-                                                    Reportar Reclamo
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                    @include('reclamos._modal')
-                                    @include('reclamos._modal-script')
-
-                                </tbody>
-                            </table>
-                        </div>
-                    @else
-                        <div class="alert alert-warning text-center mt-3">
-                            No se encontraron registros de bultos con ese código.
-                        </div>
-                    @endif
-                </div>
-            </div>
-        @endif
-
-
-        <!-- Modal para Reportar Reclamo -->
+        {{-- MODAL --}}
+        @include('reclamos._modal')
+        @include('reclamos._modal-script')
 
     </div>
-@endsection
+    @else
+        <div class="alert alert-warning text-center mt-3">
+            No se encontraron registros de bultos con ese código.
+        </div>
+    @endif
 
+
+
+
+</div>
+@endsection
 
 <!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-

@@ -17,7 +17,9 @@ if (!function_exists('resolvePerfilEmail')) {
             'jp.soza@4nlogistica.cl' => 'j.soza.b@4nlogistica.cl',
             'benjaminrojas@4nlogistica.cl' => 'b.rojas.s@4nlogistica.cl',
             'hansdelabarra@4nlogistica.cl' => 'h.delabarra.b@4nlogistica.cl',
-            'Marcelo@4nlogistica.cl' => 'o.godoy.s@4nlogistica.cl'
+            'Marcelo@4nlogistica.cl' => 'o.godoy.s@4nlogistica.cl',
+            'eliascorreap@gmail.com' => 'e.correa.p@4nlogistica.cl'
+
 
 
             // Agrega más relaciones aquí...

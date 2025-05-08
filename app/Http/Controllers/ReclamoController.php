@@ -246,6 +246,44 @@ class ReclamoController extends Controller
     }
 
 
+    // ReclamoController.php
+    public function verReclamo($id)
+    {
+        $reclamo = \App\Models\Reclamos::with(['comentarios.autor', 'bulto', 'area'])->findOrFail($id);
+
+        return view('reclamos.reclamo_individual', compact('reclamo'));
+    }
+
+
+
+    public function misReclamos()
+    {
+        $usuario = Auth::user();
+
+        // Resolver correo interno si es necesario
+        $correoInterno = resolvePerfilEmail($usuario->email);
+
+        // Buscar al trabajador asociado
+        $trabajador = \App\Models\Trabajador::whereHas('user', function ($q) use ($correoInterno, $usuario) {
+            $q->where('email', $correoInterno)->orWhere('email', $usuario->email);
+        })->first();
+
+        if (!$trabajador) {
+            return redirect('/')->with('error', 'No se pudo identificar al trabajador.');
+        }
+
+        $reclamos = \App\Models\Reclamos::where('id_trabajador', $trabajador->id)
+            ->with('bulto', 'comentarios.autor', 'area')
+            ->latest()
+            ->get();
+
+        return view('reclamos.mis_reclamos', compact('reclamos'));
+    }
+
+
+
+
+
 
 
 

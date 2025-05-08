@@ -19,6 +19,9 @@
                         {{-- Datos del reclamo --}}
                         <h5 class="card-title">📦 Bulto: {{ $reclamo->bulto->codigo_bulto ?? 'Sin código' }}</h5>
                         <p class="card-text mb-2">
+                            <strong>Creado por:</strong>
+                            {{ $reclamo->trabajador->Nombre }} {{ $reclamo->trabajador->ApellidoPaterno }}<br>
+
                             <strong>Descripción:</strong> {{ $reclamo->descripcion }}<br>
                             <strong>Descripción del Bulto:</strong> {{ $reclamo->bulto->descripcion_bulto ?? 'No disponible' }}<br>
                             <strong>Atención a:</strong> {{ $reclamo->bulto->atencion ?? 'No disponible' }}<br>

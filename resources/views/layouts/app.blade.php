@@ -242,11 +242,21 @@
                                                     <i class="fas fa-tasks me-2"></i> Pendientes
                                                 </a>
                                             </li>
+
                                             <li class="list-group-item">
                                                 <a href="{{ route('perfiles.reclamos.area') }}" class="text-decoration-none">
                                                     <i class="fas fa-comments me-2"></i> Conversaciones de Área
                                                 </a>
                                             </li>
+
+                                            <li class="list-group-item">
+                                                <a href="{{ route('reclamos.mios') }}" class="text-decoration-none">
+                                                    <i class="fas fa-user-check me-2"></i> Mis Reclamos
+                                                </a>                                                
+                                            </li>
+
+
+
                                         </ul>
                                     </div>
                                 </li>
