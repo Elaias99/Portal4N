@@ -1,14 +1,15 @@
 @extends('layouts.app')
 
-{{-- Notificaciones de Solicitudes --}}
 @php
-$solicitudes = Auth::user()->unreadNotifications->where('type', 'App\Notifications\SolicitudActualizada');
-$reclamos = Auth::user()->unreadNotifications->where('type', 'App\Notifications\NuevoReclamoAreaNotification');
-$respuestasReclamos = Auth::user()->unreadNotifications->where('type', 'App\Notifications\ReclamoRespondidoNotification');
-$comentariosNuevos = Auth::user()->unreadNotifications->where('type', 'App\Notifications\NuevoComentarioReclamoNotification');
-$reclamosCerrados = Auth::user()->unreadNotifications->where('type', 'App\Notifications\ReclamoCerradoNotification');
-
-
+$notificaciones = Auth::user()->unreadNotifications
+    ->whereIn('type', [
+        'App\Notifications\SolicitudActualizada',
+        'App\Notifications\NuevoReclamoAreaNotification',
+        'App\Notifications\ReclamoRespondidoNotification',
+        'App\Notifications\NuevoComentarioReclamoNotification',
+        'App\Notifications\ReclamoCerradoNotification',
+    ])
+    ->sortByDesc('created_at');
 @endphp
 
 
@@ -27,99 +28,37 @@ $reclamosCerrados = Auth::user()->unreadNotifications->where('type', 'App\Notifi
     </div>
 @endif
 
-@if ($solicitudes->count() > 0)
+@if ($notificaciones->count() > 0)
     <div class="container mb-4">
-        <h4 class="mb-3">📋 Notificaciones de Solicitudes</h4>
+        <h4 class="mb-3">🔔 Notificaciones</h4>
+
+        <form method="POST" action="{{ route('notifications.markAllAsRead') }}" class="mb-3 text-end">
+            @csrf
+            <button type="submit" class="btn btn-sm btn-outline-primary">
+                Marcar todas como leídas
+            </button>
+        </form>
+        
         <div class="list-group">
-            @foreach ($solicitudes as $notification)
+            @foreach ($notificaciones as $notification)
+                @php
+                    $iconos = [
+                        'App\Notifications\SolicitudActualizada' => 'fa-file-signature text-primary',
+                        'App\Notifications\NuevoReclamoAreaNotification' => 'fa-box text-warning',
+                        'App\Notifications\ReclamoRespondidoNotification' => 'fa-reply text-success',
+                        'App\Notifications\NuevoComentarioReclamoNotification' => 'fa-comment-dots text-secondary',
+                        'App\Notifications\ReclamoCerradoNotification' => 'fa-lock text-danger',
+                    ];
+                @endphp
+
                 <div class="list-group-item d-flex justify-content-between align-items-center shadow-sm p-3 mb-3 bg-light rounded">
                     <div class="d-flex align-items-center">
-                        <i class="fa-solid fa-file-signature fa-lg text-primary me-3"></i>
-                        <span>{{ $notification->data['mensaje'] }}</span>
-                    </div>
-                    <div class="d-flex align-items-center">
-
-                        <a href="{{ $notification->data['url'] }}" class="btn btn-sm btn-outline-primary me-2">
-                            Ver solicitudes
-                        </a>
-                        
-
-                        <a href="{{ route('notifications.markAsRead', $notification->id) }}" class="btn btn-sm btn-primary">
-                            Marcar como leída
-                        </a>
-                    </div>
-                </div>
-            @endforeach
-        </div>
-    </div>
-@endif
-
-{{-- 📬 Notificaciones de Respuestas a Reclamos --}}
-@if ($respuestasReclamos->count() > 0)
-    <div class="container mb-4">
-        <h4 class="mb-3">📬 Respuestas a Reclamos de tu Área</h4>
-        <div class="list-group">
-            @foreach ($respuestasReclamos as $notification)
-                <div class="list-group-item d-flex justify-content-between align-items-center shadow-sm p-3 mb-3 bg-light rounded">
-                    <div class="d-flex align-items-center">
-                        <i class="fa-solid fa-reply fa-lg text-success me-3"></i>
-                        <span>{{ $notification->data['mensaje'] }}</span>
-                    </div>
-                    <div class="d-flex align-items-center">
-                        <a href="{{ $notification->data['link'] }}" class="btn btn-sm btn-outline-success me-2">
-                            Ver respuesta
-                        </a>
-                        <a href="{{ route('notifications.markAsRead', $notification->id) }}" class="btn btn-sm btn-primary">
-                            Marcar como leída
-                        </a>
-                    </div>
-                </div>
-            @endforeach
-        </div>
-    </div>
-@endif
-
-
-
-{{-- 🔔 Notificaciones de Reclamos de Área --}}
-@if ($reclamos->count() > 0)
-    <div class="container mb-4">
-        <h4 class="mb-3">📦 Notificaciones de Reclamos de Área</h4>
-        <div class="list-group">
-            @foreach ($reclamos as $notification)
-                <div class="list-group-item d-flex justify-content-between align-items-center shadow-sm p-3 mb-3 bg-light rounded">
-                    <div class="d-flex align-items-center">
-                        <i class="fa-solid fa-box fa-lg text-warning me-3"></i>
-                        <span>{{ $notification->data['mensaje'] }}</span>
-                    </div>
-                    <div class="d-flex align-items-center">
-                        <a href="{{ $notification->data['link'] }}" class="btn btn-sm btn-outline-warning me-2">
-                            Ver reclamos
-                        </a>
-                        <a href="{{ route('notifications.markAsRead', $notification->id) }}" class="btn btn-sm btn-primary">
-                            Marcar como leída
-                        </a>
-                    </div>
-                </div>
-            @endforeach
-        </div>
-    </div>
-@endif
-
-
-@if ($comentariosNuevos->count() > 0)
-    <div class="container mb-4">
-        <h4 class="mb-3">💬 Comentarios en Reclamos</h4>
-        <div class="list-group">
-            @foreach ($comentariosNuevos as $notification)
-                <div class="list-group-item d-flex justify-content-between align-items-center shadow-sm p-3 mb-3 bg-light rounded">
-                    <div class="d-flex align-items-center">
-                        <i class="fa-solid fa-comment-dots fa-lg text-secondary me-3"></i>
+                        <i class="fa-solid fa-lg me-3 {{ $iconos[$notification->type] ?? 'fa-info-circle text-muted' }}"></i>
                         <span>{{ $notification->data['mensaje'] }}</span>
                     </div>
                     <div class="d-flex align-items-center">
                         <a href="{{ $notification->data['link'] }}" class="btn btn-sm btn-outline-secondary me-2">
-                            Ver comentario
+                            Ver
                         </a>
                         <a href="{{ route('notifications.markAsRead', $notification->id) }}" class="btn btn-sm btn-primary">
                             Marcar como leída
@@ -128,32 +67,13 @@ $reclamosCerrados = Auth::user()->unreadNotifications->where('type', 'App\Notifi
                 </div>
             @endforeach
         </div>
+    </div>
+@else
+    <div class="container mt-4">
+        <p class="text-muted text-center">No tienes notificaciones nuevas.</p>
     </div>
 @endif
 
-@if ($reclamosCerrados->count() > 0)
-    <div class="container mb-4">
-        <h4 class="mb-3">🛑 Reclamos Cerrados</h4>
-        <div class="list-group">
-            @foreach ($reclamosCerrados as $notification)
-                <div class="list-group-item d-flex justify-content-between align-items-center shadow-sm p-3 mb-3 bg-light rounded">
-                    <div class="d-flex align-items-center">
-                        <i class="fa-solid fa-lock fa-lg text-danger me-3"></i>
-                        <span>{{ $notification->data['mensaje'] }}</span>
-                    </div>
-                    <div class="d-flex align-items-center">
-                        <a href="{{ $notification->data['link'] }}" class="btn btn-sm btn-outline-danger me-2">
-                            Ver reclamos
-                        </a>
-                        <a href="{{ route('notifications.markAsRead', $notification->id) }}" class="btn btn-sm btn-primary">
-                            Marcar como leída
-                        </a>
-                    </div>
-                </div>
-            @endforeach
-        </div>
-    </div>
-@endif
 
 
 

@@ -1,20 +1,16 @@
 @extends('layouts.app')
 
-
 @php
-
-$solicitudesMod = Auth::user()->unreadNotifications->where('type', 'App\Notifications\NotificacionAdmin');
-$solicitudesVac = Auth::user()->unreadNotifications->where('type', 'App\Notifications\NotificacionAdminVacaciones');
-
-
-$nuevos = Auth::user()->unreadNotifications->where('type', 'App\Notifications\NuevoReclamoAreaNotification');
-
-$respuestas = Auth::user()->unreadNotifications->where('type', 'App\Notifications\ReclamoRespondidoNotification');
-
-$comentariosReclamos = Auth::user()->unreadNotifications->where('type', 'App\Notifications\NuevoComentarioReclamoNotification');
-
-$reclamosCerrados = Auth::user()->unreadNotifications->where('type', 'App\Notifications\ReclamoCerradoNotification');
-
+$notificaciones = Auth::user()->unreadNotifications
+    ->whereIn('type', [
+        'App\Notifications\NotificacionAdmin',
+        'App\Notifications\NotificacionAdminVacaciones',
+        'App\Notifications\NuevoReclamoAreaNotification',
+        'App\Notifications\ReclamoRespondidoNotification',
+        'App\Notifications\NuevoComentarioReclamoNotification',
+        'App\Notifications\ReclamoCerradoNotification',
+    ])
+    ->sortByDesc('created_at');
 @endphp
 
 
@@ -22,6 +18,9 @@ $reclamosCerrados = Auth::user()->unreadNotifications->where('type', 'App\Notifi
 <div class="container"> {{-- O si quieres ocupar todo el ancho: container-fluid --}}
     <!-- Barra de notificaciones con campana -->
     <div class="d-flex justify-content-end mb-3">
+
+
+
         <div class="dropdown">
             <button class="btn btn-link" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="fas fa-bell"></i>
@@ -29,83 +28,56 @@ $reclamosCerrados = Auth::user()->unreadNotifications->where('type', 'App\Notifi
                     <span class="badge bg-danger">{{ Auth::user()->unreadNotifications->count() }}</span>
                 @endif
             </button>
+
+
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
 
-                @if ($solicitudesMod->count() > 0 || $solicitudesVac->count() > 0 || $nuevos->count() > 0 || $respuestas->count() > 0 || $comentariosReclamos->count() > 0 || $reclamosCerrados->count() > 0)
-                {{-- Solicitudes de modificación --}}
-                    @foreach ($solicitudesMod as $notification)
-                        <li class="dropdown-item">
-                            <a href="{{ $notification->data['url'] ?? '#' }}" class="d-flex align-items-center">
-                                <i class="fas fa-edit text-primary"></i>
-                                <span class="ms-2">{{ $notification->data['mensaje'] }}</span>
-                            </a>
-                        </li>
-                    @endforeach
-            
-                    {{-- Solicitudes de vacaciones --}}
-                    @foreach ($solicitudesVac as $notification)
-                        <li class="dropdown-item">
-                            <a href="{{ $notification->data['url'] ?? '#' }}" class="d-flex align-items-center">
-                                <i class="fas fa-umbrella-beach text-info"></i>
-                                <span class="ms-2">{{ $notification->data['mensaje'] }}</span>
-                            </a>
-                        </li>
-                    @endforeach
+                @foreach ($notificaciones as $notification)
+                    @php
+                        $iconos = [
+                            'App\Notifications\NotificacionAdmin' => 'fas fa-edit text-primary',
+                            'App\Notifications\NotificacionAdminVacaciones' => 'fas fa-umbrella-beach text-info',
+                            'App\Notifications\NuevoReclamoAreaNotification' => 'fas fa-box text-warning',
+                            'App\Notifications\ReclamoRespondidoNotification' => 'fas fa-reply text-success',
+                            'App\Notifications\NuevoComentarioReclamoNotification' => 'fas fa-comment text-secondary',
+                            'App\Notifications\ReclamoCerradoNotification' => 'fas fa-lock text-danger',
+                        ];
+                    @endphp
 
-                    
-                    @foreach ($respuestas as $notification)
-                        <li class="dropdown-item">
-                            <a href="{{ $notification->data['link'] ?? '#' }}" class="d-flex align-items-center">
-                                <i class="fas fa-reply text-success"></i>
-                                <span class="ms-2">{{ $notification->data['mensaje'] }}</span>
-                            </a>
-                        </li>
-                    @endforeach
-                
-                    @foreach ($nuevos as $notification)
-                        <li class="dropdown-item">
-                            <a href="{{ $notification->data['link'] ?? '#' }}" class="d-flex align-items-center">
-                                <i class="fas fa-box text-warning"></i>
-                                <span class="ms-2">{{ $notification->data['mensaje'] }}</span>
-                            </a>
-                        </li>
-                    @endforeach
+                    <li class="dropdown-item">
+                        <a href="{{ $notification->data['link'] ?? '#' }}" class="d-flex align-items-center gap-2">
+                            <i class="{{ $iconos[$notification->type] ?? 'fas fa-info-circle text-muted' }}"></i>
+                            <span class="flex-grow-1">{{ $notification->data['mensaje'] }}</span>
+                        </a>
+                    </li>
+                @endforeach
 
-                    @foreach ($comentariosReclamos as $notification)
-                        <li class="dropdown-item">
-                            <a href="{{ $notification->data['link'] ?? '#' }}" class="d-flex align-items-center">
-                                <i class="fas fa-comment text-secondary"></i>
-                                <span class="ms-2">{{ $notification->data['mensaje'] }}</span>
-                            </a>
-                        </li>
-                    @endforeach
-
-                    @foreach ($reclamosCerrados as $notification)
-                        <li class="dropdown-item">
-                            <a href="{{ $notification->data['link'] ?? '#' }}" class="d-flex align-items-center">
-                                <i class="fas fa-lock text-danger"></i>
-                                <span class="ms-2">{{ $notification->data['mensaje'] }}</span>
-                            </a>
-                        </li>
-                    @endforeach
-
-                
-
+                @if ($notificaciones->count() > 0)
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <form method="POST" action="{{ route('notifications.markAllAsRead') }}">
                             @csrf
-                            <button type="submit" class="dropdown-item text-center">Marcar todas como leídas</button>
+                            <button type="submit" class="dropdown-item text-center">
+                                Marcar todas como leídas
+                            </button>
                         </form>
                     </li>
                 @else
-                    <li class="dropdown-item text-center">No tienes notificaciones nuevas.</li>
+                    <li class="dropdown-item text-center text-muted">No tienes notificaciones nuevas.</li>
                 @endif
+
+
+                
+
+
                 
             </ul>
 
         </div>
     </div>
+
+
+
 
     @if(Session::has('Mensaje'))
         <div class="alert alert-success" role="alert">

@@ -57,7 +57,7 @@ class SolicitudActualizada extends Notification
         return [
             'mensaje' => "{$icono} Tu solicitud de {$tipo} fue {$this->estado}.",
             'estado' => $this->estado,
-            'url' => url('/empleados/solicitudes')
+            'link' => url('/empleados/solicitudes')
         ];
     }
 

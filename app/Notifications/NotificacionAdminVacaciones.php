@@ -44,7 +44,7 @@ class NotificacionAdminVacaciones extends Notification
     {
         return [
             'mensaje' => 'Nueva solicitud de vacaciones de ' . $this->solicitud->trabajador->Nombre,
-            'url' => url('/solicitudes/vacaciones'),  // Enlace para que el administrador revise las solicitudes de vacaciones
+            'link' => url('/solicitudes/vacaciones'),  // Enlace para que el administrador revise las solicitudes de vacaciones
         ];
     }
 }

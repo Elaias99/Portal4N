@@ -50,7 +50,7 @@ class NotificacionAdmin extends Notification
     {
         return [
             'mensaje' => 'Nueva solicitud de modificación de ' . $this->solicitud->trabajador->Nombre,
-            'url' => url('/solicitudes'),  // Enlace a la página de solicitudes
+            'link' => url('/solicitudes'),  // Enlace a la página de solicitudes
         ];
     }
 }
