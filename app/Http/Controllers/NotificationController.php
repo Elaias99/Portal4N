@@ -15,15 +15,19 @@ class NotificationController extends Controller
 
     public function markAsRead($id)
     {
-        $notification = Auth::user()->notifications->find($id);
-    
+        $notification = Auth::user()->notifications->where('id', $id)->first();
+
+
         if ($notification) {
             $notification->markAsRead();
+
+            // Redirigir al enlace que estaba en la notificación
+            return redirect($notification->data['link'] ?? '/');
         }
-    
-        // 🔁 Siempre quedarse en la misma vista
+
         return back();
     }
+
     
     public function markAllAsRead()
     {

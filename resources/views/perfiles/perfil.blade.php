@@ -28,51 +28,21 @@ $notificaciones = Auth::user()->unreadNotifications
     </div>
 @endif
 
-@if ($notificaciones->count() > 0)
-    <div class="container mb-4">
-        <h4 class="mb-3">🔔 Notificaciones</h4>
+<div class="container mb-4">
+    <h4 class="mb-3">🔔 Notificaciones</h4>
 
-        <form method="POST" action="{{ route('notifications.markAllAsRead') }}" class="mb-3 text-end">
-            @csrf
-            <button type="submit" class="btn btn-sm btn-outline-primary">
-                Marcar todas como leídas
-            </button>
-        </form>
-        
-        <div class="list-group">
-            @foreach ($notificaciones as $notification)
-                @php
-                    $iconos = [
-                        'App\Notifications\SolicitudActualizada' => 'fa-file-signature text-primary',
-                        'App\Notifications\NuevoReclamoAreaNotification' => 'fa-box text-warning',
-                        'App\Notifications\ReclamoRespondidoNotification' => 'fa-reply text-success',
-                        'App\Notifications\NuevoComentarioReclamoNotification' => 'fa-comment-dots text-secondary',
-                        'App\Notifications\ReclamoCerradoNotification' => 'fa-lock text-danger',
-                    ];
-                @endphp
+    <form method="POST" action="{{ route('notifications.markAllAsRead') }}" class="mb-3 text-end">
+        @csrf
+        <button type="submit" class="btn btn-sm btn-outline-primary">
+            Marcar todas como leídas
+        </button>
+    </form>
 
-                <div class="list-group-item d-flex justify-content-between align-items-center shadow-sm p-3 mb-3 bg-light rounded">
-                    <div class="d-flex align-items-center">
-                        <i class="fa-solid fa-lg me-3 {{ $iconos[$notification->type] ?? 'fa-info-circle text-muted' }}"></i>
-                        <span>{{ $notification->data['mensaje'] }}</span>
-                    </div>
-                    <div class="d-flex align-items-center">
-                        <a href="{{ $notification->data['link'] }}" class="btn btn-sm btn-outline-secondary me-2">
-                            Ver
-                        </a>
-                        <a href="{{ route('notifications.markAsRead', $notification->id) }}" class="btn btn-sm btn-primary">
-                            Marcar como leída
-                        </a>
-                    </div>
-                </div>
-            @endforeach
-        </div>
+    <div class="list-group" id="notificacionesEmpleado">
+        {{-- JavaScript insertará las notificaciones aquí --}}
     </div>
-@else
-    <div class="container mt-4">
-        <p class="text-muted text-center">No tienes notificaciones nuevas.</p>
-    </div>
-@endif
+</div>
+
 
 
 
@@ -288,4 +258,60 @@ $notificaciones = Auth::user()->unreadNotifications
         </div> <!-- Fin col-md-8 -->
     </div> <!-- Fin row -->
 </div> <!-- Fin container -->
+
+
+
+@push('scripts')
+<script>
+    function cargarNotificacionesEmpleado() {
+        $.get('{{ url('/notificaciones/empleado') }}', function(data) {
+            const contenedor = $('#notificacionesEmpleado');
+            contenedor.empty(); // limpiar contenido
+
+            const iconos = {
+                'App\\Notifications\\SolicitudActualizada': 'fa-file-signature text-primary',
+                'App\\Notifications\\NuevoReclamoAreaNotification': 'fa-box text-warning',
+                'App\\Notifications\\ReclamoRespondidoNotification': 'fa-reply text-success',
+                'App\\Notifications\\NuevoComentarioReclamoNotification': 'fa-comment-dots text-secondary',
+                'App\\Notifications\\ReclamoCerradoNotification': 'fa-lock text-danger'
+            };
+
+            if (data.items.length === 0) {
+                contenedor.append(`<p class="text-muted text-center">No tienes notificaciones nuevas.</p>`);
+                return;
+            }
+
+            data.items.forEach(function(n) {
+                const icono = iconos[n.tipo] || 'fa-info-circle text-muted';
+                const tarjeta = `
+                    <div class="list-group-item d-flex justify-content-between align-items-center shadow-sm p-3 mb-3 bg-light rounded">
+                        <div class="d-flex align-items-center">
+                            <i class="fa-solid fa-lg me-3 ${icono}"></i>
+                            <span>${n.mensaje}</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <a href="{{ url('notifications/mark-as-read') }}/${n.id}" class="btn btn-sm btn-outline-secondary me-2">Ver</a>
+
+
+                        </div>
+                    </div>
+                `;
+                contenedor.append(tarjeta);
+            });
+        });
+    }
+
+    $(document).ready(function() {
+        cargarNotificacionesEmpleado(); // primera carga
+        setInterval(cargarNotificacionesEmpleado, 30000); // cada 30 segundos
+    });
+</script>
+@endpush
+
+
+
+
+
+
+
 @endsection

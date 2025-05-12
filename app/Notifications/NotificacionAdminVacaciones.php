@@ -43,7 +43,7 @@ class NotificacionAdminVacaciones extends Notification
     public function toDatabase($notifiable)
     {
         return [
-            'mensaje' => 'Nueva solicitud de vacaciones de ' . $this->solicitud->trabajador->Nombre,
+            'mensaje' => 'Nueva solicitud de días de ' . $this->solicitud->trabajador->Nombre,
             'link' => url('/solicitudes/vacaciones'),  // Enlace para que el administrador revise las solicitudes de vacaciones
         ];
     }

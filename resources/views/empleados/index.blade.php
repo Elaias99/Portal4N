@@ -16,70 +16,9 @@ $notificaciones = Auth::user()->unreadNotifications
 
 @section('content')
 <div class="container"> {{-- O si quieres ocupar todo el ancho: container-fluid --}}
-    <!-- Barra de notificaciones con campana -->
-    <div class="d-flex justify-content-end mb-3">
 
 
-
-        <div class="dropdown">
-            <button class="btn btn-link" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="fas fa-bell"></i>
-                @if (Auth::user()->unreadNotifications->count() > 0)
-                    <span class="badge bg-danger">{{ Auth::user()->unreadNotifications->count() }}</span>
-                @endif
-            </button>
-
-
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
-
-                @foreach ($notificaciones as $notification)
-                    @php
-                        $iconos = [
-                            'App\Notifications\NotificacionAdmin' => 'fas fa-edit text-primary',
-                            'App\Notifications\NotificacionAdminVacaciones' => 'fas fa-umbrella-beach text-info',
-                            'App\Notifications\NuevoReclamoAreaNotification' => 'fas fa-box text-warning',
-                            'App\Notifications\ReclamoRespondidoNotification' => 'fas fa-reply text-success',
-                            'App\Notifications\NuevoComentarioReclamoNotification' => 'fas fa-comment text-secondary',
-                            'App\Notifications\ReclamoCerradoNotification' => 'fas fa-lock text-danger',
-                        ];
-                    @endphp
-
-                    <li class="dropdown-item">
-                        <a href="{{ $notification->data['link'] ?? '#' }}" class="d-flex align-items-center gap-2">
-                            <i class="{{ $iconos[$notification->type] ?? 'fas fa-info-circle text-muted' }}"></i>
-                            <span class="flex-grow-1">{{ $notification->data['mensaje'] }}</span>
-                        </a>
-                    </li>
-                @endforeach
-
-                @if ($notificaciones->count() > 0)
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                        <form method="POST" action="{{ route('notifications.markAllAsRead') }}">
-                            @csrf
-                            <button type="submit" class="dropdown-item text-center">
-                                Marcar todas como leídas
-                            </button>
-                        </form>
-                    </li>
-                @else
-                    <li class="dropdown-item text-center text-muted">No tienes notificaciones nuevas.</li>
-                @endif
-
-
-                
-
-
-                
-            </ul>
-
-        </div>
-    </div>
-
-
-
-
-    @if(Session::has('Mensaje'))
+       @if(Session::has('Mensaje'))
         <div class="alert alert-success" role="alert">
             {{ Session::get('Mensaje') }}
         </div>

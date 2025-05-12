@@ -79,9 +79,60 @@ route::post('/notifications/mark-all-read', function () {
     Auth::user()->unreadNotifications->markAsRead();
     return back();
 })->name('notifications.markAllAsRead');
-// route::get('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
-//
+
+//agregar una ruta para consultar notificaciones
+Route::get('/notificaciones/recientes', function () {
+    $notificaciones = Auth::user()->unreadNotifications
+        ->sortByDesc('created_at') // ya es una colección, puedes ordenar así
+        ->take(5)
+        ->map(function ($n) {
+            return [
+                'id' => $n->id,
+                'mensaje' => $n->data['mensaje'],
+                'link' => $n->data['link'] . '?notificacion_id=' . $n->id,
+                'tipo' => $n->type,
+            ];
+        });
+
+    return response()->json([
+        'total' => $notificaciones->count(),
+        'items' => $notificaciones->values()
+    ]);
+})->middleware('auth');
+
+
+Route::get('/notificaciones/empleado', function () {
+    $tiposPermitidos = [
+        'App\Notifications\SolicitudActualizada',
+        'App\Notifications\NuevoReclamoAreaNotification',
+        'App\Notifications\ReclamoRespondidoNotification',
+        'App\Notifications\NuevoComentarioReclamoNotification',
+        'App\Notifications\ReclamoCerradoNotification',
+    ];
+
+    $notificaciones = Auth::user()->unreadNotifications
+        ->whereIn('type', $tiposPermitidos)
+        ->sortByDesc('created_at')
+        ->take(5)
+        ->map(function ($n) {
+            return [
+                'id' => $n->id,
+                'mensaje' => $n->data['mensaje'],
+                'link' => $n->data['link'] . '?notificacion_id=' . $n->id,
+                'tipo' => $n->type,
+            ];
+        });
+
+    return response()->json([
+        'total' => $notificaciones->count(),
+        'items' => $notificaciones->values()
+    ]);
+})->middleware('auth');
+
+
 Route::get('/notifications/mark-as-read/{id}', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
+
+
 Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
 
 
