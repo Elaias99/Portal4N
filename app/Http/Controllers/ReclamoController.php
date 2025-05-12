@@ -18,14 +18,28 @@ class ReclamoController extends Controller
     // Listar los reclamos del trabajador autenticado
     public function index()
     {
-        // Obtener todas las áreas, si las necesitas para filtros, select, etc.
         $areas = Area::all();
 
-        // Obtener todos los reclamos pendientes del sistema (sin filtrar por trabajador)
-        $reclamos = Reclamos::where('estado', 'pendiente')->get();
+        $correoInterno = resolvePerfilEmail(Auth::user()->email);
+
+        $trabajador = \App\Models\Trabajador::whereHas('user', function ($q) use ($correoInterno) {
+            $q->where('email', $correoInterno);
+        })->first();
+
+        if (!$trabajador) {
+            return redirect()->back()->with('error', 'Trabajador no encontrado.');
+        }
+
+        $reclamos = \App\Models\Reclamos::where('estado', 'pendiente')
+            ->where(function ($query) use ($trabajador) {
+                $query->where('area_id', $trabajador->area_id)
+                    ->orWhere('id_trabajador', $trabajador->id);
+            })
+            ->get();
 
         return view('reclamos.index', compact('reclamos', 'areas'));
     }
+
 
 
 
