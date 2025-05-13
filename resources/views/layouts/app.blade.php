@@ -24,6 +24,8 @@
         'resources/sass/app.scss',
         'resources/js/app.js',
     ])
+
+    @livewireStyles
     
 </head>
 <body>
@@ -372,10 +374,11 @@
 
         $(document).ready(function() {
             cargarNotificaciones();
-            setInterval(cargarNotificaciones, 30000); // cada 30 segundos
+            setInterval(cargarNotificaciones, 9000); // cada 30 segundos
         });
     </script>
 
     @stack('scripts')
+    @livewireScripts
 </body>
 </html>

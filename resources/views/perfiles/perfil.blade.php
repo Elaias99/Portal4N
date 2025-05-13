@@ -303,7 +303,7 @@ $notificaciones = Auth::user()->unreadNotifications
 
     $(document).ready(function() {
         cargarNotificacionesEmpleado(); // primera carga
-        setInterval(cargarNotificacionesEmpleado, 30000); // cada 30 segundos
+        setInterval(cargarNotificacionesEmpleado, 9000); // cada 30 segundos
     });
 </script>
 @endpush
