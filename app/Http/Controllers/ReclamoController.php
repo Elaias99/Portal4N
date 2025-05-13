@@ -6,8 +6,6 @@ use Illuminate\Http\Request;
 use App\Models\Reclamos;
 use App\Models\Bultos;
 use App\Models\Area;
-use Illuminate\Support\Facades\Notification;
-use App\Helpers\EmailHelper;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth; // Importamos Auth para manejar la autenticación
 use App\Notifications\NuevoReclamoAreaNotification;
@@ -19,6 +17,7 @@ class ReclamoController extends Controller
     public function index()
     {
         $areas = Area::all();
+        $casuisticas = \App\Models\Casuistica::all(); // Agregado para usar en el select
 
         $correoInterno = resolvePerfilEmail(Auth::user()->email);
 
@@ -37,8 +36,9 @@ class ReclamoController extends Controller
             })
             ->get();
 
-        return view('reclamos.index', compact('reclamos', 'areas'));
+        return view('reclamos.index', compact('reclamos', 'areas', 'casuisticas'));
     }
+
 
 
 
@@ -224,8 +224,19 @@ class ReclamoController extends Controller
 
         // Verificar si ese trabajador es el creador del reclamo
         if ($trabajador && $trabajador->id === $reclamo->id_trabajador) {
+
+
+
+            $reclamo->tipo_solicitud = request('tipo_solicitud');
+
+            if (request('tipo_solicitud') === 'reclamo') {
+                $reclamo->area_id = request('area_id'); // como responsable final
+                $reclamo->casuistica_id = request('casuistica_id');
+            }
+
             $reclamo->estado = 'cerrado';
             $reclamo->save();
+
         
             // Crear comentario automático
             \App\Models\ReclamoComentario::create([
