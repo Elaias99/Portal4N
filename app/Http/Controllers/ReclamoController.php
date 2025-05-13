@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth; // Importamos Auth para manejar la autenticación
 use App\Notifications\NuevoReclamoAreaNotification;
 use App\Notifications\ReclamoCerradoNotification;
+use App\Notifications\ReclamoRespondidoNotification;
 
 class ReclamoController extends Controller
 {
@@ -113,21 +114,25 @@ class ReclamoController extends Controller
         Log::debug('Cantidad de trabajadores en el área:', ['count' => $area->trabajadores->count()]);
 
         foreach ($area->trabajadores as $trabajador) {
-            if ($trabajador->user) {
+            if (
+                $trabajador->user &&
+                $trabajador->user->id !== $usuarioOutlook->id
+            ) {
                 Log::debug('Notificando a', ['email' => $trabajador->user->email]);
                 $trabajador->user->notify(new NuevoReclamoAreaNotification($area->nombre));
-                // Notificar también al correo administrativo si existe
+
+                // Notificar al usuario administrativo (solo si no es también el autor)
                 $adminEmail = resolveAdminEmail($trabajador->user->email);
-                if ($adminEmail) {
+                if ($adminEmail && $adminEmail !== $usuarioOutlook->email) {
                     $adminUser = \App\Models\User::where('email', $adminEmail)->first();
-                    if ($adminUser) {
+                    if ($adminUser && $adminUser->id !== $usuarioOutlook->id) {
                         Log::debug('Notificando a usuario administrativo', ['email' => $adminUser->email]);
                         $adminUser->notify(new NuevoReclamoAreaNotification($area->nombre));
                     }
                 }
-
             }
         }
+
         
         
         
@@ -138,6 +143,9 @@ class ReclamoController extends Controller
 
     public function responder(Request $request, $id)
     {
+        $autorId = Auth::id();
+
+        
         $request->validate([
             'respuesta_admin' => 'required|string|max:1000',
         ]);
@@ -152,17 +160,19 @@ class ReclamoController extends Controller
         })->get();
 
         foreach ($usuariosArea as $usuario) {
-            $usuario->notify(new \App\Notifications\ReclamoRespondidoNotification($reclamo));
+            if ($usuario->id !== $autorId) {
+                $usuario->notify(new ReclamoRespondidoNotification($reclamo));
+            }
 
-            // 🔁 Buscar si existe su correo administrativo y notificarlo también
             $adminEmail = resolveAdminEmail($usuario->email);
             if ($adminEmail) {
                 $adminUser = \App\Models\User::where('email', $adminEmail)->first();
-                if ($adminUser) {
-                    $adminUser->notify(new \App\Notifications\ReclamoRespondidoNotification($reclamo));
+                if ($adminUser && $adminUser->id !== $autorId) {
+                    $adminUser->notify(new ReclamoRespondidoNotification($reclamo));
                 }
             }
         }
+
 
         return redirect()->back()->with('success', 'Reclamo respondido correctamente.');
     }
@@ -170,6 +180,8 @@ class ReclamoController extends Controller
 
     public function comentar(Request $request, $id)
     {
+        $autorId = Auth::id();
+
         $request->validate([
             'comentario' => 'required|string|max:1000',
         ]);
@@ -187,12 +199,14 @@ class ReclamoController extends Controller
         })->get();
 
         foreach ($usuariosArea as $usuario) {
-            $usuario->notify(new \App\Notifications\NuevoComentarioReclamoNotification($nuevoComentario));
+            if ($usuario->id !== $autorId) {
+                $usuario->notify(new \App\Notifications\NuevoComentarioReclamoNotification($nuevoComentario));
+            }
 
             $adminEmail = resolveAdminEmail($usuario->email);
             if ($adminEmail) {
                 $adminUser = \App\Models\User::where('email', $adminEmail)->first();
-                if ($adminUser) {
+                if ($adminUser && $adminUser->id !== $autorId) {
                     $adminUser->notify(new \App\Notifications\NuevoComentarioReclamoNotification($nuevoComentario));
                 }
             }
@@ -205,6 +219,7 @@ class ReclamoController extends Controller
     public function cerrar($id)
     {
         $reclamo = \App\Models\Reclamos::findOrFail($id);
+        $autorId = Auth::id();
 
         if ($reclamo->estado === 'cerrado') {
             return back()->with('error', 'Este reclamo está cerrado y no puede recibir más comentarios.');
@@ -251,13 +266,14 @@ class ReclamoController extends Controller
             })->get();
         
             foreach ($usuariosArea as $usuario) {
-                $usuario->notify(new ReclamoCerradoNotification($reclamo));
-        
-                // Notificar también al correo administrativo, si aplica
+                if ($usuario->id !== $autorId) {
+                    $usuario->notify(new ReclamoCerradoNotification($reclamo));
+                }
+
                 $adminEmail = resolveAdminEmail($usuario->email);
                 if ($adminEmail) {
                     $adminUser = \App\Models\User::where('email', $adminEmail)->first();
-                    if ($adminUser) {
+                    if ($adminUser && $adminUser->id !== $autorId) {
                         $adminUser->notify(new ReclamoCerradoNotification($reclamo));
                     }
                 }
