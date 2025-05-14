@@ -13,6 +13,24 @@
         </div>
     @endif
 
+
+    <form method="GET" class="form-inline mb-3">
+        <label for="filtro_trabajador" class="mr-2">Filtrar por trabajador:</label>
+        <select name="trabajador_id" id="filtro_trabajador" class="form-control mr-2">
+            <option value="">Todos</option>
+            @foreach ($trabajadores as $t)
+                <option value="{{ $t->id }}" {{ request('trabajador_id') == $t->id ? 'selected' : '' }}>
+                    {{ $t->Nombre }} {{ $t->ApellidoPaterno }}
+                </option>
+            @endforeach
+        </select>
+        <br>
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+    </form>
+
+    
+
+
     @if($reclamos->count())
         <div class="table-responsive">
             <table class="table table-bordered table-striped shadow-sm">
@@ -44,15 +62,17 @@
                                 </span>
                             </td>
                             <td>
+
                                 @php
                                     $correoInterno = resolvePerfilEmail(Auth::user()->email);
                                     $trabajadorActual = \App\Models\Trabajador::whereHas('user', function ($q) use ($correoInterno) {
                                         $q->where('email', $correoInterno);
                                     })->first();
-                                    $esCreador = $trabajadorActual && $trabajadorActual->id === $reclamo->id_trabajador;
+                                    $esDelArea = $trabajadorActual && $trabajadorActual->area_id === $reclamo->area_id;
+
                                 @endphp
 
-                                @if ($esCreador && $reclamo->estado !== 'cerrado')
+                                @if ($esDelArea && $reclamo->estado !== 'cerrado')
                                     <button class="btn btn-sm btn-danger btn-abrir-modal"
                                             data-reclamo-id="{{ $reclamo->id }}">
                                         Cerrar
@@ -165,5 +185,11 @@ $(document).ready(function () {
     });
 });
 </script>
-
+@unless(auth()->user()->hasAnyRole(['admin', 'jefe']))
+    <div class="mb-3">
+        <a href="{{ route('empleados.perfil') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Volver al Perfil
+        </a>
+    </div>
+@endunless
 @endsection

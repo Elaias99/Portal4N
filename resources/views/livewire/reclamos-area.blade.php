@@ -31,7 +31,7 @@
                                     {{ $reclamo->estado === 'cerrado' ? 'bg-danger' : 'bg-warning text-dark' }}">
                                     {{ ucfirst($reclamo->estado) }}
                                 </span><br>
-                            <small class="text-muted">Creado el {{ $reclamo->created_at->format('d-m-Y') }}</small>
+                            <small class="text-muted">Creado el {{ $reclamo->created_at->format('d-m-Y H:i') }}</small>
                         </p>
 
                         {{-- Comentarios --}}
@@ -39,7 +39,7 @@
                         @forelse ($reclamo->comentarios as $comentario)
                             <div class="border rounded p-2 mb-2 bg-light">
                                 <strong>{{ $comentario->autor->name }}</strong>
-                                <small class="text-muted">{{ $comentario->created_at->format('d-m-Y') }}</small>
+                                <small class="text-muted">{{ $comentario->created_at->format('d-m-Y H:i') }}</small>
                                 <p class="mb-0">{{ $comentario->comentario }}</p>
                             </div>
                         @empty

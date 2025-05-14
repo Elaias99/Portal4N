@@ -59,7 +59,7 @@ $notificaciones = Auth::user()->unreadNotifications
                 @if($trabajador->Foto)
                     <img 
                         src="{{ url('storage/' . $trabajador->Foto) }}" 
-                        class="img-fluid mb-3 profile-picture rounded-circle" 
+                        class="img-fluid mb-3 profile-picture" 
                         alt="Foto de {{ $trabajador->Nombre }}">
                 @else
                     <img 
@@ -88,16 +88,33 @@ $notificaciones = Auth::user()->unreadNotifications
                    Solicitar cambio de datos
                 </a>
 
+
+                <a href="{{ route('vacaciones.create') }}" 
+                   class="btn btn-primary btn-custom-width mb-3">
+                    Solicitar Permiso de Días
+                </a>
+
                 <a href="{{ route('perfiles.reclamos.area') }}" 
                     class="btn btn-primary btn-custom-width mb-3">
                         Ver Reclamos del Área
                 </a>
 
 
-                <a href="{{ route('vacaciones.create') }}" 
-                   class="btn btn-primary btn-custom-width">
-                    Solicitar Permiso de Días
+                <a href="{{ route('bultos.index') }}" 
+                    class="btn btn-primary btn-custom-width mb-3">
+                        Buscar Bulto
                 </a>
+
+                <a href="{{ route('reclamos.mios') }}" 
+                    class="btn btn-primary btn-custom-width mb-3">
+                        Mis Reclamos
+                </a>
+
+
+
+
+
+
             </div>
         </div>
 

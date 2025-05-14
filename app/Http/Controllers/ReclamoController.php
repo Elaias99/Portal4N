@@ -18,8 +18,7 @@ class ReclamoController extends Controller
     public function index()
     {
         $areas = Area::all();
-        $casuisticas = \App\Models\Casuistica::all(); // Agregado para usar en el select
-
+        $casuisticas = \App\Models\Casuistica::all();
         $correoInterno = resolvePerfilEmail(Auth::user()->email);
 
         $trabajador = \App\Models\Trabajador::whereHas('user', function ($q) use ($correoInterno) {
@@ -30,15 +29,23 @@ class ReclamoController extends Controller
             return redirect()->back()->with('error', 'Trabajador no encontrado.');
         }
 
-        $reclamos = \App\Models\Reclamos::where('estado', 'pendiente')
-            ->where(function ($query) use ($trabajador) {
-                $query->where('area_id', $trabajador->area_id)
-                    ->orWhere('id_trabajador', $trabajador->id);
-            })
-            ->get();
+        // Solo trabajadores del área del usuario actual
+        $trabajadores = \App\Models\Trabajador::where('area_id', $trabajador->area_id)->get();
 
-        return view('reclamos.index', compact('reclamos', 'areas', 'casuisticas'));
+        // Reclamos del área del usuario
+        $reclamosQuery = \App\Models\Reclamos::where('estado', 'pendiente')
+            ->where('area_id', $trabajador->area_id);
+
+        // Si se aplica un filtro por trabajador específico
+        if (request('trabajador_id')) {
+            $reclamosQuery->where('id_trabajador', request('trabajador_id'));
+        }
+
+        $reclamos = $reclamosQuery->orderByDesc('created_at')->get();
+
+        return view('reclamos.index', compact('reclamos', 'areas', 'casuisticas', 'trabajadores'));
     }
+
 
 
 
@@ -238,7 +245,7 @@ class ReclamoController extends Controller
         })->first();
 
         // Verificar si ese trabajador es el creador del reclamo
-        if ($trabajador && $trabajador->id === $reclamo->id_trabajador) {
+        if ($trabajador && $trabajador->area_id === $reclamo->area_id) {
 
 
 
