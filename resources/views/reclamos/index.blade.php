@@ -69,10 +69,12 @@
                                         $q->where('email', $correoInterno);
                                     })->first();
                                     $esDelArea = $trabajadorActual && $trabajadorActual->area_id === $reclamo->area_id;
+                                    $esCreador = $trabajadorActual && $trabajadorActual->id === $reclamo->id_trabajador;
+                                    $puedeCerrar = $reclamo->estado !== 'cerrado' && ($esDelArea || $esCreador);
 
                                 @endphp
 
-                                @if ($esDelArea && $reclamo->estado !== 'cerrado')
+                                @if ($puedeCerrar)
                                     <button class="btn btn-sm btn-danger btn-abrir-modal"
                                             data-reclamo-id="{{ $reclamo->id }}">
                                         Cerrar

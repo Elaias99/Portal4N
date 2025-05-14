@@ -34,7 +34,11 @@ class ReclamoController extends Controller
 
         // Reclamos del área del usuario
         $reclamosQuery = \App\Models\Reclamos::where('estado', 'pendiente')
-            ->where('area_id', $trabajador->area_id);
+            ->where(function ($query) use ($trabajador) {
+                $query->where('area_id', $trabajador->area_id)
+                    ->orWhere('id_trabajador', $trabajador->id);
+            });
+
 
         // Si se aplica un filtro por trabajador específico
         if (request('trabajador_id')) {
@@ -223,6 +227,84 @@ class ReclamoController extends Controller
     }
 
 
+
+
+
+
+    public function reabrir($id)
+    {
+        $reclamo = \App\Models\Reclamos::findOrFail($id);
+
+        // Solo se puede reabrir si está cerrado
+        if ($reclamo->estado !== 'cerrado') {
+            return back()->with('error', 'Este reclamo no está cerrado.');
+        }
+
+        $correoInterno = resolvePerfilEmail(Auth::user()->email);
+
+        $trabajador = \App\Models\Trabajador::whereHas('user', function ($q) use ($correoInterno) {
+            $q->where('email', $correoInterno);
+        })->first();
+
+
+        // Validar que sea el autor o alguien del área
+        if (!$trabajador || (
+            $trabajador->id !== $reclamo->id_trabajador &&
+            $trabajador->area_id !== $reclamo->area_id
+        )) {
+            return back()->with('error', 'No tienes permiso para reabrir este reclamo.');
+        }
+
+
+        // Reabrir el reclamo
+        $reclamo->estado = 'pendiente';
+        $reclamo->save();
+
+        // Comentario automático
+        \App\Models\ReclamoComentario::create([
+            'reclamo_id' => $reclamo->id,
+            'user_id' => Auth::id(),
+            'comentario' => '🔁 Reclamo reabierto por ' . Auth::user()->name . ' el ' . now()->format('d-m-Y') . '.',
+        ]);
+
+        return back()->with('success', 'Reclamo reabierto exitosamente.');
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     public function cerrar($id)
     {
         $reclamo = \App\Models\Reclamos::findOrFail($id);
@@ -245,7 +327,7 @@ class ReclamoController extends Controller
         })->first();
 
         // Verificar si ese trabajador es el creador del reclamo
-        if ($trabajador && $trabajador->area_id === $reclamo->area_id) {
+        if ($trabajador && ($trabajador->id === $reclamo->id_trabajador || $trabajador->area_id === $reclamo->area_id)) {
 
 
 

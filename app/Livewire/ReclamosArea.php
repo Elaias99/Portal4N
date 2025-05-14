@@ -27,10 +27,15 @@ class ReclamosArea extends Component
         }
 
         $this->reclamos = Reclamos::with(['bulto.comuna', 'trabajador', 'comentarios.autor'])
-            ->where('area_id', $this->trabajador->area_id)
+            // ->where('estado', 'pendiente')
+            ->where(function ($query) {
+                $query->where('area_id', $this->trabajador->area_id)
+                    ->orWhere('id_trabajador', $this->trabajador->id);
+            })
             ->latest()
             ->get();
     }
+
 
     public function render()
     {

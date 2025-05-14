@@ -35,6 +35,16 @@
                             Creado el {{ $reclamo->created_at->format('d-m-Y H:i') }}
                         </p>
 
+                        @if ($reclamo->estado === 'cerrado')
+                            <form action="{{ route('reclamos.reabrir', $reclamo->id) }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="btn btn-warning btn-sm mb-2">
+                                    <i class="fa-solid fa-rotate-left me-1"></i> Reabrir Reclamo
+                                </button>
+                            </form>
+                        @endif
+
+
                         <a href="{{ route('reclamos.ver', $reclamo->id) }}" class="btn btn-outline-primary btn-sm">
                             <i class="fa-solid fa-comments me-1"></i> Ver Historial
                         </a>

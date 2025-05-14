@@ -153,8 +153,10 @@
                     </div>
 
                     {{-- Acción --}}
+                    {{-- Acción --}}
                     <div class="mt-3 d-flex flex-column gap-2">
-                        @if (!$ultimoReclamo || $ultimoReclamo->estado === 'cerrado')
+                        @if (!$ultimoReclamo)
+                            {{-- No hay reclamo todavía --}}
                             <button type="button" class="btn btn-outline-danger btn-sm"
                                     data-toggle="modal"
                                     data-target="#reclamoModal"
@@ -162,18 +164,28 @@
                                     data-bulto-codigo="{{ $bulto->codigo_bulto }}">
                                 <i class="fa-solid fa-circle-exclamation me-1"></i> Reportar Reclamo
                             </button>
+                        @elseif ($ultimoReclamo->estado === 'cerrado')
+                            {{-- Reclamo cerrado: se puede reabrir --}}
+                            <form action="{{ route('reclamos.reabrir', $ultimoReclamo->id) }}" method="POST">
+                                @csrf
+                                <button type="submit" class="btn btn-warning btn-sm">
+                                    <i class="fa-solid fa-rotate-left me-1"></i> Reabrir Reclamo
+                                </button>
+                            </form>
                         @else
+                            {{-- Reclamo pendiente: deshabilitado --}}
                             <button class="btn btn-secondary btn-sm" disabled title="Ya existe un reclamo pendiente">
                                 <i class="fa-solid fa-ban me-1"></i> Reclamo en curso
                             </button>
                         @endif
-                    
+
                         @if ($ultimoReclamo)
                             <a href="{{ route('reclamos.ver', $ultimoReclamo->id) }}" class="btn btn-outline-secondary btn-sm">
                                 <i class="fa-solid fa-comments me-1"></i> Ver Historial de Reclamo
                             </a>
                         @endif
                     </div>
+
                     
 
 
