@@ -346,7 +346,7 @@ class ReclamoController extends Controller
             \App\Models\ReclamoComentario::create([
                 'reclamo_id' => $reclamo->id,
                 'user_id' => Auth::id(),
-                'comentario' => '🛑 Reclamo cerrado por ' . Auth::user()->name . ' el ' . now()->format('d-m-Y') . '.',
+                'comentario' => '🛑 Reclamo cerrado por ' . Auth::user()->name . ' el ' . now()->format('d-m-Y H:i') . '.',
             ]);
         
             // Notificar a usuarios del área
@@ -368,7 +368,8 @@ class ReclamoController extends Controller
                 }
             }
         
-            return back()->with('success', 'Reclamo cerrado correctamente.');
+            return redirect()->route('reclamos.dashboard')->with('success', 'Reclamo cerrado correctamente y redirigido al Dashboard.');
+
         }
         
 
