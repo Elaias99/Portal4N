@@ -46,6 +46,8 @@ if (!function_exists('resolveAdminEmail')) {
             'benjaminrojas@4nlogistica.cl' => 'b.rojas.s@4nlogistica.cl',
             'hansdelabarra@4nlogistica.cl' => 'h.delabarra.b@4nlogistica.cl',
             'Marcelo@4nlogistica.cl' => 'o.godoy.s@4nlogistica.cl',
+            'eliascorreap@gmail.com' => 'e.correa.p@4nlogistica.cl'
+
         ];
 
         // Invertimos el arreglo

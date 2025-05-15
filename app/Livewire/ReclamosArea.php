@@ -25,12 +25,12 @@ class ReclamosArea extends Component
         if (!$this->trabajador || !$this->trabajador->area_id) {
             abort(403, 'No se pudo encontrar el perfil asociado.');
         }
+        $compañerosIds = Trabajador::where('area_id', $this->trabajador->area_id)->pluck('id');
 
         $this->reclamos = Reclamos::with(['bulto.comuna', 'trabajador', 'comentarios.autor'])
-            // ->where('estado', 'pendiente')
-            ->where(function ($query) {
+            ->where(function ($query) use ($compañerosIds) {
                 $query->where('area_id', $this->trabajador->area_id)
-                    ->orWhere('id_trabajador', $this->trabajador->id);
+                    ->orWhereIn('id_trabajador', $compañerosIds);
             })
             ->latest()
             ->get();

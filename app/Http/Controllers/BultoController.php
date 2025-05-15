@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Session;
 use App\Models\Bultos;
 use App\Models\Jefe;
 use App\Models\Area;
+use App\Models\Casuistica;
 use Illuminate\Support\Facades\Storage;
 use App\Jobs\ImportBultosJob;
 
@@ -27,8 +28,9 @@ class BultoController extends Controller
 
         // Obtener todas las áreas para asignar reclamos
         $areas = Area::all();
+        $casuisticas = Casuistica::all();
 
-        return view('bultos.index', compact('bultos', 'areas'));
+        return view('bultos.index', compact('bultos', 'areas', 'casuisticas'));
     }
 
 

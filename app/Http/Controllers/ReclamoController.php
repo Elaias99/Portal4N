@@ -35,8 +35,8 @@ class ReclamoController extends Controller
         // Reclamos del área del usuario
         $reclamosQuery = \App\Models\Reclamos::where('estado', 'pendiente')
             ->where(function ($query) use ($trabajador) {
-                $query->where('area_id', $trabajador->area_id)
-                    ->orWhere('id_trabajador', $trabajador->id);
+                // $query->where('area_id', $trabajador->area_id)
+                //     ->orWhere('id_trabajador', $trabajador->id);
             });
 
 
@@ -49,7 +49,6 @@ class ReclamoController extends Controller
 
         return view('reclamos.index', compact('reclamos', 'areas', 'casuisticas', 'trabajadores'));
     }
-
 
 
 
@@ -69,7 +68,8 @@ class ReclamoController extends Controller
         $request->validate([
             'id_bulto' => 'required|exists:bultos,id',
             'area_id' => 'required|exists:areas,id',
-            'descripcion' => 'required|string'
+            'descripcion' => 'required|string',
+            'casuistica_inicial_id' => 'required|exists:casuisticas,id',
         ]);
 
         // Paso 1: Obtener el usuario autenticado (correo real de Outlook)
@@ -95,8 +95,10 @@ class ReclamoController extends Controller
             'id_trabajador' => $trabajador->id,
             'area_id' => $request->area_id,
             'descripcion' => $request->descripcion,
+            'casuistica_inicial_id' => $request->casuistica_inicial_id,
             'estado' => 'pendiente',
         ]);
+
 
 
         
@@ -248,10 +250,7 @@ class ReclamoController extends Controller
 
 
         // Validar que sea el autor o alguien del área
-        if (!$trabajador || (
-            $trabajador->id !== $reclamo->id_trabajador &&
-            $trabajador->area_id !== $reclamo->area_id
-        )) {
+        if (!$trabajador || $trabajador->area_id === null) {
             return back()->with('error', 'No tienes permiso para reabrir este reclamo.');
         }
 
@@ -269,40 +268,6 @@ class ReclamoController extends Controller
 
         return back()->with('success', 'Reclamo reabierto exitosamente.');
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     public function cerrar($id)
@@ -327,9 +292,7 @@ class ReclamoController extends Controller
         })->first();
 
         // Verificar si ese trabajador es el creador del reclamo
-        if ($trabajador && ($trabajador->id === $reclamo->id_trabajador || $trabajador->area_id === $reclamo->area_id)) {
-
-
+        if ($trabajador && $trabajador->area_id !== null) {
 
             $reclamo->tipo_solicitud = request('tipo_solicitud');
 
@@ -385,16 +348,12 @@ class ReclamoController extends Controller
         return view('reclamos.reclamo_individual', compact('reclamo'));
     }
 
-
-
     public function misReclamos()
     {
         $usuario = Auth::user();
 
-        // Resolver correo interno si es necesario
         $correoInterno = resolvePerfilEmail($usuario->email);
 
-        // Buscar al trabajador asociado
         $trabajador = \App\Models\Trabajador::whereHas('user', function ($q) use ($correoInterno, $usuario) {
             $q->where('email', $correoInterno)->orWhere('email', $usuario->email);
         })->first();
@@ -403,13 +362,21 @@ class ReclamoController extends Controller
             return redirect('/')->with('error', 'No se pudo identificar al trabajador.');
         }
 
-        $reclamos = \App\Models\Reclamos::where('id_trabajador', $trabajador->id)
+        $reclamosAbiertos = \App\Models\Reclamos::where('id_trabajador', $trabajador->id)
+            ->where('estado', '!=', 'cerrado')
             ->with('bulto', 'comentarios.autor', 'area')
             ->latest()
             ->get();
 
-        return view('reclamos.mis_reclamos', compact('reclamos'));
+        $reclamosCerrados = \App\Models\Reclamos::where('id_trabajador', $trabajador->id)
+            ->where('estado', 'cerrado')
+            ->with('bulto', 'comentarios.autor', 'area')
+            ->latest()
+            ->get();
+
+        return view('reclamos.mis_reclamos', compact('reclamosAbiertos', 'reclamosCerrados'));
     }
+
 
 
 

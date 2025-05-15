@@ -209,6 +209,8 @@ Route::post('/bultos/import', [BultoController::class, 'importExcel'])->name('bu
 
 
 Route::get('/reclamos/dashboard', [\App\Http\Controllers\ReclamoDashboardController::class, 'index'])->name('reclamos.dashboard');
+Route::get('/dashboard/reclamos/exportar', [\App\Http\Controllers\ReclamoDashboardController::class, 'exportarExcel'])->name('dashboard.reclamos.export');
+
 Route::post('/reclamos/{id}/cerrar', [App\Http\Controllers\ReclamoController::class, 'cerrar'])->name('reclamos.cerrar');
 Route::post('/reclamos/{id}/responder', [App\Http\Controllers\ReclamoController::class, 'responder'])->name('reclamos.responder');
 Route::post('/reclamos/{id}/reabrir', [\App\Http\Controllers\ReclamoController::class, 'reabrir'])->name('reclamos.reabrir');

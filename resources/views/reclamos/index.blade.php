@@ -68,9 +68,10 @@
                                     $trabajadorActual = \App\Models\Trabajador::whereHas('user', function ($q) use ($correoInterno) {
                                         $q->where('email', $correoInterno);
                                     })->first();
-                                    $esDelArea = $trabajadorActual && $trabajadorActual->area_id === $reclamo->area_id;
-                                    $esCreador = $trabajadorActual && $trabajadorActual->id === $reclamo->id_trabajador;
-                                    $puedeCerrar = $reclamo->estado !== 'cerrado' && ($esDelArea || $esCreador);
+
+                                    $tieneArea = $trabajadorActual && $trabajadorActual->area_id !== null;
+                                    $puedeCerrar = $reclamo->estado !== 'cerrado' && $tieneArea;
+
 
                                 @endphp
 

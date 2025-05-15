@@ -1,20 +1,16 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Exports;
 
-use Illuminate\Http\Request;
-use App\Models\Reclamos;
-use App\Models\Casuistica;
-use App\Exports\DashboardReclamosExport;
-use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 
-class ReclamoDashboardController extends Controller
+class DashboardReclamosExport implements FromCollection, WithHeadings
 {
-    //
-    public function index()
+    public function collection()
     {
-        $resumenPorPareja = DB::table('reclamos')
+        return DB::table('reclamos')
             ->select(
                 'area_origen.nombre as area_que_genero',
                 'area_responsable.nombre as area_que_cerro',
@@ -38,16 +34,17 @@ class ReclamoDashboardController extends Controller
             )
             ->orderByDesc('cantidad')
             ->get();
-
-        return view('reclamos.dashboard', compact('resumenPorPareja'));
     }
 
-    public function exportarExcel()
+    public function headings(): array
     {
-        return Excel::download(new DashboardReclamosExport, 'dashboard_reclamos.xlsx');
+        return [
+            'Área que generó',
+            'Área responsable',
+            'Tipo de Solicitud',
+            'Casuística Inicial',
+            'Casuística Final',
+            'Cantidad',
+        ];
     }
-
-
-
-
 }

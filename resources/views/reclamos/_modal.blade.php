@@ -33,6 +33,20 @@
                         <textarea class="form-control" name="descripcion" required></textarea>
                     </div>
 
+
+                    <div class="form-group">
+                        <label for="casuistica_inicial_id" class="form-label">Motivo del Reclamo (Casuística Inicial)</label>
+                        <select class="form-control" name="casuistica_inicial_id" required>
+                            <option value="" disabled selected>Seleccione una casuística</option>
+                            @foreach ($casuisticas as $casuistica)
+                                <option value="{{ $casuistica->id }}">{{ $casuistica->nombre }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <br>
+
+
                     <button type="submit" class="btn btn-primary">Enviar Reclamo</button>
                 </form>
             </div>

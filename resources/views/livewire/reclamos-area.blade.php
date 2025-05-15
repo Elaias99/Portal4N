@@ -1,5 +1,6 @@
 <div class="container" wire:poll.2s>
-    <h3 class="mb-4">Reclamos dirigidos a tu área: {{ $trabajador->area->nombre }}</h3>
+    <h3 class="mb-4">Reclamos relacionados con tu área: {{ $trabajador->area->nombre }}</h3>
+
 
     @if ($reclamos->isEmpty())
         <div class="alert alert-secondary">
@@ -10,41 +11,58 @@
 
             @foreach ($reclamos as $reclamo)
                 <div class="card mb-4 shadow-sm">
-                    <div class="card-body">
 
+                    <div class="card-body">
+                        {{-- Encabezado --}}
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h5 class="mb-0 fw-bold text-primary">
-                                <i class="fa-solid fa-box me-1"></i> {{ $reclamo->bulto->codigo_bulto ?? 'Sin código' }}
-                            </h5>
-                            <small class="text-muted">ID #{{ $reclamo->id }}</small>
+                            <div>
+                                <h5 class="fw-bold text-primary mb-1">
+                                    📦 Bulto: {{ $reclamo->bulto->codigo_bulto ?? 'Sin código' }}
+                                </h5>
+
+                                
+                                <small class="text-muted">Creado por <strong>{{ $reclamo->trabajador->Nombre }} {{ $reclamo->trabajador->ApellidoPaterno }}</strong> el {{ $reclamo->created_at->format('d-m-Y H:i') }}</small>
+                            </div>
+                            <div>
+                                <small class="text-muted">ID #{{ $reclamo->id }}</small>
+                                <span class="badge {{ $reclamo->estado === 'cerrado' ? 'bg-danger' : 'bg-warning text-dark' }}">
+                                    {{ ucfirst($reclamo->estado) }}
+                                </span>
+                            </div>
                         </div>
 
-                        {{-- Datos del reclamo --}}
-                        {{-- <h5 class="card-title">📦 Bulto: {{ $reclamo->bulto->codigo_bulto ?? 'Sin código' }}</h5> --}}
-                        <p class="card-text mb-2">
-                            <strong>Creado por:</strong>
-                            {{ $reclamo->trabajador->Nombre }} {{ $reclamo->trabajador->ApellidoPaterno }}<br>
+                        {{-- Descripción del reclamo --}}
+                        <div class="mb-3">
+                            <p class="mb-1"><strong>Descripción del Reclamo:</strong><br> {{ $reclamo->descripcion }}</p>
+                        </div>
 
-                            <strong>Descripción:</strong> {{ $reclamo->descripcion }}<br>
-                            <strong>Descripción del Bulto:</strong> {{ $reclamo->bulto->descripcion_bulto ?? 'No disponible' }}<br>
-                            <strong>Atención a:</strong> {{ $reclamo->bulto->atencion ?? 'No disponible' }}<br>
-                            <strong>Dirección:</strong> {{ $reclamo->bulto->direccion ?? 'No disponible' }}<br>
-                            <strong>Comuna:</strong> {{ $reclamo->bulto->comuna->Nombre ?? 'Sin comuna' }}<br>
-                            <strong>Razón Social:</strong> {{ $reclamo->bulto->razon_social ?? 'No disponible' }}<br>
-                            <strong>Nombre Campaña:</strong> {{ $reclamo->bulto->nombre_campana ?? 'No disponible' }}<br>
-                            <strong>Ubicación Actual:</strong> {{ $reclamo->bulto->ubicacion ?? 'No disponible' }}<br>
-                            <strong>Estado:</strong> 
-                                <span class="badge 
-                                    {{ $reclamo->estado === 'cerrado' ? 'bg-danger' : 'bg-warning text-dark' }}">
-                                    {{ ucfirst($reclamo->estado) }}
-                                </span><br>
-                            <small class="text-muted">Creado el {{ $reclamo->created_at->format('d-m-Y H:i') }}</small>
+                        {{-- Área asignada --}}
+                        <p class="mb-3">
+                            <strong>Área asignada:</strong> {{ $reclamo->area->nombre ?? '—' }}
                         </p>
 
-                        {{-- Comentarios --}}
+                        {{-- Datos del bulto --}}
+                        <div class="bg-light rounded p-3 mb-3">
+                            <h6 class="fw-bold mb-2"><i class="fas fa-truck me-1"></i> Datos del Bulto</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Descripción:</strong> {{ $reclamo->bulto->descripcion_bulto ?? '—' }}</p>
+                                    <p class="mb-1"><strong>Atención a:</strong> {{ $reclamo->bulto->atencion ?? '—' }}</p>
+                                    <p class="mb-1"><strong>Dirección:</strong> {{ $reclamo->bulto->direccion ?? '—' }}</p>
+                                    <p class="mb-1"><strong>Comuna:</strong> {{ $reclamo->bulto->comuna->Nombre ?? '—' }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Razón Social:</strong> {{ $reclamo->bulto->razon_social ?? '—' }}</p>
+                                    <p class="mb-1"><strong>Campaña:</strong> {{ $reclamo->bulto->nombre_campana ?? '—' }}</p>
+                                    <p class="mb-1"><strong>Ubicación Actual:</strong> {{ $reclamo->bulto->ubicacion ?? '—' }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Historial de comentarios --}}
                         <h6 class="fw-bold mt-4">🗨️ Historial de comentarios:</h6>
                         @forelse ($reclamo->comentarios as $comentario)
-                            <div class="border rounded p-2 mb-2 bg-light">
+                            <div class="border rounded p-2 mb-2 {{ str_starts_with($comentario->comentario, '🛑') || str_starts_with($comentario->comentario, '🔁') ? 'bg-warning-subtle' : 'bg-light' }}">
                                 <strong>{{ $comentario->autor->name }}</strong>
                                 <small class="text-muted">{{ $comentario->created_at->format('d-m-Y H:i') }}</small>
                                 <p class="mb-0">{{ $comentario->comentario }}</p>
@@ -68,11 +86,16 @@
                                 🛑 Este reclamo ha sido cerrado. No se pueden agregar más comentarios.
                             </div>
                         @endif
-
                     </div>
+
+
+
+                    
                 </div>
             @endforeach
 
         </div>
     @endif
 </div>
+
+

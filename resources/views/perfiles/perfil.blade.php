@@ -94,7 +94,7 @@ $notificaciones = Auth::user()->unreadNotifications
                     Solicitar Permiso de Días
                 </a>
 
-                <a href="{{ route('perfiles.reclamos.area') }}" 
+                {{-- <a href="{{ route('perfiles.reclamos.area') }}" 
                     class="btn btn-primary btn-custom-width mb-3">
                         Ver Reclamos del Área
                 </a>
@@ -108,7 +108,7 @@ $notificaciones = Auth::user()->unreadNotifications
                 <a href="{{ route('reclamos.mios') }}" 
                     class="btn btn-primary btn-custom-width mb-3">
                         Mis Reclamos
-                </a>
+                </a> --}}
 
 
 

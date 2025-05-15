@@ -33,11 +33,14 @@
         <nav class="navbar navbar-expand-md navbar-dark">
             <div class="container">
                 <!-- Off-canvas Sidebar Menu Button (only for roles admin and jefe) -->
-                @role('admin|jefe')
-                <button class="btn btn-outline-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#menuSidebar" aria-controls="menuSidebar">
-                    <i class="fas fa-bars"></i> Menú
-                </button>
-                @endrole
+                @auth
+                    @if (auth()->user()->hasRole(['admin', 'jefe']) || (auth()->user()->trabajador && auth()->user()->trabajador->area_id))
+                        <button class="btn btn-outline-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#menuSidebar" aria-controls="menuSidebar">
+                            <i class="fas fa-bars"></i> Menú
+                        </button>
+                    @endif
+                @endauth
+
 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="{{ __('Toggle navigation') }}">
                     <span class="navbar-toggler-icon"></span>
@@ -57,17 +60,6 @@
                                 <ul class="dropdown-menu dropdown-menu-end"></ul>
                             </li>
                         @endrole
-
-
-
-
-
-
-
-
-
-
-
                         @guest
                             @if (Route::has('login'))
                                 <li class="nav-item">
@@ -116,7 +108,8 @@
         </nav>
 
         <!-- Offcanvas Sidebar (only for roles admin and jefe) -->
-        @role('admin|jefe')
+        @auth
+        @if (auth()->user()->hasRole(['admin', 'jefe']) || (auth()->user()->trabajador && auth()->user()->trabajador->area_id))
         <div class="offcanvas offcanvas-start" tabindex="-1" id="menuSidebar" aria-labelledby="menuSidebarLabel">
             <div class="offcanvas-header">
                 <h5 class="offcanvas-title" id="menuSidebarLabel">Navegación Rápida</h5>
@@ -127,121 +120,127 @@
                     <img src="{{ asset('images/logo.png') }}" alt="4Nortes" class="logo-guirnalda">
                 </div>
                 <ul class="list-group">
-                    <!-- Sección: Información de Empleados -->
-                    <li class="list-group-item">
-                        <a class="text-decoration-none dropdown-toggle" data-bs-toggle="collapse" href="#informacionEmpleados" role="button" aria-expanded="false" aria-controls="informacionEmpleados">
-                            <i class="fas fa-address-book me-2"></i> Información de Empleados
-                        </a>
-                        <div class="collapse" id="informacionEmpleados">
-                            <ul class="list-group">
-                                <li class="list-group-item">
-                                    <a href="{{ route('empleados.index') }}" class="text-decoration-none">
-                                        <i class="fas fa-user-friends me-2"></i> Trabajadores
-                                    </a>
-                                </li>
-                                <li class="list-group-item">
-                                    <a href="{{ route('empleados.localidades') }}" class="text-decoration-none">
-                                        <i class="fas fa-map-marker-alt me-2"></i> Zonas de Residencia
-                                    </a>
-                                </li>
-                                <li class="list-group-item">
-                                    <a href="{{ route('hijos.index') }}" class="text-decoration-none">
-                                        <i class="fas fa-child me-2"></i> Hijos de Empleados
-                                    </a>
-                                </li>
-                                <li class="list-group-item">
-                                    <a href="{{ route('tallas.index') }}" class="text-decoration-none">
-                                        <i class="fas fa-tshirt me-2"></i> Tallas de Uniformes
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </li>
 
-                    <!-- Sección: Solicitudes y Permisos -->
-                    <li class="list-group-item">
-                        <a class="text-decoration-none dropdown-toggle" data-bs-toggle="collapse" href="#solicitudesPermisos" role="button" aria-expanded="false" aria-controls="solicitudesPermisos">
-                            <i class="fas fa-file-signature me-2"></i> Solicitudes y Permisos
-                        </a>
-                        <div class="collapse" id="solicitudesPermisos">
-                            <ul class="list-group">
-                                <li class="list-group-item">
-                                    <a href="{{ route('solicitudes.index') }}" class="text-decoration-none">
-                                        <i class="fas fa-edit me-2"></i> Solicitudes de Modificación
-                                    </a>
-                                </li>
-                                <li class="list-group-item">
-                                    <a href="{{ route('solicitudes.vacaciones') }}" class="text-decoration-none">
-                                        <i class="fas fa-calendar-day me-2"></i> Solicitudes de Días
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </li>
+                    {{-- Secciones solo visibles para admin o jefe --}}
+                    @role('admin|jefe')
+                        <!-- Sección: Información de Empleados -->
+                        <li class="list-group-item">
+                            <a class="text-decoration-none dropdown-toggle" data-bs-toggle="collapse" href="#informacionEmpleados" role="button" aria-expanded="false" aria-controls="informacionEmpleados">
+                                <i class="fas fa-address-book me-2"></i> Información de Empleados
+                            </a>
+                            <div class="collapse" id="informacionEmpleados">
+                                <ul class="list-group">
+                                    <li class="list-group-item">
+                                        <a href="{{ route('empleados.index') }}" class="text-decoration-none">
+                                            <i class="fas fa-user-friends me-2"></i> Trabajadores
+                                        </a>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <a href="{{ route('empleados.localidades') }}" class="text-decoration-none">
+                                            <i class="fas fa-map-marker-alt me-2"></i> Zonas de Residencia
+                                        </a>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <a href="{{ route('hijos.index') }}" class="text-decoration-none">
+                                            <i class="fas fa-child me-2"></i> Hijos de Empleados
+                                        </a>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <a href="{{ route('tallas.index') }}" class="text-decoration-none">
+                                            <i class="fas fa-tshirt me-2"></i> Tallas de Uniformes
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <!-- Sección: Solicitudes y Permisos -->
+                        <li class="list-group-item">
+                            <a class="text-decoration-none dropdown-toggle" data-bs-toggle="collapse" href="#solicitudesPermisos" role="button" aria-expanded="false" aria-controls="solicitudesPermisos">
+                                <i class="fas fa-file-signature me-2"></i> Solicitudes y Permisos
+                            </a>
+                            <div class="collapse" id="solicitudesPermisos">
+                                <ul class="list-group">
+                                    <li class="list-group-item">
+                                        <a href="{{ route('solicitudes.index') }}" class="text-decoration-none">
+                                            <i class="fas fa-edit me-2"></i> Solicitudes de Modificación
+                                        </a>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <a href="{{ route('solicitudes.vacaciones') }}" class="text-decoration-none">
+                                            <i class="fas fa-calendar-day me-2"></i> Solicitudes de Días
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <!-- Archivos Adjuntos y Proveedores -->
+                        <li class="list-group-item">
+                            <a href="{{ route('admin.archivos-respaldo') }}" class="text-decoration-none">
+                                <i class="fas fa-folder-open me-2"></i> Archivos Adjuntos
+                            </a>
+                        </li>
+
+                        @role('admin')
+                        <li class="list-group-item">
+                            <a href="#submenuProveedores" class="text-decoration-none" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="submenuProveedores">
+                                <i class="fas fa-building me-2"></i> Gestión de Proveedores
+                            </a>
+                            <div class="collapse ps-4" id="submenuProveedores">
+                                <ul class="list-unstyled">
+                                    <li class="my-2">
+                                        <a href="{{ route('proveedores.index') }}" class="text-decoration-none">
+                                            <i class="fas fa-list me-2"></i> Ver Proveedores
+                                        </a>
+                                    </li>
+                                    <li class="my-2">
+                                        <a href="{{ route('proveedores.create') }}" class="text-decoration-none">
+                                            <i class="fas fa-plus me-2"></i> Crear Proveedor
+                                        </a>
+                                    </li>
+                                    <li class="my-2">
+                                        <a href="{{ route('compras.index') }}" class="text-decoration-none">
+                                            <i class="fa-solid fa-store me-2"></i> Compras
+                                        </a>
+                                    </li>
+                                    <li class="my-2">
+                                        <a href="{{ route('compras.create') }}" class="text-decoration-none">
+                                            <i class="fa-solid fa-cart-plus me-2"></i> Crear Compra
+                                        </a>
+                                    </li>
+                                    <li class="my-2">
+                                        <a href="{{ route('pagos.index') }}" class="text-decoration-none">
+                                            <i class="fas fa-money-check-alt me-2"></i> Pagos
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+                        @endrole
+
+                        @role('admin')
+                        <li class="list-group-item">
+                            <a class="text-decoration-none" href="{{ route('admin.index') }}">
+                                <i class="fas fa-cogs me-2"></i> {{ __('Centro de Gestión') }}
+                            </a>
+                        </li>
+                        @endrole
+
+                        <!-- Historial de Vacaciones -->
+                        @role('admin')
+                        <li class="list-group-item">
+                            <a href="{{ route('historial-vacacion.index') }}" class="text-decoration-none">
+                                <i class="fas fa-history me-2"></i> Historial de Vacaciones
+                            </a>
+                        </li>
+                        @endrole
 
 
-                    <!-- Archivos Adjuntos -->
-                    @role('admin')
-                    <li class="list-group-item">
-                        <a href="{{ route('admin.archivos-respaldo') }}" class="text-decoration-none">
-                            <i class="fas fa-folder-open me-2"></i> Archivos Adjuntos
-                        </a>
-                    </li>
 
-                    <li class="list-group-item">
-                        <a href="#submenuProveedores" class="text-decoration-none" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="submenuProveedores">
-                            <i class="fas fa-building me-2"></i> Gestión de Proveedores
-                        </a>
-                        <div class="collapse ps-4" id="submenuProveedores">
-                            <ul class="list-unstyled">
-                                <li class="my-2">
-                                    <a href="{{ route('proveedores.index') }}" class="text-decoration-none">
-                                        <i class="fas fa-list me-2"></i> Ver Proveedores
-                                    </a>
-                                </li>
-                                <li class="my-2">
-                                    <a href="{{ route('proveedores.create') }}" class="text-decoration-none">
-                                        <i class="fas fa-plus me-2"></i> Crear Proveedor
-                                    </a>
-                                </li>
-                                <li class="my-2">
-                                    <a href="{{ route('compras.index') }}" class="text-decoration-none">
-                                        <i class="fa-solid fa-store me-2"></i> Compras
-                                    </a>
-                                </li>
-                                <li class="my-2">
-                                    <a href="{{ route('compras.create') }}" class="text-decoration-none">
-                                        <i class="fa-solid fa-cart-plus me-2"></i> Crear Compra
-                                    </a>
-                                </li>
-
-                                <li class="my-2">
-                                    <a href="{{ route('pagos.index') }}" class="text-decoration-none">
-                                        <i class="fas fa-money-check-alt me-2"></i> Pagos
-                                    </a>
-                                </li>
-                                
-                            </ul>
-                        </div>
-                    </li>
-                    
-                    
-
-                    <li class="list-group-item">
-                        <a class="text-decoration-none" href="{{ route('admin.index') }}"><i class="fas fa-cogs me-2"></i> {{ __('Centro de Gestión') }}</a>
-                    </li>
                     @endrole
 
-                    <!-- Historial de Vacaciones -->
-                    <li class="list-group-item">
-                        <a href="{{ route('historial-vacacion.index') }}" class="text-decoration-none">
-                            <i class="fas fa-history me-2"></i> Historial de Vacaciones
-                        </a>
-                    </li>
-
-
-                    <!-- Sección: Gestión de Bultos -->
-                    <!-- Sección: Gestión de Bultos -->
+                    <!-- Gestión de Bultos (disponible también para trabajadores con área asignada) -->
                     <li class="list-group-item">
                         <a class="text-decoration-none dropdown-toggle" data-bs-toggle="collapse" href="#gestionBultos" role="button" aria-expanded="false" aria-controls="gestionBultos">
                             <i class="fas fa-boxes me-2"></i> Gestión de Bultos
@@ -266,44 +265,31 @@
                                                     <i class="fas fa-tasks me-2"></i> Pendientes
                                                 </a>
                                             </li>
-
                                             <li class="list-group-item">
                                                 <a href="{{ route('perfiles.reclamos.area') }}" class="text-decoration-none">
                                                     <i class="fas fa-comments me-2"></i> Conversaciones de Área
                                                 </a>
                                             </li>
-
                                             <li class="list-group-item">
                                                 <a href="{{ route('reclamos.mios') }}" class="text-decoration-none">
                                                     <i class="fas fa-user-check me-2"></i> Mis Reclamos
-                                                </a>                                                
+                                                </a>
                                             </li>
-
-
-
                                         </ul>
                                     </div>
                                 </li>
-
                             </ul>
                         </div>
                     </li>
 
-
-
-                    {{-- <div class="sidebar-footer text-center mt-4">
-                        <a href="{{ route('tutorial') }}" class="d-block text-decoration-none text-dark">
-                            <i class="fas fa-info-circle fa-2x"></i> <!-- Ícono de información -->
-                            <p class="m-0">Ver Tutorial</p>
-                        </a>
-                    </div> --}}
-
-
-
                 </ul>
             </div>
         </div>
-        @endrole
+        @endif
+        @endauth
+
+
+        
 
         <main class="py-4">
             @yield('content')
