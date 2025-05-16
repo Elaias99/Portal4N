@@ -17,6 +17,8 @@ class ReclamoController extends Controller
     // Listar los reclamos del trabajador autenticado
     public function index()
     {
+        \Carbon\Carbon::setLocale('es'); // ← Esto es clave
+
         $areas = Area::all();
         $casuisticas = \App\Models\Casuistica::all();
         $correoInterno = resolvePerfilEmail(Auth::user()->email);
@@ -70,6 +72,7 @@ class ReclamoController extends Controller
             'area_id' => 'required|exists:areas,id',
             'descripcion' => 'required|string',
             'casuistica_inicial_id' => 'required|exists:casuisticas,id',
+            'importancia' => 'required|in:baja,media,alta,urgente',
         ]);
 
         // Paso 1: Obtener el usuario autenticado (correo real de Outlook)
@@ -89,6 +92,9 @@ class ReclamoController extends Controller
             return redirect()->back()->with('error', 'No se pudo asociar el reclamo a un trabajador válido.');
         }
 
+        // dd($request->all());
+
+
         // Crear el reclamo
         $reclamo = Reclamos::create([
             'id_bulto' => $request->id_bulto,
@@ -97,20 +103,10 @@ class ReclamoController extends Controller
             'descripcion' => $request->descripcion,
             'casuistica_inicial_id' => $request->casuistica_inicial_id,
             'estado' => 'pendiente',
+            'importancia' => $request->importancia,
         ]);
-
-
-
-        
-
-
-
         // Obtener el área del reclamo
         $area = $reclamo->area;
-
-
-
-
         // Obtener los correos reales de los trabajadores del área
         $correosDeEnvio = $area->trabajadores
             ->map(function ($trabajador) {
@@ -145,11 +141,6 @@ class ReclamoController extends Controller
                 }
             }
         }
-
-        
-        
-        
-
         return redirect()->route('reclamos.index')->with('success', 'Reclamo enviado correctamente.');
     }
 
@@ -233,11 +224,10 @@ class ReclamoController extends Controller
 
 
 
-    public function reabrir($id)
+    public function reabrir(Request $request, $id)
     {
         $reclamo = \App\Models\Reclamos::findOrFail($id);
 
-        // Solo se puede reabrir si está cerrado
         if ($reclamo->estado !== 'cerrado') {
             return back()->with('error', 'Este reclamo no está cerrado.');
         }
@@ -248,26 +238,44 @@ class ReclamoController extends Controller
             $q->where('email', $correoInterno);
         })->first();
 
-
-        // Validar que sea el autor o alguien del área
         if (!$trabajador || $trabajador->area_id === null) {
             return back()->with('error', 'No tienes permiso para reabrir este reclamo.');
         }
 
+        // Validación de campos enviados desde el formulario
+        $request->validate([
+            'area_id' => 'required|exists:areas,id',
+            'descripcion' => 'required|string',
+            'casuistica_inicial_id' => 'required', // validación simple, ajusta si hay tabla
+            'importancia' => 'required|in:baja,media,alta,urgente',
+        ]);
 
-        // Reabrir el reclamo
+        // Reabrir y actualizar los datos necesarios
         $reclamo->estado = 'pendiente';
+        $reclamo->area_id = $request->input('area_id');
+        $reclamo->descripcion = $request->input('descripcion');
+        $reclamo->importancia = $request->importancia;
+
         $reclamo->save();
 
-        // Comentario automático
+        // Comentario del usuario con el contenido ingresado
         \App\Models\ReclamoComentario::create([
             'reclamo_id' => $reclamo->id,
             'user_id' => Auth::id(),
-            'comentario' => '🔁 Reclamo reabierto por ' . Auth::user()->name . ' el ' . now()->format('d-m-Y') . '.',
+            'comentario' => '📝 ' . $request->input('descripcion'),
+        ]);
+
+        // Comentario automático adicional (opcional si quieres dejar trazabilidad)
+        \App\Models\ReclamoComentario::create([
+            'reclamo_id' => $reclamo->id,
+            'user_id' => Auth::id(),
+            'comentario' => '🔁 Reclamo reabierto por ' . Auth::user()->name . ' el ' . now()->format('d-m-Y H:i') . '.',
         ]);
 
         return back()->with('success', 'Reclamo reabierto exitosamente.');
     }
+
+
 
 
     public function cerrar($id)

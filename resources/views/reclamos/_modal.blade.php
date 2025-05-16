@@ -46,6 +46,18 @@
 
                     <br>
 
+                    <div class="form-group">
+                        <label for="importancia" class="form-label">Nivel de Importancia</label>
+                        <select class="form-control" name="importancia" required>
+                            <option value="baja">Baja</option>
+                            <option value="media">Media</option>
+                            <option value="alta">Alta</option>
+                            <option value="urgente">Urgente</option>
+                        </select>
+                    </div>
+                    <br>
+
+
 
                     <button type="submit" class="btn btn-primary">Enviar Reclamo</button>
                 </form>

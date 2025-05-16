@@ -36,18 +36,37 @@
             <table class="table table-bordered table-striped shadow-sm">
                 <thead class="thead-dark">
                     <tr>
-                        <th>Código Bulto</th>
-                        <th>Área</th>
-                        <th>Trabajador</th>
+                        <th>Importancia</th>
+
+                        <th>ID Bulto</th>
+                        <th>Área Derivada</th>
+                        <th>Usuario Gestor</th>
                         <th>Descripción</th>
                         <th>Fecha</th>
-                        <th>Estado</th>
+                        <th>Tiempo Abierto</th>
+
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($reclamos as $reclamo)
                         <tr>
+                            <td>
+                                @switch($reclamo->importancia)
+                                    @case('urgente')
+                                        <span class="badge bg-danger text-white">Urgente</span>
+                                        @break
+                                    @case('alta')
+                                        <span class="badge bg-warning text-dark">Alta</span>
+                                        @break
+                                    @case('media')
+                                        <span class="badge bg-info text-dark">Media</span>
+                                        @break
+                                    @default
+                                        <span class="badge bg-secondary">Baja</span>
+                                @endswitch
+                            </td>
+
                             <td>{{ $reclamo->bulto->codigo_bulto ?? '—' }}</td>
                             <td>{{ $reclamo->area->nombre ?? '—' }}</td>
                             <td>
@@ -56,11 +75,7 @@
                             </td>
                             <td>{{ $reclamo->descripcion }}</td>
                             <td>{{ $reclamo->created_at->format('d-m-Y H:i') }}</td>
-                            <td>
-                                <span class="badge badge-warning text-dark text-uppercase">
-                                    {{ $reclamo->estado }}
-                                </span>
-                            </td>
+                            <td>{{ $reclamo->created_at->diffForHumans() }}</td>
                             <td>
 
                                 @php

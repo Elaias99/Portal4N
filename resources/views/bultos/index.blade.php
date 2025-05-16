@@ -164,15 +164,25 @@
                                     data-bulto-codigo="{{ $bulto->codigo_bulto }}">
                                 <i class="fa-solid fa-circle-exclamation me-1"></i> Reportar Reclamo
                             </button>
+
+
+
+
+
                         @elseif ($ultimoReclamo->estado === 'cerrado')
                             {{-- Reclamo cerrado: se puede reabrir --}}
-                            <form action="{{ route('reclamos.reabrir', $ultimoReclamo->id) }}" method="POST">
-                                @csrf
-                                <button type="submit" class="btn btn-warning btn-sm">
-                                    <i class="fa-solid fa-rotate-left me-1"></i> Reabrir Reclamo
-                                </button>
-                            </form>
-                        @else
+
+
+                            <button type="button" class="btn btn-warning btn-sm"
+                                    data-toggle="modal"
+                                    data-target="#reclamoModal"
+                                    data-bulto-id="{{ $bulto->id }}"
+                                    data-bulto-codigo="{{ $bulto->codigo_bulto }}"
+                                    data-reabrir="true"
+                                    data-reclamo-id="{{ $ultimoReclamo->id }}">
+                                <i class="fa-solid fa-rotate-left me-1"></i> Reabrir Reclamo
+                            </button>
+                        @else                        
                             {{-- Reclamo pendiente: deshabilitado --}}
                             <button class="btn btn-secondary btn-sm" disabled title="Ya existe un reclamo pendiente">
                                 <i class="fa-solid fa-ban me-1"></i> Reclamo en curso
