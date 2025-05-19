@@ -304,10 +304,15 @@ class ReclamoController extends Controller
 
             $reclamo->tipo_solicitud = request('tipo_solicitud');
 
+            $reclamo->tipo_solicitud = request('tipo_solicitud');
+
             if (request('tipo_solicitud') === 'reclamo') {
                 $reclamo->area_id = request('area_id'); // como responsable final
-                $reclamo->casuistica_id = request('casuistica_id');
             }
+
+            // Guardar casuística siempre que venga del formulario
+            $reclamo->casuistica_id = request('casuistica_id');
+
 
             $reclamo->estado = 'cerrado';
             $reclamo->save();

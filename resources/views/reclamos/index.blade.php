@@ -139,20 +139,37 @@
                         <div id="camposReclamo" style="display: none;">
                             <div class="form-group">
                                 <label for="area_id">Área Responsable</label>
-                                <select name="area_id" class="form-control">
+
+
+                                <select name="area_id" class="form-control" required>
+                                    <option value="" disabled selected>Seleccione Área...</option>
                                     @foreach($areas as $area)
                                         <option value="{{ $area->id }}">{{ $area->nombre }}</option>
                                     @endforeach
                                 </select>
+
+
+
+
                             </div>
 
                             <div class="form-group">
                                 <label for="casuistica_id">Casuística</label>
-                                <select name="casuistica_id" class="form-control">
+
+
+
+                                <select name="casuistica_id" class="form-control" required>
+                                    <option value="" disabled selected>Seleccione Casuística...</option>
                                     @foreach($casuisticas as $casuistica)
                                         <option value="{{ $casuistica->id }}">{{ $casuistica->nombre }}</option>
                                     @endforeach
                                 </select>
+
+
+
+
+
+
                             </div>
                         </div>
                     </div>
@@ -189,11 +206,23 @@ $(document).ready(function () {
     });
 
     $('#tipo_solicitud').on('change', function () {
-        const isReclamo = $(this).val() === 'reclamo';
+        const tipo = $(this).val();
 
-        if (isReclamo) {
-            $('#camposReclamo').slideDown();
+        $('select[name="area_id"]').val('');
+        $('select[name="casuistica_id"]').val('');
+
+
+        $('#camposReclamo').slideDown();
+
+        if (tipo === 'reclamo') {
+            $('select[name="area_id"]').closest('.form-group').show();
+            $('select[name="casuistica_id"]').closest('.form-group').show();
             $('select[name="area_id"]').attr('required', true);
+            $('select[name="casuistica_id"]').attr('required', true);
+        } else if (tipo === 'instruccion' || tipo === 'consulta') {
+            $('select[name="area_id"]').closest('.form-group').hide();
+            $('select[name="casuistica_id"]').closest('.form-group').show();
+            $('select[name="area_id"]').removeAttr('required');
             $('select[name="casuistica_id"]').attr('required', true);
         } else {
             $('#camposReclamo').slideUp();
@@ -201,6 +230,9 @@ $(document).ready(function () {
             $('select[name="casuistica_id"]').removeAttr('required');
         }
     });
+
+
+    
 });
 </script>
 @unless(auth()->user()->hasAnyRole(['admin', 'jefe']))
