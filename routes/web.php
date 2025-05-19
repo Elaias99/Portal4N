@@ -214,6 +214,7 @@ Route::get('/dashboard/reclamos/exportar', [\App\Http\Controllers\ReclamoDashboa
 Route::post('/reclamos/{id}/cerrar', [App\Http\Controllers\ReclamoController::class, 'cerrar'])->name('reclamos.cerrar');
 Route::post('/reclamos/{id}/responder', [App\Http\Controllers\ReclamoController::class, 'responder'])->name('reclamos.responder');
 Route::post('/reclamos/{id}/reabrir', [\App\Http\Controllers\ReclamoController::class, 'reabrir'])->name('reclamos.reabrir');
+Route::post('/reclamos/consulta', [\App\Http\Controllers\ReclamoController::class, 'storeConsulta'])->name('reclamos.consulta.store');
 Route::get('/reclamos/ver/{id}', [ReclamoController::class, 'verReclamo'])->name('reclamos.ver');
 Route::get('/reclamos/mios', [ReclamoController::class, 'misReclamos'])->name('reclamos.mios');
 Route::post('/reclamos/{id}/comentar', [ReclamoController::class, 'comentar'])->name('reclamos.comentar');

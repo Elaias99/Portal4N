@@ -1,7 +1,19 @@
 
 <div class="card mb-3 shadow-sm">
     <div class="card-body">
-        <h5 class="card-title">📦 Bulto: {{ $reclamo->bulto->codigo_bulto ?? '—' }}</h5>
+        <h5 class="card-title">
+            @if ($reclamo->bulto && $reclamo->tipo_solicitud === 'consulta')
+                📦 Bulto: {{ $reclamo->bulto->codigo_bulto }}
+                <span class="badge bg-info text-white">Consulta</span>
+            @elseif ($reclamo->bulto)
+                📦 Bulto: {{ $reclamo->bulto->codigo_bulto }}
+            @elseif ($reclamo->tipo_solicitud === 'consulta')
+                📋 Consulta #{{ $reclamo->id }}
+            @else
+                📄 Reclamo sin bulto #{{ $reclamo->id }}
+            @endif
+        </h5>
+
 
         <p class="mb-1"><strong>Descripción:</strong> {{ $reclamo->descripcion }}</p>
         <p class="mb-1"><strong>Área:</strong> {{ $reclamo->area->nombre ?? '—' }}</p>

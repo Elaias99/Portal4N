@@ -16,7 +16,7 @@
             if (esReapertura && reclamoId) {
                 form.attr('action', '/reclamos/' + reclamoId + '/reabrir');
             } else {
-                form.attr('action', '{{ route('reclamos.store') }}');
+                form.attr('action', "{{ route('reclamos.store') }}");
             }
         });
     });

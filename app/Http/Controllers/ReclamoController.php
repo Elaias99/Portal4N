@@ -145,6 +145,72 @@ class ReclamoController extends Controller
     }
 
 
+
+
+
+
+
+
+    public function storeConsulta(Request $request)
+    {
+        $request->validate([
+            'descripcion' => 'required|string',
+            'area_id' => 'required|exists:areas,id',
+            'casuistica_inicial_id' => 'required|exists:casuisticas,id',
+            'importancia' => 'required|in:baja,media,alta,urgente',
+        ]);
+
+        $usuario = Auth::user();
+        $correoInterno = resolvePerfilEmail($usuario->email);
+
+        $trabajador = \App\Models\Trabajador::whereHas('user', function ($q) use ($correoInterno) {
+            $q->where('email', $correoInterno);
+        })->first();
+
+        if (!$trabajador) {
+            return redirect()->back()->with('error', 'No se pudo identificar al trabajador para asociar la consulta.');
+        }
+
+        $reclamo = Reclamos::create([
+            'id_bulto' => null,
+            'id_trabajador' => $trabajador->id,
+            'area_id' => $request->area_id,
+            'descripcion' => $request->descripcion,
+            'casuistica_inicial_id' => $request->casuistica_inicial_id,
+            'estado' => 'pendiente',
+            'importancia' => $request->importancia,
+            'tipo_solicitud' => 'consulta',
+        ]);
+
+        // Notificar a los miembros del área
+        $area = $reclamo->area;
+        foreach ($area->trabajadores as $t) {
+            if ($t->user && $t->user->id !== $usuario->id) {
+                $t->user->notify(new \App\Notifications\NuevoReclamoAreaNotification($area->nombre));
+            }
+        }
+
+        return redirect()->route('reclamos.index')->with('success', 'Consulta enviada correctamente.');
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     public function responder(Request $request, $id)
     {
         $autorId = Auth::id();

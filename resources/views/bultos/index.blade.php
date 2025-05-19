@@ -55,15 +55,27 @@
         <h6 class="mb-3 text-center text-muted">
             <i class="fa-solid fa-magnifying-glass me-2"></i> Buscar Bulto por Código
         </h6>
-        <form action="{{ route('bultos.index') }}" method="GET">
-            <div class="input-group input-group-sm">
-                <input type="text" name="codigo_bulto" autofocus class="form-control" 
-                       placeholder="Ej: 003936646 — Ingrese el código exacto del bulto" required>
-                <button class="btn btn-primary" type="submit">
-                    <i class="fa-solid fa-search me-1"></i> Buscar
-                </button>
+
+
+        <form action="{{ route('bultos.index') }}" method="GET" class="d-flex gap-2">
+            <div class="input-group input-group-sm" style="flex: 1;">
+                <input type="text" name="codigo_bulto" autofocus class="form-control"
+                    placeholder="Ej: 003936646 — Ingrese el código exacto del bulto" required>
+                <div class="input-group-append">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fa-solid fa-search me-1"></i> Buscar
+                    </button>
+                </div>
             </div>
+
+            <button type="button" class="btn btn-outline-info btn-sm" data-toggle="modal" data-target="#consultaModal">
+                <i class="fa-solid fa-circle-question me-1"></i> Consulta General
+            </button>
         </form>
+
+
+
+
     </div>
 
     @if ($bultos && count($bultos) > 0)
@@ -205,9 +217,8 @@
             </div>
         @endforeach
 
-        {{-- MODAL --}}
-        @include('reclamos._modal')
-        @include('reclamos._modal-script')
+
+
 
     </div>
     @else
@@ -227,6 +238,11 @@
         </a>
     </div>
 @endunless
+
+        {{-- MODAL --}}
+    @include('reclamos._modal')
+    @include('reclamos._modal-script')
+    @include('reclamos._modal_consulta')
 @endsection
 
 <!-- Scripts -->

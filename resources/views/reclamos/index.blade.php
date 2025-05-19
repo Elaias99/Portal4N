@@ -37,20 +37,23 @@
                 <thead class="thead-dark">
                     <tr>
                         <th>Importancia</th>
-
+                        <th>ID Reclamo</th>
                         <th>ID Bulto</th>
                         <th>Área Derivada</th>
                         <th>Usuario Gestor</th>
                         <th>Descripción</th>
                         <th>Fecha</th>
                         <th>Tiempo Abierto</th>
-
                         <th>Acciones</th>
                     </tr>
                 </thead>
+
+
+
                 <tbody>
                     @foreach($reclamos as $reclamo)
                         <tr>
+                            {{-- Importancia --}}
                             <td>
                                 @switch($reclamo->importancia)
                                     @case('urgente')
@@ -67,17 +70,40 @@
                                 @endswitch
                             </td>
 
-                            <td>{{ $reclamo->bulto->codigo_bulto ?? '—' }}</td>
+                            {{-- ID Reclamo --}}
+                            <td>#{{ $reclamo->id }}</td>
+
+                            {{-- ID Bulto --}}
+                            <td>
+                                @if ($reclamo->bulto)
+                                    {{ $reclamo->bulto->codigo_bulto }}
+                                @elseif ($reclamo->tipo_solicitud === 'consulta')
+                                    <span class="text-info">Consulta general</span>
+                                @else
+                                    <span class="text-muted">Sin bulto</span>
+                                @endif
+                            </td>
+
+                            {{-- Área --}}
                             <td>{{ $reclamo->area->nombre ?? '—' }}</td>
+
+                            {{-- Usuario Gestor --}}
                             <td>
                                 {{ $reclamo->trabajador->Nombre ?? '' }}
                                 {{ $reclamo->trabajador->ApellidoPaterno ?? '' }}
                             </td>
-                            <td>{{ $reclamo->descripcion }}</td>
-                            <td>{{ $reclamo->created_at->format('d-m-Y H:i') }}</td>
-                            <td>{{ $reclamo->created_at->diffForHumans() }}</td>
-                            <td>
 
+                            {{-- Descripción --}}
+                            <td>{{ $reclamo->descripcion }}</td>
+
+                            {{-- Fecha --}}
+                            <td>{{ $reclamo->created_at->format('d-m-Y H:i') }}</td>
+
+                            {{-- Tiempo Abierto --}}
+                            <td>{{ $reclamo->created_at->diffForHumans() }}</td>
+
+                            {{-- Acciones --}}
+                            <td>
                                 @php
                                     $correoInterno = resolvePerfilEmail(Auth::user()->email);
                                     $trabajadorActual = \App\Models\Trabajador::whereHas('user', function ($q) use ($correoInterno) {
@@ -86,8 +112,6 @@
 
                                     $tieneArea = $trabajadorActual && $trabajadorActual->area_id !== null;
                                     $puedeCerrar = $reclamo->estado !== 'cerrado' && $tieneArea;
-
-
                                 @endphp
 
                                 @if ($puedeCerrar)
@@ -102,6 +126,16 @@
                         </tr>
                     @endforeach
                 </tbody>
+
+
+
+
+
+
+
+
+
+
             </table>
         </div>
     @else

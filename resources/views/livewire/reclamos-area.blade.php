@@ -17,8 +17,18 @@
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <div>
                                 <h5 class="fw-bold text-primary mb-1">
-                                    📦 Bulto: {{ $reclamo->bulto->codigo_bulto ?? 'Sin código' }}
+                                    @if ($reclamo->bulto && $reclamo->tipo_solicitud === 'consulta')
+                                        📦 Bulto: {{ $reclamo->bulto->codigo_bulto }}
+                                        <span class="badge bg-info text-white">Consulta</span>
+                                    @elseif ($reclamo->bulto)
+                                        📦 Bulto: {{ $reclamo->bulto->codigo_bulto }}
+                                    @elseif ($reclamo->tipo_solicitud === 'consulta')
+                                        📋 Consulta #{{ $reclamo->id }}
+                                    @else
+                                        📄 Reclamo sin bulto #{{ $reclamo->id }}
+                                    @endif
                                 </h5>
+
 
                                 
                                 <small class="text-muted">Creado por <strong>{{ $reclamo->trabajador->Nombre }} {{ $reclamo->trabajador->ApellidoPaterno }}</strong> el {{ $reclamo->created_at->format('d-m-Y H:i') }}</small>
