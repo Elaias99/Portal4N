@@ -41,9 +41,15 @@ class EmpresaController extends Controller
         $data = $request->validated();
 
         if ($request->hasFile('logo')) {
+            $isProduction = app()->environment('production');
+            $uploadPath = $isProduction
+                ? base_path('../public_html/logos')
+                : public_path('logos');
+
             $logo = $request->file('logo');
             $logoName = uniqid() . '.' . $logo->getClientOriginalExtension();
-            $logo->move(public_path('logos'), $logoName);
+            $logo->move($uploadPath, $logoName);
+
             $data['logo'] = 'logos/' . $logoName;
         }
 
@@ -51,6 +57,7 @@ class EmpresaController extends Controller
 
         return redirect()->route('empresas.index')->with('success', 'Empresa creada exitosamente.');
     }
+
 
 
     /**
@@ -80,9 +87,17 @@ class EmpresaController extends Controller
         $data = $request->validated();
 
         if ($request->hasFile('logo')) {
+            $isProduction = app()->environment('production');
+            $uploadPath = $isProduction
+                ? base_path('../public_html/logos')
+                : public_path('logos');
+
             // Eliminar logo anterior si existe
             if ($empresa->logo) {
-                $oldPath = public_path($empresa->logo);
+                $oldPath = $isProduction
+                    ? base_path('../public_html/' . $empresa->logo)
+                    : public_path($empresa->logo);
+
                 if (file_exists($oldPath)) {
                     unlink($oldPath);
                 }
@@ -90,7 +105,8 @@ class EmpresaController extends Controller
 
             $logo = $request->file('logo');
             $logoName = uniqid() . '.' . $logo->getClientOriginalExtension();
-            $logo->move(public_path('logos'), $logoName);
+            $logo->move($uploadPath, $logoName);
+
             $data['logo'] = 'logos/' . $logoName;
         }
 
@@ -98,6 +114,7 @@ class EmpresaController extends Controller
 
         return redirect()->route('empresas.index')->with('success', 'Empresa actualizada exitosamente.');
     }
+
 
     /**
      * Remove the specified resource from storage.

@@ -492,8 +492,18 @@ class TrabajadorController extends Controller
     private function uploadFoto($request, $trabajador = null)
     {
         if ($request->hasFile('Foto')) {
+            $isProduction = app()->environment('production');
+
+            // Define ruta correcta según entorno
+            $uploadPath = $isProduction
+                ? base_path('../public_html/uploads')  // Producción
+                : public_path('uploads');             // Local
+
             if ($trabajador && $trabajador->Foto) {
-                $oldPath = public_path($trabajador->Foto);
+                $oldPath = $isProduction
+                    ? base_path('../public_html/' . $trabajador->Foto)
+                    : public_path($trabajador->Foto);
+
                 if (file_exists($oldPath)) {
                     unlink($oldPath);
                 }
@@ -501,7 +511,7 @@ class TrabajadorController extends Controller
 
             $file = $request->file('Foto');
             $fileName = uniqid() . '.' . $file->getClientOriginalExtension();
-            $file->move(public_path('uploads'), $fileName);
+            $file->move($uploadPath, $fileName);
 
             return 'uploads/' . $fileName;
         }
@@ -512,15 +522,20 @@ class TrabajadorController extends Controller
 
 
 
+
     private function deleteOldPhoto($oldPhoto)
     {
         if ($oldPhoto) {
-            $fullPath = public_path($oldPhoto);
+            $fullPath = app()->environment('production')
+                ? base_path('../public_html/' . $oldPhoto)
+                : public_path($oldPhoto);
+
             if (file_exists($fullPath)) {
                 unlink($fullPath);
             }
         }
     }
+
 
 
 
