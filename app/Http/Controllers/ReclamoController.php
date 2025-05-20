@@ -93,8 +93,15 @@ class ReclamoController extends Controller
         if ($request->hasFile('foto')) {
             $archivo = $request->file('foto');
             $nombre = uniqid() . '.' . $archivo->getClientOriginalExtension();
-            $archivo->move(public_path('reclamos_fotos'), $nombre);
-            $fotoRuta = 'reclamos_fotos/' . $nombre;
+
+            // Detectar entorno y definir ruta de guardado
+            $rutaDestino = app()->environment('production')
+                ? base_path('../public_html/reclamos_fotos')
+                : public_path('reclamos_fotos');
+
+            $archivo->move($rutaDestino, $nombre);
+
+            $fotoRuta = 'reclamos_fotos/' . $nombre; // Ruta relativa que guarda en la DB
         }
 
         // Validación final
