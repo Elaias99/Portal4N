@@ -312,9 +312,12 @@
 
                             <div class="col-md-6 form-group">
                                 <label for="Foto">Foto</label>
-                                @if(isset($empleado->Foto) && file_exists(public_path($empleado->Foto)))
-                                    <img src="{{ asset($empleado->Foto) }}" alt="Foto" width="100">
+
+
+                                @if(isset($empleado->Foto))
+                                    <img src="{{ url($empleado->Foto) }}" alt="Foto" width="100">
                                 @endif
+
 
                                 <input type="file" name="Foto" id="Foto" class="form-control">
                                 @if ($errors->has('Foto'))

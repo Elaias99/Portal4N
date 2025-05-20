@@ -38,10 +38,11 @@
                 <tr>
                     <td>
                         @if($empresa->logo)
-                            <img src="{{ asset($empresa->logo) }}" alt="Logo de {{ $empresa->Nombre }}" style="max-height: 50px;">
+                            <img src="{{ url($empresa->logo) }}" alt="Logo de {{ $empresa->Nombre }}" style="max-height: 50px;">
                         @else
                             No hay logo
                         @endif
+
 
                     </td>
                     <td>{{ $empresa->Nombre }}</td>

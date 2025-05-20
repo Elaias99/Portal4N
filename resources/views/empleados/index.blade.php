@@ -170,9 +170,10 @@ $notificaciones = Auth::user()->unreadNotifications
                                         @if($empleado->empresa && $empleado->empresa->logo)
 
 
-                                            <img src="{{ asset($empleado->empresa->logo) }}" 
-                                                alt="Logo de {{ $empleado->empresa->Nombre }}" 
-                                                style="max-height: 50px;">
+                                            <img src="{{ url($empleado->empresa->logo) }}" 
+                                            alt="Logo de {{ $empleado->empresa->Nombre }}" 
+                                            style="max-height: 50px;">
+
 
                                         @else
 

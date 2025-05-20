@@ -14,11 +14,12 @@
               <div class="col-md-4">
 
 
-                  @if($empleado->Foto && file_exists(public_path($empleado->Foto)))
-                      <img src="{{ asset($empleado->Foto) }}" class="img-fluid" alt="Foto de {{ $empleado->Nombre }}">
+                  @if($empleado->Foto)
+                      <img src="{{ url($empleado->Foto) }}" class="img-fluid" alt="Foto de {{ $empleado->Nombre }}">
                   @else
                       <img src="{{ asset('images/default-avatar.png') }}" class="img-fluid" alt="Imagen predeterminada">
                   @endif
+
 
 
 
