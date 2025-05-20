@@ -73,6 +73,7 @@ class ReclamoController extends Controller
             'descripcion' => 'required|string',
             'casuistica_inicial_id' => 'required|exists:casuisticas,id',
             'importancia' => 'required|in:baja,media,alta,urgente',
+            'foto' => 'nullable|image|max:2048', // ✅ nueva validación
         ]);
 
         // Paso 1: Obtener el usuario autenticado (correo real de Outlook)
@@ -86,6 +87,15 @@ class ReclamoController extends Controller
 
         // Paso 4: Obtener el trabajador asociado a ese usuario interno
         $trabajador = $usuarioInterno?->trabajador;
+
+        $fotoRuta = null;
+
+        if ($request->hasFile('foto')) {
+            $archivo = $request->file('foto');
+            $nombre = uniqid() . '.' . $archivo->getClientOriginalExtension();
+            $archivo->move(public_path('reclamos_fotos'), $nombre);
+            $fotoRuta = 'reclamos_fotos/' . $nombre;
+        }
 
         // Validación final
         if (!$trabajador) {
@@ -104,6 +114,7 @@ class ReclamoController extends Controller
             'casuistica_inicial_id' => $request->casuistica_inicial_id,
             'estado' => 'pendiente',
             'importancia' => $request->importancia,
+            'foto' => $fotoRuta, // ✅ nuevo campo
         ]);
         // Obtener el área del reclamo
         $area = $reclamo->area;

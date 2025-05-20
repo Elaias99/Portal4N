@@ -9,7 +9,7 @@
                 </button>
             </div>
             <div class="modal-body">
-                <form id="reclamoForm" action="{{ route('reclamos.store') }}" method="POST">
+                <form id="reclamoForm" action="{{ route('reclamos.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" name="id_bulto" id="modal-bulto-id">
 
@@ -55,6 +55,11 @@
                     <div class="form-group">
                         <label for="descripcion" class="form-label">Descripción del Problema</label>
                         <textarea class="form-control" name="descripcion" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="foto">Foto del problema (opcional)</label>
+                        <input type="file" name="foto" class="form-control">
                     </div>
 
                     <br>

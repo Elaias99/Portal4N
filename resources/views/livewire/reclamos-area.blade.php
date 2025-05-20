@@ -46,6 +46,15 @@
                             <p class="mb-1"><strong>Descripción del Reclamo:</strong><br> {{ $reclamo->descripcion }}</p>
                         </div>
 
+
+                        @if ($reclamo->foto)
+                            <div class="mt-2">
+                                <strong>Foto Adjunta:</strong><br>
+                                <img src="{{ url($reclamo->foto) }}" alt="Foto del reclamo" class="img-fluid rounded shadow-sm" style="max-width: 300px;">
+                            </div>
+                        @endif
+
+
                         {{-- Área asignada --}}
                         <p class="mb-3">
                             <strong>Área asignada:</strong> {{ $reclamo->area->nombre ?? '—' }}
