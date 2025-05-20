@@ -493,29 +493,35 @@ class TrabajadorController extends Controller
     {
         if ($request->hasFile('Foto')) {
             if ($trabajador && $trabajador->Foto) {
-                $oldPath = storage_path('app/public/' . $trabajador->Foto);
+                $oldPath = public_path($trabajador->Foto);
                 if (file_exists($oldPath)) {
                     unlink($oldPath);
                 }
             }
-    
-            // Guarda el archivo en storage/app/public/uploads y genera un nombre único
-            $path = $request->file('Foto')->store('uploads', 'public');
-    
-            return $path; // Devuelve la ruta relativa como 'uploads/archivo.png'
+
+            $file = $request->file('Foto');
+            $fileName = uniqid() . '.' . $file->getClientOriginalExtension();
+            $file->move(public_path('uploads'), $fileName);
+
+            return 'uploads/' . $fileName;
         }
-    
+
         return null;
     }
 
 
 
+
     private function deleteOldPhoto($oldPhoto)
     {
-        if ($oldPhoto && Storage::exists($oldPhoto)) {
-            Storage::delete($oldPhoto);
+        if ($oldPhoto) {
+            $fullPath = public_path($oldPhoto);
+            if (file_exists($fullPath)) {
+                unlink($fullPath);
+            }
         }
     }
+
 
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////

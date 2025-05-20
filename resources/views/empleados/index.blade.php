@@ -164,11 +164,20 @@ $notificaciones = Auth::user()->unreadNotifications
                                         <i class="fa-solid fa-triangle-exclamation text-warning fa-lg"></i>
                                         <h6 class="text-primary fw-bold">Desvinculado</h6>
                                     @else
+
+
+
                                         @if($empleado->empresa && $empleado->empresa->logo)
-                                            <img src="{{ asset('storage/' . $empleado->empresa->logo) }}" 
-                                                 alt="Logo de {{ $empleado->empresa->Nombre }}" 
-                                                 style="max-height: 50px;">
+
+
+                                            <img src="{{ asset($empleado->empresa->logo) }}" 
+                                                alt="Logo de {{ $empleado->empresa->Nombre }}" 
+                                                style="max-height: 50px;">
+
                                         @else
+
+
+
                                             <p class="text-muted">No hay logo disponible</p>
                                         @endif
                                     @endif

@@ -38,19 +38,20 @@ class EmpresaController extends Controller
      */
     public function store(StoreEmpresaRequest $request)
     {
-        //
         $data = $request->validated();
 
-        // Verifica si se subió un archivo
         if ($request->hasFile('logo')) {
-            // Almacena el archivo en la carpeta 'logos' dentro de 'storage/app/public'
-            $data['logo'] = $request->file('logo')->store('logos', 'public');
+            $logo = $request->file('logo');
+            $logoName = uniqid() . '.' . $logo->getClientOriginalExtension();
+            $logo->move(public_path('logos'), $logoName);
+            $data['logo'] = 'logos/' . $logoName;
         }
 
         Empresa::create($data);
 
         return redirect()->route('empresas.index')->with('success', 'Empresa creada exitosamente.');
     }
+
 
     /**
      * Display the specified resource.
@@ -76,18 +77,21 @@ class EmpresaController extends Controller
      */
     public function update(UpdateEmpresaRequest $request, Empresa $empresa)
     {
-        //
         $data = $request->validated();
 
-        // Verifica si se subió un nuevo archivo
         if ($request->hasFile('logo')) {
-            // Elimina el logo anterior si existe
+            // Eliminar logo anterior si existe
             if ($empresa->logo) {
-                Storage::delete('public/' . $empresa->logo);
+                $oldPath = public_path($empresa->logo);
+                if (file_exists($oldPath)) {
+                    unlink($oldPath);
+                }
             }
 
-            // Almacena el nuevo archivo
-            $data['logo'] = $request->file('logo')->store('logos', 'public');
+            $logo = $request->file('logo');
+            $logoName = uniqid() . '.' . $logo->getClientOriginalExtension();
+            $logo->move(public_path('logos'), $logoName);
+            $data['logo'] = 'logos/' . $logoName;
         }
 
         $empresa->update($data);

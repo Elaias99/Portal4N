@@ -308,17 +308,23 @@
                 <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
                     <div class="accordion-body">
                         <div class="row">
+
+
                             <div class="col-md-6 form-group">
                                 <label for="Foto">Foto</label>
-                                @if(isset($empleado->Foto))
-                                    <img src="{{ asset('storage').'/'.$empleado->Foto }}" alt="Foto" width="100">
+                                @if(isset($empleado->Foto) && file_exists(public_path($empleado->Foto)))
+                                    <img src="{{ asset($empleado->Foto) }}" alt="Foto" width="100">
                                 @endif
+
                                 <input type="file" name="Foto" id="Foto" class="form-control">
                                 @if ($errors->has('Foto'))
                                     <span class="text-danger">{{ $errors->first('Foto') }}</span>
                                     <p class="text-warning">Por favor, vuelve a subir la imagen si se produjo un error.</p>
                                 @endif
                             </div>
+
+
+
                             <div class="col-md-6 form-group">
                                 <label for="salario_bruto">Salario Bruto {!! mostrarAsterisco('salario_bruto', $camposObligatorios) !!}</label>
                                 <input type="number" name="salario_bruto" id="salario_bruto" class="form-control" step="0.01" min="0" value="{{ isset($empleado->salario_bruto) ? $empleado->salario_bruto : old('salario_bruto') }}">

@@ -12,11 +12,17 @@
           <!-- Contenido Detallado del Empleado -->
           <div class="row">
               <div class="col-md-4">
-                  @if($empleado->Foto)
-                      <img src="{{ url('storage/' . $empleado->Foto) }}" class="img-fluid" alt="Foto de {{ $empleado->Nombre }}">
+
+
+                  @if($empleado->Foto && file_exists(public_path($empleado->Foto)))
+                      <img src="{{ asset($empleado->Foto) }}" class="img-fluid" alt="Foto de {{ $empleado->Nombre }}">
                   @else
-                      <img src="{{ url('images/default-avatar.png') }}" class="img-fluid" alt="Imagen predeterminada">
+                      <img src="{{ asset('images/default-avatar.png') }}" class="img-fluid" alt="Imagen predeterminada">
                   @endif
+
+
+
+
               </div>
               <div class="col-md-8">
                   <table class="table table-bordered">
