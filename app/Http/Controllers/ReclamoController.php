@@ -212,23 +212,6 @@ class ReclamoController extends Controller
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     public function responder(Request $request, $id)
     {
         $autorId = Auth::id();
@@ -272,14 +255,37 @@ class ReclamoController extends Controller
 
         $request->validate([
             'comentario' => 'required|string|max:1000',
+            'foto_comentario' => 'nullable|image|max:2048',
         ]);
 
         $reclamo = \App\Models\Reclamos::findOrFail($id);
+
+
+        $fotoRuta = null;
+
+        if ($request->hasFile('foto_comentario')) {
+            $archivo = $request->file('foto_comentario');
+            $nombre = 'comentario_' . uniqid() . '.' . $archivo->getClientOriginalExtension();
+
+            $rutaDestino = app()->environment('production')
+                ? base_path('../public_html/reclamos_comentarios_fotos')
+                : public_path('reclamos_comentarios_fotos');
+
+            if (!file_exists($rutaDestino)) {
+                mkdir($rutaDestino, 0755, true);
+            }
+
+            $archivo->move($rutaDestino, $nombre);
+
+            $fotoRuta = 'reclamos_comentarios_fotos/' . $nombre;
+        }
+
 
         $nuevoComentario = \App\Models\ReclamoComentario::create([
             'reclamo_id' => $reclamo->id,
             'user_id' => Auth::id(),
             'comentario' => $request->comentario,
+            'foto_comentario' => $fotoRuta,
         ]);
 
         $usuariosArea = \App\Models\User::whereHas('trabajador', function ($query) use ($reclamo) {

@@ -9,7 +9,7 @@ class ReclamoComentario extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['reclamo_id', 'user_id', 'comentario'];
+    protected $fillable = ['reclamo_id', 'user_id', 'comentario','foto_comentario'];
 
 
 

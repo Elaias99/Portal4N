@@ -1,120 +1,135 @@
-<div class="container" wire:poll.2s>
-    <h3 class="mb-4">Reclamos relacionados con tu área: {{ $trabajador->area->nombre }}</h3>
+<div class="row" wire:poll.2s>
+    {{-- PANEL IZQUIERDO --}}
+    <div class="col-md-2">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-3">
+                <h6 class="text-muted mb-3">🧭 Panel de Reclamos</h6>
 
+                {{-- Accesos --}}
+                {{-- Filtros (placeholder futuro) --}}
+                <div class="mb-3">
+                    <small class="text-muted d-block mb-1">🔍 Filtros (próx.)</small>
+                    <small class="text-muted">Búsqueda por trabajador, área o estado.</small>
+                </div>
 
-    @if ($reclamos->isEmpty())
-        <div class="alert alert-secondary">
-            No hay reclamos registrados para esta área.
+                {{-- Resumen --}}
+                <div>
+                    <small class="text-muted d-block mb-1">📊 Resumen</small>
+                    <ul class="list-unstyled small mb-0">
+                        <li>🟡 Pendientes: <strong>{{ $reclamos->where('estado', 'pendiente')->count() }}</strong></li>
+                        <li>🔴 Cerrados: <strong>{{ $reclamos->where('estado', 'cerrado')->count() }}</strong></li>
+                        <li>📋 Consultas: <strong>{{ $reclamos->where('tipo_solicitud', 'consulta')->count() }}</strong></li>
+                    </ul>
+                </div>
+            </div>
         </div>
-    @else
-        <div class="list-group">
+    </div>
 
+
+    {{-- PANEL DERECHO: FORO --}}
+    <div class="col-md-9">
+        <h4 class="mb-4">💬 Reclamos relacionados con tu área: {{ $trabajador->area->nombre }}</h4>
+
+        @if ($reclamos->isEmpty())
+            <div class="alert alert-secondary">
+                No hay reclamos registrados para esta área.
+            </div>
+        @else
             @foreach ($reclamos as $reclamo)
                 <div class="card mb-4 shadow-sm">
-
-                    <div class="card-body">
-                        {{-- Encabezado --}}
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <div>
-                                <h5 class="fw-bold text-primary mb-1">
-                                    @if ($reclamo->bulto && $reclamo->tipo_solicitud === 'consulta')
-                                        📦 Bulto: {{ $reclamo->bulto->codigo_bulto }}
-                                        <span class="badge bg-info text-white">Consulta</span>
-                                    @elseif ($reclamo->bulto)
-                                        📦 Bulto: {{ $reclamo->bulto->codigo_bulto }}
-                                    @elseif ($reclamo->tipo_solicitud === 'consulta')
-                                        📋 Consulta #{{ $reclamo->id }}
-                                    @else
-                                        📄 Reclamo sin bulto #{{ $reclamo->id }}
+                    {{-- Cabecera tipo foro --}}
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1 font-weight-bold text-primary">
+                                @if ($reclamo->tipo_solicitud === 'consulta')
+                                    📋 Consulta #{{ $reclamo->id }}
+                                @elseif ($reclamo->bulto)
+                                    📦 Bulto: {{ $reclamo->bulto->codigo_bulto }} 
+                                    @if ($reclamo->tipo_solicitud === 'consulta')
+                                        <span class="badge badge-info">Consulta</span>
                                     @endif
-                                </h5>
-
-
-                                
-                                <small class="text-muted">Creado por <strong>{{ $reclamo->trabajador->Nombre }} {{ $reclamo->trabajador->ApellidoPaterno }}</strong> el {{ $reclamo->created_at->format('d-m-Y H:i') }}</small>
-                            </div>
-                            <div>
-                                <small class="text-muted">ID #{{ $reclamo->id }}</small>
-                                <span class="badge {{ $reclamo->estado === 'cerrado' ? 'bg-danger' : 'bg-warning text-dark' }}">
-                                    {{ ucfirst($reclamo->estado) }}
-                                </span>
-                            </div>
+                                    <small class="text-muted">#{{ $reclamo->id }}</small>
+                                @else
+                                    📄 Reclamo #{{ $reclamo->id }}
+                                @endif
+                            </h6>
+                            <small class="text-muted">
+                                Publicado por <strong>{{ $reclamo->trabajador->Nombre }} {{ $reclamo->trabajador->ApellidoPaterno }}</strong> 
+                                el {{ $reclamo->created_at->format('d-m-Y H:i') }}
+                            </small>
                         </div>
+                        <span class="badge badge-{{ $reclamo->estado === 'cerrado' ? 'danger' : 'warning' }}">
+                            {{ ucfirst($reclamo->estado) }}
+                        </span>
+                    </div>
 
-                        {{-- Descripción del reclamo --}}
-                        <div class="mb-3">
-                            <p class="mb-1"><strong>Descripción del Reclamo:</strong><br> {{ $reclamo->descripcion }}</p>
-                        </div>
-
+                    {{-- Cuerpo del post --}}
+                    <div class="card-body">
+                        <p class="mb-2"><strong>Descripción:</strong> {{ $reclamo->descripcion }}</p>
 
                         @if ($reclamo->foto)
-                            <div class="mt-2">
-                                <strong>Foto Adjunta:</strong><br>
-                                <img src="{{ url($reclamo->foto) }}" alt="Foto del reclamo" class="img-fluid rounded shadow-sm" style="max-width: 300px;">
+                            <div class="mb-3">
+                                <img src="{{ url($reclamo->foto) }}" class="img-thumbnail" style="max-width: 200px;">
                             </div>
                         @endif
 
-
-                        {{-- Área asignada --}}
-                        <p class="mb-3">
-                            <strong>Área asignada:</strong> {{ $reclamo->area->nombre ?? '—' }}
-                        </p>
-
-                        {{-- Datos del bulto --}}
-                        <div class="bg-light rounded p-3 mb-3">
-                            <h6 class="fw-bold mb-2"><i class="fas fa-truck me-1"></i> Datos del Bulto</h6>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p class="mb-1"><strong>Descripción:</strong> {{ $reclamo->bulto->descripcion_bulto ?? '—' }}</p>
-                                    <p class="mb-1"><strong>Atención a:</strong> {{ $reclamo->bulto->atencion ?? '—' }}</p>
-                                    <p class="mb-1"><strong>Dirección:</strong> {{ $reclamo->bulto->direccion ?? '—' }}</p>
-                                    <p class="mb-1"><strong>Comuna:</strong> {{ $reclamo->bulto->comuna->Nombre ?? '—' }}</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p class="mb-1"><strong>Razón Social:</strong> {{ $reclamo->bulto->razon_social ?? '—' }}</p>
-                                    <p class="mb-1"><strong>Campaña:</strong> {{ $reclamo->bulto->nombre_campana ?? '—' }}</p>
-                                    <p class="mb-1"><strong>Ubicación Actual:</strong> {{ $reclamo->bulto->ubicacion ?? '—' }}</p>
-                                </div>
+                        @if ($reclamo->bulto)
+                            <div class="bg-light rounded p-3 mb-3">
+                                <h6 class="mb-2 font-weight-bold">📦 Detalles del Bulto</h6>
+                                <p class="mb-1"><strong>Dirección:</strong> {{ $reclamo->bulto->direccion ?? '—' }}</p>
+                                <p class="mb-1"><strong>Comuna:</strong> {{ $reclamo->bulto->comuna->Nombre ?? '—' }}</p>
+                                <p class="mb-1"><strong>Razón Social:</strong> {{ $reclamo->bulto->razon_social ?? '—' }}</p>
                             </div>
-                        </div>
+                        @endif
 
-                        {{-- Historial de comentarios --}}
-                        <h6 class="fw-bold mt-4">🗨️ Historial de comentarios:</h6>
+                        {{-- Comentarios (respuestas tipo foro) --}}
+                        <h6 class="mb-3">🗨️ Conversación:</h6>
                         @forelse ($reclamo->comentarios as $comentario)
-                            <div class="border rounded p-2 mb-2 {{ str_starts_with($comentario->comentario, '🛑') || str_starts_with($comentario->comentario, '🔁') ? 'bg-warning-subtle' : 'bg-light' }}">
-                                <strong>{{ $comentario->autor->name }}</strong>
-                                <small class="text-muted">{{ $comentario->created_at->format('d-m-Y H:i') }}</small>
-                                <p class="mb-0">{{ $comentario->comentario }}</p>
+                            <div class="media mb-3">
+                                <div class="media-body">
+                                    <h6 class="mt-0 mb-1">
+                                        {{ $comentario->autor->name }}
+                                        <small class="text-muted">— {{ $comentario->created_at->format('d-m-Y H:i') }}</small>
+                                    </h6>
+
+                                    {{-- Comentario de texto --}}
+                                    <p class="mb-1">{{ $comentario->comentario }}</p>
+
+                                    {{-- Imagen adjunta al comentario, si existe --}}
+                                    @if ($comentario->foto_comentario)
+                                        <div class="mt-2">
+                                            <img src="{{ url($comentario->foto_comentario) }}" class="img-thumbnail" style="max-width: 200px;" alt="Imagen adjunta al comentario">
+                                        </div>
+                                    @endif
+                                </div>
                             </div>
                         @empty
-                            <p class="text-muted">Aún no hay comentarios en este reclamo.</p>
+                            <p class="text-muted">Aún no hay respuestas en este hilo.</p>
                         @endforelse
 
-                        {{-- Comentario nuevo (si está permitido) --}}
+
+                        {{-- Responder --}}
                         @if ($reclamo->estado !== 'cerrado')
-                            <form action="{{ route('reclamos.comentar', $reclamo->id) }}" method="POST" class="mt-3">
+                            <form action="{{ route('reclamos.comentar', $reclamo->id) }}" method="POST" enctype="multipart/form-data">
                                 @csrf
-                                <div class="mb-2">
-                                    <label for="comentario_{{ $reclamo->id }}" class="form-label">Agregar comentario:</label>
-                                    <textarea name="comentario" id="comentario_{{ $reclamo->id }}" class="form-control" rows="2" required></textarea>
+                                <div class="form-group">
+                                    <textarea name="comentario" class="form-control" rows="2" placeholder="Escribe tu respuesta..." required></textarea>
                                 </div>
-                                <button type="submit" class="btn btn-sm btn-primary">Enviar Comentario</button>
+                                <div class="form-group">
+                                    <label for="foto_comentario">Adjuntar imagen (opcional):</label>
+                                    <input type="file" name="foto_comentario" class="form-control-file">
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-primary">Responder</button>
                             </form>
+
                         @else
-                            <div class="alert alert-danger mt-3 mb-0 p-2">
-                                🛑 Este reclamo ha sido cerrado. No se pueden agregar más comentarios.
+                            <div class="alert alert-danger p-2">
+                                🛑 Este hilo está cerrado. No se pueden agregar más respuestas.
                             </div>
                         @endif
                     </div>
-
-
-
-                    
                 </div>
             @endforeach
-
-        </div>
-    @endif
+        @endif
+    </div>
 </div>
-
-
