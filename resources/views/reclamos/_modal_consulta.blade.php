@@ -15,7 +15,8 @@
 
             {{-- Body --}}
             <div class="modal-body">
-                <form id="consultaForm" action="{{ route('reclamos.consulta.store') }}" method="POST">
+                <form id="consultaForm" action="{{ route('reclamos.consulta.store') }}" method="POST" enctype="multipart/form-data">
+
                     @csrf
 
                     {{-- Área Responsable --}}
@@ -56,6 +57,12 @@
                         <label for="descripcion">Descripción de la Consulta</label>
                         <textarea class="form-control" name="descripcion" rows="4" required></textarea>
                     </div>
+
+                    <div class="form-group">
+                        <label for="foto">Adjuntar Imagen (opcional)</label>
+                        <input type="file" name="foto" class="form-control">
+                    </div>
+
 
                     {{-- Submit --}}
                     <button type="submit" class="btn btn-primary">

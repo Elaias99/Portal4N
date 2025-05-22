@@ -176,6 +176,7 @@ class ReclamoController extends Controller
             'area_id' => 'required|exists:areas,id',
             'casuistica_inicial_id' => 'required|exists:casuisticas,id',
             'importancia' => 'required|in:baja,media,alta,urgente',
+            'foto' => 'nullable|image|max:2048', // ✅ nuevo campo validado
         ]);
 
         $usuario = Auth::user();
@@ -189,6 +190,25 @@ class ReclamoController extends Controller
             return redirect()->back()->with('error', 'No se pudo identificar al trabajador para asociar la consulta.');
         }
 
+        $fotoRuta = null;
+
+        if ($request->hasFile('foto')) {
+            $archivo = $request->file('foto');
+            $nombre = 'consulta_' . uniqid() . '.' . $archivo->getClientOriginalExtension();
+
+            // Detectar entorno y definir ruta de guardado
+            $rutaDestino = app()->environment('production')
+                ? base_path('../public_html/reclamos_fotos')
+                : public_path('reclamos_fotos');
+
+            if (!file_exists($rutaDestino)) {
+                mkdir($rutaDestino, 0755, true);
+            }
+
+            $archivo->move($rutaDestino, $nombre);
+            $fotoRuta = 'reclamos_fotos/' . $nombre;
+        }
+
         $reclamo = Reclamos::create([
             'id_bulto' => null,
             'id_trabajador' => $trabajador->id,
@@ -198,6 +218,7 @@ class ReclamoController extends Controller
             'estado' => 'pendiente',
             'importancia' => $request->importancia,
             'tipo_solicitud' => 'consulta',
+            'foto' => $fotoRuta, // ✅ guardamos la imagen
         ]);
 
         // Notificar a los miembros del área
@@ -210,6 +231,7 @@ class ReclamoController extends Controller
 
         return redirect()->route('reclamos.index')->with('success', 'Consulta enviada correctamente.');
     }
+
 
 
     public function responder(Request $request, $id)
@@ -336,8 +358,9 @@ class ReclamoController extends Controller
         $request->validate([
             'area_id' => 'required|exists:areas,id',
             'descripcion' => 'required|string',
-            'casuistica_inicial_id' => 'required', // validación simple, ajusta si hay tabla
+            'casuistica_inicial_id' => 'required',
             'importancia' => 'required|in:baja,media,alta,urgente',
+            'foto' => 'nullable|image|max:2048',
         ]);
 
         // Reabrir y actualizar los datos necesarios
@@ -345,25 +368,44 @@ class ReclamoController extends Controller
         $reclamo->area_id = $request->input('area_id');
         $reclamo->descripcion = $request->input('descripcion');
         $reclamo->importancia = $request->importancia;
-
         $reclamo->save();
 
-        // Comentario del usuario con el contenido ingresado
-        \App\Models\ReclamoComentario::create([
-            'reclamo_id' => $reclamo->id,
-            'user_id' => Auth::id(),
-            'comentario' => '📝 ' . $request->input('descripcion'),
-        ]);
-
-        // Comentario automático adicional (opcional si quieres dejar trazabilidad)
+        // 1. Comentario automático de reapertura (debe aparecer primero)
         \App\Models\ReclamoComentario::create([
             'reclamo_id' => $reclamo->id,
             'user_id' => Auth::id(),
             'comentario' => '🔁 Reclamo reabierto por ' . Auth::user()->name . ' el ' . now()->format('d-m-Y H:i') . '.',
         ]);
 
+        // 2. Guardar la imagen si se subió
+        $fotoRuta = null;
+        if ($request->hasFile('foto')) {
+            $archivo = $request->file('foto');
+            $nombre = 'reapertura_' . uniqid() . '.' . $archivo->getClientOriginalExtension();
+
+            $rutaDestino = app()->environment('production')
+                ? base_path('../public_html/reclamos_comentarios_fotos')
+                : public_path('reclamos_comentarios_fotos');
+
+            if (!file_exists($rutaDestino)) {
+                mkdir($rutaDestino, 0755, true);
+            }
+
+            $archivo->move($rutaDestino, $nombre);
+            $fotoRuta = 'reclamos_comentarios_fotos/' . $nombre;
+        }
+
+        // 3. Comentario del usuario con la descripción e imagen (aparece después)
+        \App\Models\ReclamoComentario::create([
+            'reclamo_id' => $reclamo->id,
+            'user_id' => Auth::id(),
+            'comentario' => '📝 ' . $request->input('descripcion'),
+            'foto_comentario' => $fotoRuta,
+        ]);
+
         return back()->with('success', 'Reclamo reabierto exitosamente.');
     }
+
 
 
 

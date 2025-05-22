@@ -117,25 +117,9 @@ class PerfilController extends Controller
 
     public function verReclamosArea()
     {
-        $user = Auth::user();
-        $resolvedEmail = resolvePerfilEmail($user->email);
-
-        Log::debug('User email:', ['original' => $user->email, 'resolved' => $resolvedEmail]);
-
-        $trabajador = \App\Models\Trabajador::whereHas('user', function ($query) use ($resolvedEmail, $user) {
-            $query->where('email', $resolvedEmail)
-                ->orWhere('email', $user->email);
-        })->first();
-
-        if (!$trabajador || !$trabajador->area_id) {
-            Log::debug('No se encontró trabajador o área.', ['trabajador_id' => $trabajador?->id, 'area_id' => $trabajador?->area_id]);
-            return redirect('/')->with('error', 'No se pudo encontrar el perfil asociado.');
-        }
-
-        $reclamosArea = \App\Models\Reclamos::where('area_id', $trabajador->area_id)->latest()->get();
-
-        return view('perfiles.reclamos_area', compact('trabajador', 'reclamosArea'));
+        return view('perfiles.reclamos_area');
     }
+
 
 
 
