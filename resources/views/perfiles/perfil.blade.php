@@ -8,6 +8,7 @@ $notificaciones = Auth::user()->unreadNotifications
         'App\Notifications\ReclamoRespondidoNotification',
         'App\Notifications\NuevoComentarioReclamoNotification',
         'App\Notifications\ReclamoCerradoNotification',
+        'App\Notifications\ReclamoReabiertoNotification',
     ])
     ->sortByDesc('created_at');
 @endphp

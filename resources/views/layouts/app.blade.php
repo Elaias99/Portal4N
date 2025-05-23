@@ -310,6 +310,11 @@
         function cargarNotificaciones() {
             $.get('{{ url('notificaciones/recientes') }}', function(data) {
 
+                
+
+                
+                
+
                 const badge = $('#notificationDropdown .badge');
                 const dropdown = $('#notificationDropdown').next('.dropdown-menu');
 
@@ -331,6 +336,7 @@
                         'App\\Notifications\\NuevoComentarioReclamoNotification': 'fas fa-comment text-secondary',
                         'App\\Notifications\\ReclamoCerradoNotification': 'fas fa-lock text-danger',
                         'App\\Notifications\\SolicitudActualizada': 'fas fa-file-signature text-primary',
+                        'App\\Notifications\\ReclamoReabiertoNotification': 'fas fa-undo text-info',
                     };
 
                     if (data.items.length > 0) {

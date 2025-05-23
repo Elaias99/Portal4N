@@ -1,5 +1,8 @@
 <?php
 
+use Illuminate\Support\Facades\Auth;
+use App\Models\Reclamos;
+
 if (!function_exists('resolvePerfilEmail')) {
     /**
      * Resuelve el correo corporativo asociado a un correo administrativo.
@@ -111,5 +114,60 @@ if (!function_exists('resolveCorreoNotificacion')) {
         return $user->trabajador->CorreoPersonal ?? $user->email;
     }
 }
+
+if (!function_exists('usuariosInvolucradosEnReclamo')) {
+    function usuariosInvolucradosEnReclamo(Reclamos $reclamo, $areaOrigenId = null)
+    {
+        $usuarios = collect();
+
+        // Autor
+        if ($reclamo->trabajador?->user) {
+            $usuarios->push($reclamo->trabajador->user);
+        }
+
+        // Área de destino
+        $usuariosDestino = \App\Models\User::whereHas('trabajador', function ($q) use ($reclamo) {
+            $q->where('area_id', $reclamo->area_id);
+        })->get();
+
+        // Área de origen (pasada manualmente)
+        $usuariosOrigen = collect();
+        if ($areaOrigenId) {
+            $usuariosOrigen = \App\Models\User::whereHas('trabajador', function ($q) use ($areaOrigenId) {
+                $q->where('area_id', $areaOrigenId);
+            })->get();
+        }
+
+        return $usuarios
+            ->merge($usuariosDestino)
+            ->merge($usuariosOrigen)
+            ->unique('id');
+    }
+}
+
+
+
+
+if (!function_exists('notificarUsuarioYAdmin')) {
+    /**
+     * Notifica al usuario y, si existe, también a su par administrativo.
+     */
+    function notificarUsuarioYAdmin($usuario, $notificacion)
+    {
+        if ($usuario && $usuario->id !== Auth::id()) {
+            $usuario->notify($notificacion);
+
+            $adminEmail = resolveAdminEmail($usuario->email);
+            if ($adminEmail && $adminEmail !== $usuario->email) {
+                $adminUser = \App\Models\User::where('email', $adminEmail)->first();
+                if ($adminUser && $adminUser->id !== Auth::id()) {
+                    $adminUser->notify($notificacion);
+                }
+            }
+        }
+    }
+}
+
+
 
 

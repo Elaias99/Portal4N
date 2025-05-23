@@ -153,25 +153,14 @@ class ReclamoController extends Controller
         // Log::info('Correos que se notificarían para el área: ' . $area->nombre, $correosDeEnvio->toArray());
         Log::debug('Cantidad de trabajadores en el área:', ['count' => $area->trabajadores->count()]);
 
-        foreach ($area->trabajadores as $trabajador) {
-            if (
-                $trabajador->user &&
-                $trabajador->user->id !== $usuarioOutlook->id
-            ) {
-                Log::debug('Notificando a', ['email' => $trabajador->user->email]);
-                $trabajador->user->notify(new NuevoReclamoAreaNotification($area->nombre));
+        // Notificar a todos los involucrados: autor, área origen y área destino
+        $usuariosParaNotificar = usuariosInvolucradosEnReclamo($reclamo);
 
-                // Notificar al usuario administrativo (solo si no es también el autor)
-                $adminEmail = resolveAdminEmail($trabajador->user->email);
-                if ($adminEmail && $adminEmail !== $usuarioOutlook->email) {
-                    $adminUser = \App\Models\User::where('email', $adminEmail)->first();
-                    if ($adminUser && $adminUser->id !== $usuarioOutlook->id) {
-                        Log::debug('Notificando a usuario administrativo', ['email' => $adminUser->email]);
-                        $adminUser->notify(new NuevoReclamoAreaNotification($area->nombre));
-                    }
-                }
-            }
+        foreach ($usuariosParaNotificar as $usuario) {
+            notificarUsuarioYAdmin($usuario, new NuevoReclamoAreaNotification($area->nombre));
         }
+
+
         return redirect()->route('reclamos.index')->with('success', 'Reclamo enviado correctamente.');
     }
 
@@ -252,11 +241,15 @@ class ReclamoController extends Controller
 
         // Notificar a los miembros del área
         $area = $reclamo->area;
-        foreach ($area->trabajadores as $t) {
-            if ($t->user && $t->user->id !== $usuario->id) {
-                $t->user->notify(new \App\Notifications\NuevoReclamoAreaNotification($area->nombre));
-            }
+
+        $usuariosParaNotificar = usuariosInvolucradosEnReclamo($reclamo);
+
+        foreach ($usuariosParaNotificar as $usuarioNotificado) {
+            notificarUsuarioYAdmin($usuarioNotificado, new \App\Notifications\NuevoReclamoAreaNotification($area->nombre));
         }
+
+
+        
 
         return redirect()->route('reclamos.index')->with('success', 'Consulta enviada correctamente.');
     }
@@ -277,23 +270,15 @@ class ReclamoController extends Controller
         $reclamo->estado = 'resuelto';
         $reclamo->save();
 
-        $usuariosArea = \App\Models\User::whereHas('trabajador', function ($query) use ($reclamo) {
-            $query->where('area_id', $reclamo->area_id);
-        })->get();
 
-        foreach ($usuariosArea as $usuario) {
-            if ($usuario->id !== $autorId) {
-                $usuario->notify(new ReclamoRespondidoNotification($reclamo));
-            }
+        $usuariosParaNotificar = usuariosInvolucradosEnReclamo($reclamo);
 
-            $adminEmail = resolveAdminEmail($usuario->email);
-            if ($adminEmail) {
-                $adminUser = \App\Models\User::where('email', $adminEmail)->first();
-                if ($adminUser && $adminUser->id !== $autorId) {
-                    $adminUser->notify(new ReclamoRespondidoNotification($reclamo));
-                }
-            }
+        foreach ($usuariosParaNotificar as $usuario) {
+            notificarUsuarioYAdmin($usuario, new ReclamoRespondidoNotification($reclamo));
         }
+
+
+        
 
 
         return redirect()->back()->with('success', 'Reclamo respondido correctamente.');
@@ -339,23 +324,12 @@ class ReclamoController extends Controller
             'foto_comentario' => $fotoRuta,
         ]);
 
-        $usuariosArea = \App\Models\User::whereHas('trabajador', function ($query) use ($reclamo) {
-            $query->where('area_id', $reclamo->area_id);
-        })->get();
+        $usuariosParaNotificar = usuariosInvolucradosEnReclamo($reclamo);
 
-        foreach ($usuariosArea as $usuario) {
-            if ($usuario->id !== $autorId) {
-                $usuario->notify(new \App\Notifications\NuevoComentarioReclamoNotification($nuevoComentario));
-            }
-
-            $adminEmail = resolveAdminEmail($usuario->email);
-            if ($adminEmail) {
-                $adminUser = \App\Models\User::where('email', $adminEmail)->first();
-                if ($adminUser && $adminUser->id !== $autorId) {
-                    $adminUser->notify(new \App\Notifications\NuevoComentarioReclamoNotification($nuevoComentario));
-                }
-            }
+        foreach ($usuariosParaNotificar as $usuario) {
+            notificarUsuarioYAdmin($usuario, new \App\Notifications\NuevoComentarioReclamoNotification($nuevoComentario));
         }
+
 
         return back()->with('success', 'Comentario agregado correctamente.');
     }
@@ -407,10 +381,13 @@ class ReclamoController extends Controller
         }
 
 
+        $areaOrigenId = $reclamo->area_id;
 
-        // Reabrir y actualizar los datos necesarios
         $reclamo->estado = 'pendiente';
         $reclamo->area_id = $request->input('area_id');
+
+
+
         $reclamo->descripcion = $request->input('descripcion');
         $reclamo->importancia = $request->importancia;
         $reclamo->casuistica_inicial_id = $casuisticaInicialId;
@@ -448,6 +425,14 @@ class ReclamoController extends Controller
             'comentario' => '📝 ' . $request->input('descripcion'),
             'foto_comentario' => $fotoRuta,
         ]);
+
+        $usuariosParaNotificar = usuariosInvolucradosEnReclamo($reclamo, $areaOrigenId);
+
+        foreach ($usuariosParaNotificar as $usuario) {
+            notificarUsuarioYAdmin($usuario, new \App\Notifications\ReclamoReabiertoNotification($reclamo, Auth::user()));
+        }
+
+
 
         return back()->with('success', 'Reclamo reabierto exitosamente.');
     }
@@ -506,23 +491,14 @@ class ReclamoController extends Controller
                 'comentario' => '🛑 Reclamo cerrado por ' . Auth::user()->name . ' el ' . now()->format('d-m-Y H:i') . '.',
             ]);
 
-            $usuariosArea = \App\Models\User::whereHas('trabajador', function ($query) use ($reclamo) {
-                $query->where('area_id', $reclamo->area_id);
-            })->get();
+            $usuariosParaNotificar = usuariosInvolucradosEnReclamo($reclamo);
 
-            foreach ($usuariosArea as $usuario) {
-                if ($usuario->id !== $autorId) {
-                    $usuario->notify(new ReclamoCerradoNotification($reclamo));
-                }
-
-                $adminEmail = resolveAdminEmail($usuario->email);
-                if ($adminEmail) {
-                    $adminUser = \App\Models\User::where('email', $adminEmail)->first();
-                    if ($adminUser && $adminUser->id !== $autorId) {
-                        $adminUser->notify(new ReclamoCerradoNotification($reclamo));
-                    }
-                }
+            foreach ($usuariosParaNotificar as $usuario) {
+                notificarUsuarioYAdmin($usuario, new ReclamoCerradoNotification($reclamo, Auth::user()));
             }
+
+
+
 
             return redirect()->route('reclamos.dashboard')->with('success', 'Reclamo cerrado correctamente y redirigido al Dashboard.');
         }

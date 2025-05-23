@@ -6,19 +6,18 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use App\Models\Reclamos;
 
-class ReclamoCerradoNotification extends Notification
+class ReclamoReabiertoNotification extends Notification
 {
     use Queueable;
 
     public $reclamo;
-    public $cerradoPor;
+    public $reabiertoPor;
 
-    public function __construct(Reclamos $reclamo, $cerradoPor)
+    public function __construct(Reclamos $reclamo, $reabiertoPor)
     {
         $this->reclamo = $reclamo;
-        $this->cerradoPor = $cerradoPor;
+        $this->reabiertoPor = $reabiertoPor;
     }
-
 
     public function via($notifiable)
     {
@@ -28,8 +27,7 @@ class ReclamoCerradoNotification extends Notification
     public function toDatabase($notifiable)
     {
         return [
-            'mensaje' => '🛑 El reclamo ha sido cerrado por ' . $this->cerradoPor->name,
-
+            'mensaje' => '🔁 Reclamo reabierto por ' . $this->reabiertoPor->name,
             'reclamo_id' => $this->reclamo->id,
             'link' => route('perfiles.reclamos.area'),
         ];
