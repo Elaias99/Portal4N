@@ -189,22 +189,20 @@
 
                             <div class="form-group">
                                 <label for="casuistica_id">Casuística</label>
-
-
-
-                                <select name="casuistica_id" class="form-control" required>
+                                <select name="casuistica_id" id="casuistica_id" class="form-control" required>
                                     <option value="" disabled selected>Seleccione Casuística...</option>
                                     @foreach($casuisticas as $casuistica)
                                         <option value="{{ $casuistica->id }}">{{ $casuistica->nombre }}</option>
                                     @endforeach
+                                    <option value="otro">Otro (especificar)</option>
                                 </select>
-
-
-
-
-
-
                             </div>
+
+                            <div class="form-group mt-2" id="otra_casuistica_wrapper_cierre" style="display: none;">
+                                <label for="otra_casuistica">Escriba la nueva casuística</label>
+                                <input type="text" name="otra_casuistica" class="form-control" placeholder="Ingrese motivo personalizado">
+                            </div>
+
                         </div>
                     </div>
 
@@ -269,6 +267,23 @@ $(document).ready(function () {
     
 });
 </script>
+
+
+<script>
+    $(document).on('change', '#casuistica_id', function () {
+        if ($(this).val() === 'otro') {
+            $('#otra_casuistica_wrapper_cierre').slideDown();
+            $('input[name="otra_casuistica"]').attr('required', true);
+        } else {
+            $('#otra_casuistica_wrapper_cierre').slideUp();
+            $('input[name="otra_casuistica"]').val('').removeAttr('required');
+        }
+    });
+</script>
+
+
+
+
 @unless(auth()->user()->hasAnyRole(['admin', 'jefe']))
     <div class="mb-3">
         <a href="{{ route('empleados.perfil') }}" class="btn btn-outline-secondary">

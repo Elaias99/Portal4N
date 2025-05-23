@@ -30,13 +30,20 @@
 
                     <div class="form-group">
                         <label for="casuistica_inicial_id" class="form-label">Motivo del Reclamo (Casuística Inicial)</label>
-                        <select class="form-control" name="casuistica_inicial_id" required>
+                        <select class="form-control" name="casuistica_inicial_id" id="casuistica_inicial_id" required>
                             <option value="" disabled selected>Seleccione una casuística</option>
                             @foreach ($casuisticas as $casuistica)
                                 <option value="{{ $casuistica->id }}">{{ $casuistica->nombre }}</option>
                             @endforeach
+                            <option value="otro">Otro (especificar)</option>
                         </select>
                     </div>
+
+                    <div class="form-group mt-2" id="otra_casuistica_wrapper" style="display: none;">
+                        <label for="otra_casuistica" class="form-label">Especifique la nueva casuística</label>
+                        <input type="text" name="otra_casuistica" class="form-control" placeholder="Ingrese un motivo personalizado">
+                    </div>
+
 
                     
 

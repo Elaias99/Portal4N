@@ -31,15 +31,23 @@
                     </div>
 
                     {{-- Casuística --}}
+                    {{-- Casuística --}}
                     <div class="form-group">
                         <label for="casuistica_inicial_id">Casuística</label>
-                        <select class="form-control" name="casuistica_inicial_id" required>
+                        <select class="form-control" name="casuistica_inicial_id" id="casuistica_inicial_id_consulta" required>
                             <option value="" disabled selected>Seleccione un motivo</option>
                             @foreach ($casuisticas as $casuistica)
                                 <option value="{{ $casuistica->id }}">{{ $casuistica->nombre }}</option>
                             @endforeach
+                            <option value="otro">Otro (especificar)</option>
                         </select>
                     </div>
+
+                    <div class="form-group mt-2" id="otra_casuistica_wrapper_consulta" style="display: none;">
+                        <label for="otra_casuistica">Escriba la nueva casuística</label>
+                        <input type="text" name="otra_casuistica" class="form-control" placeholder="Ingrese motivo personalizado">
+                    </div>
+
 
                     {{-- Importancia --}}
                     <div class="form-group">
@@ -83,6 +91,23 @@
         });
     });
 </script>
-<!-- <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script> -->
+
+<script>
+    $(document).ready(function () {
+        $('#casuistica_inicial_id_consulta').on('change', function () {
+            if ($(this).val() === 'otro') {
+                $('#otra_casuistica_wrapper_consulta').slideDown();
+                $('input[name="otra_casuistica"]').attr('required', true);
+            } else {
+                $('#otra_casuistica_wrapper_consulta').slideUp();
+                $('input[name="otra_casuistica"]').val('').removeAttr('required');
+            }
+        });
+
+        $('#consultaModal').on('show.bs.modal', function () {
+            $('#consultaForm')[0].reset();
+            $('#otra_casuistica_wrapper_consulta').hide(); // ocultar al abrir
+        });
+    });
+</script>
+

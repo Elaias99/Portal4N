@@ -71,10 +71,14 @@ class ReclamoController extends Controller
             'id_bulto' => 'required|exists:bultos,id',
             'area_id' => 'required|exists:areas,id',
             'descripcion' => 'required|string',
-            'casuistica_inicial_id' => 'required|exists:casuisticas,id',
+            'casuistica_inicial_id' => $request->casuistica_inicial_id === 'otro'
+                ? 'required'
+                : 'required|exists:casuisticas,id',
+            'otra_casuistica' => $request->casuistica_inicial_id === 'otro' ? 'required|string|max:255' : 'nullable',
             'importancia' => 'required|in:baja,media,alta,urgente',
-            'foto' => 'nullable|image|max:2048', // ✅ nueva validación
+            'foto' => 'nullable|image|max:2048',
         ]);
+
 
         // Paso 1: Obtener el usuario autenticado (correo real de Outlook)
         $usuarioOutlook = Auth::user();
@@ -109,7 +113,15 @@ class ReclamoController extends Controller
             return redirect()->back()->with('error', 'No se pudo asociar el reclamo a un trabajador válido.');
         }
 
-        // dd($request->all());
+        $casuisticaInicialId = $request->casuistica_inicial_id;
+
+        if ($casuisticaInicialId === 'otro') {
+            $nuevaCasuistica = \App\Models\Casuistica::create([
+                'nombre' => $request->otra_casuistica,
+            ]);
+            $casuisticaInicialId = $nuevaCasuistica->id;
+        }
+
 
 
         // Crear el reclamo
@@ -118,11 +130,12 @@ class ReclamoController extends Controller
             'id_trabajador' => $trabajador->id,
             'area_id' => $request->area_id,
             'descripcion' => $request->descripcion,
-            'casuistica_inicial_id' => $request->casuistica_inicial_id,
+            'casuistica_inicial_id' => $casuisticaInicialId,
             'estado' => 'pendiente',
             'importancia' => $request->importancia,
-            'foto' => $fotoRuta, // ✅ nuevo campo
+            'foto' => $fotoRuta,
         ]);
+
         // Obtener el área del reclamo
         $area = $reclamo->area;
         // Obtener los correos reales de los trabajadores del área
@@ -174,10 +187,16 @@ class ReclamoController extends Controller
         $request->validate([
             'descripcion' => 'required|string',
             'area_id' => 'required|exists:areas,id',
-            'casuistica_inicial_id' => 'required|exists:casuisticas,id',
+            'casuistica_inicial_id' => $request->casuistica_inicial_id === 'otro'
+                ? 'required'
+                : 'required|exists:casuisticas,id',
+            'otra_casuistica' => $request->casuistica_inicial_id === 'otro'
+                ? 'required|string|max:255'
+                : 'nullable',
             'importancia' => 'required|in:baja,media,alta,urgente',
-            'foto' => 'nullable|image|max:2048', // ✅ nuevo campo validado
+            'foto' => 'nullable|image|max:2048',
         ]);
+
 
         $usuario = Auth::user();
         $correoInterno = resolvePerfilEmail($usuario->email);
@@ -209,12 +228,22 @@ class ReclamoController extends Controller
             $fotoRuta = 'reclamos_fotos/' . $nombre;
         }
 
+        $casuisticaInicialId = $request->casuistica_inicial_id;
+
+        if ($casuisticaInicialId === 'otro') {
+            $nuevaCasuistica = \App\Models\Casuistica::create([
+                'nombre' => $request->otra_casuistica,
+            ]);
+            $casuisticaInicialId = $nuevaCasuistica->id;
+        }
+
+
         $reclamo = Reclamos::create([
             'id_bulto' => null,
             'id_trabajador' => $trabajador->id,
             'area_id' => $request->area_id,
             'descripcion' => $request->descripcion,
-            'casuistica_inicial_id' => $request->casuistica_inicial_id,
+            'casuistica_inicial_id' => $casuisticaInicialId,
             'estado' => 'pendiente',
             'importancia' => $request->importancia,
             'tipo_solicitud' => 'consulta',
@@ -358,16 +387,33 @@ class ReclamoController extends Controller
         $request->validate([
             'area_id' => 'required|exists:areas,id',
             'descripcion' => 'required|string',
-            'casuistica_inicial_id' => 'required',
+            'casuistica_inicial_id' => $request->casuistica_inicial_id === 'otro'
+                ? 'required'
+                : 'required|exists:casuisticas,id',
+            'otra_casuistica' => $request->casuistica_inicial_id === 'otro'
+                ? 'required|string|max:255'
+                : 'nullable',
             'importancia' => 'required|in:baja,media,alta,urgente',
             'foto' => 'nullable|image|max:2048',
         ]);
+
+        $casuisticaInicialId = $request->casuistica_inicial_id;
+
+        if ($casuisticaInicialId === 'otro') {
+            $nuevaCasuistica = \App\Models\Casuistica::create([
+                'nombre' => $request->otra_casuistica,
+            ]);
+            $casuisticaInicialId = $nuevaCasuistica->id;
+        }
+
+
 
         // Reabrir y actualizar los datos necesarios
         $reclamo->estado = 'pendiente';
         $reclamo->area_id = $request->input('area_id');
         $reclamo->descripcion = $request->input('descripcion');
         $reclamo->importancia = $request->importancia;
+        $reclamo->casuistica_inicial_id = $casuisticaInicialId;
         $reclamo->save();
 
         // 1. Comentario automático de reapertura (debe aparecer primero)
@@ -418,23 +464,22 @@ class ReclamoController extends Controller
         if ($reclamo->estado === 'cerrado') {
             return back()->with('error', 'Este reclamo está cerrado y no puede recibir más comentarios.');
         }
-        
 
-        // Obtener el correo del usuario autenticado
         $correoUsuario = Auth::user()->email;
-
-        // Usar resolvePerfilEmail para obtener el correo interno si es necesario
         $correoInterno = resolvePerfilEmail($correoUsuario);
 
-        // Buscar el trabajador correspondiente al correo interno
         $trabajador = \App\Models\Trabajador::whereHas('user', function ($q) use ($correoInterno) {
             $q->where('email', $correoInterno);
         })->first();
 
-        // Verificar si ese trabajador es el creador del reclamo
         if ($trabajador && $trabajador->area_id !== null) {
 
-            $reclamo->tipo_solicitud = request('tipo_solicitud');
+            request()->validate([
+                'tipo_solicitud' => 'required|in:reclamo,instruccion,consulta',
+                'area_id' => request('tipo_solicitud') === 'reclamo' ? 'required|exists:areas,id' : 'nullable',
+                'casuistica_id' => request('casuistica_id') === 'otro' ? 'required' : 'required|exists:casuisticas,id',
+                'otra_casuistica' => request('casuistica_id') === 'otro' ? 'required|string|max:255' : 'nullable',
+            ]);
 
             $reclamo->tipo_solicitud = request('tipo_solicitud');
 
@@ -442,26 +487,29 @@ class ReclamoController extends Controller
                 $reclamo->area_id = request('area_id'); // como responsable final
             }
 
-            // Guardar casuística siempre que venga del formulario
-            $reclamo->casuistica_id = request('casuistica_id');
+            // Procesar casuística personalizada si aplica
+            $casuisticaId = request('casuistica_id');
+            if ($casuisticaId === 'otro') {
+                $nuevaCasuistica = \App\Models\Casuistica::create([
+                    'nombre' => request('otra_casuistica'),
+                ]);
+                $casuisticaId = $nuevaCasuistica->id;
+            }
 
-
+            $reclamo->casuistica_id = $casuisticaId;
             $reclamo->estado = 'cerrado';
             $reclamo->save();
 
-        
-            // Crear comentario automático
             \App\Models\ReclamoComentario::create([
                 'reclamo_id' => $reclamo->id,
-                'user_id' => Auth::id(),
+                'user_id' => $autorId,
                 'comentario' => '🛑 Reclamo cerrado por ' . Auth::user()->name . ' el ' . now()->format('d-m-Y H:i') . '.',
             ]);
-        
-            // Notificar a usuarios del área
+
             $usuariosArea = \App\Models\User::whereHas('trabajador', function ($query) use ($reclamo) {
                 $query->where('area_id', $reclamo->area_id);
             })->get();
-        
+
             foreach ($usuariosArea as $usuario) {
                 if ($usuario->id !== $autorId) {
                     $usuario->notify(new ReclamoCerradoNotification($reclamo));
@@ -475,11 +523,9 @@ class ReclamoController extends Controller
                     }
                 }
             }
-        
-            return redirect()->route('reclamos.dashboard')->with('success', 'Reclamo cerrado correctamente y redirigido al Dashboard.');
 
+            return redirect()->route('reclamos.dashboard')->with('success', 'Reclamo cerrado correctamente y redirigido al Dashboard.');
         }
-        
 
         return back()->with('error', 'No tienes permiso para cerrar este reclamo.');
     }

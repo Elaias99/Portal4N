@@ -21,3 +21,18 @@
         });
     });
 </script>
+
+<script>
+    $(document).ready(function () {
+        $('#casuistica_inicial_id').on('change', function () {
+            if ($(this).val() === 'otro') {
+                $('#otra_casuistica_wrapper').slideDown();
+                $('input[name="otra_casuistica"]').attr('required', true);
+            } else {
+                $('#otra_casuistica_wrapper').slideUp();
+                $('input[name="otra_casuistica"]').val('').removeAttr('required');
+            }
+        });
+    });
+</script>
+
