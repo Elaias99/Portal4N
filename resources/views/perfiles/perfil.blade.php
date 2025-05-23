@@ -56,17 +56,24 @@ $notificaciones = Auth::user()->unreadNotifications
         <div class="col-12 col-md-4">
 
             <div class="card p-3 mb-4 text-center">
+
+
+
                 @if($trabajador->Foto)
                     <img 
-                        src="{{ url('storage/' . $trabajador->Foto) }}" 
+                        src="{{ url($trabajador->Foto) }}" 
                         class="img-fluid mb-3 profile-picture" 
                         alt="Foto de {{ $trabajador->Nombre }}">
                 @else
                     <img 
-                        src="{{ url('images/default-avatar.png') }}" 
+                        src="{{ asset('images/default-avatar.png') }}" 
                         class="img-fluid mb-3 rounded-circle" 
                         alt="Imagen predeterminada">
                 @endif
+
+
+
+
 
                 <a href="{{ route('perfiles.editar', $trabajador->id) }}" 
                    class="btn btn-outline-primary btn-custom-width mb-2">
@@ -93,26 +100,6 @@ $notificaciones = Auth::user()->unreadNotifications
                    class="btn btn-primary btn-custom-width mb-3">
                     Solicitar Permiso de Días
                 </a>
-
-                {{-- <a href="{{ route('perfiles.reclamos.area') }}" 
-                    class="btn btn-primary btn-custom-width mb-3">
-                        Ver Reclamos del Área
-                </a>
-
-
-                <a href="{{ route('bultos.index') }}" 
-                    class="btn btn-primary btn-custom-width mb-3">
-                        Buscar Bulto
-                </a>
-
-                <a href="{{ route('reclamos.mios') }}" 
-                    class="btn btn-primary btn-custom-width mb-3">
-                        Mis Reclamos
-                </a> --}}
-
-
-
-
 
 
             </div>

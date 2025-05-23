@@ -185,25 +185,22 @@
                                 </style>
 
                                 {{-- Campo con ícono de clip --}}
-                                <div x-data="{ imageUrl: null }" class="form-group mb-2 input-con-icon">
+                                <div x-data="previewImage()" class="form-group mb-2 input-con-icon">
                                     <textarea name="comentario" class="form-control" rows="2" placeholder="Escribe tu respuesta..." required></textarea>
 
-                                    <label for="foto_comentario">
+                                    <label for="foto_comentario_{{ $reclamo->id }}">
                                         <i class="fa fa-paperclip" title="Adjuntar foto"></i>
                                     </label>
 
-                                    <input type="file" id="foto_comentario" name="foto_comentario"
-                                        @change="const file = $event.target.files[0];
-                                                if (file) {
-                                                    const reader = new FileReader();
-                                                    reader.onload = e => imageUrl = e.target.result;
-                                                    reader.readAsDataURL(file);
-                                                }">
+                                    <input type="file" id="foto_comentario_{{ $reclamo->id }}" name="foto_comentario"
+                                        @change="mostrarPreview($event)">
 
                                     <template x-if="imageUrl">
                                         <img :src="imageUrl" alt="Vista previa" class="mt-2 rounded border" style="max-width: 200px;">
                                     </template>
                                 </div>
+
+
 
 
                             
@@ -231,3 +228,20 @@
         @endif
     </div>
 </div>
+
+<script>
+    function previewImage() {
+        return {
+            imageUrl: null,
+            mostrarPreview(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = e => this.imageUrl = e.target.result;
+                reader.readAsDataURL(file);
+            }
+        }
+    }
+</script>
+
+
