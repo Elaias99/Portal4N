@@ -1,15 +1,18 @@
 <div class="row" wire:poll.2s>
     {{-- PANEL IZQUIERDO --}}
-    {{-- PANEL IZQUIERDO --}}
+
     <div class="col-md-2">
         <div class="card shadow-sm border-0">
             <div class="card-body p-3">
                 <h6 class="text-muted mb-3">🧭 Panel de Reclamos</h6>
 
                 {{-- Filtros activos --}}
-                {{-- Filtros activos --}}
+
                 <div class="mb-3">
                     <label class="text-muted d-block mb-1">🔍 Filtros</label>
+
+                    <input type="text" wire:model.defer="filtroBulto" class="form-control form-control-sm mb-2" placeholder="Buscar por código de bulto">
+
 
                     <select wire:model.defer="filtroEstado" class="form-control form-control-sm mb-2">
                         <option value="">Estado: Todos</option>
@@ -24,6 +27,16 @@
                         <option value="alta">Alta</option>
                         <option value="urgente">Urgente</option>
                     </select>
+
+                    <select wire:model.defer="filtroTrabajador" class="form-control form-control-sm mb-2">
+                        <option value="">Trabajador: Todos</option>
+                        @foreach($trabajadores as $t)
+                            <option value="{{ $t->id }}">
+                                {{ $t->Nombre }} {{ $t->ApellidoPaterno }}
+                            </option>
+                        @endforeach
+                    </select>
+
 
                     <button wire:click="aplicarFiltrado" class="btn btn-sm btn-primary mt-2 w-100">
                         Aplicar Filtrado
@@ -145,23 +158,69 @@
                         </div>
 
                         {{-- Formulario de respuesta (si no está cerrado) --}}
+                        {{-- Formulario de respuesta (si no está cerrado) --}}
                         @if ($reclamo->estado !== 'cerrado')
                             <form action="{{ route('reclamos.comentar', $reclamo->id) }}" method="POST" enctype="multipart/form-data" class="mt-3">
                                 @csrf
-                                <div class="form-group mb-2">
+
+                                <style>
+                                    .input-con-icon {
+                                        position: relative;
+                                    }
+                                    .input-con-icon textarea {
+                                        padding-right: 40px;
+                                    }
+                                    .input-con-icon label {
+                                        position: absolute;
+                                        top: 50%;
+                                        right: 10px;
+                                        transform: translateY(-50%);
+                                        color: #6c757d;
+                                        cursor: pointer;
+                                        margin: 0;
+                                    }
+                                    .input-con-icon input[type="file"] {
+                                        display: none;
+                                    }
+                                </style>
+
+                                {{-- Campo con ícono de clip --}}
+                                <div x-data="{ imageUrl: null }" class="form-group mb-2 input-con-icon">
                                     <textarea name="comentario" class="form-control" rows="2" placeholder="Escribe tu respuesta..." required></textarea>
+
+                                    <label for="foto_comentario">
+                                        <i class="fa fa-paperclip" title="Adjuntar foto"></i>
+                                    </label>
+
+                                    <input type="file" id="foto_comentario" name="foto_comentario"
+                                        @change="const file = $event.target.files[0];
+                                                if (file) {
+                                                    const reader = new FileReader();
+                                                    reader.onload = e => imageUrl = e.target.result;
+                                                    reader.readAsDataURL(file);
+                                                }">
+
+                                    <template x-if="imageUrl">
+                                        <img :src="imageUrl" alt="Vista previa" class="mt-2 rounded border" style="max-width: 200px;">
+                                    </template>
                                 </div>
-                                <div class="form-group mb-2">
-                                    <label for="foto_comentario" class="form-label">Adjuntar imagen (opcional):</label>
-                                    <input type="file" name="foto_comentario" class="form-control">
-                                </div>
-                                <button type="submit" class="btn btn-sm btn-primary">Responder</button>
+
+
+                            
+
+                                <button type="submit" class="btn btn-sm btn-primary mt-2">Responder</button>
                             </form>
+
                         @else
                             <div class="alert alert-danger mt-3 p-2">
                                 🛑 Este hilo está cerrado. No se pueden agregar más respuestas.
                             </div>
                         @endif
+
+
+
+
+
                     </div>
                 </div>
 

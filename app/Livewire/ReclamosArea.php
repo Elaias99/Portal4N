@@ -15,6 +15,12 @@ class ReclamosArea extends Component
     public $filtroEstado = '';
     public $filtroImportancia = '';
 
+    public $filtroBulto = '';
+
+    public $filtroTrabajador = '';
+
+
+
     public $reclamosFiltrados = [];
 
     public function mount()
@@ -31,6 +37,8 @@ class ReclamosArea extends Component
             abort(403, 'No se pudo encontrar el perfil asociado.');
         }
 
+        $this->trabajadores = Trabajador::where('area_id', $this->trabajador->area_id)->get();
+
         $this->aplicarFiltrado(); // carga inicial
     }
 
@@ -41,26 +49,63 @@ class ReclamosArea extends Component
 
             ->where(function ($query) {
                 $query->where('area_id', $this->trabajador->area_id)
-                    ->orWhere('id_trabajador', $this->trabajador->id)
+                    ->orWhereHas('trabajador', function ($q) {
+                        $q->where('area_id', $this->trabajador->area_id);
+                    })
                     ->orWhereHas('comentarios', function ($q) {
                         $q->where('user_id', Auth::id());
                     });
             })
 
 
+            ->when($this->filtroBulto, function ($query) {
+                $valor = strtolower(trim($this->filtroBulto));
+                $query->where(function ($subQuery) use ($valor) {
+                    $subQuery
+                        ->whereHas('bulto', function ($q) use ($valor) {
+                            $q->whereRaw('LOWER(codigo_bulto) LIKE ?', ["%{$valor}%"]);
+                        })
+                        ->orWhere(function ($q) use ($valor) {
+                            $q->whereNull('id_bulto')
+                            ->whereRaw('LOWER(descripcion) LIKE ?', ["%{$valor}%"]);
+                        })
+                        ->orWhereRaw('CAST(id AS CHAR) LIKE ?', ["%{$valor}%"]);
+                });
+            })
+
+
+
+
+
 
             ->when($this->filtroEstado, fn($q) => $q->where('estado', $this->filtroEstado))
             ->when($this->filtroImportancia, fn($q) => $q->where('importancia', $this->filtroImportancia))
-            ->latest()
+            ->when($this->filtroTrabajador, fn($q) => $q->where('id_trabajador', $this->filtroTrabajador))
+
+            ->orderByRaw("
+                CASE 
+                    WHEN importancia = 'urgente' THEN 0
+                    WHEN importancia = 'alta' THEN 1
+                    WHEN importancia = 'media' THEN 2
+                    WHEN importancia = 'baja' THEN 3
+                    ELSE 4
+                END
+            ")->orderBy('created_at', 'desc')
             ->get();
+
+                
     }
 
     public function resetFiltros()
     {
         $this->filtroEstado = '';
         $this->filtroImportancia = '';
+        $this->filtroBulto = '';
+        $this->filtroTrabajador = ''; // ✅ Esto es lo que faltaba
         $this->aplicarFiltrado();
     }
+
+
 
     public function render()
     {
