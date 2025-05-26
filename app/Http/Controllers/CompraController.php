@@ -38,37 +38,27 @@ class CompraController extends Controller
             $query->where('mes', $request->month);
         }
 
-        if ($request->filled('provider')) {
-            $query->whereHas('proveedor', function ($q) use ($request) {
-                $q->where('razon_social', $request->provider);
-            });
-        }
-
-        if ($request->filled('document_type')) {
-            $query->where('tipo_documento', $request->document_type);
-        }
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->whereHas('proveedor', function ($q) use ($search) {
-                $q->where('razon_social', 'like', "%$search%")
-                  ->orWhere('rut', 'like', "%$search%");
-            });
-        }
-        
-
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // ✅ Paginar resultados
-        $compras = $query->orderBy('created_at', 'desc')->paginate(15);
+        // ✅ Buscador por razon_social del proveedor
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('proveedor', function ($q) use ($search) {
+                $q->where('razon_social', 'like', '%' . $search . '%');
+            });
+        }
 
-        // Proveedores para filtros
+        // Paginación
+        $compras = $query->orderBy('created_at', 'asc')->paginate(15);
+
+        // Proveedores para posibles otros filtros
         $proveedores = Proveedor::all();
 
         return view('compras.index', compact('compras', 'proveedores'));
     }
+
 
 
 

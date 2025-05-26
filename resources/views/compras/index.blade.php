@@ -121,6 +121,17 @@
 
                 <form method="GET" action="{{ route('compras.index') }}">
                     <div class="row g-4">
+
+
+                        <div class="col-md-3">
+                            <label for="search" class="form-label">Buscar por Razón Social</label>
+                            <input type="text" name="search" id="search" class="form-control"
+                                value="{{ request('search') }}" placeholder="Ej. Comercial XYZ">
+                        </div>
+
+
+
+
                         <div class="col-md-3">
                             <label for="year" class="form-label">Año</label>
                             <select name="year" id="year" class="form-select">
@@ -135,7 +146,7 @@
                             <label for="month" class="form-label">Mes</label>
                             <select name="month" id="month" class="form-select">
                                 <option value="">Todos</option>
-                                @foreach (['Enero', 'Febrero', 'Marzo', 'Abril'] as $mes)
+                                @foreach (['Enero', 'Febrero', 'Marzo', 'Abril','Mayo','Junio', 'Julio', 'Agosto', 'Septiembre','Octubre'] as $mes)
                                     <option value="{{ $mes }}" {{ request('month') == $mes ? 'selected' : '' }}>{{ $mes }}</option>
                                 @endforeach
                             </select>
