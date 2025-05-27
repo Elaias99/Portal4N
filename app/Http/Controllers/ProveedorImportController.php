@@ -24,7 +24,9 @@ class ProveedorImportController extends Controller
                 'omitidas' => $importador->omitidas,
                 'errores' => $importador->errores,
                 'exitosos' => $importador->exitosos,
+                'incompletos' => $importador->conDatosIncompletos, // 🔸 esto es lo nuevo
             ]);
+
 
             return back();
         } catch (\Exception $e) {

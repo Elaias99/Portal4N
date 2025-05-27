@@ -12,20 +12,9 @@
                 <li>⚠️ Proveedores omitidos: <strong>{{ session('import_result_proveedores.omitidas') }}</strong></li>
             </ul>
 
-            @if (count(session('import_result_proveedores.errores', [])))
-                <details>
-                    <summary>Ver errores ({{ count(session('import_result_proveedores.errores')) }})</summary>
-                    <ul class="mt-2">
-                        @foreach (session('import_result_proveedores.errores') as $error)
-                            <li>❌ {{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </details>
-            @endif
-
             @if (count(session('import_result_proveedores.exitosos', [])))
                 <details class="mt-2">
-                    <summary>Ver proveedores importados ({{ count(session('import_result_proveedores.exitosos')) }})</summary>
+                    <summary>✅ Ver proveedores importados ({{ count(session('import_result_proveedores.exitosos')) }})</summary>
                     <ul class="mt-2">
                         @foreach (session('import_result_proveedores.exitosos') as $exito)
                             <li>✅ {{ $exito }}</li>
@@ -35,6 +24,63 @@
             @endif
         </div>
     @endif
+
+
+    @if (session('import_result_proveedores.omitidas') > 0 
+        && count(session('import_result_proveedores.errores', [])) > 0)
+
+        @php
+            $errores = collect(session('import_result_proveedores.errores'));
+            $erroresDuplicados = $errores->filter(fn($e) => str_contains($e, 'ya existe un proveedor con el mismo RUT'));
+            $erroresFaltantes = $errores->reject(fn($e) => str_contains($e, 'ya existe un proveedor con el mismo RUT'));
+        @endphp
+
+        <div class="alert alert-warning shadow-sm">
+            ⚠️ Algunos registros fueron omitidos por errores.
+
+            @if ($erroresDuplicados->count())
+                <details class="mt-2">
+                    <summary>🔁 Ver proveedores duplicados ({{ $erroresDuplicados->count() }})</summary>
+                    <ul class="mt-2">
+                        @foreach ($erroresDuplicados as $dup)
+                            <li>🔁 {{ $dup }}</li>
+                        @endforeach
+                    </ul>
+                </details>
+            @endif
+
+            @if ($erroresFaltantes->count())
+                <details class="mt-3">
+                    <summary>❌ Ver errores por campos obligatorios incompletos ({{ $erroresFaltantes->count() }})</summary>
+                    <ul class="mt-2">
+                        @foreach ($erroresFaltantes as $err)
+                            <li>❌ {{ $err }}</li>
+                        @endforeach
+                    </ul>
+                </details>
+            @endif
+        </div>
+    @endif
+
+
+
+
+    @if (session('import_result_proveedores.incompletos') && count(session('import_result_proveedores.incompletos')))
+        <div class="alert alert-warning shadow-sm mt-3">
+            ⚠️ Algunos proveedores se importaron con datos incompletos usando el valor "Sin Registro".
+            <details class="mt-2">
+                <summary>Ver detalles ({{ count(session('import_result_proveedores.incompletos')) }})</summary>
+                <ul class="mt-2">
+                    @foreach (session('import_result_proveedores.incompletos') as $registro)
+                        <li>🔍 {{ $registro }}</li>
+                    @endforeach
+                </ul>
+            </details>
+        </div>
+    @endif
+
+
+
 
 
     <div class="row">
