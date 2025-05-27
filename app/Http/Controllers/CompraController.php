@@ -18,6 +18,8 @@ use App\Imports\CompraImport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ProveedoresFaltantesExport;
 
+use App\Exports\CompraExport;
+
 
 
 class CompraController extends Controller
@@ -424,6 +426,14 @@ class CompraController extends Controller
         session()->forget('proveedores_faltantes');
         return redirect()->route('compras.index')->with('success', 'Lista de proveedores faltantes limpiada.');
     }
+
+
+    public function export()
+    {
+        return Excel::download(new CompraExport, 'compras.xlsx');
+    }
+
+
 
 
 

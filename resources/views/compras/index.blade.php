@@ -127,6 +127,11 @@
         <a href="{{ route('compras.create') }}" class="btn btn-primary ms-auto">
             <i class="fa fa-plus me-1"></i> Agregar Compra Manual
         </a>
+
+        <a href="{{ route('compras.exportar') }}" class="btn btn-outline-success">
+            <i class="fa fa-file-excel me-1"></i> Exportar Compras
+        </a>
+
     </div>
 
             {{-- ✅ PANEL: FILTROS --}}

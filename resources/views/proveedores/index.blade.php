@@ -129,6 +129,15 @@
                         <a href="{{ route('proveedores.index') }}" class="btn btn-outline-secondary">Limpiar</a>
                     </div>
                 </form>
+
+                <div class="d-grid gap-2 mt-3">
+                    <a href="{{ route('proveedores.exportar') }}" class="btn btn-outline-success">
+                        <i class="fa fa-file-excel me-1"></i> Exportar Proveedores
+                    </a>
+                </div>
+
+
+
             </div>
         </div>
 

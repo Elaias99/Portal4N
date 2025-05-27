@@ -14,107 +14,73 @@ class ProveedorExport implements FromCollection, WithHeadings, WithStyles, Shoul
 {
     public function collection()
     {
-        // Cargamos también relaciones necesarias
-        return Proveedor::with(['compras.tipoPago', 'banco'])->get();
+        return Proveedor::with(['banco', 'tipoCuenta', 'tipoPago', 'comuna'])->get();
     }
+
 
     public function map($proveedor): array
     {
-        $filas = [];
-
-        $clp = "CLP";
-
-        foreach ($proveedor->compras as $compra) {
-            $nombreBanco = $proveedor->banco->id ?? 'N/A';
-            $nombreTipoPago = $compra->tipoPago->nombre ?? 'N/A';
-
-            $glosa = "Pago  {$nombreTipoPago}  {$compra->numero_documento}";
-            
-
-            $cuentaEmpresa = $compra->empresa->cta_corriente ?? '';
-            $ctaCorrienteFormateada = str_pad($cuentaEmpresa, 15, '0', STR_PAD_LEFT);
-
-
-
-            $filas[] = [
-                $ctaCorrienteFormateada,
-
-                $clp,
-
-                str_pad($proveedor->nro_cuenta, 22, '0', STR_PAD_LEFT),
-
-                $clp,
-
-                $nombreBanco,
-
-                preg_replace('/[.\-]/', '', $proveedor->rut),
-
-                $proveedor->razon_social,
-
-                $compra->pago_total,
-
-                $glosa,
-
-                $proveedor->correo_banco,
-                
-                
-                $glosa,
-                $glosa,
-                $glosa,
-
-
-            ];
-        }
-
-        if (empty($filas)) {
-            $cuentaEmpresa = $proveedor->empresa->cta_corriente ?? '';
-            $ctaCorrienteFormateada = str_pad($cuentaEmpresa, 15, '0', STR_PAD_LEFT);
-            $nombreBanco = $proveedor->banco->nombre ?? 'N/A';
-        
-            $filas[] = [
-                $ctaCorrienteFormateada,
-                $clp,
-                str_pad($proveedor->nro_cuenta ?? '', 22, '0', STR_PAD_LEFT),
-                $clp,
-                $nombreBanco,
-                preg_replace('/[.\-]/', '', $proveedor->rut),
-                $proveedor->razon_social,
-                0, // No hay pago_total
-                'Sin compras',
-                $proveedor->correo_banco ?? 'N/A',
-                'N/A',
-                'N/A',
-                'N/A',
-            ];
-        }
-        
-
-        return $filas;
+        return [
+            $proveedor->razon_social,
+            $proveedor->rut,
+            $proveedor->banco->nombre ?? 'Sin Registro',
+            $proveedor->tipoCuenta->nombre ?? 'Sin Registro',
+            $proveedor->nro_cuenta,
+            $proveedor->tipoPago->nombre ?? 'Sin Registro',
+            $proveedor->telefono_empresa,
+            $proveedor->Nombre_RepresentanteLegal,
+            $proveedor->Rut_RepresentanteLegal,
+            $proveedor->Telefono_RepresentanteLegal,
+            $proveedor->Correo_RepresentanteLegal,
+            $proveedor->contacto_nombre,
+            $proveedor->contacto_telefono,
+            $proveedor->contacto_correo,
+            $proveedor->giro_comercial,
+            $proveedor->direccion_facturacion,
+            $proveedor->direccion_despacho,
+            $proveedor->nombre_contacto2,
+            $proveedor->telefono_contacto2,
+            $proveedor->correo_contacto2,
+            $proveedor->correo_banco,
+            $proveedor->nombre_razon_social_banco,
+            $proveedor->cargo_contacto1,
+            $proveedor->cargo_contacto2,
+            $proveedor->comuna->Nombre ?? 'Sin Comuna',
+        ];
     }
+
 
     public function headings(): array
     {
         return [
-            'Cuenta Origen',
-            'Moneda Cuenta de Origen',
-            'Número de Cuenta',
-            'Moneda Cuenta de Destino',
-            'Banco',
-            'RUT',
             'Razón Social',
-            'Pago Total',
-
-            'Glosa Transferencia',
+            'RUT',
+            'Banco',
+            'Tipo de Cuenta',
+            'Número de Cuenta',
+            'Tipo de Documento',
+            'Teléfono Empresa',
+            'Nombre Representante Legal',
+            'RUT Representante Legal',
+            'Teléfono Representante Legal',
+            'Correo Representante Legal',
+            'Contacto 1 - Nombre',
+            'Contacto 1 - Teléfono',
+            'Contacto 1 - Correo',
+            'Giro Comercial',
+            'Dirección Facturación',
+            'Dirección Despacho',
+            'Contacto 2 - Nombre',
+            'Contacto 2 - Teléfono',
+            'Contacto 2 - Correo',
             'Correo Banco',
-  
-            
-            'Glosa Correo Beneficiario',
-            'Glosa Cartola Cliente',
-            'Glosa Cartola Beneficiario',
-            
-            
+            'Razón Social Banco',
+            'Cargo Contacto 1',
+            'Cargo Contacto 2',
+            'Comuna',
         ];
     }
+
 
     public function styles(Worksheet $sheet)
     {

@@ -194,9 +194,11 @@ Route::post('/compras/limpiar-proveedores-faltantes', [CompraController::class, 
 
 
 Route::get('/compras/descargar-plantilla', [CompraController::class, 'descargarPlantilla'])->name('compras.plantilla');
+Route::get('/compras/exportar', [CompraController::class, 'export'])->name('compras.exportar');
 
 Route::resource('compras', CompraController::class);
 Route::post('/compras/importar', [CompraController::class, 'importar'])->name('compras.importar');
+
 Route::patch('/compras/{id}/status', [CompraController::class, 'updateStatus'])->name('compras.updateStatus');
 
 
@@ -233,7 +235,7 @@ Route::get('/tutorial', function () {
 // Ruta para descargar la plantilla vacía de proveedores
 Route::get('/proveedores/descargar-plantilla', [App\Http\Controllers\ProveedorController::class, 'descargarPlantilla'])->name('proveedores.plantilla');
 //Ruta para exportar en Excel el listado de los proveedores
-Route::get('/proveedores/export', [ProveedorController::class, 'export'])->name('proveedores.export');
+Route::get('/proveedores/export', [ProveedorController::class, 'export'])->name('proveedores.exportar');
 Route::resource('proveedores', 'App\Http\Controllers\ProveedorController')->middleware('auth');
 Route::post('/importar-proveedores', [ProveedorImportController::class, 'importar'])->name('importar.proveedores');
 Route::get('/subir-proveedores', function () {
