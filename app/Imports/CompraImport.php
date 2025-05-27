@@ -26,6 +26,11 @@ class CompraImport implements ToModel, WithHeadingRow
     public $importadasDetalle = [];
     public $proveedoresFaltantes = [];
 
+
+    public $erroresDuplicados = [];
+    public $erroresValidacion = [];
+
+
     
 
     public function model(array $row)
@@ -180,8 +185,10 @@ class CompraImport implements ToModel, WithHeadingRow
 
 
             $this->errores[] = $mensaje;
+            $this->erroresValidacion[] = $mensaje;
             $this->omitidas++;
             return null;
+
         }
 
 
@@ -228,8 +235,10 @@ class CompraImport implements ToModel, WithHeadingRow
             $docNumero       = $row['numero_documento'] ?? 'Sin número';
 
             $this->errores[] = "⚠️ Duplicado — Empresa: {$empresaNombre}, Proveedor: {$proveedorNombre}, Tipo Doc: {$tipoNombre}, N° Doc: {$docNumero}";
+            $this->erroresDuplicados[] = $this->errores[count($this->errores) - 1];
             $this->omitidas++;
             return null;
+
         }
 
 

@@ -357,13 +357,19 @@ class CompraController extends Controller
                 session()->put('proveedores_faltantes', $import->proveedoresFaltantes);
             }
 
-            return redirect()->route('compras.index')
-                ->with('import_result', [
-                    'importadas' => $import->importadas,
-                    'omitidas' => $import->omitidas,
-                    'errores' => $import->errores,
-                    'detalles' => $import->importadasDetalle,
-                ]);
+            return redirect()->route('compras.index')->with('import_result', [
+                'importadas' => $import->importadas,
+                'omitidas' => $import->omitidas,
+                'errores' => $import->errores,
+                'erroresDuplicados' => $import->erroresDuplicados,
+                'erroresValidacion' => $import->erroresValidacion,
+                'detalles' => $import->importadasDetalle,
+            ]);
+
+
+
+
+
         } catch (\Exception $e) {
             return back()->with('error', 'Error al importar el archivo: ' . $e->getMessage());
         }

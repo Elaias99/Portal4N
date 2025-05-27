@@ -33,25 +33,39 @@
         </div>
     @endif
 
-    {{-- ERRORES DE IMPORTACIÓN --}}
-    @if ($importResult && isset($importResult['errores']) && count($importResult['errores']) > 0)
 
-        <div class="alert alert-warning shadow-sm mt-2 position-relative" role="alert">
-            <strong>⚠️ Se encontraron errores al importar el archivo:</strong>
 
-            <button class="btn btn-sm btn-outline-dark position-absolute end-0 top-0 m-2" type="button" data-bs-toggle="collapse" data-bs-target="#errorListCollapse" aria-expanded="false">
-                Ver detalles
-            </button>
+    @if (session('import_result.importadas') == 0 && session('import_result.omitidas') > 0)
+        <div class="alert alert-warning shadow-sm mt-2">
+            ⚠️ Todas las filas del archivo fueron omitidas.
 
-            <div class="collapse mt-3" id="errorListCollapse" style="max-height: 300px; overflow-y: auto; border-top: 1px solid #ccc; padding-top: 10px;">
-                <ul class="mb-0">
-                    @foreach ($importResult['errores'] as $error)
-                        <li>{!! $error !!}</li>
-                    @endforeach
-                </ul>
-            </div>
+            @if (session('import_result.erroresDuplicados') && count(session('import_result.erroresDuplicados')) > 0)
+                <details class="mt-2">
+                    <summary>🔁 Compras duplicadas ({{ count(session('import_result.erroresDuplicados')) }})</summary>
+                    <ul>
+                        @foreach (session('import_result.erroresDuplicados') as $error)
+                            <li>{!! $error !!}</li>
+                        @endforeach
+                    </ul>
+                </details>
+            @endif
+
+            @if (session('import_result.erroresValidacion') && count(session('import_result.erroresValidacion')) > 0)
+                <details class="mt-3">
+                    <summary>❌ Errores de validación ({{ count(session('import_result.erroresValidacion')) }})</summary>
+                    <ul>
+                        @foreach (session('import_result.erroresValidacion') as $error)
+                            <li>{!! $error !!}</li>
+                        @endforeach
+                    </ul>
+                </details>
+            @endif
         </div>
     @endif
+
+
+
+
 
 
     {{-- MENSAJE DE IMPORTADAS CORRECTAMENTE --}}
@@ -90,6 +104,8 @@
             </button>
         </form>
     @endif
+
+
 
 
 
