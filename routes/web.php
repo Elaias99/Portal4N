@@ -21,6 +21,7 @@ use App\Http\Controllers\AreaController;
 use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\ReclamoController;
+use App\Http\Controllers\ProductoEscaneadoController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -182,6 +183,7 @@ Route::resource('regions', 'App\Http\Controllers\RegionController')->middleware(
 Route::resource('tipo_vestimentas', 'App\Http\Controllers\TipoVestimentaController')->middleware('auth');
 Route::resource('tallas', 'App\Http\Controllers\TallaController')->middleware('auth');
 Route::resource('hijos', 'App\Http\Controllers\HijoController')->middleware('auth');
+Route::resource('escaneo', 'App\Http\Controllers\ProductoEscaneadoController')->middleware('auth');
 
 // Áreas
 Route::resource('areas', 'App\Http\Controllers\AreaController')->middleware('auth');
@@ -317,3 +319,27 @@ Route::get('/test-mail', function () {
 // Investigar API
 // BACKCOFFE
 // 
+
+
+
+use Illuminate\Http\Request;
+
+Route::post('/fake-api/token', function (Request $request) {
+    // Simulamos usuario y contraseña correctos
+    $usuario = $request->input('Username');
+    $contrasena = $request->input('Password');
+    $grantType = $request->input('grant_type');
+
+    // Verificamos que los valores coincidan con lo esperado
+    if ($usuario === 'admin' && $contrasena === '1234' && $grantType === 'password') {
+        return response()->json([
+            'access_token' => 'FAKE-TOKEN-123456789',
+            'token_type' => 'Bearer',
+            'expires_in' => 3600,
+        ]);
+    } else {
+        return response()->json([
+            'error' => 'Credenciales inválidas'
+        ], 401);
+    }
+});
