@@ -23,6 +23,8 @@ use App\Http\Controllers\PagoController;
 use App\Http\Controllers\ReclamoController;
 use App\Http\Controllers\ProductoEscaneadoController;
 
+use App\Http\Controllers\TrackingProductoController;
+
 Route::get('/', function () {
     if (Auth::check()) {
         $user = Auth::user();
@@ -183,7 +185,32 @@ Route::resource('regions', 'App\Http\Controllers\RegionController')->middleware(
 Route::resource('tipo_vestimentas', 'App\Http\Controllers\TipoVestimentaController')->middleware('auth');
 Route::resource('tallas', 'App\Http\Controllers\TallaController')->middleware('auth');
 Route::resource('hijos', 'App\Http\Controllers\HijoController')->middleware('auth');
+
+// Tracking
 Route::resource('escaneo', 'App\Http\Controllers\ProductoEscaneadoController')->middleware('auth');
+Route::get('/tracking-productos', [TrackingProductoController::class, 'index'])->name('tracking_productos.index');
+Route::get('/tracking-productos/retiro', [TrackingProductoController::class, 'retiro'])->name('tracking_productos.retiro');
+Route::post('/tracking-productos/retiro', [TrackingProductoController::class, 'guardarRetiro'])->name('tracking_productos.guardar_retiro');
+Route::post('/tracking-productos/retiro/agregar', [TrackingProductoController::class, 'agregarCodigo'])->name('tracking_productos.agregar_codigo');
+Route::post('/tracking-productos/retiro/finalizar', [TrackingProductoController::class, 'guardarLoteRetiro'])->name('tracking_productos.guardar_lote');
+
+
+Route::get('/tracking-productos/recepcion', [TrackingProductoController::class, 'recepcion'])->name('tracking_productos.recepcion');
+Route::post('/tracking-productos/recepcion/agregar', [TrackingProductoController::class, 'agregarCodigoRecepcion'])->name('tracking_productos.agregar_codigo_recepcion');
+Route::post('/tracking-productos/recepcion/finalizar', [TrackingProductoController::class, 'guardarRecepcion'])->name('tracking_productos.guardar_recepcion');
+
+
+Route::get('/tracking/en-ruta', [TrackingProductoController::class, 'enRuta'])->name('tracking_productos.en_ruta');
+Route::post('/tracking/en-ruta/agregar', [TrackingProductoController::class, 'agregarCodigoRuta'])->name('tracking_productos.agregar_codigo_ruta');
+Route::post('/tracking/en-ruta/guardar', [TrackingProductoController::class, 'guardarRuta'])->name('tracking_productos.guardar_ruta');
+
+Route::post('/tracking-productos/asignar-chofer', [TrackingProductoController::class, 'asignarChofer'])->name('tracking_productos.asignar_chofer');
+Route::get('/tracking-productos/asignar-individual', [TrackingProductoController::class, 'asignarIndividual'])->name('tracking_productos.asignar_individual');
+Route::post('/tracking-productos/asignar-individual', [TrackingProductoController::class, 'asignarSeleccionados'])->name('tracking_productos.asignar_seleccionados');
+Route::post('/tracking-productos/asignar/agregar-codigo', [TrackingProductoController::class, 'agregarCodigoAsignacion'])->name('tracking_productos.agregar_codigo_asignacion');
+
+
+
 
 // Áreas
 Route::resource('areas', 'App\Http\Controllers\AreaController')->middleware('auth');

@@ -1,0 +1,99 @@
+@extends('layouts.app')
+
+@section('content')
+<div class="container">
+    <h2>Asignar productos escaneados a un repartidor</h2>
+
+    @if (session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
+
+    @if (session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
+
+    {{-- Formulario de escaneo --}}
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ route('tracking_productos.agregar_codigo_asignacion') }}">
+                        @csrf
+                        <div class="mb-3">
+                            <label for="codigo" class="form-label">Escanear código</label>
+                            <input type="text" name="codigo" id="codigo" class="form-control" autofocus required>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">Agregar código</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {{-- Información del último escaneado --}}
+        @if(session('ultimo_producto_base'))
+            @php $p = session('ultimo_producto_base'); @endphp
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">Último producto escaneado</div>
+                    <div class="card-body">
+                        <p><strong>Nombre:</strong> {{ $p->nombre }}</p>
+                        <p><strong>Peso:</strong> {{ $p->peso }}</p>
+                        <p><strong>Altura:</strong> {{ $p->altura }}</p>
+                        <p><strong>Ancho:</strong> {{ $p->ancho }}</p>
+                        <p><strong>Profundidad:</strong> {{ $p->profundidad }}</p>
+                    </div>
+                </div>
+            </div>
+        @endif
+    </div>
+
+    {{-- Listado de códigos escaneados --}}
+    @php
+        $codigos = session('codigos_asignacion', []);
+        $productos = \App\Models\ProductoBase::whereIn('codigo', $codigos)->get()->keyBy('codigo');
+    @endphp
+
+    @if (count($codigos))
+        <div class="card mb-3">
+            <div class="card-header">Códigos escaneados</div>
+            <div class="card-body p-0">
+                <table class="table table-bordered table-hover m-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Peso</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($codigos as $i => $codigo)
+                            <tr>
+                                <td>{{ $i + 1 }}</td>
+                                <td>{{ $codigo }}</td>
+                                <td>{{ $productos[$codigo]->nombre ?? '—' }}</td>
+                                <td>{{ $productos[$codigo]->peso ?? '—' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {{-- Asignar productos a chofer --}}
+        <form method="POST" action="{{ route('tracking_productos.asignar_seleccionados') }}">
+            @csrf
+            <div class="mb-3">
+                <label for="chofer_id" class="form-label">Seleccionar chofer:</label>
+                <select name="chofer_id" id="chofer_id" class="form-select" required>
+                    <option value="">-- Selecciona un chofer --</option>
+                    @foreach ($choferes as $chofer)
+                        <option value="{{ $chofer->id }}">{{ $chofer->Nombre }} {{ $chofer->ApellidoPaterno }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Asignar productos escaneados</button>
+        </form>
+    @endif
+</div>
+@endsection
