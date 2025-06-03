@@ -29,18 +29,17 @@
             </div>
         </div>
 
-        {{-- Información del último escaneado --}}
-        @if(session('ultimo_producto_base'))
-            @php $p = session('ultimo_producto_base'); @endphp
+        {{-- Información del último bulto escaneado --}}
+        @if(session('ultimo_bulto'))
+            @php $b = session('ultimo_bulto'); @endphp
             <div class="col-md-8">
                 <div class="card">
-                    <div class="card-header">Último producto escaneado</div>
+                    <div class="card-header">Último bulto escaneado</div>
                     <div class="card-body">
-                        <p><strong>Nombre:</strong> {{ $p->nombre }}</p>
-                        <p><strong>Peso:</strong> {{ $p->peso }}</p>
-                        <p><strong>Altura:</strong> {{ $p->altura }}</p>
-                        <p><strong>Ancho:</strong> {{ $p->ancho }}</p>
-                        <p><strong>Profundidad:</strong> {{ $p->profundidad }}</p>
+                        <p><strong>Descripción:</strong> {{ $b->descripcion_bulto }}</p>
+                        <p><strong>Peso:</strong> {{ $b->peso }}</p>
+                        <p><strong>Dirección:</strong> {{ $b->direccion }}</p>
+                        <p><strong>Referencia:</strong> {{ $b->referencia }}</p>
                     </div>
                 </div>
             </div>
@@ -50,7 +49,7 @@
     {{-- Listado de códigos escaneados --}}
     @php
         $codigos = session('codigos_asignacion', []);
-        $productos = \App\Models\ProductoBase::whereIn('codigo', $codigos)->get()->keyBy('codigo');
+        $productos = \App\Models\Bultos::whereIn('codigo_bulto', $codigos)->get()->keyBy('codigo_bulto');
     @endphp
 
     @if (count($codigos))
@@ -62,7 +61,7 @@
                         <tr>
                             <th>#</th>
                             <th>Código</th>
-                            <th>Nombre</th>
+                            <th>Descripción</th>
                             <th>Peso</th>
                         </tr>
                     </thead>
@@ -71,7 +70,7 @@
                             <tr>
                                 <td>{{ $i + 1 }}</td>
                                 <td>{{ $codigo }}</td>
-                                <td>{{ $productos[$codigo]->nombre ?? '—' }}</td>
+                                <td>{{ $productos[$codigo]->descripcion_bulto ?? '—' }}</td>
                                 <td>{{ $productos[$codigo]->peso ?? '—' }}</td>
                             </tr>
                         @endforeach

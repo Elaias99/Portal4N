@@ -29,20 +29,20 @@
             </div>
         </div>
 
-        {{-- Información del producto escaneado --}}
-        @if(session('ultimo_producto_base'))
+        {{-- Información del bulto escaneado --}}
+        @if(session('ultimo_bulto'))
         @php
-            $p = session('ultimo_producto_base');
+            $b = session('ultimo_bulto');
         @endphp
         <div class="col-md-8">
             <div class="card">
-                <div class="card-header">Información del producto escaneado</div>
+                <div class="card-header">Información del Bulto Escaneado</div>
                 <div class="card-body">
-                    <p><strong>Nombre:</strong> {{ $p->nombre }}</p>
-                    <p><strong>Peso:</strong> {{ $p->peso }}</p>
-                    <p><strong>Altura:</strong> {{ $p->altura }}</p>
-                    <p><strong>Ancho:</strong> {{ $p->ancho }}</p>
-                    <p><strong>Profundidad:</strong> {{ $p->profundidad }}</p>
+                    <p><strong>Descripción:</strong> {{ $b->descripcion_bulto ?? '—' }}</p>
+                    <p><strong>Peso:</strong> {{ $b->peso ?? '—' }}</p>
+                    <p><strong>Dirección:</strong> {{ $b->direccion ?? '—' }}</p>
+                    <p><strong>Destino:</strong> {{ $b->numero_destino ?? '—' }}</p>
+                    <p><strong>Referencia:</strong> {{ $b->referencia ?? '—' }}</p>
                 </div>
             </div>
         </div>
@@ -52,7 +52,6 @@
     {{-- Códigos escaneados --}}
     @php
         $codigos = session('codigos_retiro', []);
-        $productos = \App\Models\ProductoBase::whereIn('codigo', $codigos)->get()->keyBy('codigo');
     @endphp
 
     @if (count($codigos))

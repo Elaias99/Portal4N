@@ -2,9 +2,6 @@
 
 @section('content')
 
-
-
-
 <div class="container">
     <h2>Escaneo - En Ruta</h2>
 
@@ -33,25 +30,25 @@
             </div>
         </div>
 
-        {{-- Información del producto escaneado --}}
+        {{-- Información del bulto escaneado --}}
         @php
-            $producto = session('ultimo_producto_base');
+            $bulto = session('ultimo_bulto');
         @endphp
 
-        @if ($producto)
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header">Información del producto escaneado</div>
-                    <div class="card-body">
-                        <p><strong>Nombre:</strong> {{ $producto->nombre }}</p>
-                        <p><strong>Peso:</strong> {{ $producto->peso }}</p>
-                        <p><strong>Altura:</strong> {{ $producto->altura }}</p>
-                        <p><strong>Ancho:</strong> {{ $producto->ancho }}</p>
-                        <p><strong>Profundidad:</strong> {{ $producto->profundidad }}</p>
-                    </div>
+        @if ($bulto)
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">Información del Bulto Escaneado</div>
+                <div class="card-body">
+                    <p><strong>Descripción:</strong> {{ $bulto->descripcion_bulto ?? '—' }}</p>
+                    <p><strong>Peso:</strong> {{ $bulto->peso ?? '—' }}</p>
+                    <p><strong>Dirección:</strong> {{ $bulto->direccion ?? '—' }}</p>
+                    <p><strong>Destino:</strong> {{ $bulto->numero_destino ?? '—' }}</p>
+                    <p><strong>Referencia:</strong> {{ $bulto->referencia ?? '—' }}</p>
                 </div>
             </div>
-            @endif
+        </div>
+        @endif
     </div>
 
     {{-- Códigos escaneados actualmente --}}
@@ -72,23 +69,16 @@
     {{-- Productos en estado Recepcionado sin marcar En Ruta --}}
     <h4 class="mt-5">Productos actualmente en estado Recepcionado (sin marcar En Ruta):</h4>
     <ul class="list-group">
-
-
         @forelse ($pendientes as $item)
             <li class="list-group-item">
                 <strong>{{ $item['codigo'] }}</strong> — {{ $item['nombre'] }} |
-                Peso: {{ $item['peso'] }}, Dimensiones: {{ $item['dimensiones'] }}<br>
+                Peso: {{ $item['peso'] }}, Dirección: {{ $item['direccion'] }}<br>
                 <small><strong>Recepcionado por:</strong> {{ $item['usuario'] }}</small>
             </li>
         @empty
-
-
-
-
             <li class="list-group-item">No hay productos pendientes.</li>
         @endforelse
     </ul>
-
 </div>
 
 @endsection
