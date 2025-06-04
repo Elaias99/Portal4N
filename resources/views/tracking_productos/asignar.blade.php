@@ -17,7 +17,7 @@
         <div class="col-md-4">
             <div class="card">
                 <div class="card-body">
-                    <form method="POST" action="{{ route('tracking_productos.agregar_codigo_asignacion') }}">
+                    <form method="POST" action="{{ route('tracking_productos.agregar_codigo_asignacion') }}" onsubmit="this.querySelector('button').disabled = true;">
                         @csrf
                         <div class="mb-3">
                             <label for="codigo" class="form-label">Escanear código</label>
@@ -36,10 +36,10 @@
                 <div class="card">
                     <div class="card-header">Último bulto escaneado</div>
                     <div class="card-body">
-                        <p><strong>Descripción:</strong> {{ $b->descripcion_bulto }}</p>
-                        <p><strong>Peso:</strong> {{ $b->peso }}</p>
-                        <p><strong>Dirección:</strong> {{ $b->direccion }}</p>
-                        <p><strong>Referencia:</strong> {{ $b->referencia }}</p>
+                        <p><strong>Descripción:</strong> {{ $b->descripcion_bulto ?? '—' }}</p>
+                        <p><strong>Peso:</strong> {{ $b->peso ?? '—' }}</p>
+                        <p><strong>Dirección:</strong> {{ $b->direccion ?? '—' }}</p>
+                        <p><strong>Referencia:</strong> {{ $b->referencia ?? '—' }}</p>
                     </div>
                 </div>
             </div>
@@ -80,7 +80,7 @@
         </div>
 
         {{-- Asignar productos a chofer --}}
-        <form method="POST" action="{{ route('tracking_productos.asignar_seleccionados') }}">
+        <form method="POST" action="{{ route('tracking_productos.asignar_seleccionados') }}" onsubmit="this.querySelector('button').disabled = true;">
             @csrf
             <div class="mb-3">
                 <label for="chofer_id" class="form-label">Seleccionar chofer:</label>
@@ -95,4 +95,15 @@
         </form>
     @endif
 </div>
+
+{{-- Autofocus al recargar --}}
+<script>
+    window.onload = function () {
+        const input = document.getElementById('codigo');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    };
+</script>
 @endsection

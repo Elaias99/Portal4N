@@ -21,6 +21,12 @@ class TrackingProducto extends Model
         return $this->hasOne(\App\Models\Bultos::class, 'codigo_bulto', 'codigo');
     }
 
+    public function chofer()
+    {
+        return $this->belongsTo(\App\Models\Trabajador::class, 'chofer_id');
+    }
+
+
 
 
 }

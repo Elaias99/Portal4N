@@ -18,7 +18,7 @@
         <div class="col-md-4">
             <div class="card">
                 <div class="card-body">
-                    <form method="POST" action="{{ route('tracking_productos.agregar_codigo_ruta') }}">
+                    <form method="POST" action="{{ route('tracking_productos.agregar_codigo_ruta') }}" onsubmit="this.querySelector('button').disabled = true;">
                         @csrf
                         <div class="mb-3">
                             <label for="codigo" class="form-label">Escanea un código</label>
@@ -31,9 +31,7 @@
         </div>
 
         {{-- Información del bulto escaneado --}}
-        @php
-            $bulto = session('ultimo_bulto');
-        @endphp
+        @php $bulto = session('ultimo_bulto'); @endphp
 
         @if ($bulto)
         <div class="col-md-8">
@@ -53,12 +51,27 @@
 
     {{-- Códigos escaneados actualmente --}}
     @if (count($escaneados))
-        <h4 class="mt-4">Códigos escaneados para En Ruta:</h4>
-        <ul class="list-group mb-3">
-            @foreach ($escaneados as $codigo)
-                <li class="list-group-item">{{ $codigo }}</li>
-            @endforeach
-        </ul>
+        <div class="card mb-4">
+            <div class="card-header">Códigos escaneados para En Ruta</div>
+            <div class="card-body p-0">
+                <table class="table table-bordered table-hover m-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Código</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($escaneados as $index => $codigo)
+                            <tr>
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $codigo }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
         <form method="POST" action="{{ route('tracking_productos.guardar_ruta') }}">
             @csrf
@@ -68,7 +81,7 @@
 
     {{-- Productos en estado Recepcionado sin marcar En Ruta --}}
     <h4 class="mt-5">Productos actualmente en estado Recepcionado (sin marcar En Ruta):</h4>
-    <ul class="list-group">
+    <ul class="list-group mb-5">
         @forelse ($pendientes as $item)
             <li class="list-group-item">
                 <strong>{{ $item['codigo'] }}</strong> — {{ $item['nombre'] }} |
@@ -81,4 +94,14 @@
     </ul>
 </div>
 
+{{-- Autofocus después de recarga --}}
+<script>
+    window.onload = function () {
+        const input = document.getElementById('codigo');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    };
+</script>
 @endsection

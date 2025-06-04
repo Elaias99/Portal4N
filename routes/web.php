@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\ReclamoController;
 use App\Http\Controllers\ProductoEscaneadoController;
+use App\Http\Controllers\TrackingDashboardController;
 
 use App\Http\Controllers\TrackingProductoController;
 
@@ -186,7 +187,7 @@ Route::resource('tipo_vestimentas', 'App\Http\Controllers\TipoVestimentaControll
 Route::resource('tallas', 'App\Http\Controllers\TallaController')->middleware('auth');
 Route::resource('hijos', 'App\Http\Controllers\HijoController')->middleware('auth');
 
-// Tracking
+//////////////////// Tracking /////////////
 Route::resource('escaneo', 'App\Http\Controllers\ProductoEscaneadoController')->middleware('auth');
 Route::get('/tracking-productos', [TrackingProductoController::class, 'index'])->name('tracking_productos.index');
 Route::get('/tracking-productos/retiro', [TrackingProductoController::class, 'retiro'])->name('tracking_productos.retiro');
@@ -209,6 +210,7 @@ Route::get('/tracking-productos/asignar-individual', [TrackingProductoController
 Route::post('/tracking-productos/asignar-individual', [TrackingProductoController::class, 'asignarSeleccionados'])->name('tracking_productos.asignar_seleccionados');
 Route::post('/tracking-productos/asignar/agregar-codigo', [TrackingProductoController::class, 'agregarCodigoAsignacion'])->name('tracking_productos.agregar_codigo_asignacion');
 
+Route::get('/tracking/dashboard', [TrackingDashboardController::class, 'index'])->name('tracking.dashboard');
 
 
 

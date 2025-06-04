@@ -4,9 +4,16 @@
 <div class="container text-center">
     <h2>Escaneo Productos</h2>
 
+
+
     @if (session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
+
+    <a href="{{ route('tracking.dashboard') }}" class="btn btn-info mb-3">
+        Ver Panel de Estado
+    </a>
+
 
 
     <div class="row mt-4">

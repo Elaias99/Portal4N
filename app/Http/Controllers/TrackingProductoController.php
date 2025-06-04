@@ -55,10 +55,8 @@ class TrackingProductoController extends Controller
             'codigo' => 'required|string'
         ]);
 
-        $user = Auth::user();
-        $correoPerfil = resolvePerfilEmail($user->email);
-        $usuarioPerfil = \App\Models\User::where('email', $correoPerfil)->firstOrFail();
-        $trabajador = \App\Models\Trabajador::where('user_id', $usuarioPerfil->id)->firstOrFail();
+        ['usuarioPerfil' => $usuarioPerfil, 'trabajador' => $trabajador] = $this->getPerfilYTrabajador();
+
 
         TrackingProducto::create([
             'codigo' => $request->codigo,
@@ -80,7 +78,10 @@ class TrackingProductoController extends Controller
         $codigo = $request->codigo;
 
         // Validar si existe en bultos
-        $bulto = \App\Models\Bultos::where('codigo_bulto', $codigo)->first();
+        $bulto = \App\Models\Bultos::select('codigo_bulto', 'descripcion_bulto', 'peso', 'direccion')
+            ->where('codigo_bulto', $codigo)
+            ->first();
+
 
         if (!$bulto) {
             return back()->with('error', "El código $codigo no existe en la base de bultos.");
@@ -97,14 +98,14 @@ class TrackingProductoController extends Controller
 
         // Verificar si ya está escaneado en la sesión
         $escaneados = session()->get('codigos_retiro', []);
-
         if (in_array($codigo, $escaneados)) {
             return back()->with('error', "El código $codigo ya fue escaneado.");
         }
 
-        // Agregar a sesión
-        $escaneados[] = $codigo;
-        session(['codigos_retiro' => $escaneados]);
+        session()->push('codigos_retiro', $codigo);
+
+
+
         session(['ultimo_bulto' => $bulto]);
 
         return back()->with('success', "Código $codigo agregado exitosamente.");
@@ -121,33 +122,34 @@ class TrackingProductoController extends Controller
             return back()->with('error', 'No hay códigos para registrar.');
         }
 
-        $user = Auth::user();
-        $correoPerfil = resolvePerfilEmail($user->email);
-        $usuarioPerfil = \App\Models\User::where('email', $correoPerfil)->firstOrFail();
-        $trabajador = \App\Models\Trabajador::where('user_id', $usuarioPerfil->id)->firstOrFail();
+        ['usuarioPerfil' => $usuarioPerfil, 'trabajador' => $trabajador] = $this->getPerfilYTrabajador();
 
-        $guardados = 0;
+        // 🔁 Traer todos los códigos que ya existen en estado 'Retiro'
+        $codigosExistentes = TrackingProducto::whereIn('codigo', $codigos)
+            ->where('estado', 'Retiro')
+            ->pluck('codigo')
+            ->toArray();
 
-        foreach ($codigos as $codigo) {
-            $yaExiste = TrackingProducto::where('codigo', $codigo)
-                ->where('estado', 'Retiro')
-                ->exists();
+        $nuevos = array_diff($codigos, $codigosExistentes);
 
-            if (!$yaExiste) {
-                TrackingProducto::create([
-                    'codigo' => $codigo,
-                    'estado' => 'Retiro',
-                    'user_id' => $usuarioPerfil->id,
-                    'trabajador_id' => $trabajador->id,
-                    'area_id' => $trabajador->area_id,
-                ]);
-                $guardados++;
-            }
+        // 🧠 Usar insert para evitar múltiples `create()`
+        $datos = [];
+        foreach ($nuevos as $codigo) {
+            $datos[] = [
+                'codigo' => $codigo,
+                'estado' => 'Retiro',
+                'user_id' => $usuarioPerfil->id,
+                'trabajador_id' => $trabajador->id,
+                'area_id' => $trabajador->area_id,
+                'created_at' => now(),
+                'updated_at' => now()
+            ];
         }
 
+        TrackingProducto::insert($datos);
         session()->forget('codigos_retiro');
 
-        if ($guardados === 0) {
+        if (empty($nuevos)) {
             return redirect()
                 ->route('tracking_productos.retiro')
                 ->with('error', 'Todos los códigos escaneados ya habían sido retirados anteriormente.');
@@ -155,9 +157,9 @@ class TrackingProductoController extends Controller
 
         return redirect()
             ->route('tracking_productos.index')
-            ->with('success', "$guardados producto(s) registrados correctamente.");
-
+            ->with('success', count($nuevos) . ' producto(s) registrados correctamente.');
     }
+
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////// 
 
@@ -166,26 +168,32 @@ class TrackingProductoController extends Controller
     {
         $escaneados = session('codigos_recepcion', []);
 
-        // Obtener todos los códigos en estado 'Retiro' que no han sido recepcionados aún
-        $codigosPendientes = TrackingProducto::select('codigo')
-            ->where('estado', 'Retiro')
-            ->get()
+        // 1. Códigos con estado 'Retiro' que aún no han sido recepcionados
+        $codigosRetiro = TrackingProducto::where('estado', 'Retiro')
             ->pluck('codigo')
-            ->filter(function ($codigo) {
-                return !TrackingProducto::where('codigo', $codigo)
-                    ->where('estado', 'Recepcionado')
-                    ->exists();
-            })
-            ->values()
             ->toArray();
 
-        // Excluir los que ya se están escaneando en esta sesión
-        $codigosPendientes = array_diff($codigosPendientes, $escaneados);
+        $codigosRecepcionados = TrackingProducto::where('estado', 'Recepcionado')
+            ->pluck('codigo')
+            ->toArray();
+
+        // 2. Eliminar duplicados y escaneados en esta sesión
+        $codigosPendientes = array_diff($codigosRetiro, $codigosRecepcionados, $escaneados);
+
+        // 3. Traer solo bultos que existan
+        $bultos = \App\Models\Bultos::whereIn('codigo_bulto', $codigosPendientes)
+            ->select('codigo_bulto', 'descripcion_bulto', 'peso', 'direccion', 'numero_destino', 'referencia')
+            ->get()
+            ->keyBy('codigo_bulto');
 
         $pendientes = [];
 
         foreach ($codigosPendientes as $codigo) {
-            $bulto = \App\Models\Bultos::where('codigo_bulto', $codigo)->first();
+            if (!isset($bultos[$codigo])) {
+                continue;
+            }
+
+            $bulto = $bultos[$codigo];
 
             $registroRetiro = TrackingProducto::where('codigo', $codigo)
                 ->where('estado', 'Retiro')
@@ -194,18 +202,15 @@ class TrackingProductoController extends Controller
 
             $trabajador = $registroRetiro?->trabajador?->Nombre . ' ' . $registroRetiro?->trabajador?->ApellidoPaterno ?? '—';
 
-            if ($bulto) {
-                $pendientes[] = [
-                    'codigo' => $bulto->codigo_bulto,
-                    'nombre' => $bulto->descripcion_bulto,
-                    'peso' => $bulto->peso,
-                    'direccion' => $bulto->direccion,
-                    'usuario' => $trabajador
-                ];
-            }
+            $pendientes[] = [
+                'codigo' => $bulto->codigo_bulto,
+                'nombre' => $bulto->descripcion_bulto,
+                'peso' => $bulto->peso,
+                'direccion' => $bulto->direccion,
+                'usuario' => $trabajador
+            ];
         }
 
-        // Limpiar tarjeta visual si no se ha escaneado nada
         if (empty($escaneados)) {
             session()->forget('ultimo_bulto');
         }
@@ -214,6 +219,7 @@ class TrackingProductoController extends Controller
 
         return view('tracking_productos.recepcion', compact('pendientes', 'escaneados', 'choferes'));
     }
+
 
 
 
@@ -227,7 +233,10 @@ class TrackingProductoController extends Controller
         $codigo = $request->codigo;
 
         // Validar existencia en bultos
-        $bulto = \App\Models\Bultos::where('codigo_bulto', $codigo)->first();
+        $bulto = \App\Models\Bultos::select('codigo_bulto', 'descripcion_bulto', 'peso', 'direccion')
+            ->where('codigo_bulto', $codigo)
+            ->first();
+
         if (!$bulto) {
             return back()->with('error', "El código $codigo no existe en la base de bultos.");
         }
@@ -252,16 +261,16 @@ class TrackingProductoController extends Controller
 
         // Verificar que no esté repetido en sesión
         $escaneados = session()->get('codigos_recepcion', []);
-
-        if (!in_array($codigo, $escaneados)) {
-            $escaneados[] = $codigo;
-            session(['codigos_recepcion' => $escaneados]);
-            session(['ultimo_bulto' => $bulto]);
-
-            return back()->with('success', "Código $codigo agregado exitosamente.");
+        if (in_array($codigo, $escaneados)) {
+            return back()->with('error', "El código $codigo ya fue escaneado.");
         }
 
-        return back()->with('error', "El código $codigo ya fue escaneado.");
+        session()->push('codigos_recepcion', $codigo);
+        session(['ultimo_bulto' => $bulto]);
+        return back()->with('success', "Código $codigo agregado exitosamente.");
+
+
+       
     }
 
 
@@ -274,51 +283,50 @@ class TrackingProductoController extends Controller
             return back()->with('error', 'No hay códigos para registrar.');
         }
 
-        $user = Auth::user();
-        $correoPerfil = resolvePerfilEmail($user->email);
-        $usuarioPerfil = \App\Models\User::where('email', $correoPerfil)->firstOrFail();
-        $trabajador = \App\Models\Trabajador::where('user_id', $usuarioPerfil->id)->firstOrFail();
+        ['usuarioPerfil' => $usuarioPerfil, 'trabajador' => $trabajador] = $this->getPerfilYTrabajador();
 
-        $guardados = 0;
-        $rechazados = [];
+        // Obtener códigos válidos en estado 'Retiro'
+        $enRetiro = TrackingProducto::whereIn('codigo', $codigos)
+            ->where('estado', 'Retiro')
+            ->pluck('codigo')
+            ->toArray();
 
-        foreach ($codigos as $codigo) {
-            $existeEnRetiro = TrackingProducto::where('codigo', $codigo)
-                ->where('estado', 'Retiro')
-                ->exists();
+        // Obtener códigos ya recepcionados
+        $yaRecepcionados = TrackingProducto::whereIn('codigo', $codigos)
+            ->where('estado', 'Recepcionado')
+            ->pluck('codigo')
+            ->toArray();
 
-            if (!$existeEnRetiro) {
-                $rechazados[] = $codigo;
-                continue;
-            }
+        // Códigos válidos para registrar como 'Recepcionado'
+        $registrables = array_diff($enRetiro, $yaRecepcionados);
 
-            $yaRecepcionado = TrackingProducto::where('codigo', $codigo)
-                ->where('estado', 'Recepcionado')
-                ->exists();
+        // Códigos inválidos (no están en retiro)
+        $rechazados = array_diff($codigos, $enRetiro);
 
-            if (!$yaRecepcionado) {
-                TrackingProducto::create([
-                    'codigo' => $codigo,
-                    'estado' => 'Recepcionado',
-                    'user_id' => $usuarioPerfil->id,
-                    'trabajador_id' => $trabajador->id,
-                    'area_id' => $trabajador->area_id,
-                    // 'chofer_id' => $choferAsignado,
-                ]);
-                $guardados++;
-            }
+        // Insertar en bloque
+        $datos = [];
+        foreach ($registrables as $codigo) {
+            $datos[] = [
+                'codigo' => $codigo,
+                'estado' => 'Recepcionado',
+                'user_id' => $usuarioPerfil->id,
+                'trabajador_id' => $trabajador->id,
+                'area_id' => $trabajador->area_id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
         }
 
-
+        TrackingProducto::insert($datos);
         session()->forget('codigos_recepcion');
 
-        if ($guardados === 0) {
+        if (empty($registrables)) {
             return redirect()
                 ->route('tracking_productos.recepcion')
                 ->with('error', 'Todos los códigos ya fueron recepcionados anteriormente o no estaban en estado Retiro.');
         }
 
-        $msg = "$guardados producto(s) recepcionado(s) correctamente.";
+        $msg = count($registrables) . ' producto(s) recepcionado(s) correctamente.';
 
         if (!empty($rechazados)) {
             $msg .= ' Los siguientes códigos no fueron procesados porque no tienen un registro previo con estado "Retiro": ';
@@ -328,63 +336,75 @@ class TrackingProductoController extends Controller
         return redirect()->route('tracking_productos.index')->with('success', $msg);
     }
 
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     
     public function enRuta()
     {
-        $user = Auth::user();
-        $correoPerfil = resolvePerfilEmail($user->email);
-        $usuarioPerfil = \App\Models\User::where('email', $correoPerfil)->firstOrFail();
-        $trabajador = \App\Models\Trabajador::where('user_id', $usuarioPerfil->id)->firstOrFail();
+        ['usuarioPerfil' => $usuarioPerfil, 'trabajador' => $trabajador] = $this->getPerfilYTrabajador();
         $areaId = $trabajador->area_id;
-
         $escaneados = session('codigos_ruta', []);
 
-        // 1. Si es OPERADOR
+        // 1. OPERADOR: ver productos sin chofer asignado
         if ($areaId == 1) {
             $productosSinChofer = TrackingProducto::where('estado', 'Recepcionado')
                 ->whereNull('chofer_id')
                 ->get();
 
+            $codigos = $productosSinChofer->pluck('codigo')->toArray();
+            $bultos = \App\Models\Bultos::whereIn('codigo_bulto', $codigos)
+                ->select('codigo_bulto', 'descripcion_bulto', 'peso', 'direccion')
+                ->get()
+                ->keyBy('codigo_bulto');
+
             $pendientesAsignacion = [];
 
             foreach ($productosSinChofer as $item) {
-                $bulto = \App\Models\Bultos::where('codigo_bulto', $item->codigo)->first();
+                if (!isset($bultos[$item->codigo])) {
+                    continue;
+                }
+
+                $bulto = $bultos[$item->codigo];
                 $recepcionadoPor = $item->trabajador?->Nombre . ' ' . $item->trabajador?->ApellidoPaterno ?? '—';
 
-                if ($bulto) {
-                    $pendientesAsignacion[] = [
-                        'codigo' => $item->codigo,
-                        'nombre' => $bulto->descripcion_bulto,
-                        'peso' => $bulto->peso,
-                        'direccion' => $bulto->direccion,
-                        'usuario' => $recepcionadoPor,
-                    ];
-                }
+                $pendientesAsignacion[] = [
+                    'codigo' => $item->codigo,
+                    'nombre' => $bulto->descripcion_bulto,
+                    'peso' => $bulto->peso,
+                    'direccion' => $bulto->direccion,
+                    'usuario' => $recepcionadoPor,
+                ];
             }
 
             $choferes = \App\Models\Trabajador::where('area_id', 5)->get();
             return view('tracking_productos.en_ruta', compact('areaId', 'choferes', 'pendientesAsignacion'));
         }
 
-        // 2. Si es CHOFER (área 5)
-        $codigosPendientes = TrackingProducto::where('estado', 'Recepcionado')
+        // 2. CHOFER: ver productos asignados que aún no estén En Ruta
+        $recepcionados = TrackingProducto::where('estado', 'Recepcionado')
             ->where('chofer_id', $trabajador->id)
-            ->get()
             ->pluck('codigo')
-            ->filter(function ($codigo) {
-                return !TrackingProducto::where('codigo', $codigo)
-                    ->where('estado', 'En Ruta')
-                    ->exists();
-            })
-            ->values()
             ->toArray();
 
-        $codigosPendientes = array_diff($codigosPendientes, $escaneados);
+        $yaEnRuta = TrackingProducto::where('estado', 'En Ruta')
+            ->pluck('codigo')
+            ->toArray();
+
+        $codigosPendientes = array_diff($recepcionados, $yaEnRuta, $escaneados);
+
+        $bultos = \App\Models\Bultos::whereIn('codigo_bulto', $codigosPendientes)
+            ->select('codigo_bulto', 'descripcion_bulto', 'peso', 'direccion')
+            ->get()
+            ->keyBy('codigo_bulto');
 
         $pendientes = [];
+
         foreach ($codigosPendientes as $codigo) {
-            $bulto = \App\Models\Bultos::where('codigo_bulto', $codigo)->first();
+            if (!isset($bultos[$codigo])) {
+                continue;
+            }
+
+            $bulto = $bultos[$codigo];
 
             $registroRecepcion = TrackingProducto::where('codigo', $codigo)
                 ->where('estado', 'Recepcionado')
@@ -393,15 +413,13 @@ class TrackingProductoController extends Controller
 
             $trabajadorNombre = $registroRecepcion?->trabajador?->Nombre . ' ' . $registroRecepcion?->trabajador?->ApellidoPaterno ?? '—';
 
-            if ($bulto) {
-                $pendientes[] = [
-                    'codigo' => $bulto->codigo_bulto,
-                    'nombre' => $bulto->descripcion_bulto,
-                    'peso' => $bulto->peso,
-                    'direccion' => $bulto->direccion,
-                    'usuario' => $trabajadorNombre
-                ];
-            }
+            $pendientes[] = [
+                'codigo' => $bulto->codigo_bulto,
+                'nombre' => $bulto->descripcion_bulto,
+                'peso' => $bulto->peso,
+                'direccion' => $bulto->direccion,
+                'usuario' => $trabajadorNombre
+            ];
         }
 
         if (empty($escaneados)) {
@@ -410,6 +428,7 @@ class TrackingProductoController extends Controller
 
         return view('tracking_productos.en_ruta', compact('areaId', 'pendientes', 'escaneados'));
     }
+
 
 
     public function agregarCodigoRuta(Request $request)
@@ -421,16 +440,19 @@ class TrackingProductoController extends Controller
         $codigo = $request->codigo;
 
         // Verificar que exista en la tabla de bultos
-        $bulto = \App\Models\Bultos::where('codigo_bulto', $codigo)->first();
+        $bulto = \App\Models\Bultos::select('codigo_bulto', 'descripcion_bulto', 'peso', 'direccion')
+            ->where('codigo_bulto', $codigo)
+            ->first();
+
+
+
         if (!$bulto) {
             return back()->with('error', "El código $codigo no existe en la tabla de bultos.");
         }
 
         // Verificar que esté recepcionado y asignado al chofer actual
-        $user = Auth::user();
-        $correoPerfil = resolvePerfilEmail($user->email);
-        $usuarioPerfil = \App\Models\User::where('email', $correoPerfil)->firstOrFail();
-        $trabajador = \App\Models\Trabajador::where('user_id', $usuarioPerfil->id)->firstOrFail();
+        ['usuarioPerfil' => $usuarioPerfil, 'trabajador' => $trabajador] = $this->getPerfilYTrabajador();
+
 
         $existeEnRecepcionado = \App\Models\TrackingProducto::where('codigo', $codigo)
             ->where('estado', 'Recepcionado')
@@ -456,8 +478,14 @@ class TrackingProductoController extends Controller
             return back()->with('error', "El código $codigo ya fue escaneado.");
         }
 
-        $escaneados[] = $codigo;
-        session(['codigos_ruta' => $escaneados]);
+        $escaneados = session()->get('codigos_ruta', []);
+        if (in_array($codigo, $escaneados)) {
+            return back()->with('error', "El código $codigo ya fue escaneado.");
+        }
+        session()->push('codigos_ruta', $codigo);
+
+
+
         session(['ultimo_bulto' => $bulto]);
 
         return back()->with('success', "Código $codigo agregado exitosamente.");
@@ -472,52 +500,54 @@ class TrackingProductoController extends Controller
             return back()->with('error', 'No hay códigos para registrar.');
         }
 
-        $user = Auth::user();
-        $correoPerfil = resolvePerfilEmail($user->email);
-        $usuarioPerfil = \App\Models\User::where('email', $correoPerfil)->firstOrFail();
-        $trabajador = \App\Models\Trabajador::where('user_id', $usuarioPerfil->id)->firstOrFail();
+        ['usuarioPerfil' => $usuarioPerfil, 'trabajador' => $trabajador] = $this->getPerfilYTrabajador();
 
-        $guardados = 0;
-        $rechazados = [];
+        // 🧠 Filtrar los códigos válidos que estén en estado 'Recepcionado' y asignados al chofer actual
+        $recepcionadosAsignados = TrackingProducto::whereIn('codigo', $codigos)
+            ->where('estado', 'Recepcionado')
+            ->where('chofer_id', $trabajador->id)
+            ->pluck('codigo')
+            ->toArray();
 
-        foreach ($codigos as $codigo) {
-            $recepcionado = TrackingProducto::where('codigo', $codigo)
-                ->where('estado', 'Recepcionado')
-                ->where('chofer_id', $trabajador->id)
-                ->first();
+        // Filtrar los que ya están marcados como 'En Ruta'
+        $yaEnRuta = TrackingProducto::whereIn('codigo', $codigos)
+            ->where('estado', 'En Ruta')
+            ->pluck('codigo')
+            ->toArray();
 
-            if (!$recepcionado) {
-                $rechazados[] = $codigo;
-                continue;
-            }
+        // Códigos válidos para registrar como 'En Ruta'
+        $registrables = array_diff($recepcionadosAsignados, $yaEnRuta);
 
-            $yaEnRuta = TrackingProducto::where('codigo', $codigo)
-                ->where('estado', 'En Ruta')
-                ->exists();
+        // Códigos rechazados (no asignados al chofer o ya procesados)
+        $rechazados = array_diff($codigos, $registrables);
 
-            if (!$yaEnRuta) {
-                TrackingProducto::create([
-                    'codigo' => $codigo,
-                    'estado' => 'En Ruta',
-                    'user_id' => $usuarioPerfil->id,
-                    'trabajador_id' => $trabajador->id,
-                    'area_id' => $trabajador->area_id,
-                    'chofer_id' => $trabajador->id,
-                ]);
-                $guardados++;
-            }
+        // Insertar en bloque
+        $datos = [];
+        foreach ($registrables as $codigo) {
+            $datos[] = [
+                'codigo' => $codigo,
+                'estado' => 'En Ruta',
+                'user_id' => $usuarioPerfil->id,
+                'trabajador_id' => $trabajador->id,
+                'area_id' => $trabajador->area_id,
+                'chofer_id' => $trabajador->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
         }
+
+        TrackingProducto::insert($datos);
 
         session()->forget('codigos_ruta');
-        session()->forget('ultimo_bulto'); // ← limpieza adicional
+        session()->forget('ultimo_bulto');
 
-        if ($guardados === 0) {
+        if (empty($registrables)) {
             return redirect()
                 ->route('tracking_productos.en_ruta')
-                ->with('error', 'Todos los códigos ya fueron marcados como En Ruta o no pertenecen a este chofer.');
+                ->with('error', 'Todos los códigos ya fueron marcados como En Ruta o no te pertenecen.');
         }
 
-        $msg = "$guardados producto(s) marcados como En Ruta correctamente.";
+        $msg = count($registrables) . ' producto(s) marcados como En Ruta correctamente.';
 
         if (!empty($rechazados)) {
             $msg .= ' Algunos códigos no fueron procesados porque no te pertenecen o ya fueron procesados: ';
@@ -526,11 +556,6 @@ class TrackingProductoController extends Controller
 
         return redirect()->route('tracking_productos.index')->with('success', $msg);
     }
-
-
-
-
-
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 
@@ -562,44 +587,41 @@ class TrackingProductoController extends Controller
 
     public function asignarIndividual()
     {
-        session()->forget('ultimo_bulto'); // ← cambiamos nombre para consistencia
+        session()->forget('ultimo_bulto');
 
-        $user = Auth::user();
-        $correoPerfil = resolvePerfilEmail($user->email);
-        $usuarioPerfil = \App\Models\User::where('email', $correoPerfil)->firstOrFail();
-        $trabajador = \App\Models\Trabajador::where('user_id', $usuarioPerfil->id)->firstOrFail();
+        ['usuarioPerfil' => $usuarioPerfil, 'trabajador' => $trabajador] = $this->getPerfilYTrabajador();
 
-        // Seguridad adicional: solo operadores pueden acceder
         if ($trabajador->area_id != 1) {
             abort(403, 'Solo operadores pueden asignar productos.');
         }
 
         $choferes = \App\Models\Trabajador::where('area_id', 5)->get();
 
-        $productosSinChofer = TrackingProducto::where('estado', 'Recepcionado')
+        // Cargar productos sin chofer con relaciones ya incluidas
+        $productosSinChofer = TrackingProducto::with(['bulto', 'trabajador'])
+            ->where('estado', 'Recepcionado')
             ->whereNull('chofer_id')
             ->get();
 
         $pendientesAsignacion = [];
 
         foreach ($productosSinChofer as $item) {
-            $bulto = $item->bulto; // ← gracias a la relación hasOne()
-
-            $recepcionadoPor = $item->trabajador?->Nombre . ' ' . $item->trabajador?->ApellidoPaterno ?? '—';
-
-            if ($bulto) {
-                $pendientesAsignacion[] = [
-                    'codigo' => $item->codigo,
-                    'nombre' => $bulto->descripcion_bulto ?? '—',
-                    'peso' => $bulto->peso ?? '—',
-                    'dimensiones' => $bulto->referencia ?? '—', // o puedes combinar otras columnas si quieres formato WxHxD
-                    'usuario' => $recepcionadoPor,
-                ];
+            if (!$item->bulto) {
+                continue; // evitar productos sin bulto asociado
             }
+
+            $pendientesAsignacion[] = [
+                'codigo' => $item->codigo,
+                'nombre' => $item->bulto->descripcion_bulto ?? '—',
+                'peso' => $item->bulto->peso ?? '—',
+                'dimensiones' => $item->bulto->referencia ?? '—',
+                'usuario' => $item->trabajador?->Nombre . ' ' . $item->trabajador?->ApellidoPaterno ?? '—',
+            ];
         }
 
         return view('tracking_productos.asignar', compact('choferes', 'pendientesAsignacion'));
     }
+
 
 
     public function asignarSeleccionados(Request $request)
@@ -649,7 +671,12 @@ class TrackingProductoController extends Controller
         $codigo = $request->codigo;
 
         // Validar que exista en la tabla Bultos
-        $bulto = \App\Models\Bultos::where('codigo_bulto', $codigo)->first();
+        $bulto = \App\Models\Bultos::select('codigo_bulto', 'descripcion_bulto', 'peso', 'direccion', 'referencia')
+            ->where('codigo_bulto', $codigo)
+            ->first();
+
+
+
         if (!$bulto) {
             return back()->with('error', "El código $codigo no existe en la base de bultos.");
         }
@@ -668,19 +695,34 @@ class TrackingProductoController extends Controller
             return back()->with('error', "El código $codigo ya fue asignado a un chofer.");
         }
 
-        // Verificar que no esté ya escaneado en esta sesión
         $codigos = session()->get('codigos_asignacion', []);
         if (in_array($codigo, $codigos)) {
             return back()->with('error', "El código $codigo ya fue escaneado.");
         }
 
-        // Guardar en sesión
-        $codigos[] = $codigo;
-        session(['codigos_asignacion' => $codigos]);
-        session(['ultimo_bulto' => $bulto]); // nota: cambiamos nombre de sesión para claridad
+        session()->push('codigos_asignacion', $codigo);
+        session(['ultimo_bulto' => $bulto]);
+
 
         return back()->with('success', "Código $codigo agregado correctamente.");
     }
+
+
+    ///////////Métodos Privados/////////////////////////////////////
+
+    private function getPerfilYTrabajador()
+    {
+        $user = Auth::user();
+        $correoPerfil = resolvePerfilEmail($user->email);
+        $usuarioPerfil = \App\Models\User::where('email', $correoPerfil)->firstOrFail();
+        $trabajador = \App\Models\Trabajador::where('user_id', $usuarioPerfil->id)->firstOrFail();
+
+        return compact('usuarioPerfil', 'trabajador');
+    }
+
+
+    
+
 
 
 

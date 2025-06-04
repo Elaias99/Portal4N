@@ -17,7 +17,7 @@
         <div class="col-md-4">
             <div class="card">
                 <div class="card-body">
-                    <form method="POST" action="{{ route('tracking_productos.agregar_codigo') }}">
+                    <form method="POST" action="{{ route('tracking_productos.agregar_codigo') }}" onsubmit="this.querySelector('button').disabled = true;">
                         @csrf
                         <div class="mb-3">
                             <label for="codigo" class="form-label">Escanea un código</label>
@@ -31,9 +31,7 @@
 
         {{-- Información del bulto escaneado --}}
         @if(session('ultimo_bulto'))
-        @php
-            $b = session('ultimo_bulto');
-        @endphp
+        @php $b = session('ultimo_bulto'); @endphp
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">Información del Bulto Escaneado</div>
@@ -50,9 +48,7 @@
     </div>
 
     {{-- Códigos escaneados --}}
-    @php
-        $codigos = session('codigos_retiro', []);
-    @endphp
+    @php $codigos = session('codigos_retiro', []); @endphp
 
     @if (count($codigos))
         <div class="card">
@@ -71,9 +67,9 @@
                         @foreach ($codigos as $index => $codigo)
                             <tr>
                                 <td>{{ $index + 1 }}</td>
-                                <td>{{ $codigo }}</td>
+                                <td>{{ is_array($codigo) ? $codigo['codigo'] : $codigo }}</td>
                                 <td>Retirado</td>
-                                <td>{{ now()->format('Y-m-d H:i') }}</td>
+                                <td>{{ is_array($codigo) ? $codigo['timestamp'] : now()->format('Y-m-d H:i') }}</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -88,4 +84,15 @@
         </form>
     @endif
 </div>
+
+{{-- Reforzar autofocus después de recarga --}}
+<script>
+    window.onload = function () {
+        const input = document.getElementById('codigo');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    };
+</script>
 @endsection

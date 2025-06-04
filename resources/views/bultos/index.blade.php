@@ -72,10 +72,6 @@
                 <i class="fa-solid fa-circle-question me-1"></i> Consulta General
             </button>
         </form>
-
-
-
-
     </div>
 
     @if ($bultos && count($bultos) > 0)
@@ -84,6 +80,14 @@
             @php
                 $ultimoReclamo = $bulto->reclamos()->latest()->first();
             @endphp
+
+            @php
+                $choferTracking = \App\Models\TrackingProducto::where('codigo', $bulto->codigo_bulto)
+                    ->where('estado', 'En Ruta')
+                    ->latest()
+                    ->first();
+            @endphp
+
 
             <div class="card shadow-sm mb-4" style="max-width: 800px;">
                 <div class="card-body">
@@ -98,9 +102,24 @@
 
                     {{-- Info agrupada --}}
                     <div class="row small text-muted">
+
+                        <div class="col-md-6 mb-2">
+                            <strong>Chofer que entregó:</strong>
+                            @if ($choferTracking && $choferTracking->trabajador)
+                                {{ $choferTracking->trabajador->Nombre }} {{ $choferTracking->trabajador->ApellidoPaterno }}
+                            @else
+                                <span class="text-muted">—</span>
+                            @endif
+                        </div>
+
+
+
                         <div class="col-md-6 mb-2">
                             <strong>Dirección:</strong> {{ $bulto->direccion }}, {{ $bulto->comuna->Nombre ?? '—' }} ({{ $bulto->depto_destino }})
                         </div>
+
+
+                        
                         <div class="col-md-6 mb-2">
                             <strong>Región:</strong> {{ $bulto->comuna->region->Nombre ?? '—' }}
                         </div>
@@ -208,17 +227,9 @@
                         @endif
                     </div>
 
-                    
-
-
-
-
                 </div>
             </div>
         @endforeach
-
-
-
 
     </div>
     @else
@@ -226,9 +237,6 @@
             No se encontraron registros de bultos con ese código.
         </div>
     @endif
-
-
-
 
 </div>
 @unless(auth()->user()->hasAnyRole(['admin', 'jefe']))
