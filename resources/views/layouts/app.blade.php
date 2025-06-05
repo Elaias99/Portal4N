@@ -13,6 +13,10 @@
 
     <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
 
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0d6efd">
+
+
     <!-- Fonts & Icons -->
     <link rel="dns-prefetch" href="//fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet">
@@ -376,5 +380,14 @@
 
     @stack('scripts')
     @livewireScripts
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('✅ Service Worker registrado', reg))
+            .catch(err => console.error('❌ Error al registrar Service Worker', err));
+        }
+    </script>
+
 </body>
 </html>
