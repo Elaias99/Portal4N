@@ -246,6 +246,16 @@
                     @endrole
 
                     <!-- Gestión de Bultos (disponible también para trabajadores con área asignada) -->
+                    @auth
+                    @if (
+                        auth()->user()->hasRole(['admin', 'jefe']) ||
+                        (
+                            auth()->user()->trabajador &&
+                            auth()->user()->trabajador->area_id &&
+                            auth()->user()->trabajador->area_id !== 5
+                        )
+                    )
+                    <!-- Gestión de Bultos -->
                     <li class="list-group-item">
                         <a class="text-decoration-none dropdown-toggle" data-bs-toggle="collapse" href="#gestionBultos" role="button" aria-expanded="false" aria-controls="gestionBultos">
                             <i class="fas fa-boxes me-2"></i> Gestión de Bultos
@@ -257,8 +267,6 @@
                                         <i class="fas fa-search me-2"></i> Buscar Bulto
                                     </a>
                                 </li>
-
-                                <!-- Subgrupo: Reclamos -->
                                 <li class="list-group-item">
                                     <a class="text-decoration-none dropdown-toggle" data-bs-toggle="collapse" href="#gestionReclamos" role="button" aria-expanded="false" aria-controls="gestionReclamos">
                                         <i class="fas fa-clipboard-list me-2"></i> Reclamos
@@ -286,11 +294,31 @@
                             </ul>
                         </div>
                     </li>
+                    @endif
+                    @endauth
+
+
+                    @auth
+                    @if (
+                        auth()->user()->hasRole(['admin', 'jefe']) ||
+                        (
+                            auth()->user()->trabajador &&
+                            auth()->user()->trabajador->area_id
+                        )
+                    )
+                        <!-- Opción: Seguimiento de Productos -->
+                        <li class="list-group-item">
+                            <a href="{{ url('/tracking-productos') }}" class="text-decoration-none">
+                                <i class="fas fa-map-marker-alt me-2"></i> Seguimiento de Productos
+                            </a>
+                        </li>
+                    @endif
+                    @endauth
 
 
 
 
-
+                    
                 </ul>
             </div>
         </div>

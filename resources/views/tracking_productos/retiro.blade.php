@@ -27,10 +27,10 @@
                     </form>
                 </div>
 
-                <div class="mt-5">
+                {{-- <div class="mt-5">
                     <h5>Escanear con Cámara</h5>
                     <div id="reader" style="width: 100%; max-width: 400px; margin: auto;"></div>
-                </div>
+                </div> --}}
 
 
 
@@ -105,7 +105,7 @@
 </script>
 
 
-<script src="https://unpkg.com/html5-qrcode"></script>
+{{-- <script src="https://unpkg.com/html5-qrcode"></script>
 <script>
     function onScanSuccess(decodedText, decodedResult) {
         const input = document.getElementById('codigo');
@@ -123,7 +123,7 @@
         const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
         scanner.render(onScanSuccess, onScanFailure);
     });
-</script>
+</script> --}}
 
 
 
