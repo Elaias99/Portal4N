@@ -235,7 +235,7 @@ Route::patch('/compras/{id}/status', [CompraController::class, 'updateStatus'])-
 
 
 // Ruta Dashboard
-Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+// Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
 
 Route::resource('bultos', 'App\Http\Controllers\BultoController')->middleware('auth');
 Route::post('/bultos/import', [BultoController::class, 'importExcel'])->name('bultos.import');
