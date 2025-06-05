@@ -26,6 +26,14 @@
                         <button type="submit" class="btn btn-success w-100">Guardar</button>
                     </form>
                 </div>
+
+                <div class="mt-5">
+                    <h5>Escanear con Cámara</h5>
+                    <div id="reader" style="width: 100%; max-width: 400px; margin: auto;"></div>
+                </div>
+
+
+
             </div>
         </div>
 
@@ -95,4 +103,29 @@
         }
     };
 </script>
+
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+    function onScanSuccess(decodedText, decodedResult) {
+        const input = document.getElementById('codigo');
+        if (input) {
+            input.value = decodedText;
+            input.form.submit();
+        }
+    }
+
+    function onScanFailure(error) {
+        // Puedes dejarlo vacío o mostrar errores si deseas
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
+        scanner.render(onScanSuccess, onScanFailure);
+    });
+</script>
+
+
+
+
 @endsection
