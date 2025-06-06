@@ -81,6 +81,8 @@
                                 </li>
                             @endif
                         @else
+
+
                             <li class="nav-item dropdown">
                                 <a id="navbarDropdown" class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>
                                     <i class="fas fa-user"></i> {{ Auth::user()->name }}
@@ -409,6 +411,22 @@
             setInterval(cargarNotificaciones, 9000); // cada 30 segundos
         });
     </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const $navbar = $('#navbarSupportedContent');
+
+            // Cierra el menú hamburguesa si está abierto al abrir el sidebar
+            $('#menuSidebar').on('show.bs.offcanvas', function () {
+                if ($navbar.hasClass('show')) {
+                    $navbar.collapse('hide');
+                }
+            });
+        });
+    </script>
+
+
+
 
     @stack('scripts')
     @livewireScripts

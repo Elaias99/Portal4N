@@ -52,11 +52,11 @@
                             class="@error('email') is-invalid @enderror"
                             required>
 
-                        @error('email')
+                        {{-- @error('email')
                             <span class="invalid-feedback" role="alert">
                                 <strong>{{ $message }}</strong>
                             </span>
-                        @enderror
+                        @enderror --}}
                     </div>
 
                     <!-- Campo de contraseña -->
@@ -68,11 +68,11 @@
                             class="@error('password') is-invalid @enderror"
                             required>
 
-                        @error('password')
+                        {{-- @error('password')
                             <span class="invalid-feedback" role="alert">
                                 <strong>{{ $message }}</strong>
                             </span>
-                        @enderror
+                        @enderror --}}
                     </div>
 
                     <!-- Botón de Login -->

@@ -115,3 +115,37 @@ body {
     margin-top: 5px;
     color: #333;
 }
+
+/* Transición suave del menú colapsable (hamburguesa) en mobile */
+.collapsing {
+    height: 0;
+    overflow: hidden;
+    transition: height 0.35s ease;
+}
+
+.collapse:not(.show) {
+    display: block;
+    height: 0;
+    overflow: hidden;
+}
+
+.collapse.show {
+    height: auto;
+    transition: height 0.35s ease;
+}
+
+/* Mejora la separación y accesibilidad en el dropdown del usuario */
+.navbar-nav .dropdown-menu {
+    margin-top: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.dropdown-menu .dropdown-item {
+    padding: 10px 15px;
+    font-size: 0.95rem;
+}
+
+.dropdown-item i {
+    width: 20px;
+}
+
