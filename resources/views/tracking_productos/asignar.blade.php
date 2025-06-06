@@ -30,7 +30,7 @@
         </div>
 
         {{-- Información del último bulto escaneado --}}
-        @if(session('ultimo_bulto'))
+        {{-- @if(session('ultimo_bulto'))
             @php $b = session('ultimo_bulto'); @endphp
             <div class="col-md-8">
                 <div class="card">
@@ -43,7 +43,9 @@
                     </div>
                 </div>
             </div>
-        @endif
+        @endif --}}
+
+
     </div>
 
     {{-- Listado de códigos escaneados --}}
