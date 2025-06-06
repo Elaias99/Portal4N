@@ -14,7 +14,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-
     <title>Página de Inicio de Sesión</title>
 
     <!-- Import Google Fonts -->
@@ -25,9 +24,9 @@
 
     <!-- Estilo personalizado -->
     @vite('resources/css/login.css')
-
 </head>
 <body class="login-body">
+
     <div class="container">
         <div class="image-section">
             <img src="{{ asset('images/logo1.png') }}" alt="Logo de 4N Logística" class="logo">
@@ -36,20 +35,23 @@
             <!-- Logo para móviles -->
             <img src="{{ asset('images/logo.png') }}" alt="Logo de 4N Logística" class="logo-top">
 
-            
             <header>
                 <h1>Inicio de Sesión</h1>
             </header>
             <main>
                 <form class="login-form" method="POST" action="{{ route('login') }}">
-                    @csrf <!-- Laravel CSRF Token -->
-                    <script>console.log("Formulario cargado correctamente");</script>
+                    @csrf
 
                     <!-- Campo de correo electrónico -->
                     <div class="input-group">
-                        {{-- <i class="fa fa-envelope"></i> --}}
-                        <input type="email" id="email" name="email" placeholder="Correo" value="{{ old('email') }}" required>
-                        <script>console.log("Campo de correo electrónico renderizado");</script>
+                        <input type="email"
+                            id="email"
+                            name="email"
+                            placeholder="Correo"
+                            value="{{ old('email') }}"
+                            class="@error('email') is-invalid @enderror"
+                            required>
+
                         @error('email')
                             <span class="invalid-feedback" role="alert">
                                 <strong>{{ $message }}</strong>
@@ -59,9 +61,13 @@
 
                     <!-- Campo de contraseña -->
                     <div class="input-group">
-                        {{-- <i class="fa fa-lock"></i> --}}
-                        <input type="password" id="password" name="password" placeholder="Contraseña" required>
-                        <script>console.log("Campo de contraseña renderizado");</script>
+                        <input type="password"
+                            id="password"
+                            name="password"
+                            placeholder="Contraseña"
+                            class="@error('password') is-invalid @enderror"
+                            required>
+
                         @error('password')
                             <span class="invalid-feedback" role="alert">
                                 <strong>{{ $message }}</strong>
@@ -70,16 +76,23 @@
                     </div>
 
                     <!-- Botón de Login -->
-                    <button type="submit" class="button" onclick="console.log('Botón de login presionado')">Login</button>
+                    <button type="submit" class="button">Login</button>
+
+                    <!-- Alerta general para credenciales inválidas -->
+                    @if ($errors->has('email') || $errors->has('password'))
+                        <div class="alert alert-danger text-center mt-3" role="alert">
+                            <i class="fas fa-exclamation-circle mr-2"></i>
+                            Las credenciales ingresadas son incorrectas. Verifica tu correo y contraseña.
+                        </div>
+                    @endif
+
                 </form>
             </main>
         </div>
     </div>
 
     <script>
-        // Agregar clase 'loaded' para iniciar la animación
         window.onload = function() {
-            console.log("Página completamente cargada");
             document.body.classList.add('loaded');
         }
     </script>
