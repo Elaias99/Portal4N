@@ -124,9 +124,7 @@ body {
 }
 
 .collapse:not(.show) {
-    display: block;
-    height: 0;
-    overflow: hidden;
+    display: none;
 }
 
 .collapse.show {
