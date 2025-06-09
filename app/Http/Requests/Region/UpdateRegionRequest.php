@@ -36,6 +36,15 @@ class UpdateRegionRequest extends FormRequest
                 'min:1',
                 Rule::unique('regions', 'Numero')->ignore($this->route('region')),
             ],
+
+            'Abreviatura' => [
+                'required',
+                'string',
+                'max:10',
+                Rule::unique('regions', 'Abreviatura')->ignore($this->route('region')),
+            ],
+
+
         ];
     }
 
@@ -48,6 +57,13 @@ class UpdateRegionRequest extends FormRequest
             'Numero.integer' => 'El número de la región debe ser un valor entero.',
             'Numero.min' => 'El número de la región debe ser al menos 1.',
             'Numero.unique' => 'Este número de región ya está registrado.',
+
+
+            'Abreviatura.required' => 'La abreviatura es obligatoria.',
+            'Abreviatura.string' => 'La abreviatura debe ser texto.',
+            'Abreviatura.max' => 'La abreviatura no puede tener más de 10 caracteres.',
+            'Abreviatura.unique' => 'Esta abreviatura ya está registrada.',
+
         ];
     }
 

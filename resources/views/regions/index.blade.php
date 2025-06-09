@@ -1,52 +1,3 @@
-{{-- @extends('layouts.app')
-
-@section('content')
-<div class="container">
-    <h1>Lista de Regiones</h1>
-    <a href="{{ route('regions.create') }}" class="btn btn-primary">Crear Región</a>
-    
-    @if ($message = Session::get('success'))
-        <div class="alert alert-success">
-            <p>{{ $message }}</p>
-        </div>
-    @endif
-
-    <table class="table table-bordered mt-3">
-        <thead class="thead-light">
-            <tr>
-                {{-- <th>#</th> --}}
-                {{-- <th>Nombre</th>
-                <th>Número</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach ($regions as $region)
-            <tr>
-                {{-- <td>{{ $region->id }}</td> --}}
-                {{-- <td>{{ $region->Nombre }}</td>
-                <td>{{ $region->Numero }}</td>
-                <td>
-                    <a href="{{ route('regions.edit', $region->id) }}" class="btn btn-warning">Editar</a>
-                    <form action="{{ route('regions.destroy', $region->id) }}" method="POST" style="display:inline;">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" onclick="return confirm('¿Borrar?');" class="btn btn-danger">Eliminar</button>
-                    </form>
-                </td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
-</div>
-@endsection --}} 
-
-
-
-
-
-
-
 @extends('layouts.app')
 
 @section('content')
@@ -55,6 +6,7 @@
         <h1 class="text-primary">Listado de Regiones</h1>
         <a href="{{ route('regions.create') }}" class="btn btn-primary">Agregar Región</a>
     </div>
+    
     
     <div class="card">
         <div class="card-header">
@@ -67,7 +19,7 @@
             <table class="table table-hover">
                 <thead class="thead-light">
                     <tr>
-                        
+                        <th>Abreviatura</th>
                         <th>Nombre</th>
                         <th>Numero</th>
                         <th>Acciones</th>
@@ -76,6 +28,7 @@
                 <tbody>
                     @foreach($regions as $region)
                         <tr>
+                            <td>{{ $region->Abreviatura }}</td>
                             <td>{{ $region->Nombre }}</td>
                             <td>{{ $region->Numero }}</td>
                             

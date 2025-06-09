@@ -25,6 +25,8 @@ class StoreRegionRequest extends FormRequest
             //
             'Nombre' => 'required|string|max:255|unique:regions,Nombre',
             'Numero' => 'required|integer|min:1|unique:regions,Numero',
+            'Abreviatura' => 'required|string|max:10|unique:regions,Abreviatura',
+
         ];
     }
 
@@ -37,6 +39,12 @@ class StoreRegionRequest extends FormRequest
             'Numero.integer' => 'El número de la región debe ser un valor entero.',
             'Numero.min' => 'El número de la región debe ser al menos 1.',
             'Numero.unique' => 'Este número de región ya está registrado.',
+
+            'Abreviatura.required' => 'La abreviatura es obligatoria.',
+            'Abreviatura.string' => 'La abreviatura debe ser texto.',
+            'Abreviatura.max' => 'La abreviatura no puede tener más de 10 caracteres.',
+            'Abreviatura.unique' => 'Esta abreviatura ya está registrada.',
+
         ];
     }
 
