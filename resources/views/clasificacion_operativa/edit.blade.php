@@ -21,7 +21,6 @@
             </select>
         </div>
 
-
         <div class="mb-3">
             <label for="zona_id" class="form-label">Zona</label>
             <select name="zona_id" id="zona_id" class="form-control" required>
@@ -68,11 +67,22 @@
                         {{ $item->Nombre }}
                     </option>
                 @endforeach
-            </select>
-
-            
+            </select>            
         </div>
 
+
+        <div class="mb-3">
+            <label class="form-label">Frecuencia de Distribución (Días)</label>
+            <div class="form-check">
+                @foreach(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'] as $dia)
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="frecuencia_dias[]" value="{{ $dia }}"
+                            {{ in_array($dia, old('frecuencia_dias', $frecuenciaDias ?? [])) ? 'checked' : '' }}>
+                        <label class="form-check-label">{{ $dia }}</label>
+                    </div>
+                @endforeach
+            </div>
+        </div>
 
 
 

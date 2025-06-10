@@ -47,4 +47,11 @@ class ComunaClasificacionOperativa extends Model
         return $this->belongsTo(\App\Models\Proveedor::class);
     }
 
+    public function frecuenciaDistribucion()
+    {
+        return $this->hasOne(\App\Models\FrecuenciaDistribucion::class, 'comuna_id', 'comuna_id')
+                    ->whereColumn('proveedor_id', 'proveedor_id');
+    }
+
+
 }
