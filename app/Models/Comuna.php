@@ -22,5 +22,11 @@ class Comuna extends Model
         return $this->hasMany(Empresa::class);
     }
 
+    public function clasificacionOperativa()
+    {
+        return $this->hasOne(ComunaClasificacionOperativa::class);
+    }
+
+
 
 }

@@ -167,6 +167,12 @@ Route::get('/empleados/exportExcel', [TrabajadorController::class, 'exportExcel'
 //Ruta para exportar en Excel el listado de las facturas
 Route::get('/facturas/export', [FacturaController::class, 'export'])->name('facturas.export');
 
+// OPERADORES
+Route::resource('clasificacion-operativa', \App\Http\Controllers\ClasificacionOperativaController::class)
+    ->only(['index', 'edit', 'update']) // limitar solo a lo que usas (opcional)
+    ->middleware('auth');
+
+
 
 
 

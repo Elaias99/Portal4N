@@ -78,6 +78,12 @@ class Proveedor extends Model
         return $this->belongsTo(Comuna::class, 'comuna_id');
     }
 
+    public function clasificaciones()
+    {
+        return $this->hasMany(\App\Models\ComunaClasificacionOperativa::class);
+    }
+
+
 
 
 }
