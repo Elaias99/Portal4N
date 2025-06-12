@@ -21,7 +21,7 @@ use App\Http\Controllers\AreaController;
 use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\ReclamoController;
-use App\Http\Controllers\ProductoEscaneadoController;
+use App\Http\Controllers\ComunaController;
 use App\Http\Controllers\TrackingDashboardController;
 
 use App\Http\Controllers\TrackingProductoController;
@@ -180,7 +180,11 @@ Route::resource('clasificacion-operativa', \App\Http\Controllers\ClasificacionOp
 Route::resource('empresas', '\App\Http\Controllers\EmpresaController')->middleware('auth');
 Route::resource('cargos', '\App\Http\Controllers\CargoController')->middleware('auth');
 Route::resource('afps', 'App\Http\Controllers\AFPController')->middleware('auth');
+
+Route::get('/comunas/export', [ComunaController::class, 'export'])->name('comunas.export');
 Route::resource('comunas', 'App\Http\Controllers\ComunaController')->middleware('auth');
+
+
 route::get('/empleados/localidades', [TrabajadorController::class, 'mostrarLocalidad'])->name('empleados.localidades');
 Route::resource('saluds', 'App\Http\Controllers\SaludController')->middleware('auth');
 Route::resource('situacions', 'App\Http\Controllers\SituacionController')->middleware('auth');

@@ -13,7 +13,7 @@
             <div class="accordion-item">
                 <h2 class="accordion-header" id="heading{{ $region->id }}">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ $region->id }}" aria-expanded="false" aria-controls="collapse{{ $region->id }}">
-                        {{ $region->Abreviatura ?? '' }} - {{ $region->Nombre }} ({{ $region->Numero }})
+                        {{ $region->Abreviatura ?? '' }} - {{ $region->Nombre }} ({{ $region->NumeroRomano }})
                     </button>
                 </h2>
                 <div id="collapse{{ $region->id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ $region->id }}" data-bs-parent="#accordionRegions">
@@ -45,7 +45,9 @@
                                         </td>
 
                                         <td>{{ $comuna->clasificacionOperativa->tipoZona->nombre ?? '—' }}</td>
-                                        <td>{{ $region->Numero }}</td>
+
+                                        <td>{{ $region->NumeroRomano }}</td>
+
                                         <td>{{ $comuna->Nombre }}</td>
                                         <td>{{ $comuna->clasificacionOperativa->comuna_matriz ?? '—' }}</td>
 

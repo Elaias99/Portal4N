@@ -7,7 +7,8 @@ use App\Models\Region;
 use Illuminate\Http\Request;
 use App\Http\Requests\Comuna\StoreComunaRequest;
 use App\Http\Requests\Comuna\UpdateComunaRequest;
-
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\ComunasExport;
 class ComunaController extends Controller
 {
     /**
@@ -85,6 +86,12 @@ class ComunaController extends Controller
 
         return redirect()->route('comunas.index')->with('success', 'Comuna eliminada exitosamente.');
 
+    }
+
+    
+    public function export()
+    {
+        return Excel::download(new ComunasExport, 'comunas.xlsx');
     }
 
 
