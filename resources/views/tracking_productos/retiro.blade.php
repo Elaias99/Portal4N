@@ -27,32 +27,10 @@
                     </form>
                 </div>
 
-                {{-- <div class="mt-5">
-                    <h5>Escanear con Cámara</h5>
-                    <div id="reader" style="width: 100%; max-width: 400px; margin: auto;"></div>
-                </div> --}}
-
-
 
             </div>
         </div>
 
-        {{-- Información del bulto escaneado --}}
-        {{-- @if(session('ultimo_bulto'))
-        @php $b = session('ultimo_bulto'); @endphp
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">Información del Bulto Escaneado</div>
-                <div class="card-body">
-                    <p><strong>Descripción:</strong> {{ $b->descripcion_bulto ?? '—' }}</p>
-                    <p><strong>Peso:</strong> {{ $b->peso ?? '—' }}</p>
-                    <p><strong>Dirección:</strong> {{ $b->direccion ?? '—' }}</p>
-                    <p><strong>Destino:</strong> {{ $b->numero_destino ?? '—' }}</p>
-                    <p><strong>Referencia:</strong> {{ $b->referencia ?? '—' }}</p>
-                </div>
-            </div>
-        </div>
-        @endif --}}
     </div>
 
     {{-- Códigos escaneados --}}
@@ -103,29 +81,6 @@
         }
     };
 </script>
-
-
-{{-- <script src="https://unpkg.com/html5-qrcode"></script>
-<script>
-    function onScanSuccess(decodedText, decodedResult) {
-        const input = document.getElementById('codigo');
-        if (input) {
-            input.value = decodedText;
-            input.form.submit();
-        }
-    }
-
-    function onScanFailure(error) {
-        // Puedes dejarlo vacío o mostrar errores si deseas
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-        const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
-        scanner.render(onScanSuccess, onScanFailure);
-    });
-</script> --}}
-
-
 
 
 @endsection

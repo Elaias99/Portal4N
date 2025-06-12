@@ -164,7 +164,7 @@ class TrackingProductoController extends Controller
     /////////////////////////////////////////////////////////////////////////////////////////////////////// 
 
 
-    public function recepcion()
+    public function recepcion(Request $request)
     {
         $escaneados = session('codigos_recepcion', []);
 
@@ -180,11 +180,21 @@ class TrackingProductoController extends Controller
         // 2. Eliminar duplicados y escaneados en esta sesión
         $codigosPendientes = array_diff($codigosRetiro, $codigosRecepcionados, $escaneados);
 
+        $razonSocial = $request->get('razon_social');
+
+        
+
         // 3. Traer solo bultos que existan
         $bultos = \App\Models\Bultos::whereIn('codigo_bulto', $codigosPendientes)
-            ->select('codigo_bulto', 'descripcion_bulto', 'peso', 'direccion', 'numero_destino', 'referencia')
+            ->when($razonSocial, function ($query) use ($razonSocial) {
+                $query->where('razon_social', 'like', '%' . $razonSocial . '%');
+            })
+            ->select('codigo_bulto', 'descripcion_bulto', 'peso', 'direccion', 'numero_destino', 'referencia', 'razon_social')
             ->get()
             ->keyBy('codigo_bulto');
+
+        $razonesSociales = $bultos->pluck('razon_social')->filter()->unique()->sort()->values();
+
 
         $pendientes = [];
 
@@ -217,7 +227,7 @@ class TrackingProductoController extends Controller
 
         $choferes = \App\Models\Trabajador::where('area_id', 5)->get();
 
-        return view('tracking_productos.recepcion', compact('pendientes', 'escaneados', 'choferes'));
+        return view('tracking_productos.recepcion', compact('pendientes', 'escaneados', 'choferes', 'razonSocial','razonesSociales'));
     }
 
 
@@ -339,11 +349,12 @@ class TrackingProductoController extends Controller
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     
-    public function enRuta()
+    public function enRuta(Request $request)
     {
         ['usuarioPerfil' => $usuarioPerfil, 'trabajador' => $trabajador] = $this->getPerfilYTrabajador();
         $areaId = $trabajador->area_id;
         $escaneados = session('codigos_ruta', []);
+        $razonSocial = $request->get('razon_social');
 
         // 1. OPERADOR: ver productos sin chofer asignado
         if ($areaId == 1) {
@@ -352,17 +363,21 @@ class TrackingProductoController extends Controller
                 ->get();
 
             $codigos = $productosSinChofer->pluck('codigo')->toArray();
+
             $bultos = \App\Models\Bultos::whereIn('codigo_bulto', $codigos)
-                ->select('codigo_bulto', 'descripcion_bulto', 'peso', 'direccion')
+                ->when($razonSocial, function ($query) use ($razonSocial) {
+                    $query->where('razon_social', 'like', '%' . $razonSocial . '%');
+                })
+                ->select('codigo_bulto', 'descripcion_bulto', 'peso', 'direccion', 'razon_social')
                 ->get()
                 ->keyBy('codigo_bulto');
+
+            $razonesSociales = $bultos->pluck('razon_social')->filter()->unique()->sort()->values();
 
             $pendientesAsignacion = [];
 
             foreach ($productosSinChofer as $item) {
-                if (!isset($bultos[$item->codigo])) {
-                    continue;
-                }
+                if (!isset($bultos[$item->codigo])) continue;
 
                 $bulto = $bultos[$item->codigo];
                 $recepcionadoPor = $item->trabajador?->Nombre . ' ' . $item->trabajador?->ApellidoPaterno ?? '—';
@@ -377,7 +392,14 @@ class TrackingProductoController extends Controller
             }
 
             $choferes = \App\Models\Trabajador::where('area_id', 5)->get();
-            return view('tracking_productos.en_ruta', compact('areaId', 'choferes', 'pendientesAsignacion'));
+
+            return view('tracking_productos.en_ruta', compact(
+                'areaId',
+                'choferes',
+                'pendientesAsignacion',
+                'razonSocial',
+                'razonesSociales'
+            ));
         }
 
         // 2. CHOFER: ver productos asignados que aún no estén En Ruta
@@ -393,16 +415,19 @@ class TrackingProductoController extends Controller
         $codigosPendientes = array_diff($recepcionados, $yaEnRuta, $escaneados);
 
         $bultos = \App\Models\Bultos::whereIn('codigo_bulto', $codigosPendientes)
-            ->select('codigo_bulto', 'descripcion_bulto', 'peso', 'direccion')
+            ->when($razonSocial, function ($query) use ($razonSocial) {
+                $query->where('razon_social', 'like', '%' . $razonSocial . '%');
+            })
+            ->select('codigo_bulto', 'descripcion_bulto', 'peso', 'direccion', 'razon_social')
             ->get()
             ->keyBy('codigo_bulto');
+
+        $razonesSociales = $bultos->pluck('razon_social')->filter()->unique()->sort()->values();
 
         $pendientes = [];
 
         foreach ($codigosPendientes as $codigo) {
-            if (!isset($bultos[$codigo])) {
-                continue;
-            }
+            if (!isset($bultos[$codigo])) continue;
 
             $bulto = $bultos[$codigo];
 
@@ -426,8 +451,16 @@ class TrackingProductoController extends Controller
             session()->forget('ultimo_bulto');
         }
 
-        return view('tracking_productos.en_ruta', compact('areaId', 'pendientes', 'escaneados'));
+        return view('tracking_productos.en_ruta', compact(
+            'areaId',
+            'pendientes',
+            'escaneados',
+            'razonSocial',
+            'razonesSociales'
+        ));
     }
+
+
 
 
 

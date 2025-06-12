@@ -5,6 +5,27 @@
 <div class="container">
     <h2>Escaneo - En Ruta</h2>
 
+    <form method="GET" class="mb-4">
+        <div class="row">
+            <div class="col-md-5">
+                <label for="razon_social" class="form-label">Filtrar por Razón Social</label>
+                <select name="razon_social" id="razon_social" class="form-select" onchange="this.form.submit()">
+                    <option value="">— Ver todas —</option>
+                    @foreach ($razonesSociales as $razon)
+                        <option value="{{ $razon }}" {{ $razon == request('razon_social') ? 'selected' : '' }}>
+                            {{ $razon }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <a href="{{ route('tracking_productos.en_ruta') }}" class="btn btn-outline-secondary">Limpiar</a>
+            </div>
+        </div>
+    </form>
+
+
+
     @if (session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
@@ -33,20 +54,6 @@
         {{-- Información del bulto escaneado --}}
         @php $bulto = session('ultimo_bulto'); @endphp
 
-        {{-- @if ($bulto)
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">Información del Bulto Escaneado</div>
-                <div class="card-body">
-                    <p><strong>Descripción:</strong> {{ $bulto->descripcion_bulto ?? '—' }}</p>
-                    <p><strong>Peso:</strong> {{ $bulto->peso ?? '—' }}</p>
-                    <p><strong>Dirección:</strong> {{ $bulto->direccion ?? '—' }}</p>
-                    <p><strong>Destino:</strong> {{ $bulto->numero_destino ?? '—' }}</p>
-                    <p><strong>Referencia:</strong> {{ $bulto->referencia ?? '—' }}</p>
-                </div>
-            </div>
-        </div>
-        @endif --}}
     </div>
 
     {{-- Códigos escaneados actualmente --}}
