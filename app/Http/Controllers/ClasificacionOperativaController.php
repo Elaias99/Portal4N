@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Comuna;
 use App\Models\FrecuenciaDistribucion;
 use Carbon\Carbon;
+use App\Models\RutaGeografica;
 
 class ClasificacionOperativaController extends Controller
 {
@@ -19,6 +20,7 @@ class ClasificacionOperativaController extends Controller
             'clasificacionOperativa.tipoZona',
             'clasificacionOperativa.subzona',
             'clasificacionOperativa.proveedor',
+            'clasificacionOperativa.zonaRutaGeografica',
             'clasificacionOperativa.frecuenciaDistribucion.dias',
             'region'
         )->orderBy('Nombre');
@@ -69,6 +71,8 @@ class ClasificacionOperativaController extends Controller
         $tiposZona = \App\Models\TipoZona::all();
         $subzonas = \App\Models\Subzona::all();
         $proveedores = \App\Models\Proveedor::orderBy('razon_social')->get();
+        $rutasGeograficas = \App\Models\RutaGeografica::orderBy('nombre')->get();
+
 
         $proveedorId = optional($comuna->clasificacionOperativa)->proveedor_id;
 
@@ -87,23 +91,34 @@ class ClasificacionOperativaController extends Controller
 
         
 
-        return view('clasificacion_operativa.edit', compact('comuna', 'zonas', 'tiposZona', 'subzonas', 'comunasTodas', 'proveedores', 'frecuenciaDias'));
+        return view('clasificacion_operativa.edit', compact('comuna', 'zonas', 'tiposZona', 'subzonas', 'comunasTodas', 'proveedores', 'frecuenciaDias','rutasGeograficas'));
     }
 
 
     public function update(Request $request, $comuna_id)
     {
+
+        // dd($request->all());
+
         $validated = $request->validate([
             'zona_id' => 'required|exists:zonas,id',
-            'tipo_zona_id' => 'required|exists:tipos_zona,id',
+            // 'tipo_zona_id' => 'required|exists:tipos_zona,id',
             'subzona_id' => 'required|exists:subzonas,id',
             'comuna_matriz' => 'nullable|string|max:255',
             'proveedor_id' => 'nullable|exists:proveedores,id',
+            'zona_ruta_geografica_id' => 'required|exists:zona_ruta_geograficas,id',
+
         ]);
+
+        $ruta = RutaGeografica::find($validated['zona_ruta_geografica_id']);
+        $tipoZonaId = optional($ruta)->tipo_zona_id;
 
         \App\Models\ComunaClasificacionOperativa::updateOrCreate(
             ['comuna_id' => $comuna_id],
-            $validated + ['comuna_id' => $comuna_id]
+            $validated + [
+                'comuna_id' => $comuna_id,
+                'tipo_zona_id' => $tipoZonaId, // <- se define automáticamente
+            ]
         );
 
         $frecuencia = FrecuenciaDistribucion::updateOrCreate(

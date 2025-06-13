@@ -31,7 +31,9 @@
                                     <th>Rut</th>
                                     <th>Zona Madre</th>
                                     <th>Subzona</th>
-                                    <th>Zona</th>                                                                                                                                                
+                                    <th>Zona</th>  
+                                    <th>Ruta Geo</th>
+                                    <th>Transporte</th>                                                                                                                                              
                                     <th>Acción</th>
                                 </tr>
                             </thead>
@@ -57,6 +59,17 @@
                                         <td>{{ $comuna->clasificacionOperativa->zona->zonaMadre->nombre ?? '—' }}</td>                                        
                                         <td>{{ $comuna->clasificacionOperativa->subzona->nombre ?? '—' }}</td>
                                         <td>{{ $comuna->clasificacionOperativa->zona->nombre ?? '—' }}</td>
+
+                                        <td>
+                                            @if ($comuna->clasificacionOperativa?->zonaRutaGeografica)
+                                                {{ $comuna->clasificacionOperativa->zonaRutaGeografica->nombre }}
+                                            @else
+                                                <span class="text-muted">No asignada</span>
+                                            @endif
+                                        </td>
+
+                                        <td>{{ $comuna->clasificacionOperativa->zonaRutaGeografica->transporte->nombre ?? 'Sin definir' }}</td>
+
                                                                                                                                                                                                        
                                         <td>
                                             <a href="{{ route('clasificacion-operativa.edit', $comuna->id) }}" class="btn btn-sm btn-primary">

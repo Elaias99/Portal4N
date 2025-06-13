@@ -33,7 +33,7 @@
             </select>
         </div>
 
-        <div class="mb-3">
+        {{-- <div class="mb-3">
             <label for="tipo_zona_id" class="form-label">Tipo de Zona</label>
             <select name="tipo_zona_id" id="tipo_zona_id" class="form-control" required>
                 <option value="">Seleccione...</option>
@@ -43,7 +43,7 @@
                     </option>
                 @endforeach
             </select>
-        </div>
+        </div> --}}
 
         <div class="mb-3">
             <label for="subzona_id" class="form-label">Subzona</label>
@@ -69,6 +69,20 @@
                 @endforeach
             </select>            
         </div>
+
+        <div class="mb-3">
+            <label for="zona_ruta_geografica_id" class="form-label">Ruta Geográfica</label>
+            <select name="zona_ruta_geografica_id" id="zona_ruta_geografica_id" class="form-control" required>
+                <option value="">Seleccione...</option>
+                @foreach($rutasGeograficas as $ruta)
+                    <option value="{{ $ruta->id }}"
+                        {{ optional($comuna->clasificacionOperativa)->zona_ruta_geografica_id == $ruta->id ? 'selected' : '' }}>
+                        {{ $ruta->nombre }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
 
 
         <div class="mb-3">

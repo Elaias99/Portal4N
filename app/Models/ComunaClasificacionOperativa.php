@@ -18,6 +18,7 @@ class ComunaClasificacionOperativa extends Model
         'subzona_id',
         'comuna_matriz',
         'proveedor_id',
+        'zona_ruta_geografica_id',
         
 
     ];
@@ -52,6 +53,12 @@ class ComunaClasificacionOperativa extends Model
         return $this->hasOne(\App\Models\FrecuenciaDistribucion::class, 'comuna_id', 'comuna_id')
                     ->whereColumn('proveedor_id', 'proveedor_id');
     }
+
+    public function zonaRutaGeografica()
+    {
+        return $this->belongsTo(RutaGeografica::class, 'zona_ruta_geografica_id');
+    }
+
 
 
 }

@@ -18,5 +18,11 @@ class TipoZona extends Model
         return $this->hasMany(ComunaClasificacionOperativa::class);
     }
 
+    public function rutasGeograficas()
+    {
+        return $this->hasMany(RutaGeografica::class, 'tipo_zona_id');
+    }
+
+
 
 }
