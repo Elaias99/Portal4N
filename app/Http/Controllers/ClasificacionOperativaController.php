@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Comuna;
 use App\Models\FrecuenciaDistribucion;
 use Carbon\Carbon;
 use App\Models\RutaGeografica;
@@ -21,6 +20,8 @@ class ClasificacionOperativaController extends Controller
             'clasificacionOperativa.subzona',
             'clasificacionOperativa.proveedor',
             'clasificacionOperativa.zonaRutaGeografica',
+            'clasificacionOperativa.zonaRutaGeografica.origen',   // <- agregar
+            'clasificacionOperativa.zonaRutaGeografica.destino', 
             'clasificacionOperativa.frecuenciaDistribucion.dias',
             'region'
         )->orderBy('Nombre');

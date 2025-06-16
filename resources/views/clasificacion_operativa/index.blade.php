@@ -33,7 +33,17 @@
                                     <th>Subzona</th>
                                     <th>Zona</th>  
                                     <th>Ruta Geo</th>
-                                    <th>Transporte</th>                                                                                                                                              
+                                    <th>Transporte</th>
+                                    
+                                    <th>Origen</th>
+                                    <th>Destino Máximo</th>
+                                    <th>Nombre de la Ruta</th>
+
+
+
+                                    
+                                    
+
                                     <th>Acción</th>
                                 </tr>
                             </thead>
@@ -69,6 +79,14 @@
                                         </td>
 
                                         <td>{{ $comuna->clasificacionOperativa->zonaRutaGeografica->transporte->nombre ?? 'Sin definir' }}</td>
+
+
+                                        <td>{{ $comuna->clasificacionOperativa->zonaRutaGeografica->origen->Nombre ?? '—' }}</td>
+                                        <td>{{ $comuna->clasificacionOperativa->zonaRutaGeografica->destino->Nombre ?? '—' }}</td>
+
+                                        <td>{{ $comuna->clasificacionOperativa->zonaRutaGeografica->nombre_ruta ?? '—' }}</td>
+
+
 
                                                                                                                                                                                                        
                                         <td>

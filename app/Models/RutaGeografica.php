@@ -16,6 +16,10 @@ class RutaGeografica extends Model
         'nombre',
         'tipo_zona_id',
         'transporte_id',
+        'origen_comuna_id',
+        'destino_comuna_id',
+        'nombre_ruta'
+
     ];
 
     public function tipoZona()
@@ -27,6 +31,17 @@ class RutaGeografica extends Model
     {
         return $this->belongsTo(Transporte::class);
     }
+
+    public function origen()
+    {
+        return $this->belongsTo(Comuna::class, 'origen_comuna_id');
+    }
+
+    public function destino()
+    {
+        return $this->belongsTo(Comuna::class, 'destino_comuna_id');
+    }
+
 
 
 
