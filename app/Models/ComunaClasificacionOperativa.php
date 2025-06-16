@@ -19,6 +19,7 @@ class ComunaClasificacionOperativa extends Model
         'comuna_matriz',
         'proveedor_id',
         'zona_ruta_geografica_id',
+        'cobertura_id'
         
 
     ];
@@ -58,6 +59,12 @@ class ComunaClasificacionOperativa extends Model
     {
         return $this->belongsTo(RutaGeografica::class, 'zona_ruta_geografica_id');
     }
+
+    public function cobertura()
+    {
+        return $this->belongsTo(Cobertura::class);
+    }
+
 
 
 

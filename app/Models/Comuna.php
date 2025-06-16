@@ -9,6 +9,8 @@ class Comuna extends Model
 {
     use HasFactory;
 
+    protected $table = 'comunas';
+
     protected $fillable = ['Nombre',
     'region_id',];
 

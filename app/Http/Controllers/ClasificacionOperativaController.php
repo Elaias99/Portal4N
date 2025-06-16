@@ -21,7 +21,8 @@ class ClasificacionOperativaController extends Controller
             'clasificacionOperativa.proveedor',
             'clasificacionOperativa.zonaRutaGeografica',
             'clasificacionOperativa.zonaRutaGeografica.origen',   // <- agregar
-            'clasificacionOperativa.zonaRutaGeografica.destino', 
+            'clasificacionOperativa.zonaRutaGeografica.destino',
+            'clasificacionOperativa.cobertura', 
             'clasificacionOperativa.frecuenciaDistribucion.dias',
             'region'
         )->orderBy('Nombre');
@@ -74,6 +75,9 @@ class ClasificacionOperativaController extends Controller
         $proveedores = \App\Models\Proveedor::orderBy('razon_social')->get();
         $rutasGeograficas = \App\Models\RutaGeografica::orderBy('nombre')->get();
 
+        $coberturas = \App\Models\Cobertura::orderBy('nombre')->get();
+
+
 
         $proveedorId = optional($comuna->clasificacionOperativa)->proveedor_id;
 
@@ -92,7 +96,7 @@ class ClasificacionOperativaController extends Controller
 
         
 
-        return view('clasificacion_operativa.edit', compact('comuna', 'zonas', 'tiposZona', 'subzonas', 'comunasTodas', 'proveedores', 'frecuenciaDias','rutasGeograficas'));
+        return view('clasificacion_operativa.edit', compact('comuna', 'zonas', 'tiposZona', 'subzonas', 'comunasTodas', 'proveedores', 'frecuenciaDias','rutasGeograficas','coberturas'));
     }
 
 
@@ -108,6 +112,8 @@ class ClasificacionOperativaController extends Controller
             'comuna_matriz' => 'nullable|string|max:255',
             'proveedor_id' => 'nullable|exists:proveedores,id',
             'zona_ruta_geografica_id' => 'required|exists:zona_ruta_geograficas,id',
+            'cobertura_id' => 'nullable|exists:coberturas,id',
+
 
         ]);
 

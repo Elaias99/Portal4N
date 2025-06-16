@@ -85,6 +85,23 @@
 
 
 
+
+
+
+        <div class="mb-3">
+            <label for="cobertura_id" class="form-label">Cobertura</label>
+            <select name="cobertura_id" id="cobertura_id" class="form-control">
+                <option value="">Seleccione...</option>
+                @foreach($coberturas as $cobertura)
+                    <option value="{{ $cobertura->id }}"
+                        {{ optional($comuna->clasificacionOperativa)->cobertura_id == $cobertura->id ? 'selected' : '' }}>
+                        {{ $cobertura->nombre }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+
         <div class="mb-3">
             <label class="form-label">Frecuencia de Distribución (Días)</label>
             <div class="form-check">
@@ -97,6 +114,7 @@
                 @endforeach
             </div>
         </div>
+
 
 
 
