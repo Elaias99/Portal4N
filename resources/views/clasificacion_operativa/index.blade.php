@@ -17,96 +17,104 @@
                     </button>
                 </h2>
                 <div id="collapse{{ $region->id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ $region->id }}" data-bs-parent="#accordionRegions">
+
+
+
                     <div class="accordion-body">
-                        <table class="table table-bordered table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Frecuencia de días</th>
-                                    <th>Próxima Entrega</th>
-                                    <th>Tipo de Zona</th>
-                                    <th>Número Región</th>
-                                    <th>Comuna</th>
-                                    <th>Comuna Matriz</th>
-                                    <th>Nombre Operador</th>
-                                    <th>Rut</th>
-                                    <th>Zona Madre</th>
-                                    <th>Subzona</th>
-                                    <th>Zona</th>  
-                                    <th>Ruta Geo</th>
-                                    <th>Transporte</th>
-                                    
-                                    <th>Origen</th>
-                                    <th>Destino Máximo</th>
-                                    <th>Nombre de la Ruta</th>
-
-                                    <th>Cobertura</th>
+                        <div class="table-responsive">
 
 
 
-
-
-                                    
-                                    
-
-                                    <th>Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($comunasRegion as $comuna)
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-light">
                                     <tr>
-                                        <td>{{ $comuna->frecuencia_texto ?? '—' }}</td>
-
-                                        <td>
-                                            {{ $comuna->proxima_entrega ?? '—' }}
-                                        </td>
-
-                                        <td>{{ $comuna->clasificacionOperativa->tipoZona->nombre ?? '—' }}</td>
-
-                                        <td>{{ $region->NumeroRomano }}</td>
-
-                                        <td>{{ $comuna->Nombre }}</td>
-                                        <td>{{ $comuna->clasificacionOperativa->comuna_matriz ?? '—' }}</td>
-
-                                        <td>{{"Operador"}} {{$comuna->clasificacionOperativa->comuna_matriz ?? ''}} {{ $comuna->clasificacionOperativa->proveedor->razon_social ?? '—' }}</td>
-
-                                        <td>{{ $comuna->clasificacionOperativa->proveedor->rut ?? '—' }}</td>
-                                        <td>{{ $comuna->clasificacionOperativa->zona->zonaMadre->nombre ?? '—' }}</td>                                        
-                                        <td>{{ $comuna->clasificacionOperativa->subzona->nombre ?? '—' }}</td>
-                                        <td>{{ $comuna->clasificacionOperativa->zona->nombre ?? '—' }}</td>
-
-                                        <td>
-                                            @if ($comuna->clasificacionOperativa?->zonaRutaGeografica)
-                                                {{ $comuna->clasificacionOperativa->zonaRutaGeografica->nombre }}
-                                            @else
-                                                <span class="text-muted">No asignada</span>
-                                            @endif
-                                        </td>
-
-                                        <td>{{ $comuna->clasificacionOperativa->zonaRutaGeografica->transporte->nombre ?? 'Sin definir' }}</td>
-
-
-                                        <td>{{ $comuna->clasificacionOperativa->zonaRutaGeografica->origen->Nombre ?? '—' }}</td>
-                                        <td>{{ $comuna->clasificacionOperativa->zonaRutaGeografica->destino->Nombre ?? '—' }}</td>
-
-                                        <td>{{ $comuna->clasificacionOperativa->zonaRutaGeografica->nombre_ruta ?? '—' }}</td>
-
-                                        <td>{{ $comuna->clasificacionOperativa->cobertura->nombre ?? '—' }}</td>
-
-
-
-
-                                                                                                                                                                                                       
-                                        <td>
-                                            <a href="{{ route('clasificacion-operativa.edit', $comuna->id) }}" class="btn btn-sm btn-primary">
-                                                Editar
-                                            </a>
-                                        </td>
+                                        <th>Frecuencia de días</th>
+                                        <th>Próxima Entrega</th>
+                                        <th>Tipo de Zona</th>
+                                        <th>Número Región</th>
+                                        <th>Comuna</th>
+                                        <th>Comuna Matriz</th>
+                                        <th>Nombre Operador</th>
+                                        <th>Rut</th>
+                                        <th>Zona Madre</th>
+                                        <th>Subzona</th>
+                                        <th>Zona</th>  
+                                        <th>Ruta Geo</th>
+                                        <th>Transporte</th>
                                         
+                                        <th>Origen</th>
+                                        <th>Destino Máximo</th>
+                                        <th>Nombre de la Ruta</th>
+
+                                        <th>Cobertura</th>
+
+
+                                        <th>Acción</th>
                                     </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    @foreach($comunasRegion as $comuna)
+                                        <tr>
+                                            <td>{{ $comuna->frecuencia_texto ?? '—' }}</td>
+
+                                            <td>
+                                                {{ $comuna->proxima_entrega ?? '—' }}
+                                            </td>
+
+                                            <td>{{ $comuna->clasificacionOperativa->tipoZona->nombre ?? '—' }}</td>
+
+                                            <td>{{ $region->NumeroRomano }}</td>
+
+                                            <td>{{ $comuna->Nombre }}</td>
+                                            <td>{{ $comuna->clasificacionOperativa->comuna_matriz ?? '—' }}</td>
+
+                                            <td>{{"Operador"}} {{$comuna->clasificacionOperativa->comuna_matriz ?? ''}} {{ $comuna->clasificacionOperativa->proveedor->razon_social ?? '—' }}</td>
+
+                                            <td>{{ $comuna->clasificacionOperativa->proveedor->rut ?? '—' }}</td>
+                                            <td>{{ $comuna->clasificacionOperativa->zona->zonaMadre->nombre ?? '—' }}</td>                                        
+                                            <td>{{ $comuna->clasificacionOperativa->subzona->nombre ?? '—' }}</td>
+                                            <td>{{ $comuna->clasificacionOperativa->zona->nombre ?? '—' }}</td>
+
+                                            <td>
+                                                @if ($comuna->clasificacionOperativa?->zonaRutaGeografica)
+                                                    {{ $comuna->clasificacionOperativa->zonaRutaGeografica->nombre }}
+                                                @else
+                                                    <span class="text-muted">No asignada</span>
+                                                @endif
+                                            </td>
+
+                                            <td>{{ $comuna->clasificacionOperativa->zonaRutaGeografica->transporte->nombre ?? 'Sin definir' }}</td>
+
+
+                                            <td>{{ $comuna->clasificacionOperativa->zonaRutaGeografica->origen->Nombre ?? '—' }}</td>
+                                            <td>{{ $comuna->clasificacionOperativa->zonaRutaGeografica->destino->Nombre ?? '—' }}</td>
+
+                                            <td>{{ $comuna->clasificacionOperativa->zonaRutaGeografica->nombre_ruta ?? '—' }}</td>
+
+                                            <td>{{ $comuna->clasificacionOperativa->cobertura->nombre ?? '—' }}</td>
+
+
+
+
+                                                                                                                                                                                                        
+                                            <td>
+                                                <a href="{{ route('clasificacion-operativa.edit', $comuna->id) }}" class="btn btn-sm btn-primary">
+                                                    Editar
+                                                </a>
+                                            </td>
+                                            
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+
+
                     </div>
+
+
+
+
                 </div>
             </div>
         @endforeach
