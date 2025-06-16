@@ -30,6 +30,26 @@ $notificaciones = Auth::user()->unreadNotifications
     <div class="row">
         <!-- Sidebar de filtros -->
         <div class="col-lg-2">
+
+            <div class="card shadow-sm p-3 mt-4">
+                <h5 class="fw-bold">Accesos rápidos</h5>
+
+                <div class="d-grid gap-2 mt-2">
+                    <a href="{{ route('clasificacion-operativa.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Operadores">
+                        <i class="fa-solid fa-truck-fast me-2"></i> Operadores
+                    </a>
+
+                    <a href="{{ route('bultos.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Bultos">
+                        <i class="fa-solid fa-box-open me-2"></i> Bultos
+                    </a>
+                </div>
+            </div>
+
+            <br>
+
+
+
+
             <div class="card shadow-sm p-3">
                 <h5 class="fw-bold">Filtrar por</h5>
 
@@ -98,8 +118,12 @@ $notificaciones = Auth::user()->unreadNotifications
                         <a href="{{ route('empleados.index') }}" class="btn btn-outline-secondary">Limpiar Filtros</a>
                     </div>
                 </form>
+
+
             </div>
+
         </div>
+
 
         <!-- Contenido principal -->
         <div class="col-lg-10">
@@ -119,18 +143,14 @@ $notificaciones = Auth::user()->unreadNotifications
                     </div>
                 </div>
 
-                <!-- Barra de búsqueda -->
-                {{-- <form action="{{ route('empleados.index') }}" method="GET" class="d-flex align-items-center">
-                    <input type="text" name="search" class="form-control shadow-sm me-2" placeholder="Buscar empleados..." value="{{ request()->query('search') }}">
-                    <button type="submit" class="btn btn-outline-primary shadow-sm">Buscar</button>
-                </form> --}}
-
                 <!-- Botón para crear empleado -->
-                <div class="d-flex align-items-center">
+                <div class="d-flex align-items-center gap-2">
                     <a href="{{ route('empleados.create') }}" class="btn btn-outline-dark shadow-sm" data-bs-toggle="tooltip" title="Agregar Empleado">
                         <i class="fa-solid fa-user-plus fa-lg"></i>
                     </a>
+                    
                 </div>
+
             </div>
 
             <!-- Listado de Empleados -->
