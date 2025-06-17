@@ -15,9 +15,9 @@
 
 
                   @if($empleado->Foto)
-                      <img src="{{ url($empleado->Foto) }}" class="img-fluid" alt="Foto de {{ $empleado->Nombre }}">
+                      <img src="{{ url($empleado->Foto) }}" class="img-fluid" alt="Foto de {{ $empleado->Nombre }}" loading="lazy">
                   @else
-                      <img src="{{ asset('images/default-avatar.png') }}" class="img-fluid" alt="Imagen predeterminada">
+                      <img src="{{ asset('images/default-avatar.png') }}" class="img-fluid" alt="Imagen predeterminada" loading="lazy">
                   @endif
 
 
@@ -183,12 +183,12 @@
           </div>
         </div>
         <div class="modal-footer">
-            <img src="{{ asset('images/logo.png') }}" alt="Logo de la Empresa" class="img-fluid" style="max-height: 40px; margin-right: auto;">
+            <img src="{{ asset('images/logo.png') }}" alt="Logo de la Empresa" class="img-fluid" style="max-height: 40px; margin-right: auto;" loading="lazy">
 
             <!-- Botón para Descargar PDF -->
-            <a href="{{ route('empleados.exportCotizacion', $empleado->id) }}" class="btn btn-primary">
+            {{-- <a href="{{ route('empleados.exportCotizacion', $empleado->id) }}" class="btn btn-primary">
                 <i class="fa-solid fa-file-pdf"></i> Descargar Cotización en PDF
-            </a>
+            </a> --}}
 
 
           <!-- Botón para Cerrar el Modal -->
