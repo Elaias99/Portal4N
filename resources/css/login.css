@@ -45,7 +45,7 @@
     
         .image-section {
             flex: 1.5; /* Mantén la proporción original */
-            background: url('../../public/images/camion4.png') no-repeat center center;
+            background: url('../../public/images/camion4.jpg') no-repeat center center;
             background-size: cover; /* Mantén el fondo ajustado */
             position: relative;
             min-height: 100%; /* Asegura que llene todo el contenedor */
