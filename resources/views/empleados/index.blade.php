@@ -31,7 +31,7 @@ $notificaciones = Auth::user()->unreadNotifications
         <!-- Sidebar de filtros -->
         <div class="col-lg-2">
 
-            <div class="card shadow-sm p-3 mt-4">
+            <div class="card shadow-sm p-3 mt-6">
                 <h5 class="fw-bold">Accesos rápidos</h5>
 
                 <div class="d-grid gap-2 mt-2">
@@ -42,6 +42,12 @@ $notificaciones = Auth::user()->unreadNotifications
                     <a href="{{ route('bultos.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Bultos">
                         <i class="fa-solid fa-box-open me-2"></i> Bultos
                     </a>
+
+                    <a href="{{ route('proveedores.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Proveedores">
+                        <i class="fa-solid fa-user-tie"></i> Proveedores
+                    </a>
+
+
                 </div>
             </div>
 
