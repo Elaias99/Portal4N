@@ -17,16 +17,20 @@
         </div>
 
         {{-- BLOQUE DE IMPORTACIÓN COMO UN COMPONENTE --}}
-        <form action="{{ route('bultos.import') }}" method="POST" enctype="multipart/form-data"
+        <form id="formImport" action="{{ route('bultos.import') }}" method="POST" enctype="multipart/form-data"
             class="bg-light rounded shadow-sm px-3 py-2 d-flex align-items-center gap-2"
             style="max-width: 100%;">
             @csrf
             <i class="fa-solid fa-file-excel text-success"></i>
             <input type="file" name="file" class="form-control form-control-sm" required style="max-width: 180px;">
-            <button type="submit" class="btn btn-success btn-sm">
+            
+            <button type="submit" class="btn btn-success btn-sm" id="btnImportar">
                 <i class="fa-solid fa-upload me-1"></i> Importar
             </button>
         </form>
+
+
+
     </div>
 
 
@@ -239,6 +243,7 @@
     @endif
 
 </div>
+
 @unless(auth()->user()->hasAnyRole(['admin', 'jefe']))
     <div class="mb-3">
         <a href="{{ route('empleados.perfil') }}" class="btn btn-outline-secondary">
@@ -247,11 +252,26 @@
     </div>
 @endunless
 
-        {{-- MODAL --}}
+    {{-- MODAL --}}
     @include('reclamos._modal')
     @include('reclamos._modal-script')
     @include('reclamos._modal_consulta')
+
+<script>
+    document.getElementById('formImport').addEventListener('submit', function () {
+        const btn = document.getElementById('btnImportar');
+        btn.disabled = true;
+        btn.innerHTML = `
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Importando...`;
+    });
+</script>
+
+
 @endsection
+
+
+
 
 <!-- Scripts -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
