@@ -28,7 +28,7 @@
 
         <div class="image-container">
             <a href="{{ route('login') }}">
-                <img src="{{ asset('images/imagen1.jpg') }}" alt="Recursos Humanos">
+                <img src="{{ asset('images/imagen1.webp') }}" alt="Recursos Humanos" loading="lazy">
                 <div class="text-overlay">Recursos Humanos</div>
             </a>
         </div>
@@ -36,7 +36,7 @@
 
         <div class="image-container">
             <a href="{{ route('login') }}">
-                <img src="{{ asset('images/imagen2.png') }}" alt="Acceso Empleados">
+                <img src="{{ asset('images/imagen2.webp') }}" alt="Acceso Empleados" loading="lazy">
                 <div class="text-overlay">Acceso Empleados</div>
             </a>
         </div>
@@ -44,7 +44,7 @@
 
         <div class="image-container">
             <a href="{{ route('under.construction') }}">
-                <img src="{{ asset('images/imagen3.jpg') }}" alt="Logística">
+                <img src="{{ asset('images/imagen3.webp') }}" alt="Logística" loading="lazy">
                 <div class="text-overlay">Logística</div>
             </a>
         </div>
