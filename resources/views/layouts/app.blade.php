@@ -408,7 +408,7 @@
 
         $(document).ready(function() {
             cargarNotificaciones();
-            setInterval(cargarNotificaciones, 9000); // cada 30 segundos
+            setInterval(cargarNotificaciones, 30000); // cada 30 segundos
         });
     </script>
 
