@@ -11,7 +11,7 @@
 
     <title>{{ config('app.name', '4Nortes') }}</title>
 
-    <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
+    {{-- <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}"> --}}
 
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0d6efd">

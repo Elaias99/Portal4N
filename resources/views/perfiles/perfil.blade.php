@@ -64,7 +64,7 @@ $notificaciones = Auth::user()->unreadNotifications
                     <img 
                         src="{{ url($trabajador->Foto) }}" 
                         class="img-fluid mb-3 profile-picture" 
-                        alt="Foto de {{ $trabajador->Nombre }}">
+                        alt="Foto de {{ $trabajador->Nombre }}" loading="lazy">
                 @else
                     <img 
                         src="{{ asset('images/default-avatar.png') }}" 
