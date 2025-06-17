@@ -22,10 +22,10 @@ class VacacionController extends Controller
         $solicitudPendiente = Vacacion::solicitudesPendientes($user->trabajador->id);
         $diasProporcionales = $this->diaProporcional();
 
-        $response = Http::get('https://apis.digital.gob.cl/fl/feriados');
-        $feriados = $response->successful() ? $response->json() : [];
+        // $response = Http::get('https://apis.digital.gob.cl/fl/feriados');
+        // $feriados = $response->successful() ? $response->json() : [];
 
-        return view('vacaciones.create', compact('diasProporcionales', 'solicitudPendiente', 'feriados'));
+        return view('vacaciones.create', compact('diasProporcionales', 'solicitudPendiente'));
     }
 
 
@@ -141,9 +141,7 @@ class VacacionController extends Controller
 
         // Obtener los feriados desde la API
         $response = Http::get('https://apis.digital.gob.cl/fl/feriados');
-        $feriados = $response->successful()
-            ? collect($response->json())->pluck('fecha') // Extraer solo las fechas
-            : collect();
+        $feriados = collect(); // No se consideran feriados externos
 
         $diasHabiles = 0;
         while ($fechaInicio->lessThanOrEqualTo($fechaFin)) {
