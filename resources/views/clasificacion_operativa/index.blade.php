@@ -40,6 +40,7 @@
                                         <th>Destino Máximo</th>
                                         <th>Nombre de la Ruta</th>
                                         <th>Cobertura</th>
+                                        <th>Provincia</th>
                                         <th>Acción</th>
                                     </tr>
                                 </thead>
@@ -66,6 +67,7 @@
                                             <td>{{ $comuna->clasificacionOperativa->zonaRutaGeografica->destino->Nombre ?? '—' }}</td>
                                             <td>{{ $comuna->clasificacionOperativa->zonaRutaGeografica->nombre_ruta ?? '—' }}</td>
                                             <td>{{ $comuna->clasificacionOperativa->cobertura->nombre ?? '—' }}</td>
+                                            <td>{{ $comuna->clasificacionOperativa->provincia->nombre ?? '—' }}</td>
                                             <td>
                                                 <a href="{{ route('clasificacion-operativa.edit', $comuna->id) }}" class="btn btn-sm btn-primary">
                                                     Editar

@@ -101,6 +101,19 @@
             </select>
         </div>
 
+        <div class="mb-3">
+            <label for="provincia_id" class="form-label">Provincia</label>
+            <select name="provincia_id" id="provincia_id" class="form-control">
+                <option value="">Seleccione...</option>
+                @foreach($provincias as $provincia)
+                    <option value="{{ $provincia->id }}"
+                        {{ optional($provincia->clasificacionOperativa)->provincia_id == $provincia->id ? 'selected' : '' }}>
+                        {{ $provincia->nombre }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
 
         <div class="mb-3">
             <label class="form-label">Frecuencia de Distribución (Días)</label>
