@@ -25,10 +25,12 @@ class ClasificacionOperativaController extends Controller
             'clasificacionOperativa.zonaRutaGeografica.origen',   // <- agregar
             'clasificacionOperativa.zonaRutaGeografica.destino',
             'clasificacionOperativa.cobertura',
-            'clasificacionOperativa.provincia',  
+            'clasificacionOperativa.provincia',
+            'clasificacionOperativa.codigoiata', 
             'clasificacionOperativa.frecuenciaDistribucion.dias',
             'region',
             'ordenTransporte'
+            
         )->orderBy('Nombre');
 
         if ($regionId) {
@@ -84,6 +86,8 @@ class ClasificacionOperativaController extends Controller
 
         $provincias = \App\Models\Provincia::orderBy('nombre')->get();
 
+        $codigoiatas = \App\Models\CodigoIata::orderBy('cod_iata')->get();
+
 
 
         $proveedorId = optional($comuna->clasificacionOperativa)->proveedor_id;
@@ -103,7 +107,7 @@ class ClasificacionOperativaController extends Controller
 
         
 
-        return view('clasificacion_operativa.edit', compact('comuna', 'zonas', 'tiposZona', 'subzonas', 'comunasTodas', 'proveedores', 'frecuenciaDias','rutasGeograficas','coberturas','provincias'));
+        return view('clasificacion_operativa.edit', compact('comuna', 'zonas', 'tiposZona', 'subzonas', 'comunasTodas', 'proveedores', 'frecuenciaDias','rutasGeograficas','coberturas','provincias','codigoiatas'));
     }
 
 
@@ -120,7 +124,10 @@ class ClasificacionOperativaController extends Controller
             'proveedor_id' => 'nullable|exists:proveedores,id',
             'zona_ruta_geografica_id' => 'required|exists:zona_ruta_geograficas,id',
             'cobertura_id' => 'nullable|exists:coberturas,id',
-            'provincia_id' => 'nullable|exists:provincias,id'
+            'provincia_id' => 'nullable|exists:provincias,id',
+
+            'iata_id' => 'nullable|exists:iata_codigos,id'
+            
 
 
         ]);

@@ -111,6 +111,21 @@
         </div>
 
 
+        <div class="mb-3">
+            <label for="iata_id" class="form-label">Código IATA</label>
+            <select name="iata_id" id="iata_id" class="form-control" required>
+                <option value="">Seleccione...</option>
+                @foreach($codigoiatas as $codigo)
+                    <option value="{{ $codigo->id }}"
+                        {{ optional($comuna->clasificacionOperativa)->iata_id == $codigo->id ? 'selected' : '' }}>
+                        {{ $codigo->cod_iata }} → {{ $codigo->cod_iata2 }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+
+
 
 
 

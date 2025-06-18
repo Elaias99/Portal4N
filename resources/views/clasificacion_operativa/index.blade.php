@@ -28,6 +28,11 @@
                                         <th>Tipo de Zona</th>
                                         <th>Número Región</th>
                                         <th>Comuna</th>
+
+                                        <th>COD IATA</th>
+                                        <th>COD IATA2</th>
+
+
                                         <th>Comuna Matriz</th>
                                         <th>Nombre Operador</th>
                                         <th>Rut</th>
@@ -56,6 +61,20 @@
                                             <td>{{ $comuna->clasificacionOperativa->tipoZona->nombre ?? '—' }}</td>
                                             <td>{{ $region->NumeroRomano }}</td>
                                             <td>{{ $comuna->Nombre }}</td>
+
+
+
+
+                                            <td>{{ $comuna->clasificacionOperativa->codigoiata->cod_iata ?? '—' }}</td>
+                                            <td>{{ $comuna->clasificacionOperativa->codigoiata->cod_iata2 ?? '—' }}</td>
+
+
+
+
+
+
+
+
                                             <td>{{ $comuna->clasificacionOperativa->comuna_matriz ?? '—' }}</td>
                                             <td>
                                                 Operador {{ $comuna->clasificacionOperativa->comuna_matriz ?? '' }}

@@ -21,6 +21,7 @@ class ComunaClasificacionOperativa extends Model
         'zona_ruta_geografica_id',
         'cobertura_id',
         'provincia_id',
+        'iata_id',
         
 
     ];
@@ -70,6 +71,12 @@ class ComunaClasificacionOperativa extends Model
     {
         return $this->belongsTo(Provincia::class);
     }
+
+    public function codigoiata()
+    {
+        return $this->belongsTo(CodigoIata::class, 'iata_id');
+    }
+
 
 
 
