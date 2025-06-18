@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\FrecuenciaDistribucion;
 use Carbon\Carbon;
 use App\Models\RutaGeografica;
+use App\Models\OrdenTransporte;
+
 
 class ClasificacionOperativaController extends Controller
 {
@@ -25,7 +27,8 @@ class ClasificacionOperativaController extends Controller
             'clasificacionOperativa.cobertura',
             'clasificacionOperativa.provincia',  
             'clasificacionOperativa.frecuenciaDistribucion.dias',
-            'region'
+            'region',
+            'ordenTransporte'
         )->orderBy('Nombre');
 
         if ($regionId) {
@@ -68,7 +71,8 @@ class ClasificacionOperativaController extends Controller
 
     public function edit($comuna_id)
     {
-        $comuna = \App\Models\Comuna::with('clasificacionOperativa')->findOrFail($comuna_id);
+        $comuna = \App\Models\Comuna::with('clasificacionOperativa', 'ordenTransporte')->findOrFail($comuna_id);
+
         $comunasTodas = \App\Models\Comuna::orderBy('Nombre')->get();
         $zonas = \App\Models\Zona::all();
         $tiposZona = \App\Models\TipoZona::all();
@@ -123,13 +127,24 @@ class ClasificacionOperativaController extends Controller
 
         $ruta = RutaGeografica::find($validated['zona_ruta_geografica_id']);
         $tipoZonaId = optional($ruta)->tipo_zona_id;
+        
 
         \App\Models\ComunaClasificacionOperativa::updateOrCreate(
+
+            
+
+
             ['comuna_id' => $comuna_id],
             $validated + [
                 'comuna_id' => $comuna_id,
                 'tipo_zona_id' => $tipoZonaId, // <- se define automáticamente
             ]
+
+
+
+
+
+
         );
 
         $frecuencia = FrecuenciaDistribucion::updateOrCreate(
@@ -138,6 +153,22 @@ class ClasificacionOperativaController extends Controller
                 'proveedor_id' => $validated['proveedor_id'],
             ]
         );
+
+        // Guardar o actualizar el orden de transporte
+        $orden = $request->input('orden_transporte');
+
+        if ($orden !== null) {
+            \App\Models\OrdenTransporte::updateOrCreate(
+                [
+                    'comuna_id' => $comuna_id,
+                    'zona_ruta_geografica_id' => $validated['zona_ruta_geografica_id'],
+                ],
+                [
+                    'orden' => $orden,
+                ]
+            );
+        }
+
 
 
         // Limpiamos días anteriores (por si hubo cambios)

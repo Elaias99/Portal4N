@@ -29,6 +29,12 @@ class Comuna extends Model
         return $this->hasOne(ComunaClasificacionOperativa::class);
     }
 
+    public function ordenTransporte()
+    {
+        return $this->hasOne(OrdenTransporte::class);
+    }
+
+
 
 
 }

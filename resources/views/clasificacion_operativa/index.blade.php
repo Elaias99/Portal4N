@@ -24,7 +24,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th>Frecuencia de días</th>
-                                        <th>Próxima Entrega</th>
+                                        {{-- <th>Próxima Entrega</th> --}}
                                         <th>Tipo de Zona</th>
                                         <th>Número Región</th>
                                         <th>Comuna</th>
@@ -41,6 +41,10 @@
                                         <th>Nombre de la Ruta</th>
                                         <th>Cobertura</th>
                                         <th>Provincia</th>
+                                        <th>Orden Transporte</th>
+
+
+
                                         <th>Acción</th>
                                     </tr>
                                 </thead>
@@ -48,7 +52,7 @@
                                     @foreach($comunasRegion as $comuna)
                                         <tr>
                                             <td>{{ $comuna->frecuencia_texto ?? '—' }}</td>
-                                            <td>{{ $comuna->proxima_entrega ?? '—' }}</td>
+                                            {{-- <td>{{ $comuna->proxima_entrega ?? '—' }}</td> --}}
                                             <td>{{ $comuna->clasificacionOperativa->tipoZona->nombre ?? '—' }}</td>
                                             <td>{{ $region->NumeroRomano }}</td>
                                             <td>{{ $comuna->Nombre }}</td>
@@ -68,6 +72,11 @@
                                             <td>{{ $comuna->clasificacionOperativa->zonaRutaGeografica->nombre_ruta ?? '—' }}</td>
                                             <td>{{ $comuna->clasificacionOperativa->cobertura->nombre ?? '—' }}</td>
                                             <td>{{ $comuna->clasificacionOperativa->provincia->nombre ?? '—' }}</td>
+                                            <td>{{ $comuna->ordenTransporte?->orden ?? '—' }}</td>
+
+
+
+
                                             <td>
                                                 <a href="{{ route('clasificacion-operativa.edit', $comuna->id) }}" class="btn btn-sm btn-primary">
                                                     Editar

@@ -33,18 +33,6 @@
             </select>
         </div>
 
-        {{-- <div class="mb-3">
-            <label for="tipo_zona_id" class="form-label">Tipo de Zona</label>
-            <select name="tipo_zona_id" id="tipo_zona_id" class="form-control" required>
-                <option value="">Seleccione...</option>
-                @foreach($tiposZona as $tipo)
-                    <option value="{{ $tipo->id }}" {{ optional($comuna->clasificacionOperativa)->tipo_zona_id == $tipo->id ? 'selected' : '' }}>
-                        {{ $tipo->nombre }}
-                    </option>
-                @endforeach
-            </select>
-        </div> --}}
-
         <div class="mb-3">
             <label for="subzona_id" class="form-label">Subzona</label>
             <select name="subzona_id" id="subzona_id" class="form-control" required>
@@ -113,6 +101,23 @@
                 @endforeach
             </select>
         </div>
+
+
+
+        <div class="mb-3">
+            <label for="orden_transporte" class="form-label">Orden de Transporte</label>
+            <input type="number" name="orden_transporte" id="orden_transporte" class="form-control"
+                value="{{ old('orden_transporte', $comuna->ordenTransporte?->orden) }}">
+        </div>
+
+
+
+
+
+
+
+
+
 
 
         <div class="mb-3">
