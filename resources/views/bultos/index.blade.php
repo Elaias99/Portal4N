@@ -53,6 +53,15 @@
         </div>
     @endif
 
+    @if(session('info'))
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <i class="fa-solid fa-info-circle me-2"></i>
+            {{ session('info') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    @endif
+
+
     <!-- Buscador -->
     {{-- BUSCADOR DE BULTOS EN TARJETA --}}
     <div class="card shadow-sm p-3 mb-4" style="max-width: 600px; margin: 0 auto;">

@@ -45,22 +45,36 @@ class BultoController extends Controller
     public function importExcel(Request $request)
     {
         try {
-            // Validar que el archivo sea un Excel
             $request->validate([
                 'file' => 'required|mimes:xlsx,xls'
             ]);
 
-            // Procesar el archivo usando la importación
-            Excel::import(new BultosImport, $request->file('file'));
+            $import = new BultosImport();
+            \Maatwebsite\Excel\Facades\Excel::import($import, $request->file('file'));
 
-            // Mensaje de éxito
-            return back()->with('success', 'Los bultos fueron importados correctamente.');
+            $nuevos = $import->insertados;
+            $repetidos = $import->duplicados;
+
+            if ($nuevos === 0 && $repetidos > 0) {
+                return back()->with('info', "Todos los bultos del archivo ya estaban registrados. No se agregó ninguno.");
+            }
+
+            if ($nuevos > 0 && $repetidos > 0) {
+                return back()->with('success', "$nuevos bultos fueron agregados correctamente. $repetidos ya estaban en el sistema y fueron ignorados.");
+            }
+
+            if ($nuevos > 0 && $repetidos === 0) {
+                return back()->with('success', "Importación completada: $nuevos bultos nuevos agregados.");
+            }
+
+            return back()->with('info', "El archivo estaba vacío o mal formateado. No se procesaron bultos.");
 
         } catch (\Exception $e) {
-            // Mostrar el error exacto en pantalla
-            dd("Error durante la importación:", $e->getMessage());
+            return back()->with('error', 'Error al importar: ' . $e->getMessage());
         }
     }
+
+
 
 
     
