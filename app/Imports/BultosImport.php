@@ -5,6 +5,7 @@ namespace App\Imports;
 use App\Models\Bultos;
 use App\Models\Comuna;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
@@ -16,6 +17,7 @@ class BultosImport implements ToCollection, WithHeadingRow
 
     public function __construct()
     {
+        // Precarga todas las comunas
         $this->comunas = Comuna::all()->pluck('id', 'Nombre')->mapWithKeys(function ($id, $nombre) {
             return [strtolower(trim($nombre)) => $id];
         })->toArray();
@@ -23,20 +25,26 @@ class BultosImport implements ToCollection, WithHeadingRow
 
     public function collection(Collection $rows)
     {
+        // Precargar códigos ya existentes (en minúsculas y sin espacios)
+        $existentes = Bultos::pluck('codigo_bulto')->map(function ($codigo) {
+            return strtolower(trim($codigo));
+        })->toArray();
+
+        $nuevosBultos = [];
+
         foreach ($rows as $row) {
             $codigo = trim(strtolower($row['id_bulto'] ?? ''));
 
             if (empty($codigo)) {
-                continue; // omitir filas sin código válido
+                continue; // omitir vacíos
             }
 
-            // Si el bulto ya existe, ignorarlo
-            if (Bultos::where('codigo_bulto', $codigo)->exists()) {
+            if (in_array($codigo, $existentes)) {
                 $this->duplicados++;
                 continue;
             }
 
-            Bultos::create([
+            $nuevosBultos[] = [
                 'codigo_bulto'   => $codigo,
                 'id_envio'       => $row['id_envio_id_solicitud'] ?? null,
                 'atencion'       => $row['atencion'] ?? null,
@@ -59,9 +67,16 @@ class BultosImport implements ToCollection, WithHeadingRow
                 'fecha_carga'    => now(),
                 'estado'         => 'pendiente',
                 'id_jefe'        => null,
-            ]);
+                'created_at'     => now(),
+                'updated_at'     => now(),
+            ];
 
             $this->insertados++;
+        }
+
+        // Insertar en lote si hay nuevos
+        if (!empty($nuevosBultos)) {
+            DB::table('bultos')->insert($nuevosBultos);
         }
     }
 
