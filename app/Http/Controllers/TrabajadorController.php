@@ -96,6 +96,12 @@ class TrabajadorController extends Controller
         // 3. Ordenar empleados por cumpleaños y nombre
         $empleados = $this->sortEmpleados($empleados);
 
+        // Agregar días proporcionales calculados a cada empleado
+        foreach ($empleados as $empleado) {
+            $empleado->dias_proporcionales = $empleado->calcularDiasProporcionales();
+        }
+
+
         // 4. Obtener datos para los filtros
         $cargos = Cargo::all();
         $empresas = Empresa::all();

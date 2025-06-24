@@ -164,6 +164,15 @@
                           </tr>
 
                           <tr>
+                              <th>Días Proporcionales Acumulados</th>
+                              <td>{{ $empleado->dias_proporcionales }}</td>
+                          </tr>
+
+
+
+
+
+                          <tr>
                             <th>Turno</th>
                             <td>{{ $empleado->turno ? $empleado->turno->nombre : 'No asignado' }}</td>
                           </tr>

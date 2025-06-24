@@ -179,6 +179,38 @@ class Trabajador extends Model
 
 
 
+    public function calcularDiasProporcionales()
+    {
+        if (!$this->fecha_inicio_trabajo) {
+            return 0;
+        }
+
+        $fechaInicio = Carbon::parse($this->fecha_inicio_trabajo);
+        $fechaActual = Carbon::now();
+
+        $diasMesInicio = $fechaInicio->daysInMonth;
+        $diasTrabajadosMesInicio = $diasMesInicio - $fechaInicio->day + 1;
+        $proporcionMesInicio = $diasTrabajadosMesInicio / $diasMesInicio;
+
+        $mesesCompletos = $fechaInicio->diffInMonths($fechaActual) - 1;
+        $proporcionales = (15 / 12) * ($mesesCompletos + $proporcionMesInicio);
+
+        $diasTomados = $this->vacaciones()
+            ->whereHas('solicitud', function ($q) {
+                $q->where('estado', 'aprobado')->where('tipo_dia', 'vacaciones');
+            })
+            ->sum('dias');
+
+        $diasHistoricos = $this->historialVacaciones()
+            ->where('tipo_dia', 'vacaciones')
+            ->sum('dias_laborales');
+
+        return max(round($proporcionales - ($diasTomados + $diasHistoricos), 2), 0);
+    }
+
+
+
+
 
 }
 
