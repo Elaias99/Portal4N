@@ -168,6 +168,8 @@ Route::get('/empleados/exportExcel', [TrabajadorController::class, 'exportExcel'
 Route::get('/facturas/export', [FacturaController::class, 'export'])->name('facturas.export');
 
 // OPERADORES
+Route::get('/clasificacion-operativa/exportar', [\App\Http\Controllers\ClasificacionOperativaController::class, 'exportar'])->name('clasificacion-operativa.exportar');
+
 Route::resource('clasificacion-operativa', \App\Http\Controllers\ClasificacionOperativaController::class)
     ->only(['index', 'edit', 'update']) // limitar solo a lo que usas (opcional)
     ->middleware('auth');

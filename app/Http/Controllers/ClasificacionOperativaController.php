@@ -8,6 +8,9 @@ use Carbon\Carbon;
 use App\Models\RutaGeografica;
 use App\Models\OrdenTransporte;
 
+use App\Exports\ClasificacionOperativaExport;
+use Maatwebsite\Excel\Facades\Excel;
+
 
 class ClasificacionOperativaController extends Controller
 {
@@ -249,6 +252,15 @@ class ClasificacionOperativaController extends Controller
         }
 
         return $query;
+    }
+
+
+    public function exportar(Request $request)
+    {
+        return Excel::download(
+            new ClasificacionOperativaExport($request->all()),
+            'clasificacion_operativa.xlsx'
+        );
     }
 
 
