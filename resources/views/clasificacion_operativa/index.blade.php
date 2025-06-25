@@ -4,6 +4,59 @@
 <div class="container">
     <h1 class="mb-4 text-dark">Clasificación Operativa por Comuna</h1>
 
+
+    <div class="p-4 mb-4 rounded-3 shadow-sm" style="background-color: #f8f9fa;">
+        <form method="GET" action="{{ route('clasificacion-operativa.index') }}">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <input type="text" name="comuna" class="form-control rounded-pill border-0 shadow-sm" placeholder="Comuna..." value="{{ request('comuna') }}">
+                </div>
+                <div class="col-md-2">
+                    <input type="text" name="proveedor" class="form-control rounded-pill border-0 shadow-sm" placeholder="Proveedor..." value="{{ request('proveedor') }}">
+                </div>
+                <div class="col-md-2">
+                    <select name="region" class="form-select rounded-pill border-0 shadow-sm">
+                        <option value="">Todas las regiones</option>
+                        @foreach($regiones as $region)
+                            <option value="{{ $region->id }}" {{ request('region') == $region->id ? 'selected' : '' }}>{{ $region->Nombre }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="zona" class="form-select rounded-pill border-0 shadow-sm">
+                        <option value="">Todas las zonas</option>
+                        @foreach($zonas as $zona)
+                            <option value="{{ $zona->id }}" {{ request('zona') == $zona->id ? 'selected' : '' }}>{{ $zona->nombre }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="subzona" class="form-select rounded-pill border-0 shadow-sm">
+                        <option value="">Todas las subzonas</option>
+                        @foreach($subzonas as $subzona)
+                            <option value="{{ $subzona->id }}" {{ request('subzona') == $subzona->id ? 'selected' : '' }}>{{ $subzona->nombre }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="cobertura" class="form-select rounded-pill border-0 shadow-sm">
+                        <option value="">Todas las coberturas</option>
+                        @foreach($coberturas as $cobertura)
+                            <option value="{{ $cobertura->id }}" {{ request('cobertura') == $cobertura->id ? 'selected' : '' }}>{{ $cobertura->nombre }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-outline-primary rounded-pill px-4">Filtrar</button>
+                    <a href="{{ route('clasificacion-operativa.index') }}" class="btn btn-outline-dark rounded-pill px-4">Limpiar</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+
+
+
     <div class="accordion" id="accordionRegions">
         @foreach($regiones as $region)
             @php

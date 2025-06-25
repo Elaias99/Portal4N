@@ -14,61 +14,55 @@ class ClasificacionOperativaController extends Controller
     //
     public function index(Request $request)
     {
-        $regionId = $request->input('region');
-
-        $comunasQuery = \App\Models\Comuna::with(
+        $comunasQuery = \App\Models\Comuna::with([
             'clasificacionOperativa.zona.zonaMadre',
             'clasificacionOperativa.tipoZona',
             'clasificacionOperativa.subzona',
             'clasificacionOperativa.proveedor',
             'clasificacionOperativa.zonaRutaGeografica',
-            'clasificacionOperativa.zonaRutaGeografica.origen',   // <- agregar
+            'clasificacionOperativa.zonaRutaGeografica.origen',
             'clasificacionOperativa.zonaRutaGeografica.destino',
             'clasificacionOperativa.cobertura',
             'clasificacionOperativa.provincia',
-            'clasificacionOperativa.codigoiata', 
+            'clasificacionOperativa.codigoiata',
             'clasificacionOperativa.frecuenciaDistribucion.dias',
             'region',
             'ordenTransporte'
-            
-        )->orderBy('Nombre');
+        ])->orderBy('Nombre');
 
-        if ($regionId) {
-            $comunasQuery->where('region_id', $regionId);
-        }
+        // 👇 aplicas los filtros centralizados
+        $this->aplicarFiltros($comunasQuery, $request);
 
         $comunas = $comunasQuery->get();
 
+        // 👇 post-procesamiento de días y próxima entrega
         foreach ($comunas as $comuna) {
-            $dias = [];
-
-            $frecuencia = optional(optional($comuna->clasificacionOperativa)->frecuenciaDistribucion);
-
-            if ($frecuencia && $frecuencia->dias) {
-                $dias = $frecuencia->dias->pluck('dia_semana')->toArray();
-            }
+            $dias = optional(optional($comuna->clasificacionOperativa)->frecuenciaDistribucion->dias)->pluck('dia_semana')->toArray() ?? [];
 
             $comuna->frecuencia_texto = $this->formatearDias($dias);
 
-            // Calcular fecha próxima de entrega (solo si hay frecuencia)
-            if (!empty($dias)) {
-                $hoy = Carbon::now()->locale('es')->dayName; // Ej: "martes"
-                $diaFormateado = ucfirst($hoy); // Carbon da minúsculas, lo pasamos a "Martes"
-                $diasHasta = $this->calcularDiasHastaProximaEntrega($dias, $diaFormateado);
-                $comuna->proxima_entrega = Carbon::now()->addDays($diasHasta)->format('d-m-Y');
-
-            } else {
-                $comuna->proxima_entrega = null;
-            }
+            $comuna->proxima_entrega = !empty($dias)
+                ? Carbon::now()->addDays($this->calcularDiasHastaProximaEntrega($dias, ucfirst(Carbon::now()->locale('es')->dayName)))->format('d-m-Y')
+                : null;
         }
 
         $regiones = \App\Models\Region::orderBy('id')->get();
 
-        return view('clasificacion_operativa.index', compact('comunas', 'regiones', 'regionId'));
+        $regionesConComunas = $regiones->filter(function ($region) use ($comunas) {
+            return $comunas->where('region_id', $region->id)->isNotEmpty();
+        });
+
+        return view('clasificacion_operativa.index', [
+            'comunas' => $comunas,
+            'regiones' => $regionesConComunas,
+            'regionId' => $request->input('region'),
+            'zonas' => \App\Models\Zona::all(),
+            'subzonas' => \App\Models\Subzona::all(),
+            'coberturas' => \App\Models\Cobertura::all(),
+            'filtros' => $request->only(['comuna', 'proveedor', 'zona', 'subzona', 'cobertura']),
+        ]);
+
     }
-
-
-
 
 
     public function edit($comuna_id)
@@ -138,19 +132,11 @@ class ClasificacionOperativaController extends Controller
 
         \App\Models\ComunaClasificacionOperativa::updateOrCreate(
 
-            
-
-
             ['comuna_id' => $comuna_id],
             $validated + [
                 'comuna_id' => $comuna_id,
                 'tipo_zona_id' => $tipoZonaId, // <- se define automáticamente
             ]
-
-
-
-
-
 
         );
 
@@ -227,6 +213,44 @@ class ClasificacionOperativaController extends Controller
         // Si no hay días restantes esta semana, calcula para la próxima
         return (7 - $diaActualIndex) + $indicesEntrega[0];
     }
+
+    private function aplicarFiltros($query, Request $request)
+    {
+        if ($regionId = $request->input('region')) {
+            $query->where('region_id', $regionId);
+        }
+
+        if ($comunaNombre = $request->input('comuna')) {
+            $query->where('Nombre', 'like', "%$comunaNombre%");
+        }
+
+        if ($proveedorNombre = $request->input('proveedor')) {
+            $query->whereHas('clasificacionOperativa.proveedor', function ($q) use ($proveedorNombre) {
+                $q->where('razon_social', 'like', "%$proveedorNombre%");
+            });
+        }
+
+        if ($zonaId = $request->input('zona')) {
+            $query->whereHas('clasificacionOperativa', function ($q) use ($zonaId) {
+                $q->where('zona_id', $zonaId);
+            });
+        }
+
+        if ($subzonaId = $request->input('subzona')) {
+            $query->whereHas('clasificacionOperativa', function ($q) use ($subzonaId) {
+                $q->where('subzona_id', $subzonaId);
+            });
+        }
+
+        if ($coberturaId = $request->input('cobertura')) {
+            $query->whereHas('clasificacionOperativa', function ($q) use ($coberturaId) {
+                $q->where('cobertura_id', $coberturaId);
+            });
+        }
+
+        return $query;
+    }
+
 
 
 
