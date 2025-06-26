@@ -1,14 +1,16 @@
 <?php
 
-
 namespace App\Exports;
 
 use App\Models\Comuna;
-use Maatwebsite\Excel\Concerns\FromCollection;
+use Illuminate\Database\Eloquent\Builder;
+use Maatwebsite\Excel\Concerns\FromQuery;
+use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithChunkReading;
 
-class ClasificacionOperativaExport implements FromCollection, WithHeadings, ShouldAutoSize
+class ClasificacionOperativaExport implements FromQuery, WithMapping, WithHeadings, ShouldAutoSize, WithChunkReading
 {
     protected $filtros;
 
@@ -17,53 +19,55 @@ class ClasificacionOperativaExport implements FromCollection, WithHeadings, Shou
         $this->filtros = $filtros;
     }
 
-    public function collection()
+    public function query()
     {
-        $comunas = Comuna::with([
-            'clasificacionOperativa.zona.zonaMadre',
-            'clasificacionOperativa.subzona',
-            'clasificacionOperativa.tipoZona',
-            'clasificacionOperativa.proveedor',
-            'clasificacionOperativa.zonaRutaGeografica.transporte',
-            'clasificacionOperativa.zonaRutaGeografica.origen',
-            'clasificacionOperativa.zonaRutaGeografica.destino',
-            'clasificacionOperativa.codigoiata',
-            'clasificacionOperativa.cobertura',
-            'clasificacionOperativa.provincia',
-            'region',
-            'ordenTransporte'
-        ])
-        ->when($this->filtros['region'] ?? null, fn($q, $region) => $q->where('region_id', $region))
-        ->when($this->filtros['comuna'] ?? null, fn($q, $comuna) => $q->where('Nombre', 'like', "%$comuna%"))
-        ->when($this->filtros['proveedor'] ?? null, fn($q, $prov) => $q->whereHas('clasificacionOperativa.proveedor', fn($q2) => $q2->where('razon_social', 'like', "%$prov%")))
-        ->get();
+        return Comuna::with([
+                'clasificacionOperativa.zona.zonaMadre',
+                'clasificacionOperativa.subzona',
+                'clasificacionOperativa.tipoZona',
+                'clasificacionOperativa.proveedor',
+                'clasificacionOperativa.zonaRutaGeografica.transporte',
+                'clasificacionOperativa.zonaRutaGeografica.origen',
+                'clasificacionOperativa.zonaRutaGeografica.destino',
+                'clasificacionOperativa.codigoiata',
+                'clasificacionOperativa.cobertura',
+                'clasificacionOperativa.provincia',
+                'region',
+                'ordenTransporte'
+            ])
+            ->when($this->filtros['region'] ?? null, fn(Builder $q, $region) => $q->where('region_id', $region))
+            ->when($this->filtros['comuna'] ?? null, fn(Builder $q, $comuna) => $q->where('Nombre', 'like', "%$comuna%"))
+            ->when($this->filtros['proveedor'] ?? null, fn(Builder $q, $prov) =>
+                $q->whereHas('clasificacionOperativa.proveedor', fn($q2) => $q2->where('razon_social', 'like', "%$prov%"))
+            );
+    }
 
-        return $comunas->map(function ($comuna) {
-            $clas = $comuna->clasificacionOperativa;
-            $ruta = $clas->zonaRutaGeografica ?? null;
+    public function map($comuna): array
+    {
+        $clas = $comuna->clasificacionOperativa;
+        $ruta = $clas->zonaRutaGeografica ?? null;
 
-            return [
-                'Tipo de Zona'        => $clas->tipoZona->nombre ?? '',
-                'Número Región'      => $comuna->region->Numero ?? '',
-                'Comuna'             => $comuna->Nombre,
-                'COD IATA'           => $clas->codigoiata->cod_iata ?? '',
-                'COD IATA2'          => $clas->codigoiata->cod_iata2 ?? '',
-                'Comuna Matriz'      => $clas->comuna_matriz ?? '',
-                'Nombre Operador'    => $clas->proveedor->razon_social ?? '',
-                'Rut'                => $clas->proveedor->rut ?? '',
-                'Zona Madre'         => $clas->zona->zonaMadre->nombre ?? '',
-                'Subzona'            => $clas->subzona->nombre ?? '',
-                'Zona'               => $clas->zona->nombre ?? '',
-                'Ruta Geo'           => $ruta->nombre ?? '',
-                'Transporte'         => $ruta->transporte->nombre ?? '',
-                'Origen'             => $ruta->origen->Nombre ?? '',
-                'Destino Máximo'     => $ruta->destino->Nombre ?? '',
-                'Nombre de la Ruta'  => $ruta->nombre_ruta ?? '',
-                'Cobertura'          => $clas->cobertura->nombre ?? '',
-                'Provincia'          => $clas->provincia->nombre ?? '',
-                'Orden Transporte'   => $comuna->ordenTransporte->orden ?? '',
-            ];
-        });
+        return [
+            $clas->tipoZona->nombre ?? '',
+            $comuna->region->Numero ?? '',
+            $comuna->Nombre,
+            $clas->codigoiata->cod_iata ?? '',
+            $clas->codigoiata->cod_iata2 ?? '',
+            $clas->comuna_matriz ?? '',
+            $clas->proveedor->razon_social ?? '',
+            $clas->proveedor->rut ?? '',
+            $clas->zona->zonaMadre->nombre ?? '',
+            $clas->subzona->nombre ?? '',
+            $clas->zona->nombre ?? '',
+            $ruta->nombre ?? '',
+            $ruta->transporte->nombre ?? '',
+            $ruta->origen->Nombre ?? '',
+            $ruta->destino->Nombre ?? '',
+            $ruta->nombre_ruta ?? '',
+            $clas->cobertura->nombre ?? '',
+            $clas->provincia->nombre ?? '',
+            $comuna->ordenTransporte->orden ?? '',
+        ];
     }
 
     public function headings(): array
@@ -89,5 +93,10 @@ class ClasificacionOperativaExport implements FromCollection, WithHeadings, Shou
             'Provincia',
             'Orden Transporte',
         ];
+    }
+
+    public function chunkSize(): int
+    {
+        return 500; // podés ajustar a 1000 si querés más velocidad y tenés buena RAM
     }
 }
