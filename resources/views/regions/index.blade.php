@@ -22,6 +22,7 @@
                         <th>Abreviatura</th>
                         <th>Nombre</th>
                         <th>Numero Romano</th>
+                        <th>Numero</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -31,6 +32,8 @@
                             <td>{{ $region->Abreviatura }}</td>
                             <td>{{ $region->Nombre }}</td>
                             <td>{{ $region->NumeroRomano }}</td>
+
+                            <td>{{ $region->Numero }}</td>
                             
                             <td>
                                 <a href="{{ route('regions.edit', $region->id) }}" class="btn btn-warning btn-sm">

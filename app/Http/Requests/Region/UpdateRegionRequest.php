@@ -44,6 +44,13 @@ class UpdateRegionRequest extends FormRequest
                 Rule::unique('regions', 'Abreviatura')->ignore($this->route('region')),
             ],
 
+            'NumeroRomano' => [
+                'nullable',
+                'string',
+                'max:10',
+                Rule::unique('regions', 'NumeroRomano')->ignore($this->route('region')),
+            ],
+
 
         ];
     }
@@ -63,6 +70,10 @@ class UpdateRegionRequest extends FormRequest
             'Abreviatura.string' => 'La abreviatura debe ser texto.',
             'Abreviatura.max' => 'La abreviatura no puede tener más de 10 caracteres.',
             'Abreviatura.unique' => 'Esta abreviatura ya está registrada.',
+
+            'NumeroRomano.string' => 'El número romano debe ser texto.',
+            'NumeroRomano.max' => 'El número romano no puede exceder los 10 caracteres.',
+
 
         ];
     }

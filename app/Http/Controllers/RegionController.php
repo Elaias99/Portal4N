@@ -17,10 +17,6 @@ class RegionController extends Controller
      */
     public function index(Request $request)
     {
-        //
-        // $regions = Region::all();
-        // return view('regions.index', compact('regions'));
-
 
         $search = $request->input('search');
         $query = Region::query();

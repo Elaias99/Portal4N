@@ -9,5 +9,6 @@ storage/framework/views/
 /public/build
 public/reclamos_comentarios_fotos/
 public/reclamos_fotos/
+.phpunit.result.cache
 
 

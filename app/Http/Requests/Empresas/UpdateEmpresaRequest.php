@@ -37,6 +37,9 @@ class UpdateEmpresaRequest extends FormRequest
             'mail_formalizado' => 'required|email|max:255',
             'banco_id' => 'nullable|exists:bancos,id',
             'comuna_id' => 'nullable|exists:comunas,id',
+
+            'rut' => 'nullable|string|max:20',
+
         ];
     }
 
@@ -56,6 +59,9 @@ class UpdateEmpresaRequest extends FormRequest
             'mail_formalizado.email' => 'Debe ingresar un correo electrónico válido.',
             'banco_id.exists' => 'El banco seleccionado no es válido.',
             'comuna_id.exists' => 'La comuna seleccionada no es válida.',
+
+            'rut.max' => 'El RUT no debe tener más de 20 caracteres.',
+
         ];
     }
 }

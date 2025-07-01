@@ -9,7 +9,7 @@ class Region extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['Nombre', 'Numero','Abreviatura'];
+    protected $fillable = ['Nombre', 'Numero','Abreviatura','NumeroRomano'];
 
 
     public function comunas()

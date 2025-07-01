@@ -26,6 +26,8 @@ class StoreRegionRequest extends FormRequest
             'Nombre' => 'required|string|max:255|unique:regions,Nombre',
             'Numero' => 'required|integer|min:1|unique:regions,Numero',
             'Abreviatura' => 'required|string|max:10|unique:regions,Abreviatura',
+            'NumeroRomano' => 'nullable|string|max:10',
+
 
         ];
     }
@@ -44,6 +46,9 @@ class StoreRegionRequest extends FormRequest
             'Abreviatura.string' => 'La abreviatura debe ser texto.',
             'Abreviatura.max' => 'La abreviatura no puede tener más de 10 caracteres.',
             'Abreviatura.unique' => 'Esta abreviatura ya está registrada.',
+
+            'NumeroRomano.string' => 'El número romano debe ser texto.',
+            'NumeroRomano.max' => 'El número romano no puede exceder los 10 caracteres.',
 
         ];
     }

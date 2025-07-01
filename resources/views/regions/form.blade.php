@@ -23,6 +23,17 @@
     @enderror
 </div>
 
+<div class="form-group">
+    <label for="NumeroRomano">{{ 'Número Romano' }}</label>
+    <input type="text" name="NumeroRomano" id="NumeroRomano"
+           value="{{ old('NumeroRomano', $region->NumeroRomano ?? '') }}"
+           class="form-control @error('NumeroRomano') is-invalid @enderror" maxlength="10">
+    @error('NumeroRomano')
+        <div class="invalid-feedback">{{ $message }}</div>
+    @enderror
+</div>
+
+
 
 
 <br>

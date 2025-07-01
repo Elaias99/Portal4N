@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('trabajadors', function (Blueprint $table) {
             //
-            $table->string('CorreoPersonal')->nullable()->after('Correo'); // El correo personal es opcional
+            $table->string('CorreoPersonal')->nullable(); // El correo personal es opcional
         });
     }
 

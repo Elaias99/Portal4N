@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('facturas', function (Blueprint $table) {
+        Schema::table('empresas', function (Blueprint $table) {
             //
-            $table->string('tipo_documento')->nullable();
+            if (!Schema::hasColumn('empresas', 'rut')) {
+                $table->string('rut', 20)->nullable()->after('logo');
+            }
         });
     }
 
@@ -22,9 +24,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('facturas', function (Blueprint $table) {
+        Schema::table('empresas', function (Blueprint $table) {
             //
-            $table->dropColumn('tipo_documento');
+            if (Schema::hasColumn('empresas', 'rut')) {
+                $table->dropColumn('rut');
+            }
         });
     }
 };

@@ -76,7 +76,8 @@ class EmpresaController extends Controller
         //
         $bancos = Banco::all();
         $comunas = Comuna::all();
-        return view('empresas.edit',compact('empresa', compact('empresa', 'bancos', 'comunas')));
+        return view('empresas.edit', compact('empresa', 'bancos', 'comunas'));
+
     }
 
     /**
