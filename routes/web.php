@@ -150,6 +150,8 @@ route::get('vacaciones/descargar/{id}', [VacacionController::class, 'descargarAr
 Route::post('/solicitudes/vacaciones/{id}/aprobar', [SolicitudController::class, 'approveVacacion'])->middleware('auth')->name('solicitudes.vacaciones.approve');//Botón que aprueba solicitud de VACACIONES
 Route::post('/solicitudes/vacaciones/{id}/rechazar', [SolicitudController::class, 'rejectVacacion'])->middleware('auth')->name('solicitudes.vacaciones.reject');//Botón que RECHAZA solicitud de VACACIONES
 Route::get('/vacaciones/{id}/descargar-archivo-admin', [VacacionController::class, 'descargarArchivoAdmin'])->name('vacaciones.descargarArchivoAdmin'); //Esta ruta específica se encargará de manejar la descarga del archivo PDF que se crea de manera automática
+Route::get('vacaciones/exportar-disponibles', [VacacionController::class, 'exportarDisponibilidad'])
+    ->name('vacaciones.exportarDisponibles');
 
 
 //ruta para que el empleado pueda acceder a la descarga del archivo que adjunto el administrador cuando aprueba o rechaza una solicitud
@@ -300,11 +302,12 @@ Route::put('/facturas/{factura}/update-status', [FacturaController::class, 'upda
 
 
 // Ruta resource para gestionar todas las operaciones del HistorialVacacionController
-Route::resource('historial-vacacion', HistorialVacacionController::class);
 Route::post('/historial-vacacion/{id}/subir', [HistorialVacacionController::class, 'subirArchivo'])
     ->name('historial-vacacion.subir');
 Route::get('/historial-vacacion/{id}/descargar', [HistorialVacacionController::class, 'descargarArchivo'])
     ->name('historial-vacacion.descargar');
+Route::resource('historial-vacacion', HistorialVacacionController::class);
+
     
 // Pagos
 Route::post('/pagos/{id}/importante', [PagoController::class, 'toggleImportante'])->name('pagos.toggleImportante');

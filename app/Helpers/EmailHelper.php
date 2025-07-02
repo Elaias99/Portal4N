@@ -18,7 +18,7 @@ if (!function_exists('resolvePerfilEmail')) {
             'luisdelabarra@4nlogistica.cl' => 'l.delabarra.b@4nlogistica.cl',
             'raul.suazo@4nlogistica.cl' => 'r.suazo.m@4nlogistica.cl',
             'jp.soza@4nlogistica.cl' => 'j.soza.b@4nlogistica.cl',
-            'benjaminrojas@4nlogistica.cl' => 'b.rojas.s@4nlogistica.cl',
+            // 'benjaminrojas@4nlogistica.cl' => 'b.rojas.s@4nlogistica.cl', //Desvinculado
             'hansdelabarra@4nlogistica.cl' => 'h.delabarra.b@4nlogistica.cl',
             'Marcelo@4nlogistica.cl' => 'o.godoy.s@4nlogistica.cl',
             'eliascorreap@gmail.com' => 'e.correa.p@4nlogistica.cl'
@@ -46,7 +46,7 @@ if (!function_exists('resolveAdminEmail')) {
             'luisdelabarra@4nlogistica.cl' => 'l.delabarra.b@4nlogistica.cl',
             'raul.suazo@4nlogistica.cl' => 'r.suazo.m@4nlogistica.cl',
             'jp.soza@4nlogistica.cl' => 'j.soza.b@4nlogistica.cl',
-            'benjaminrojas@4nlogistica.cl' => 'b.rojas.s@4nlogistica.cl',
+            // 'benjaminrojas@4nlogistica.cl' => 'b.rojas.s@4nlogistica.cl',//Desvinculado
             'hansdelabarra@4nlogistica.cl' => 'h.delabarra.b@4nlogistica.cl',
             'Marcelo@4nlogistica.cl' => 'o.godoy.s@4nlogistica.cl',
             'eliascorreap@gmail.com' => 'e.correa.p@4nlogistica.cl'

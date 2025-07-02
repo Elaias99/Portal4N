@@ -56,11 +56,25 @@
     <h1 class="text-center" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Solicitudes de Días</h1>
 
     <!-- Botón para Generar PDF Manual -->
-    <div class="text-right mb-4">
-        <a href="{{ route('rrhh.formulario') }}" class="btn btn-outline-danger">
-            <i class="fas fa-file-pdf"></i> Generar PDF Manualmente
+    <div class="d-flex flex-wrap gap-2 justify-content-center mb-4">
+        <!-- Botón PDF Manual -->
+        <a href="{{ route('rrhh.formulario') }}" class="btn btn-danger shadow-sm d-flex align-items-center gap-2 px-4 py-2">
+            <i class="fas fa-file-pdf fa-lg"></i> <span>Generar PDF Manualmente</span>
+        </a>
+
+        <!-- Botón Historial -->
+        <a href="{{ route('historial-vacacion.index') }}" class="btn btn-secondary shadow-sm d-flex align-items-center gap-2 px-4 py-2">
+            <i class="fas fa-history fa-lg"></i> <span>Historial de Vacaciones</span>
+        </a>
+
+        <!-- Botón Exportar Excel -->
+        <a href="{{ route('vacaciones.exportarDisponibles') }}" class="btn btn-success shadow-sm d-flex align-items-center gap-2 px-4 py-2">
+            <i class="fas fa-file-excel fa-lg"></i> <span>Exportar Días Disponibles</span>
         </a>
     </div>
+
+
+
 
     <!-- Filtros por estado -->
     <form action="{{ route('solicitudes.vacaciones') }}" method="GET" class="mb-3">

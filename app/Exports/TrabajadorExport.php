@@ -17,6 +17,12 @@ class TrabajadorExport implements FromCollection, WithHeadings, WithColumnWidths
         return Trabajador::with(['empresa', 'cargo', 'comuna.region', 'afp', 'salud', 'turno', 'sistemaTrabajo', 'situacion', 'estadoCivil', 'hijos'])
             ->get()
             ->map(function ($empleado) {
+
+                $diasProporcionales = $empleado->calcularDiasProporcionales();
+
+
+
+
                 // Obtener la información de los hijos (nombre y edad)
                 $hijos = $empleado->hijos->map(function ($hijo) {
                     return "{$hijo->nombre} ({$hijo->edad} años)";
@@ -49,6 +55,7 @@ class TrabajadorExport implements FromCollection, WithHeadings, WithColumnWidths
                     $empleado->nombre_emergencia ?? '', // Contacto de emergencia (Parentezco)
                     $empleado->contacto_emergencia ?? '', // Telefono emergencia
                     $hijos, // Hijos (nombre y edad)
+                    $diasProporcionales,
                 ];
             });
     }
@@ -61,7 +68,7 @@ class TrabajadorExport implements FromCollection, WithHeadings, WithColumnWidths
             'Fecha Nacimiento', 'Sueldo Base', 'Estado Civil', 'Mail personal', 'Direccion', 
             'Comuna', 'AFP', 'Salud', 'Banco', 'Cta', 'N° Cuenta', 
             'Telefono Trabajador', 'Contacto de emergencia (Parentezco)', 'Telefono emergencia',
-            'Hijos (Nombre y Edad)' // Nueva columna
+            'Hijos (Nombre y Edad)', 'Días Vacaciones Disponibles'
         ];
     }
 
@@ -73,7 +80,8 @@ class TrabajadorExport implements FromCollection, WithHeadings, WithColumnWidths
             'K' => 10, 'L' => 15, 'M' => 15, 'N' => 15, 'O' => 35,
             'P' => 45, 'Q' => 15, 'R' => 15, 'S' => 15, 'T' => 20,
             'U' => 15, 'V' => 15, 'W' => 20, 'X' => 40, 'Y' => 20,
-            'Z' => 110 // Ancho para la columna de hijos
+            'Z' => 110, 'AA' => 15,
+
         ];
     }
 

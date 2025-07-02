@@ -13,6 +13,9 @@ use Carbon\Carbon;
 use App\Mail\VacacionesSolicitadas;
 use Illuminate\Support\Facades\Mail;
 
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\VacacionDisponibleExport;
+
 class VacacionController extends Controller
 {
 
@@ -275,6 +278,13 @@ class VacacionController extends Controller
 
         // Pasar la colección de empleados con sus archivos de respaldo a la vista
         return view('admin.archivos_respaldo', compact('empleadosConRespaldo'));
+    }
+
+
+    public function exportarDisponibilidad()
+    {
+        $nombreArchivo = 'vacaciones_disponibles_' . now()->format('Ymd_His') . '.xlsx';
+        return Excel::download(new VacacionDisponibleExport, $nombreArchivo);
     }
 
 

@@ -277,8 +277,8 @@ class SolicitudController extends Controller
         $estado = $request->get('estado');
         $jefeId = $user->jefe->id ?? null; // Obtener el ID del jefe si existe
 
-        // Si el usuario es Benjamín Rojas (Jefe de Control RRHH), mostrar TODAS las solicitudes
-        if ($user->id == 376) {
+        // Si el usuario tiene rol 'admin', puede ver todas las solicitudes
+        if ($user->roles->contains('name', 'admin')) {
             $solicitudes = Solicitud::where('campo', 'Vacaciones')
                 ->when($estado, function ($query, $estado) {
                     return $query->where('estado', $estado);
@@ -298,18 +298,19 @@ class SolicitudController extends Controller
                     ->orderBy('created_at', 'desc')
                     ->get();
             } else {
-                // Si el usuario no es jefe y no es RRHH, devolver solicitudes vacías
+                // Si el usuario no es jefe y no es admin, devolver solicitudes vacías
                 $solicitudes = collect();
             }
         }
 
-        // Asociar días solicitados directamente desde la columna 'dias', validando la relación
+        // Asociar días solicitados directamente desde la columna 'dias'
         $solicitudes->each(function ($solicitud) {
             $solicitud->dias_laborales = $solicitud->vacacion ? $solicitud->vacacion->dias : 0;
         });
 
         return view('solicitudes.vacaciones', compact('solicitudes'));
     }
+
 
 
     // Función para eliminar acentos
