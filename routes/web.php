@@ -231,8 +231,9 @@ Route::get('/tracking/dashboard', [TrackingDashboardController::class, 'index'])
 
 
 // Áreas
-Route::resource('areas', 'App\Http\Controllers\AreaController')->middleware('auth');
 Route::post('/areas/{area}/asignar', [AreaController::class, 'asignar'])->name('areas.asignar');
+Route::resource('areas', 'App\Http\Controllers\AreaController')->middleware('auth');
+
 
 
 // Ruta para las compras

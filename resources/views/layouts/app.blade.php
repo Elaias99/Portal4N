@@ -152,11 +152,20 @@
                                             <i class="fas fa-child me-2"></i> Hijos de Empleados
                                         </a>
                                     </li>
+
                                     <li class="list-group-item">
                                         <a href="{{ route('tallas.index') }}" class="text-decoration-none">
                                             <i class="fas fa-tshirt me-2"></i> Tallas de Uniformes
                                         </a>
                                     </li>
+
+                                    <li class="list-group-item">
+                                        <a href="{{ route('areas.index') }}" class="text-decoration-none">
+                                            <i class="fa-solid fa-tags me-2"></i>   Áreas de Trabajo
+
+                                        </a>
+                                    </li>
+
                                 </ul>
                             </div>
                         </li>
