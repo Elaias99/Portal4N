@@ -2,7 +2,13 @@
 
 @section('content')
 <div class="container mt-5">
-    <h1 class="mb-4 text-center">Crear Peticiones de Días</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0">Crear Peticiones de Días</h1>
+        <a href="{{ route('vacaciones.mis') }}" class="btn btn-outline-dark">
+            Historial de días Tomados
+        </a>
+    </div>
+
 
     <!-- Mostrar mensajes de error -->
     @if ($errors->any())
@@ -26,6 +32,8 @@
     <div class="alert alert-info">
         <strong>Días Proporcionales Acumulados:</strong> {{ $diasProporcionales }}
     </div>
+
+
 
     @if ($solicitudPendiente)
         <!-- Mensaje si ya hay una solicitud pendiente -->

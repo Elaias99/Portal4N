@@ -171,6 +171,42 @@ class VacacionController extends Controller
     }
 
 
+    public function misVacaciones()
+    {
+        $user = Auth::user();
+        $trabajador = $user->trabajador;
+
+        if (!$trabajador) {
+            return redirect()->back()->with('error', 'No se encontró información del trabajador.');
+        }
+
+        // Vacaciones históricas
+        $historialVacaciones = HistorialVacacion::where('trabajador_id', $trabajador->id)
+            ->orderBy('fecha_inicio', 'asc')
+            ->get()
+            ->each(function ($historial) {
+                $historial->dias_descontados = ($historial->tipo_dia === 'vacaciones') ? $historial->dias_laborales : 0;
+            });
+
+        // Solicitudes aprobadas
+        $solicitudesAprobadas = Solicitud::where('trabajador_id', $trabajador->id)
+            ->where('campo', 'Vacaciones')
+            ->where('estado', 'aprobado')
+            ->orderBy('created_at', 'desc')
+            ->with('vacacion')
+            ->get()
+            ->each(function ($solicitud) {
+                $vac = $solicitud->vacacion;
+                $dias = $vac ? $vac->dias : 0;
+                $solicitud->dias_tomados = $dias;
+                $solicitud->dias_descontados = ($solicitud->tipo_dia === 'vacaciones') ? $dias : 0;
+            });
+
+        return view('vacaciones.mis_vacaciones', compact('historialVacaciones', 'solicitudesAprobadas', 'trabajador'));
+    }
+
+
+
 
 
 

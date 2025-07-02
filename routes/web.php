@@ -161,6 +161,8 @@ Route::get('/vacaciones/{id}/descargar-archivo-respuesta', [VacacionController::
 Route::get('/admin/archivos-respaldo', [VacacionController::class, 'mostrarArchivosRespaldo'])
     ->name('admin.archivos-respaldo');
 
+Route::get('/mis-vacaciones', [App\Http\Controllers\VacacionController::class, 'misVacaciones'])
+    ->name('vacaciones.mis');
 
 
 // Ruta para exportar Excel el listado de los empleados
