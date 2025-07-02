@@ -92,19 +92,6 @@ $notificaciones = Auth::user()->unreadNotifications
                         </select>
                     </div>
 
-                    <!-- Filtro por Situación -->
-                    <div class="mb-3">
-                        <label class="form-label">Situación:</label>
-                        <select name="situacion_id" class="form-select form-select-sm">
-                            <option value="">- Seleccionar Situación -</option>
-                            @foreach($situaciones as $situacion)
-                                <option value="{{ $situacion->id }}" {{ request('situacion_id') == $situacion->id ? 'selected' : '' }}>
-                                    {{ $situacion->Nombre }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
                     <!-- Beneficios -->
                     <div class="mb-3">
                         <h6 class="fw-bold">Beneficios:</h6>
@@ -116,6 +103,11 @@ $notificaciones = Auth::user()->unreadNotifications
                             <input class="form-check-input" type="checkbox" name="contrato_firmado" value="1" {{ request('contrato_firmado') ? 'checked' : '' }}>
                             <label class="form-check-label">Contrato Firmado</label>
                         </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="mostrar_desvinculados" value="1" {{ request('mostrar_desvinculados') ? 'checked' : '' }}>
+                            <label class="form-check-label">Mostrar desvinculados</label>
+                        </div>
+
                     </div>
 
                     <!-- Botones de acción -->

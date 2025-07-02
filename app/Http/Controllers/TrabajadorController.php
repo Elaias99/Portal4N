@@ -48,6 +48,8 @@ class TrabajadorController extends Controller
 
     public function index(Request $request)
     {
+        $mostrarDesvinculados = $request->has('mostrar_desvinculados');
+
         $query = $request->input('search');
         $cargoId = $request->input('cargo_id');
         $empresaId = $request->input('empresa_id');
@@ -79,15 +81,25 @@ class TrabajadorController extends Controller
             ->when($contratoFirmado, function ($queryBuilder) use ($contratoFirmado) {
                 $queryBuilder->where('ContratoFirmado', $contratoFirmado);
             })
-            ->when(!$hayFiltro, function ($queryBuilder) { 
-                // Si NO hay filtro, excluir a los empleados desvinculados
+
+
+            ->when($mostrarDesvinculados, function ($queryBuilder) {
+                $queryBuilder->where(function ($q) {
+                    $q->whereHas('sistemaTrabajo', function ($sub) {
+                        $sub->where('nombre', 'Desvinculado');
+                    })->orWhereHas('situacion', function ($sub) {
+                        $sub->where('Nombre', 'Desvinculado');
+                    });
+                });
+            })->when(!$hayFiltro && !$mostrarDesvinculados, function ($queryBuilder) {
                 $queryBuilder->whereHas('sistemaTrabajo', function ($query) {
                     $query->where('nombre', '!=', 'Desvinculado');
-                })
-                ->whereHas('situacion', function ($query) {
+                })->whereHas('situacion', function ($query) {
                     $query->where('Nombre', '!=', 'Desvinculado');
                 });
             })
+
+
             ->get();
 
         // 2. Marcar empleados que están de cumpleaños
