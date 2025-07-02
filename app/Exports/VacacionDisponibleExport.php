@@ -11,7 +11,13 @@ class VacacionDisponibleExport implements FromCollection, WithHeadings
 {
     public function collection()
     {
-        return Trabajador::with('empresa', 'cargo')
+        return Trabajador::with(['empresa', 'cargo', 'sistemaTrabajo', 'situacion'])
+            ->whereHas('sistemaTrabajo', function ($q) {
+                $q->where('nombre', '!=', 'Desvinculado');
+            })
+            ->whereHas('situacion', function ($q) {
+                $q->where('Nombre', '!=', 'Desvinculado');
+            })
             ->get()
             ->map(function ($trabajador) {
                 return [
@@ -24,6 +30,7 @@ class VacacionDisponibleExport implements FromCollection, WithHeadings
                 ];
             });
     }
+
 
     public function headings(): array
     {
