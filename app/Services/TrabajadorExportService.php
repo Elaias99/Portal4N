@@ -6,6 +6,7 @@ use App\Models\Trabajador;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\TrabajadorExport;
+use Illuminate\Http\Request;
 
 class TrabajadorExportService
 {
@@ -18,9 +19,10 @@ class TrabajadorExportService
     }
 
     // Método para exportar empleados en formato Excel
-    public function exportExcel()
+    public function exportExcel(Request $request)
     {
-        return Excel::download(new TrabajadorExport, 'empleados.xlsx');
+        $columnasSeleccionadas = $request->input('columnas', []); // array de columnas marcadas
+        return Excel::download(new TrabajadorExport($columnasSeleccionadas), 'empleados.xlsx');
     }
 
     // Método para exportar la cotización de un empleado en PDF

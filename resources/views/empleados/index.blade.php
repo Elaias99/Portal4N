@@ -14,7 +14,10 @@ $notificaciones = Auth::user()->unreadNotifications
 @endphp
 
 
+
+
 @section('content')
+
 <div class="container"> {{-- O si quieres ocupar todo el ancho: container-fluid --}}
 
 
@@ -132,9 +135,15 @@ $notificaciones = Auth::user()->unreadNotifications
                         <i class="fa-regular fa-file-excel me-2"></i> Exportar
                     </button>
                     <div class="dropdown-menu shadow-sm fade" aria-labelledby="exportDropdown">
-                        <a class="dropdown-item d-flex align-items-center" href="{{ route('empleados.exportExcel') }}">
+
+
+                        <a class="dropdown-item d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#modalExportarExcel">
                             <i class="fa-solid fa-file-excel text-success me-2"></i> Exportar a Excel
                         </a>
+
+
+
+
                         <a class="dropdown-item d-flex align-items-center" href="{{ route('empleados.exportPdf') }}">
                             <i class="fa-solid fa-file-pdf text-danger me-2"></i> Exportar a PDF
                         </a>
@@ -220,6 +229,8 @@ $notificaciones = Auth::user()->unreadNotifications
                         </div>
                     </div>
                 @include('partials.employee_modal', ['empleado' => $empleado])
+
+                @include('empleados.modal_exportar_excel')
                 @endforeach
             </div> <!-- fin .row del listado -->
         </div> <!-- fin .col-lg-10 -->

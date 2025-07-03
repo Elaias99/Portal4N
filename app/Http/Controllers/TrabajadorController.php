@@ -397,9 +397,9 @@ class TrabajadorController extends Controller
     }
 
     // Método para exportar Excel el listado de los empledos
-    public function exportExcel()
+    public function exportExcel(Request $request)
     {
-        return $this->exportService->exportExcel();
+        return $this->exportService->exportExcel($request);
     }
 
     //Método para exportar en formato PDF, las liquidaciones pero para cada empleado
