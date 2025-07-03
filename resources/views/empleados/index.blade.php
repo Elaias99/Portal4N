@@ -230,13 +230,14 @@ $notificaciones = Auth::user()->unreadNotifications
                     </div>
                 @include('partials.employee_modal', ['empleado' => $empleado])
 
-                @include('empleados.modal_exportar_excel')
+                
                 @endforeach
             </div> <!-- fin .row del listado -->
         </div> <!-- fin .col-lg-10 -->
     </div> <!-- fin .row -->
 </div> <!-- fin .container -->
 
+@include('empleados.modal_exportar_excel')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
