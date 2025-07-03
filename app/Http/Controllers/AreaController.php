@@ -25,7 +25,7 @@ class AreaController extends Controller
     {
         //
         $trabajadores = Trabajador::all();
-        return view('areas.create', compact('areas','trabajadores'));
+        return view('areas.create', compact('trabajadores'));
     }
 
     /**
@@ -59,7 +59,7 @@ class AreaController extends Controller
         //
         $area = Area::findOrFail($id);
         $trabajadores = Trabajador::all();
-        return view('areas.edit', compact('areas','trabajadores'));
+        return view('areas.edit', compact('trabajadores'));
     }
 
     /**
@@ -97,21 +97,62 @@ class AreaController extends Controller
             'trabajador_id' => 'required|exists:trabajadors,id',
         ]);
 
-        $trabajador = \App\Models\Trabajador::findOrFail($request->trabajador_id);
-        $trabajador->area_id = $id;
-        $trabajador->save();
+        $trabajador = Trabajador::findOrFail($request->trabajador_id);
+
+        if (is_null($trabajador->area_id)) {
+            // Asignar como área principal
+            $trabajador->area_id = $id;
+            $trabajador->save();
+        } else {
+            // Ya tiene un área principal, asignar como adicional
+            $trabajador->areasSecundarias()->syncWithoutDetaching([$id]);
+        }
 
         return redirect()->route('areas.index')->with('success', 'Trabajador asignado correctamente.');
     }
 
     public function quitar($areaId, $trabajadorId)
     {
-        $trabajador = Trabajador::where('id', $trabajadorId)->where('area_id', $areaId)->firstOrFail();
-        $trabajador->area_id = null;
-        $trabajador->save();
+        $trabajador = Trabajador::where('id', $trabajadorId)
+            ->where('area_id', $areaId)
+            ->first();
 
-        return redirect()->route('areas.index')->with('success', 'Trabajador quitado del área correctamente.');
+        if ($trabajador) {
+            $trabajador->area_id = null;
+            $trabajador->save();
+        } else {
+            // En caso de que sea un área secundaria
+            $trabajador = Trabajador::findOrFail($trabajadorId);
+            $trabajador->areasSecundarias()->detach($areaId);
+        }
+
+        return redirect()->route('areas.index')->with('success', 'Trabajador removido del área correctamente.');
     }
+
+
+
+
+
+    public function asignarSecundaria(Request $request, $areaId)
+    {
+        $request->validate([
+            'trabajador_id' => 'required|exists:trabajadors,id',
+        ]);
+
+        $trabajador = Trabajador::findOrFail($request->trabajador_id);
+        $trabajador->areasSecundarias()->syncWithoutDetaching([$areaId]);
+
+        return back()->with('success', 'Área secundaria asignada correctamente.');
+    }
+
+    public function quitarSecundaria($areaId, $trabajadorId)
+    {
+        $trabajador = Trabajador::findOrFail($trabajadorId);
+        $trabajador->areasSecundarias()->detach($areaId);
+
+        return back()->with('success', 'Área secundaria removida correctamente.');
+    }
+
 
 
 }

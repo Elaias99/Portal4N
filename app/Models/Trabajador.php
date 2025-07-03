@@ -50,6 +50,12 @@ class Trabajador extends Model
         return $this->belongsTo(Area::class, 'area_id');
     }
 
+    public function areasSecundarias()
+    {
+        return $this->belongsToMany(Area::class, 'area_trabajador');
+    }
+
+
 
     
     public function cargo() {

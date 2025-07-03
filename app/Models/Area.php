@@ -21,4 +21,10 @@ class Area extends Model
         return $this->hasMany(Reclamos::class);
     }
 
+    public function trabajadoresSecundarios()
+    {
+        return $this->belongsToMany(Trabajador::class, 'area_trabajador');
+    }
+
+
 }
