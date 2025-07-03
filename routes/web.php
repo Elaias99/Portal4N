@@ -232,6 +232,8 @@ Route::get('/tracking/dashboard', [TrackingDashboardController::class, 'index'])
 
 // Áreas
 Route::post('/areas/{area}/asignar', [AreaController::class, 'asignar'])->name('areas.asignar');
+Route::post('/areas/{area}/quitar-trabajador/{trabajador}', [AreaController::class, 'quitar'])->name('areas.quitar');
+
 Route::resource('areas', 'App\Http\Controllers\AreaController')->middleware('auth');
 
 

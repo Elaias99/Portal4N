@@ -104,4 +104,14 @@ class AreaController extends Controller
         return redirect()->route('areas.index')->with('success', 'Trabajador asignado correctamente.');
     }
 
+    public function quitar($areaId, $trabajadorId)
+    {
+        $trabajador = Trabajador::where('id', $trabajadorId)->where('area_id', $areaId)->firstOrFail();
+        $trabajador->area_id = null;
+        $trabajador->save();
+
+        return redirect()->route('areas.index')->with('success', 'Trabajador quitado del área correctamente.');
+    }
+
+
 }
