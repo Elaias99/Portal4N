@@ -7,9 +7,13 @@
         <div class="modal-header bg-light">
           <h5 class="modal-title font-weight-bold" id="modalExportarExcelLabel">Seleccionar columnas a exportar</h5>
 
-          <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
-            <span aria-hidden="true">&times;</span>
+          <button type="button"
+                  class="btn btn-link text-dark position-absolute end-0 top-0 m-3 p-0 border-0"
+                  data-dismiss="modal" aria-label="Cerrar"
+                  style="font-size: 1.2rem;">
+              <i class="fas fa-times"></i>
           </button>
+
           
         </div>
 
@@ -103,7 +107,8 @@
 </script>
 
 <!-- jQuery (requerido por Bootstrap 4) -->
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
 
 <!-- Popper.js (necesario para tooltips, modals, dropdowns de Bootstrap) -->
 <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>

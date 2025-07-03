@@ -137,7 +137,8 @@ $notificaciones = Auth::user()->unreadNotifications
                     <div class="dropdown-menu shadow-sm fade" aria-labelledby="exportDropdown">
 
 
-                        <a class="dropdown-item d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#modalExportarExcel">
+                        <a class="dropdown-item d-flex align-items-center" href="#" data-toggle="modal" data-target="#modalExportarExcel">
+
                             <i class="fa-solid fa-file-excel text-success me-2"></i> Exportar a Excel
                         </a>
 
