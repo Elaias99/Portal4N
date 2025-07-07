@@ -23,6 +23,7 @@ use App\Http\Controllers\PagoController;
 use App\Http\Controllers\ReclamoController;
 use App\Http\Controllers\ComunaController;
 use App\Http\Controllers\TrackingDashboardController;
+use App\Http\Controllers\ContratoController;
 
 use App\Http\Controllers\TrackingProductoController;
 
@@ -202,6 +203,39 @@ Route::resource('regions', 'App\Http\Controllers\RegionController')->middleware(
 Route::resource('tipo_vestimentas', 'App\Http\Controllers\TipoVestimentaController')->middleware('auth');
 Route::resource('tallas', 'App\Http\Controllers\TallaController')->middleware('auth');
 Route::resource('hijos', 'App\Http\Controllers\HijoController')->middleware('auth');
+
+
+// 📄 Descargar archivo PDF del contrato
+Route::get('contratos/{id}/download', [ContratoController::class, 'download'])
+    ->name('contratos.download')
+    ->middleware('auth');
+
+// 📝 Mostrar formulario para registrar contrato (recibe ID del trabajador)
+Route::get('contratos/create/{trabajador}', [ContratoController::class, 'create'])
+    ->name('contratos.create')
+    ->middleware('auth');
+
+// 💾 Guardar contrato para trabajador (POST con ID del trabajador)
+Route::post('contratos/{trabajador}', [ContratoController::class, 'store'])
+    ->name('contratos.store')
+    ->middleware('auth');
+
+Route::get('contratos/{contrato}/edit', [ContratoController::class, 'edit'])
+    ->name('contratos.edit')
+    ->middleware('auth');
+
+Route::put('contratos/{contrato}', [ContratoController::class, 'update'])
+    ->name('contratos.update')
+    ->middleware('auth');
+
+
+// 📋 Otras rutas de tipo resource (index y destroy)
+Route::resource('contratos', ContratoController::class)
+    ->only(['index', 'destroy'])
+    ->middleware('auth');
+
+
+
 
 //////////////////// Tracking /////////////
 Route::resource('escaneo', 'App\Http\Controllers\ProductoEscaneadoController')->middleware('auth');

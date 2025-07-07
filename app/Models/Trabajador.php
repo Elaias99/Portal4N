@@ -55,6 +55,10 @@ class Trabajador extends Model
         return $this->belongsToMany(Area::class, 'area_trabajador');
     }
 
+    public function contratos()
+    {
+        return $this->hasMany(Contrato::class);
+    }
 
 
     
