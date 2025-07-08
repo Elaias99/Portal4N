@@ -5,10 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Trabajador extends Model
 {
     use HasFactory;
+
+    use SoftDeletes;
 
     protected $table = 'trabajadors'; // O ajusta el nombre si es diferente
 
