@@ -12,7 +12,8 @@ class ContratoController extends Controller
 {
     public function index()
     {
-        $trabajadores = Trabajador::with('contratos')
+        $trabajadores = Trabajador::with(['contratos'])
+            ->whereNull('deleted_at')
             ->where(function ($query) {
                 $query->where('ContratoFirmado', 'Sí')
                     ->orWhere('AnexoContrato', 'Sí')
@@ -25,11 +26,16 @@ class ContratoController extends Controller
         return view('contratos.index', compact('trabajadores'));
     }
 
+
     public function create($trabajadorId)
     {
-        $trabajador = Trabajador::findOrFail($trabajadorId);
+        $trabajador = Trabajador::where('id', $trabajadorId)
+            ->whereNull('deleted_at')
+            ->firstOrFail();
+
         return view('contratos.create', compact('trabajador'));
     }
+
 
     public function store(Request $request, $trabajadorId)
     {
@@ -56,8 +62,9 @@ class ContratoController extends Controller
             'firmado_por' => $request->firmado_por,
         ]);
 
-        // 🔄 Sincronización con tabla trabajadors
-        $trabajador = Trabajador::findOrFail($trabajadorId);
+        $trabajador = Trabajador::where('id', $trabajadorId)
+            ->whereNull('deleted_at')
+            ->firstOrFail();
 
         if ($request->tipo === 'Contrato' && $request->estado === 'Firmado') {
             $trabajador->ContratoFirmado = 'Sí';
@@ -72,11 +79,16 @@ class ContratoController extends Controller
         return redirect()->route('contratos.index')->with('success', 'Contrato registrado correctamente.');
     }
 
+
     public function edit($id)
     {
-        $contrato = Contrato::with('trabajador')->findOrFail($id);
+        $contrato = Contrato::with(['trabajador' => function ($q) {
+            $q->whereNull('deleted_at');
+        }])->findOrFail($id);
+
         return view('contratos.edit', compact('contrato'));
     }
+
 
     public function update(Request $request, $id)
     {

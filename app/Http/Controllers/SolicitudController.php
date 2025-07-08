@@ -20,15 +20,17 @@ class SolicitudController extends Controller
     {
         $user = Auth::user();
         $estado = $request->get('estado');
-        $jefeId = $user->jefe->id ?? null; // Obtener el ID del jefe si existe
+        $jefeId = $user->jefe->id ?? null;
 
-        // Si el usuario tiene un jefe, es un "jefe de área"
         if ($jefeId) {
-            // Filtrar solo las solicitudes de los empleados bajo este jefe
-            $solicitudes = Solicitud::with('trabajador')
-                ->whereHas('trabajador', function ($query) use ($jefeId) {
-                    $query->where('id_jefe', $jefeId);
+            $solicitudes = Solicitud::whereHas('trabajador', function ($q) use ($jefeId) {
+                    $q->where('id_jefe', $jefeId)
+                    ->whereNull('deleted_at');
                 })
+                ->with(['trabajador' => function ($q) use ($jefeId) {
+                    $q->where('id_jefe', $jefeId)
+                    ->whereNull('deleted_at');
+                }])
                 ->when($estado, function ($query, $estado) {
                     return $query->where('estado', $estado);
                 })
@@ -36,8 +38,12 @@ class SolicitudController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
         } else {
-            // Si el usuario no es un jefe, mostrar todas las solicitudes (asumiendo que es admin)
-            $solicitudes = Solicitud::with('trabajador')
+            $solicitudes = Solicitud::whereHas('trabajador', function ($q) {
+                    $q->whereNull('deleted_at');
+                })
+                ->with(['trabajador' => function ($q) {
+                    $q->whereNull('deleted_at');
+                }])
                 ->when($estado, function ($query, $estado) {
                     return $query->where('estado', $estado);
                 })
@@ -48,6 +54,7 @@ class SolicitudController extends Controller
 
         return view('solicitudes.index', compact('solicitudes'));
     }
+
 
 
 
@@ -257,59 +264,63 @@ class SolicitudController extends Controller
 
 
 
-
-
-
-
-
-
-
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////// SOLICITUDES SOLO DE VACACIONES /////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     //Método para mostrar todas las solicitudes de vacaciones que ha echo el empleado
-    // Método para mostrar todas las solicitudes de vacaciones que ha hecho el empleado
     public function vacaciones(Request $request)
     {
         $user = Auth::user();
         $estado = $request->get('estado');
-        $jefeId = $user->jefe->id ?? null; // Obtener el ID del jefe si existe
+        $jefeId = $user->jefe->id ?? null;
 
-        // Si el usuario tiene rol 'admin', puede ver todas las solicitudes
         if ($user->roles->contains('name', 'admin')) {
+            // Admin ve todas las solicitudes de vacaciones con trabajadores no eliminados
             $solicitudes = Solicitud::where('campo', 'Vacaciones')
+                ->whereHas('trabajador', function ($q) {
+                    $q->whereNull('deleted_at');
+                })
+                ->with(['trabajador' => function ($q) {
+                    $q->whereNull('deleted_at');
+                }])
+                ->when($estado, function ($query, $estado) {
+                    return $query->where('estado', $estado);
+                })
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } elseif ($jefeId) {
+            // Jefe ve solo solicitudes de sus trabajadores activos
+            $solicitudes = Solicitud::where('campo', 'Vacaciones')
+                ->whereHas('trabajador', function ($q) use ($jefeId) {
+                    $q->where('id_jefe', $jefeId)
+                    ->whereNull('deleted_at');
+                })
+                ->with(['trabajador' => function ($q) use ($jefeId) {
+                    $q->where('id_jefe', $jefeId)
+                    ->whereNull('deleted_at');
+                }])
                 ->when($estado, function ($query, $estado) {
                     return $query->where('estado', $estado);
                 })
                 ->orderBy('created_at', 'desc')
                 ->get();
         } else {
-            // Si el usuario tiene un jefe, mostrar solo las solicitudes de sus empleados directos
-            if ($jefeId) {
-                $solicitudes = Solicitud::where('campo', 'Vacaciones')
-                    ->whereHas('trabajador', function ($query) use ($jefeId) {
-                        $query->where('id_jefe', $jefeId);
-                    })
-                    ->when($estado, function ($query, $estado) {
-                        return $query->where('estado', $estado);
-                    })
-                    ->orderBy('created_at', 'desc')
-                    ->get();
-            } else {
-                // Si el usuario no es jefe y no es admin, devolver solicitudes vacías
-                $solicitudes = collect();
-            }
+            // No es admin ni jefe
+            $solicitudes = collect();
         }
 
-        // Asociar días solicitados directamente desde la columna 'dias'
+        // Añadir campo de días laborales solicitados
         $solicitudes->each(function ($solicitud) {
             $solicitud->dias_laborales = $solicitud->vacacion ? $solicitud->vacacion->dias : 0;
         });
 
         return view('solicitudes.vacaciones', compact('solicitudes'));
     }
+
+
+
 
 
 
@@ -373,11 +384,6 @@ class SolicitudController extends Controller
         }
 
         $vacacion->save();
-
-        
-
-
-
         // Notificar solo si el estado cambió a "aprobado"
         if ($notificar) {
             $solicitud->trabajador->user->notify(new SolicitudActualizada('aprobada', $solicitud));
@@ -385,8 +391,6 @@ class SolicitudController extends Controller
 
             $correoDestino = resolveCorreoNotificacion($solicitud->trabajador->user);
             Mail::to($correoDestino)->send(new EstadoVacacionesActualizado($solicitud, 'aprobada', $pdfPath));
-
-
 
         }
 

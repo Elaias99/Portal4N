@@ -24,7 +24,16 @@
 
     <!-- Primera copia -->
     <div class="header">
-        <img src="{{ asset('storage/' . $solicitud->trabajador->empresa->logo) }}" alt="Logo de la Empresa" class="logo">
+
+        @php
+            $logoPath = storage_path('app/public/' . $solicitud->trabajador->empresa->logo);
+        @endphp
+
+        @if(file_exists($logoPath))
+            <img src="data:image/png;base64,{{ base64_encode(file_get_contents($logoPath)) }}" alt="Logo de la Empresa" class="logo">
+        @endif
+
+        
         <div class="title">
 
             SOLICITUD DE {{ strtoupper(
@@ -109,7 +118,14 @@
 
     <!-- Segunda copia (idéntica a la primera) -->
     <div class="header">
-        <img src="{{ asset('storage/' . $solicitud->trabajador->empresa->logo) }}" alt="Logo de la Empresa" class="logo">
+        @php
+            $logoPath = storage_path('app/public/' . $solicitud->trabajador->empresa->logo);
+        @endphp
+
+        @if(file_exists($logoPath))
+            <img src="data:image/png;base64,{{ base64_encode(file_get_contents($logoPath)) }}" alt="Logo de la Empresa" class="logo">
+        @endif
+
         <div class="title">
 
             SOLICITUD DE {{ strtoupper(

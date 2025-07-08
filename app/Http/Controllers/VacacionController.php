@@ -291,19 +291,26 @@ class VacacionController extends Controller
     //Este método permite al administrador ver una lista completa de todos los archivos de respaldo
     public function mostrarArchivosRespaldo()
     {
-        // Obtener respaldos de vacaciones con archivos adjuntos del administrador
         $vacacionesConRespaldo = Vacacion::whereNotNull('archivo_respuesta_admin')
-            ->with('trabajador')
+            ->whereHas('trabajador', function ($q) {
+                $q->whereNull('deleted_at');
+            })
+            ->with(['trabajador' => function ($q) {
+                $q->whereNull('deleted_at');
+            }])
             ->get()
-            ->groupBy('trabajador_id'); // Agrupamos por trabajador_id
+            ->groupBy('trabajador_id');
 
-        // Obtener respaldos de solicitudes de cambios con archivos adjuntos del administrador
         $solicitudesConRespaldo = Solicitud::whereNotNull('archivo_admin')
-            ->with('trabajador')
+            ->whereHas('trabajador', function ($q) {
+                $q->whereNull('deleted_at');
+            })
+            ->with(['trabajador' => function ($q) {
+                $q->whereNull('deleted_at');
+            }])
             ->get()
-            ->groupBy('trabajador_id'); // Agrupamos por trabajador_id
+            ->groupBy('trabajador_id');
 
-        // Crear una colección de empleados con sus archivos de respaldo
         $empleadosConRespaldo = [];
         foreach ($vacacionesConRespaldo as $trabajador_id => $vacaciones) {
             $empleadosConRespaldo[$trabajador_id]['vacaciones'] = $vacaciones;
@@ -312,9 +319,9 @@ class VacacionController extends Controller
             $empleadosConRespaldo[$trabajador_id]['modificaciones'] = $solicitudes;
         }
 
-        // Pasar la colección de empleados con sus archivos de respaldo a la vista
         return view('admin.archivos_respaldo', compact('empleadosConRespaldo'));
     }
+
 
 
     public function exportarDisponibilidad()

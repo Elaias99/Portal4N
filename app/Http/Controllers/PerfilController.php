@@ -58,30 +58,24 @@ class PerfilController extends Controller
 
     public function show()
     {
-        // Obtener el usuario autenticado
         $user = Auth::user();
-
-        // Resolver el correo corporativo asociado al administrador
         $resolvedEmail = resolvePerfilEmail($user->email);
 
-        // Buscar el trabajador asociado al correo resuelto
         $trabajador = \App\Models\Trabajador::whereHas('user', function ($query) use ($resolvedEmail) {
-            $query->where('email', $resolvedEmail);
-        })->first();
+                $query->where('email', $resolvedEmail);
+            })
+            ->whereNull('deleted_at') // evitar trabajador eliminado
+            ->first();
 
-
-
-        // Si no se encuentra un trabajador, redirigir con un error
         if (!$trabajador) {
             return redirect('/')->with('error', 'No se pudo encontrar el perfil asociado.');
         }
 
         $reclamosArea = \App\Models\Reclamos::where('area_id', $trabajador->area_id)->get();
 
-
-        // Retornar la vista del perfil con el trabajador encontrado
         return view('perfiles.perfil', compact('trabajador', 'reclamosArea'));
     }
+
 
 
 

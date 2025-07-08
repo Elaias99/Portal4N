@@ -7,33 +7,21 @@ use Illuminate\Http\Request;
 
 class AreaController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        //
         $areas = Area::all();
-        $trabajadores = Trabajador::all();
-        return view('areas.index', compact('areas','trabajadores'));
+        $trabajadores = Trabajador::whereNull('deleted_at')->get(); // solo activos
+        return view('areas.index', compact('areas', 'trabajadores'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        //
-        $trabajadores = Trabajador::all();
+        $trabajadores = Trabajador::whereNull('deleted_at')->get(); // solo activos
         return view('areas.create', compact('trabajadores'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
         $request->validate([
             'nombre' => 'required|string|max:255|unique:areas,nombre',
         ]);
@@ -43,31 +31,20 @@ class AreaController extends Controller
         return redirect()->route('areas.index')->with('success', 'Área creada correctamente.');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
         //
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(string $id)
     {
-        //
         $area = Area::findOrFail($id);
-        $trabajadores = Trabajador::all();
+        $trabajadores = Trabajador::whereNull('deleted_at')->get(); // solo activos
         return view('areas.edit', compact('trabajadores'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, string $id)
     {
-        //
         $area = Area::findOrFail($id);
 
         $request->validate([
@@ -79,12 +56,8 @@ class AreaController extends Controller
         return redirect()->route('areas.index')->with('success', 'Área actualizada correctamente.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
-        //
         $area = Area::findOrFail($id);
         $area->delete();
 
@@ -97,14 +70,14 @@ class AreaController extends Controller
             'trabajador_id' => 'required|exists:trabajadors,id',
         ]);
 
-        $trabajador = Trabajador::findOrFail($request->trabajador_id);
+        $trabajador = Trabajador::where('id', $request->trabajador_id)
+            ->whereNull('deleted_at')
+            ->firstOrFail();
 
         if (is_null($trabajador->area_id)) {
-            // Asignar como área principal
             $trabajador->area_id = $id;
             $trabajador->save();
         } else {
-            // Ya tiene un área principal, asignar como adicional
             $trabajador->areasSecundarias()->syncWithoutDetaching([$id]);
         }
 
@@ -115,23 +88,21 @@ class AreaController extends Controller
     {
         $trabajador = Trabajador::where('id', $trabajadorId)
             ->where('area_id', $areaId)
+            ->whereNull('deleted_at')
             ->first();
 
         if ($trabajador) {
             $trabajador->area_id = null;
             $trabajador->save();
         } else {
-            // En caso de que sea un área secundaria
-            $trabajador = Trabajador::findOrFail($trabajadorId);
+            $trabajador = Trabajador::where('id', $trabajadorId)
+                ->whereNull('deleted_at')
+                ->firstOrFail();
             $trabajador->areasSecundarias()->detach($areaId);
         }
 
         return redirect()->route('areas.index')->with('success', 'Trabajador removido del área correctamente.');
     }
-
-
-
-
 
     public function asignarSecundaria(Request $request, $areaId)
     {
@@ -139,7 +110,10 @@ class AreaController extends Controller
             'trabajador_id' => 'required|exists:trabajadors,id',
         ]);
 
-        $trabajador = Trabajador::findOrFail($request->trabajador_id);
+        $trabajador = Trabajador::where('id', $request->trabajador_id)
+            ->whereNull('deleted_at')
+            ->firstOrFail();
+
         $trabajador->areasSecundarias()->syncWithoutDetaching([$areaId]);
 
         return back()->with('success', 'Área secundaria asignada correctamente.');
@@ -147,12 +121,12 @@ class AreaController extends Controller
 
     public function quitarSecundaria($areaId, $trabajadorId)
     {
-        $trabajador = Trabajador::findOrFail($trabajadorId);
+        $trabajador = Trabajador::where('id', $trabajadorId)
+            ->whereNull('deleted_at')
+            ->firstOrFail();
+
         $trabajador->areasSecundarias()->detach($areaId);
 
         return back()->with('success', 'Área secundaria removida correctamente.');
     }
-
-
-
 }

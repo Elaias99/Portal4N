@@ -11,10 +11,18 @@ class TallaController extends Controller
 {
     public function index()
     {
-        // Obtiene todas las tallas con sus relaciones
-        $tallas = Talla::with(['trabajador', 'tipoVestimenta'])->get();
+        $tallas = Talla::whereHas('trabajador', function ($q) {
+            $q->whereNull('deleted_at');
+        })->with([
+            'trabajador' => function ($q) {
+                $q->whereNull('deleted_at');
+            },
+            'tipoVestimenta'
+        ])->get();
+
         return view('tallas.index', compact('tallas'));
     }
+
 
     public function create()
     {
