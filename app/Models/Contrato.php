@@ -12,7 +12,7 @@ class Contrato extends Model
     protected $table = 'contratos';
 
     protected $fillable = ['trabajador_id',
-    'tipo','estado','archivo','firmado_por'];
+    'tipo','estado','archivo','firmado_por','fecha_inicio_contrato'];
 
     public function trabajador()
     {

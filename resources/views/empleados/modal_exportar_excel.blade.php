@@ -40,7 +40,7 @@
                 <div class="form-check"><input class="form-check-input" type="checkbox" name="columnas[]" value="turno" checked><label class="form-check-label">Turno</label></div>
                 <div class="form-check"><input class="form-check-input" type="checkbox" name="columnas[]" value="sistema_trabajo" checked><label class="form-check-label">Sistema de Trabajo</label></div>
                 <div class="form-check"><input class="form-check-input" type="checkbox" name="columnas[]" value="tipo_contrato" checked><label class="form-check-label">Tipo de Contrato</label></div>
-                <div class="form-check"><input class="form-check-input" type="checkbox" name="columnas[]" value="anexo_contrato" checked><label class="form-check-label">Anexo Contrato</label></div>
+  
                 <div class="form-check"><input class="form-check-input" type="checkbox" name="columnas[]" value="situacion" checked><label class="form-check-label">Situación</label></div>
                 <div class="form-check"><input class="form-check-input" type="checkbox" name="columnas[]" value="casino" checked><label class="form-check-label">Casino</label></div>
                 <div class="form-check"><input class="form-check-input" type="checkbox" name="columnas[]" value="fecha_nacimiento" checked><label class="form-check-label">Fecha de Nacimiento</label></div>

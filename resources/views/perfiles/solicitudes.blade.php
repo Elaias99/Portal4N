@@ -20,8 +20,6 @@
         'turno',
         'situacion',
         'comuna',
-        'contrato_firmado',
-        'anexo_contrato'
     ]; // Lista actualizada de campos
 @endphp
     @if($solicitudes->whereIn('campo', $modificacionCampos)->isEmpty())

@@ -23,8 +23,6 @@
                 <option value="turno">Turno</option>
                 <option value="situacion">Situación Laboral</option>
                 <option value="comuna">Comuna</option>
-                <option value="contrato_firmado">Contrato Firmado</option>
-                <option value="anexo_contrato">Anexo de Contrato</option>
             </select>
         </div>
 

@@ -8,6 +8,14 @@
 </div>
 
 <div class="form-group">
+    <label for="fecha_inicio_contrato">Fecha de firma</label>
+    <input type="date" name="fecha_inicio_contrato" id="fecha_inicio_contrato" class="form-control"
+           value="{{ old('fecha_inicio_contrato', isset($contrato->fecha_inicio_contrato) ? \Carbon\Carbon::parse($contrato->fecha_inicio_contrato)->format('Y-m-d') : '') }}"
+           required>
+</div>
+
+
+<div class="form-group">
     <label for="estado">Estado</label>
     <select name="estado" id="estado" class="form-control" required>
         <option value="">-- Seleccione --</option>

@@ -38,16 +38,16 @@ $notificaciones = Auth::user()->unreadNotifications
                 <h5 class="fw-bold">Accesos rápidos</h5>
 
                 <div class="d-grid gap-2 mt-2">
-                    <a href="{{ route('clasificacion-operativa.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Operadores">
-                        <i class="fa-solid fa-truck-fast me-2"></i> Operadores
+                    <a href="{{ route('contratos.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Contratos">
+                        <i class="fa-solid fa-file-signature me-2"></i> Contratos
                     </a>
 
-                    <a href="{{ route('bultos.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Bultos">
-                        <i class="fa-solid fa-box-open me-2"></i> Bultos
+                    <a href="{{ route('historial-vacacion.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Vacaciones">
+                        <i class="fa-solid fa-plane-departure me-2"></i> Vacaciones
                     </a>
 
-                    <a href="{{ route('proveedores.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Proveedores">
-                        <i class="fa-solid fa-user-tie"></i> Proveedores
+                    <a href="{{ route('areas.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="areas">
+                        <i class="fa-solid fa-person me-2"></i> Areas
                     </a>
 
 
@@ -102,10 +102,7 @@ $notificaciones = Auth::user()->unreadNotifications
                             <input class="form-check-input" type="checkbox" name="casino" value="1" {{ request('casino') ? 'checked' : '' }}>
                             <label class="form-check-label">Acceso al Casino</label>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="contrato_firmado" value="1" {{ request('contrato_firmado') ? 'checked' : '' }}>
-                            <label class="form-check-label">Contrato Firmado</label>
-                        </div>
+
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="mostrar_desvinculados" value="1" {{ request('mostrar_desvinculados') ? 'checked' : '' }}>
                             <label class="form-check-label">Mostrar desvinculados</label>

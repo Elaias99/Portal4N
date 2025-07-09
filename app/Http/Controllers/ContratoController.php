@@ -44,7 +44,9 @@ class ContratoController extends Controller
             'tipo' => 'required|in:Contrato,Anexo',
             'estado' => 'required|in:Firmado,Pendiente,Rechazado',
             'archivo' => 'nullable|file|mimes:pdf|max:2048',
-            'firmado_por' => 'nullable|string|max:255'
+            'firmado_por' => 'nullable|string|max:255',
+            'fecha_inicio_contrato' => 'required|date',
+
         ]);
 
         $archivoPath = null;
@@ -61,6 +63,8 @@ class ContratoController extends Controller
             'estado' => $request->estado,
             'archivo' => $archivoPath,
             'firmado_por' => $request->firmado_por,
+            'fecha_inicio_contrato' => $request->fecha_inicio_contrato,
+
         ]);
 
         $trabajador = Trabajador::where('id', $trabajadorId)
@@ -87,7 +91,9 @@ class ContratoController extends Controller
             'tipo' => 'required|in:Contrato,Anexo',
             'estado' => 'required|in:Firmado,Pendiente,Rechazado',
             'archivo' => 'nullable|file|mimes:pdf|max:2048',
-            'firmado_por' => 'nullable|string|max:255'
+            'firmado_por' => 'nullable|string|max:255',
+            'fecha_inicio_contrato' => 'required|date',
+
         ]);
 
         $contrato = Contrato::findOrFail($id);
@@ -108,6 +114,8 @@ class ContratoController extends Controller
             'estado' => $request->estado,
             'archivo' => $archivoPath,
             'firmado_por' => $request->firmado_por,
+            'fecha_inicio_contrato' => $request->fecha_inicio_contrato,
+
         ]);
 
         return redirect()->route('contratos.index')->with('success', 'Contrato actualizado correctamente.');
