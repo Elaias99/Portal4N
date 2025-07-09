@@ -15,7 +15,6 @@
                 <option value="cargo">Cargo</option>
                 <option value="salario_bruto">Salario Bruto</option>
                 <option value="fecha_inicio_trabajo">Fecha de Ingreso</option>
-                <option value="fecha_inicio_contrato">Fecha de Inicio de Contrato</option>
                 <option value="banco">Banco</option>
                 <option value="numero_cuenta">Número de Cuenta</option>
                 <option value="tipo_cuenta">Tipo de Cuenta</option>

@@ -7,21 +7,21 @@
     $camposObligatorios = $esCreacion 
         ? [
             'Rut', 'Nombre', 'ApellidoPaterno', 'ApellidoMaterno',
-            'FechaNacimiento', 'CorreoPersonal', 'Casino', 'ContratoFirmado',
-            'AnexoContrato', 'empresa_id', 'cargo_id', 'situacion_id',
+            'FechaNacimiento', 'CorreoPersonal', 'Casino',
+             'empresa_id', 'cargo_id', 'situacion_id',
             'estado_civil_id', 'comuna_id', 'afp_id', 'salud_id',
             'sistema_trabajo_id', 'turno_id', 'salario_bruto', 'calle',
             'numero_celular', 'nombre_emergencia', 'contacto_emergencia',
-            'fecha_inicio_trabajo', 'fecha_inicio_contrato',
+            'fecha_inicio_trabajo',
             'banco', 'numero_cuenta', 'tipo_cuenta', 'Rut_Empresa', 'id_jefe'
         ]
         : [
             'Rut', 'Nombre', 'ApellidoPaterno', 'ApellidoMaterno',
-            'FechaNacimiento', 'Casino', 'ContratoFirmado', 'AnexoContrato',
+            'FechaNacimiento', 'Casino', 
             'empresa_id', 'cargo_id', 'situacion_id',
             'estado_civil_id', 'comuna_id', 'afp_id', 'salud_id',
             'sistema_trabajo_id', 'turno_id', 'salario_bruto', 'calle',
-            'numero_celular', 'fecha_inicio_trabajo', 'fecha_inicio_contrato',
+            'numero_celular', 'fecha_inicio_trabajo',
             'id_jefe'
         ];
 
@@ -360,34 +360,7 @@
                                     <span class="text-danger">{{ $errors->first('Casino') }}</span>
                                 @endif
                             </div>
-                            <div class="col-md-6 form-group">
-                                <label for="ContratoFirmado">Contrato Firmado {!! mostrarAsterisco('ContratoFirmado', $camposObligatorios) !!}</label>
-                                <select name="ContratoFirmado" id="ContratoFirmado" class="form-control">
-                                    <option value="Sí" {{ (old('ContratoFirmado') == 'Sí' || (isset($empleado->ContratoFirmado) && $empleado->ContratoFirmado == 'Sí')) ? 'selected' : '' }}>Sí</option>
-                                    <option value="No" {{ (old('ContratoFirmado') == 'No' || (isset($empleado->ContratoFirmado) && $empleado->ContratoFirmado == 'No')) ? 'selected' : '' }}>No</option>
-                                </select>
-                                @if ($errors->has('ContratoFirmado'))
-                                    <span class="text-danger">{{ $errors->first('ContratoFirmado') }}</span>
-                                @endif
-                            </div>
-                            <div class="col-md-6 form-group">
-                                <label for="fecha_inicio_contrato">Fecha inicio contrato {!! mostrarAsterisco('fecha_inicio_contrato', $camposObligatorios) !!}</label>
-                                <input type="date" name="fecha_inicio_contrato" id="fecha_inicio_contrato" class="form-control" value="{{ isset($empleado->fecha_inicio_contrato) ? $empleado->fecha_inicio_contrato->format('Y-m-d') : old('fecha_inicio_contrato') }}">
-                                @if ($errors->has('fecha_inicio_contrato'))
-                                    <span class="text-danger">{{ $errors->first('fecha_inicio_contrato') }}</span>
-                                @endif
-                            </div>
-                            <div class="col-md-6 form-group">
-                                <label for="AnexoContrato">Anexo Contrato {!! mostrarAsterisco('AnexoContrato', $camposObligatorios) !!}</label>
-                                <select name="AnexoContrato" id="AnexoContrato" class="form-control">
-                                    <option value="Sí" {{ (old('AnexoContrato') == 'Sí' || (isset($empleado->AnexoContrato) && $empleado->AnexoContrato == 'Sí')) ? 'selected' : '' }}>Sí</option>
-                                    <option value="No" {{ (old('AnexoContrato') == 'No' || (isset($empleado->AnexoContrato) && $empleado->AnexoContrato == 'No')) ? 'selected' : '' }}>No</option>
-                                </select>
-                                @if ($errors->has('AnexoContrato'))
-                                    <span class="text-danger">{{ $errors->first('AnexoContrato') }}</span>
-                                @endif
-                            </div>
-
+                            
 
                             <div class="col-md-6 form-group">
                                 <label for="id_jefe">Jefe de Área {!! mostrarAsterisco('id_jefe', $camposObligatorios) !!}</label>

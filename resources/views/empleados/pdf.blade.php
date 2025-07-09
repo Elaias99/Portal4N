@@ -75,8 +75,7 @@
                 <th style="width: 80px;">Salud</th>
                 <th style="width: 40px;">Casino</th>
                 <th style="width: 60px;">Estado Civil</th>
-                <th style="width: 40px;">Contrato Firmado</th>
-                <th style="width: 40px;">Anexo Contrato</th>
+
                 <th style="width: 60px;">Situación</th>
             </tr>
         </thead>
@@ -93,8 +92,7 @@
                     <td>{{ $empleado->salud->Nombre }}</td>
                     <td>{{ $empleado->Casino }}</td>
                     <td>{{ $empleado->estadoCivil->Nombre }}</td>
-                    <td>{{ $empleado->ContratoFirmado }}</td>
-                    <td>{{ $empleado->AnexoContrato }}</td>
+
                     <td>{{ $empleado->situacion->Nombre }}</td>
                 </tr>
             @endforeach

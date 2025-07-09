@@ -12,7 +12,6 @@
         'cargo', 
         'salario_bruto', 
         'fecha_ingreso', 
-        'fecha_inicio_contrato',
         'banco',
         'numero_cuenta',
         'tipo_cuenta',

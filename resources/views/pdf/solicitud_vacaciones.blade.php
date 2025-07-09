@@ -64,10 +64,7 @@
                 <td><strong>Cargo:</strong></td>
                 <td>{{ $solicitud->trabajador->cargo->Nombre }}</td>
             </tr>
-            <tr>
-                <td><strong>Fecha Contrato:</strong></td>
-                <td>{{ \Carbon\Carbon::parse($solicitud->trabajador->fecha_inicio_contrato)->format('d/m/Y') }}</td>
-            </tr>
+ 
             <tr>
                 <td><strong>Fecha Solicitud:</strong></td>
                 <td>{{ $solicitud->created_at->format('d/m/Y') }}</td>
@@ -156,10 +153,7 @@
                 <td><strong>Cargo:</strong></td>
                 <td>{{ $solicitud->trabajador->cargo->Nombre }}</td>
             </tr>
-            <tr>
-                <td><strong>Fecha Contrato:</strong></td>
-                <td>{{ \Carbon\Carbon::parse($solicitud->trabajador->fecha_inicio_contrato)->format('d/m/Y') }}</td>
-            </tr>
+
             <tr>
                 <td><strong>Fecha Solicitud:</strong></td>
                 <td>{{ $solicitud->created_at->format('d/m/Y') }}</td>

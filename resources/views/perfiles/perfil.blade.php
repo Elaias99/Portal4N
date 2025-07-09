@@ -222,18 +222,9 @@ $notificaciones = Auth::user()->unreadNotifications
                                             <th><i class="fa-solid fa-ring me-2"></i>Estado Civil</th>
                                             <td>{{ $trabajador->estadoCivil->Nombre }}</td>
                                         </tr>
-                                        <tr>
-                                            <th><i class="fa-solid fa-check me-2"></i>Contrato Firmado</th>
-                                            <td>{{ $trabajador->ContratoFirmado }}</td>
-                                        </tr>
-                                        <tr>
-                                            <th><i class="fa-solid fa-calendar-check me-2"></i>Fecha Inicio Contrato</th>
-                                            <td>{{ $trabajador->fecha_inicio_contrato->translatedFormat('d F, Y') }}</td>
-                                        </tr>
-                                        <tr>
-                                            <th><i class="fa-solid fa-file-signature me-2"></i>Anexo Contrato</th>
-                                            <td>{{ $trabajador->AnexoContrato }}</td>
-                                        </tr>
+
+
+
                                         <tr>
                                             <th><i class="fa-solid fa-clipboard-list me-2"></i>Situación</th>
                                             <td>{{ $trabajador->situacion->Nombre }}</td>

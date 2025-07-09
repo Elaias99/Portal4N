@@ -55,10 +55,9 @@ class TrabajadorController extends Controller
         $empresaId = $request->input('empresa_id');
         $situacionId = $request->input('situacion_id');
         $casino = $request->has('casino') ? 'Sí' : null;
-        $contratoFirmado = $request->has('contrato_firmado') ? 'Sí' : null;
 
         // Comprobar si hay algún filtro activo
-        $hayFiltro = $query || $cargoId || $empresaId || $situacionId || $casino || $contratoFirmado;
+        $hayFiltro = $query || $cargoId || $empresaId || $situacionId || $casino ;
 
         $empleados = Trabajador::when($query, function ($queryBuilder) use ($query) {
                 $queryBuilder->where('Nombre', 'like', "%$query%")
@@ -78,10 +77,6 @@ class TrabajadorController extends Controller
             ->when($casino, function ($queryBuilder) use ($casino) {
                 $queryBuilder->where('casino', $casino);
             })
-            ->when($contratoFirmado, function ($queryBuilder) use ($contratoFirmado) {
-                $queryBuilder->where('ContratoFirmado', $contratoFirmado);
-            })
-
 
             ->when($mostrarDesvinculados, function ($queryBuilder) {
                 $queryBuilder->where(function ($q) {

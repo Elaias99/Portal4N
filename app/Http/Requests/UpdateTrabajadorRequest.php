@@ -39,8 +39,7 @@ class UpdateTrabajadorRequest extends FormRequest
             'CorreoPersonal' => 'nullable|email|max:255',  // Nuevo campo para el correo personal, opcional
             'Foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'Casino' => 'required|string|max:255',
-            'ContratoFirmado' => 'required|string|max:255',
-            'AnexoContrato' => 'required|string|max:255',
+
             'empresa_id' => 'required|exists:empresas,id',
 
             'cargo_id' => 'required|in:otro,' . \App\Models\Cargo::pluck('id')->implode(','),
@@ -92,7 +91,7 @@ class UpdateTrabajadorRequest extends FormRequest
             'nombre_emergencia' => 'nullable|string|max:255',
             'contacto_emergencia' => 'nullable|string|max:15',
             'fecha_inicio_trabajo' => 'required|date',
-            'fecha_inicio_contrato' => 'required|date',
+
             // otras reglas de validación...
             'banco_id' => 'required|exists:bancos,id',
             'numero_cuenta' => 'nullable|string|max:255',
@@ -180,8 +179,6 @@ class UpdateTrabajadorRequest extends FormRequest
             'fecha_inicio_trabajo.required' => 'La fecha de inicio de trabajo es obligatoria.',
             'fecha_inicio_trabajo.date' => 'La fecha de inicio de trabajo debe ser una fecha válida.',
 
-            'fecha_inicio_contrato.required' => 'Debe ingresar la fecha de inicio de su contrato',
-            'fecha_inicio_contrato.date'=>'La fecha de inicio de contrato no es válida',
 
             'banco_id.required' => 'El campo Banco es obligatorio.',
             'banco_id.exists' => 'El banco seleccionado no es válido.',

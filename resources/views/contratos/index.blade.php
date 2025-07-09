@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="container">
-    <h3 class="mb-4">📄 Listado de Trabajadores con Contratos Registrados</h3>
+    <h3 class="mb-4">Listado de Trabajadores con Contratos Registrados</h3>
 
     @if (session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
@@ -16,9 +16,6 @@
                 <thead class="thead-dark">
                     <tr>
                         <th>Trabajador</th>
-                        <th>Contrato Firmado (Sí/No)</th>
-                        <th>Anexo Firmado (Sí/No)</th>
-                        <th>Inicio Legal del Contrato</th>
                         <th>Inicio Real del Trabajo</th>
                         <th>Contratos Registrados</th>
                         <th>Acciones</th>
@@ -29,22 +26,6 @@
                     @foreach ($trabajadores as $trabajador)
                         <tr>
                             <td><strong>{{ $trabajador->Nombre }} {{ $trabajador->ApellidoPaterno }}</strong></td>
-
-                            <td>
-                                <span class="badge bg-light text-dark border">
-                                    {{ $trabajador->ContratoFirmado === 'Sí' ? 'Sí' : 'No' }}
-                                </span>
-                            </td>
-
-                            <td>
-                                <span class="badge bg-light text-dark border">
-                                    {{ $trabajador->AnexoContrato === 'Sí' ? 'Sí' : 'No' }}
-                                </span>
-                            </td>
-
-                            <td>
-                                {{ $trabajador->fecha_inicio_contrato ? \Carbon\Carbon::parse($trabajador->fecha_inicio_contrato)->format('d/m/Y') : '-' }}
-                            </td>
 
                             <td>
                                 {{ $trabajador->fecha_inicio_trabajo ? \Carbon\Carbon::parse($trabajador->fecha_inicio_trabajo)->format('d/m/Y') : '-' }}

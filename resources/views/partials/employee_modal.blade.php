@@ -49,9 +49,9 @@
                   <tr><th>Salud</th><td>{{ $empleado->salud->Nombre }}</td></tr>
                   <tr><th>Casino</th><td>{{ $empleado->Casino }}</td></tr>
                   <tr><th>Estado Civil</th><td>{{ $empleado->estadoCivil->Nombre }}</td></tr>
-                  <tr><th>Contrato Firmado</th><td>{{ $empleado->ContratoFirmado }}</td></tr>
-                  <tr><th>Fecha Inicio Contrato</th><td>{{ \Carbon\Carbon::parse($empleado->fecha_inicio_contrato)->format('d/m/Y') }}</td></tr>
-                  <tr><th>Anexo Contrato</th><td>{{ $empleado->AnexoContrato }}</td></tr>
+
+                  
+
                   <tr><th>Situación</th><td>{{ $empleado->situacion->Nombre }}</td></tr>
                   <tr><th>Días Proporcionales Acumulados</th><td>{{ $empleado->dias_proporcionales }}</td></tr>
                   <tr><th>Turno</th><td>{{ $empleado->turno ? $empleado->turno->nombre : 'No asignado' }}</td></tr>

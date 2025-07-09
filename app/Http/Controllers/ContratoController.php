@@ -14,12 +14,13 @@ class ContratoController extends Controller
     {
         $trabajadores = Trabajador::with(['contratos'])
             ->whereNull('deleted_at')
+
             ->where(function ($query) {
-                $query->where('ContratoFirmado', 'Sí')
-                    ->orWhere('AnexoContrato', 'Sí')
-                    ->orWhereNotNull('fecha_inicio_trabajo')
-                    ->orWhereNotNull('fecha_inicio_contrato');
+                $query->whereHas('contratos')
+                    ->orWhereNotNull('fecha_inicio_trabajo');
             })
+
+
             ->orderBy('Nombre')
             ->get();
 
@@ -65,16 +66,6 @@ class ContratoController extends Controller
         $trabajador = Trabajador::where('id', $trabajadorId)
             ->whereNull('deleted_at')
             ->firstOrFail();
-
-        if ($request->tipo === 'Contrato' && $request->estado === 'Firmado') {
-            $trabajador->ContratoFirmado = 'Sí';
-        }
-
-        if ($request->tipo === 'Anexo' && $request->estado === 'Firmado') {
-            $trabajador->AnexoContrato = 'Sí';
-        }
-
-        $trabajador->save();
 
         return redirect()->route('contratos.index')->with('success', 'Contrato registrado correctamente.');
     }

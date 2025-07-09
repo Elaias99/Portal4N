@@ -35,10 +35,9 @@ class TrabajadorFactory extends Factory
             'ApellidoMaterno' => $this->faker->lastName,
             'FechaNacimiento' => $this->faker->date('Y-m-d', '2000-01-01'),
             'Casino' => 'No',
-            'ContratoFirmado' => 'Sí',
-            'AnexoContrato' => 'Ninguno',
+
             'fecha_inicio_trabajo' => $this->faker->date('Y-m-d', '2024-05-02'),
-            'fecha_inicio_contrato' => $this->faker->date('Y-m-d', '2024-08-02'),
+
 
             // Relaciones obligatorias
             'empresa_id' => Empresa::factory(),

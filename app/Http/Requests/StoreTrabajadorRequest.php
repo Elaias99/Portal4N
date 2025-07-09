@@ -34,8 +34,7 @@ class StoreTrabajadorRequest extends FormRequest
             'CorreoPersonal' => 'required|email|max:255',  // Nuevo campo para el correo personal, opcional
             'Foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'Casino' => 'required|string|max:255',
-            'ContratoFirmado' => 'required|string|max:255',
-            'AnexoContrato' => 'required|string|max:255',
+
             'empresa_id' => 'required|exists:empresas,id',
             'cargo_id' => 'required|in:otro,' . \App\Models\Cargo::pluck('id')->implode(','),
 
@@ -80,7 +79,7 @@ class StoreTrabajadorRequest extends FormRequest
             'nombre_emergencia' => 'required|string|max:255', // Ahora obligatorio
             'contacto_emergencia' => 'required|string|max:15', // Ahora obligatorio
             'fecha_inicio_trabajo' => 'required|date',
-            'fecha_inicio_contrato' => 'required|date',
+
 
             'banco_id' => 'required|exists:bancos,id', // Ahora obligatorio
             'numero_cuenta' => 'required|string|max:255', // Ahora obligatorio
@@ -119,8 +118,7 @@ class StoreTrabajadorRequest extends FormRequest
             'Foto.image' => 'El archivo debe ser una imagen válida.',
             'Foto.mimes' => 'La imagen debe estar en formato jpeg, png, jpg, o gif.',
             'Casino.required' => 'El campo de casino es obligatorio.',
-            'ContratoFirmado.required' => 'El contrato firmado es obligatorio.',
-            'AnexoContrato.required' => 'El anexo de contrato es obligatorio.',
+
             'empresa_id.required' => 'Debe seleccionar una empresa válida.',
             'cargo_id.required' => 'Debe seleccionar un cargo válido.',
             'situacion_id.required' => 'Debe seleccionar una situación válida.',
@@ -139,8 +137,6 @@ class StoreTrabajadorRequest extends FormRequest
             'numero_celular.regex' => 'El número de celular debe tener un formato válido.',
             'fecha_inicio_trabajo.required' => 'Debe ingresar la fecha de inicio de trabajo.',
 
-            'fecha_inicio_contrato.required' => 'Debe ingresar la fecha de inicio de su contrato',
-            'fecha_inicio_contrato.date'=>'La fecha de inicio de contrato no es válida',
 
 
 

@@ -44,8 +44,11 @@ class TrabajadorExport implements FromCollection, WithHeadings, WithColumnWidths
                         'cargo' => $empleado->cargo->Nombre ?? '',
                         'turno' => $empleado->turno->nombre ?? '',
                         'sistema_trabajo' => $empleado->sistemaTrabajo->nombre ?? '',
-                        'tipo_contrato' => $empleado->ContratoFirmado ?? '',
-                        'anexo_contrato' => $empleado->AnexoContrato ?? '',
+
+
+
+
+
                         'situacion' => $empleado->situacion->Nombre ?? '',
                         'casino' => $empleado->Casino ?? '',
                         'fecha_nacimiento' => $empleado->FechaNacimiento ? Carbon::parse($empleado->FechaNacimiento)->format('Y-m-d') : '',
@@ -87,8 +90,11 @@ class TrabajadorExport implements FromCollection, WithHeadings, WithColumnWidths
             'cargo' => 'Cargo',
             'turno' => 'Turno',
             'sistema_trabajo' => 'Sistema de Trabajo',
-            'tipo_contrato' => 'Tipo Contrato',
-            'anexo_contrato' => 'Anexo Contrato',
+
+
+
+
+
             'situacion' => 'Situación',
             'casino' => 'Casino',
             'fecha_nacimiento' => 'Fecha Nacimiento',
@@ -125,8 +131,10 @@ class TrabajadorExport implements FromCollection, WithHeadings, WithColumnWidths
             'cargo' => 25,
             'turno' => 15,
             'sistema_trabajo' => 20,
-            'tipo_contrato' => 20,
-            'anexo_contrato' => 20,
+
+
+
+
             'situacion' => 15,
             'casino' => 10,
             'fecha_nacimiento' => 15,

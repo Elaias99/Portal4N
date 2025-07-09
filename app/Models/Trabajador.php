@@ -18,11 +18,11 @@ class Trabajador extends Model
 
     protected $fillable = [
         'Rut', 'Nombre', 'SegundoNombre', 'TercerNombre', 'ApellidoPaterno', 'ApellidoMaterno', 
-        'FechaNacimiento', 'CorreoPersonal', 'Foto', 'Casino', 'ContratoFirmado', 'AnexoContrato', 
+        'FechaNacimiento', 'CorreoPersonal', 'Foto', 'Casino', 
         'empresa_id', 'cargo_id', 'situacion_id', 'estado_civil_id', 'comuna_id', 'afp_id', 'salud_id',
         'salario_bruto', 'calle','numero_celular','nombre_emergencia','contacto_emergencia', 'fecha_inicio_trabajo',
         'user_id', 'turno_id', 'sistema_trabajo_id' ,'numero_cuenta','tipo_cuenta','Rut_Empresa',
-        'fecha_inicio_contrato', 'id_jefe','banco_id','area_id',
+        'id_jefe','banco_id','area_id',
     ];
 
 
@@ -30,7 +30,6 @@ class Trabajador extends Model
     protected $casts = [
         'fecha_inicio_trabajo' => 'date',
         'FechaNacimiento' => 'date', // Agregar este cast
-        'fecha_inicio_contrato'=> 'date',
     ];
     
 
