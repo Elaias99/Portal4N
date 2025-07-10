@@ -62,9 +62,6 @@
         </div>
     @endif
 
-
-
-
     @if (session('import_result_proveedores.incompletos') && count(session('import_result_proveedores.incompletos')))
         <div class="alert alert-warning shadow-sm mt-3">
             ⚠️ Algunos proveedores se importaron con datos incompletos usando el valor "Sin Registro".
@@ -79,17 +76,43 @@
         </div>
     @endif
 
-
-
-
-
     <div class="row">
-        {{-- Filtros a la izquierda --}}
+
         <div class="col-lg-2 mb-4">
+
+            <div class="card shadow-sm p-3 mb-4">
+                <h5 class="fw-bold mb-3">Gestión Masiva de Proveedores</h5>
+
+                {{-- Importar --}}
+                <form id="importForm" action="{{ route('importar.proveedores') }}" method="POST" enctype="multipart/form-data" class="mb-2">
+                    @csrf
+                    <input type="file" name="archivo" id="archivoInput" accept=".xlsx,.xls" style="display: none;">
+                    <button type="button" id="toggleImportarBtn"
+                        class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center">
+                        <i class="fa-solid fa-file-excel me-1"></i> Importar Excel
+                    </button>
+                </form>
+
+                {{-- Exportar --}}
+                <form action="{{ route('proveedores.exportar') }}" method="GET">
+                    <button type="submit"
+                        class="btn btn-outline-primary btn-block py-2 d-flex align-items-center justify-content-center">
+                        <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
+                    </button>
+                </form>
+            </div>
+
+
+
+
+
             <div class="card shadow-sm p-3">
-                <h5 class="fw-bold mb-3">Filtrar Proveedores</h5>
+                
 
                 <form method="GET" action="{{ route('proveedores.index') }}">
+                    <h5 class="fw-bold mb-3">Filtrar Proveedores</h5>
+
+
                     <div class="mb-3">
                         <label class="form-label">Razón Social:</label>
                         <input type="text" name="razon_social" class="form-control" placeholder="Ej: Acme Ltda." value="{{ request('razon_social') }}">
@@ -130,42 +153,27 @@
                     </div>
                 </form>
 
-                <div class="d-grid gap-2 mt-3">
-                    <a href="{{ route('proveedores.exportar') }}" class="btn btn-outline-success">
-                        <i class="fa fa-file-excel me-1"></i> Exportar Proveedores
-                    </a>
-                </div>
-
-
-
             </div>
         </div>
-
-
-
-
 
         {{-- Contenido principal: acciones + tabla --}}
         <div class="col-lg-9">
             {{-- Acciones principales --}}
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-                <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <a href="{{ route('proveedores.plantilla') }}" class="btn btn-outline-primary btn-sm">
-                        <i class="fa fa-download me-1"></i> Descargar Plantilla de Proveedores
-                    </a>
+                <div class="d-flex flex-wrap align-items-center">
 
-                    
-
-                    <button id="toggleImportarBtn" class="btn btn-outline-success btn-sm">
-                        <i class="fa fa-file-import mr-1"></i> Importar Excel
+                    <button type="button" class="btn btn-outline-primary btn-sm mr-2 mb-2"
+                        data-toggle="modal" data-target="#modalImportarProveedores">
+                        <i class="fa fa-info-circle mr-1"></i> Ver estructura y plantilla
                     </button>
-                    
+
                     <form id="importForm" action="{{ route('importar.proveedores') }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         <input type="file" name="archivo" id="archivoInput" accept=".xlsx,.xls" style="display: none;">
                     </form>
-                    
+
                 </div>
+
 
                 <a href="{{ route('proveedores.create') }}" class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="tooltip" title="Agregar Proveedor">
                     <i class="fa-solid fa-user-plus me-1"></i> Agregar
@@ -213,14 +221,6 @@
                                         <i class="fa-solid fa-eye"></i>
                                     </button>
                                 </td>
-                                {{-- <td>
-                                    <a href="{{ route('proveedores.edit', $proveedor->id) }}" class="btn btn-warning btn-sm">Editar</a>
-                                    <form action="{{ route('proveedores.destroy', $proveedor->id) }}" method="POST" style="display:inline;">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de que deseas eliminar este proveedor?')">Eliminar</button>
-                                    </form>
-                                </td> --}}
                             </tr>
 
                             {{-- Fila de detalles expandible --}}
@@ -327,5 +327,8 @@
         document.getElementById('importForm').submit();
     });
 </script>
+
+@include('proveedores.modal_importar')
+
 
 @endsection

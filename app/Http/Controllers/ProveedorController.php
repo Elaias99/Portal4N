@@ -47,8 +47,11 @@ class ProveedorController extends Controller
         // Extras
         $bancos = Banco::all();
         $comunas = Comuna::all();
+        $tiposCuenta = TipoCuenta::all();
+        $tiposDocumento = TipoDocumento::all();
 
-        return view('proveedores.index', compact('proveedores', 'bancos', 'comunas'));
+
+        return view('proveedores.index', compact('proveedores', 'bancos', 'comunas', 'tiposCuenta', 'tiposDocumento'));
     }
 
 

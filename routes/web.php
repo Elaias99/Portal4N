@@ -24,6 +24,7 @@ use App\Http\Controllers\ReclamoController;
 use App\Http\Controllers\ComunaController;
 use App\Http\Controllers\TrackingDashboardController;
 use App\Http\Controllers\ContratoController;
+use App\Http\Controllers\ExportacionController;
 
 use App\Http\Controllers\TrackingProductoController;
 
@@ -233,6 +234,13 @@ Route::put('contratos/{contrato}', [ContratoController::class, 'update'])
 Route::resource('contratos', ContratoController::class)
     ->only(['index', 'destroy'])
     ->middleware('auth');
+
+
+Route::prefix('exportar')->group(function () {
+    Route::get('/bancos', [ExportacionController::class, 'exportarBancos'])->name('exportar.bancos');
+    Route::get('/tipo-cuentas', [ExportacionController::class, 'exportarTipoCuentas'])->name('exportar.tipo_cuentas');
+    Route::get('/tipo-documentos', [ExportacionController::class, 'exportarTipoDocumentos'])->name('exportar.tipo_documentos');
+});
 
 
 
