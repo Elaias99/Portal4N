@@ -84,14 +84,16 @@
                 <h5 class="fw-bold mb-3">Gestión Masiva de Proveedores</h5>
 
                 {{-- Importar --}}
-                <form id="importForm" action="{{ route('importar.proveedores') }}" method="POST" enctype="multipart/form-data" class="mb-2">
+                <form class="mb-2"> {{-- SIN id aquí --}}
                     @csrf
                     <input type="file" name="archivo" id="archivoInput" accept=".xlsx,.xls" style="display: none;">
-                    <button type="button" id="toggleImportarBtn"
-                        class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center">
+                    
+                    <button type="button" class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center"
+                        data-toggle="modal" data-target="#modalImportarExcelProveedores">
                         <i class="fa-solid fa-file-excel me-1"></i> Importar Excel
                     </button>
                 </form>
+
 
                 {{-- Exportar --}}
                 <form action="{{ route('proveedores.exportar') }}" method="GET">
@@ -163,7 +165,7 @@
                 <div class="d-flex flex-wrap align-items-center">
 
                     <button type="button" class="btn btn-outline-primary btn-sm mr-2 mb-2"
-                        data-toggle="modal" data-target="#modalImportarProveedores">
+                        data-toggle="modal" data-target="#modalImportarProveedores" data-bs-toggle="tooltip" title="Plantillas"> 
                         <i class="fa fa-info-circle mr-1"></i> Ver estructura y plantilla
                     </button>
 
@@ -329,6 +331,7 @@
 </script>
 
 @include('proveedores.modal_importar')
+@include('proveedores.modal_importar_proveedores')
 
 
 @endsection

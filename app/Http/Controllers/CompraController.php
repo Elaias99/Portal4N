@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\FormaPago;
 use Illuminate\Support\Facades\Log;
 use App\Models\TipoDocumento;
-
+use App\Models\Banco;
+use App\Models\TipoCuenta;
 use App\Imports\CompraImport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ProveedoresFaltantesExport;
@@ -57,8 +58,27 @@ class CompraController extends Controller
 
         // Proveedores para posibles otros filtros
         $proveedores = Proveedor::all();
+        $bancos = Banco::all();
+        $tipoCuentas = TipoCuenta::all();
+        $formasPago = FormaPago::all();
+        $plazosPago = PlazoPago::all();
+        $tiposDocumento = TipoDocumento::all();
+        $empresas = Empresa::all();
+        $centrosCostos = CentroCosto::all();
 
-        return view('compras.index', compact('compras', 'proveedores'));
+
+        return view('compras.index', compact(
+            'compras',
+            'proveedores',
+            'bancos',
+            'tipoCuentas',
+            'formasPago',
+            'plazosPago',
+            'tiposDocumento',
+            'empresas',
+            'centrosCostos'
+        ));
+
     }
 
 

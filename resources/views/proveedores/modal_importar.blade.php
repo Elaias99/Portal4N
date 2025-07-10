@@ -4,11 +4,25 @@
     <div class="modal-content shadow">
       <div class="modal-header bg-white border-bottom">
         <h5 class="modal-title" id="modalImportarProveedoresLabel">
-          <i class="fa fa-file-excel me-2 text-success"></i> Guía para Importar Proveedores
+          Guía para Importar Proveedores
         </h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
-            <span aria-hidden="true">&times;</span>
-        </button>
+          <button type="button"
+                  class="btn btn-light btn-sm rounded-circle shadow-sm"
+                  data-dismiss="modal"
+                  aria-label="Cerrar"
+                  style="
+                    position: absolute;
+                    top: 16px;
+                    right: 16px;
+                    width: 32px;
+                    height: 32px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10;
+                  ">
+            <span aria-hidden="true" class="text-dark" style="font-size: 1.2rem;">&times;</span>
+          </button>
 
       </div>
 
