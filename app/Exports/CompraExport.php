@@ -3,14 +3,15 @@
 namespace App\Exports;
 
 use App\Models\Compra;
-use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithChunkReading;
 
-class CompraExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize
+class CompraExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithChunkReading
 {
-    public function collection()
+    public function query()
     {
         return Compra::with([
             'empresa',
@@ -20,7 +21,12 @@ class CompraExport implements FromCollection, WithHeadings, WithMapping, ShouldA
             'plazoPago',
             'formaPago',
             'user'
-        ])->get();
+        ]);
+    }
+
+    public function chunkSize(): int
+    {
+        return 1000;
     }
 
     public function map($compra): array

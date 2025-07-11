@@ -3,20 +3,28 @@
 namespace App\Exports;
 
 use App\Models\Proveedor;
-use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithChunkReading;
+
+use Illuminate\Contracts\Queue\ShouldQueue;
+
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class ProveedorExport implements FromCollection, WithHeadings, WithStyles, ShouldAutoSize, WithMapping
+class ProveedorExport implements FromQuery, WithHeadings, WithStyles, ShouldAutoSize, WithMapping, WithChunkReading, ShouldQueue
 {
-    public function collection()
+    public function query()
     {
-        return Proveedor::with(['banco', 'tipoCuenta', 'tipoPago', 'comuna'])->get();
+        return Proveedor::with(['banco', 'tipoCuenta', 'tipoPago', 'comuna']);
     }
 
+    public function chunkSize(): int
+    {
+        return 1000;
+    }
 
     public function map($proveedor): array
     {
@@ -49,7 +57,6 @@ class ProveedorExport implements FromCollection, WithHeadings, WithStyles, Shoul
         ];
     }
 
-
     public function headings(): array
     {
         return [
@@ -80,7 +87,6 @@ class ProveedorExport implements FromCollection, WithHeadings, WithStyles, Shoul
             'Comuna',
         ];
     }
-
 
     public function styles(Worksheet $sheet)
     {

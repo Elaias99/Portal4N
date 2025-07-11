@@ -228,10 +228,10 @@ class ProveedorController extends Controller
 
     public function export()
     {
-        
         return Excel::download(new ProveedorExport, 'proveedores.xlsx');
-
     }
+
+
 
     public function descargarPlantilla()
     {
