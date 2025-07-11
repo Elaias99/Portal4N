@@ -58,6 +58,14 @@
         </div>
     @endif
 
+    @if (session('import_result.importadas') == 0 && session('import_result.omitidas') > 0 && empty(session('import_result.erroresValidacion')) && empty(session('import_result.erroresDuplicados')))
+        <div class="alert alert-secondary shadow-sm">
+            ℹ️ El archivo fue procesado, pero no se encontró ninguna compra nueva para importar.
+            <br>Verifica si los registros ya existen o si no cumplen con las condiciones para ser importados.
+        </div>
+    @endif
+
+
     @if (session('import_result.importadas'))
         <div class="alert alert-success shadow-sm position-relative" role="alert">
             ✅ Compras importadas correctamente: <strong>{{ session('import_result.importadas') }}</strong>
