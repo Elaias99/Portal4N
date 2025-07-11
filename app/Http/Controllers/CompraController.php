@@ -268,18 +268,6 @@ class CompraController extends Controller
         }
         
 
-        // if ($validatedData['tipo_pago'] === 'Contado' && $request->has('opcion_contado')) {
-        //     $fechaDocumento = $validatedData['fecha_documento'] ?? date('Y-m-d');
-            
-        //     if ($request->opcion_contado === 'viernes') {
-        //         $validatedData['fecha_vencimiento'] = calcularSiguienteViernes($fechaDocumento);
-        //     } elseif ($request->opcion_contado === 'hoy') {
-        //         $validatedData['fecha_vencimiento'] = $fechaDocumento;
-        //     }
-        // }
-
-        
-
         // Actualizar la compra con los nuevos datos
         $compra->update($validatedData);
 

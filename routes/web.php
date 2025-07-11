@@ -240,6 +240,14 @@ Route::prefix('exportar')->group(function () {
     Route::get('/bancos', [ExportacionController::class, 'exportarBancos'])->name('exportar.bancos');
     Route::get('/tipo-cuentas', [ExportacionController::class, 'exportarTipoCuentas'])->name('exportar.tipo_cuentas');
     Route::get('/tipo-documentos', [ExportacionController::class, 'exportarTipoDocumentos'])->name('exportar.tipo_documentos');
+
+    Route::get('/centro-costos', [ExportacionController::class, 'exportarCentroCosto'])->name('exportar.centro_costo');
+    Route::get('/formas-pago', [ExportacionController::class, 'exportarFormaPago'])->name('exportar.forma_pago');
+    Route::get('/plazo-pago', [ExportacionController::class, 'exportarPlazoPago'])->name('exportar.plazo_pago');
+
+    Route::get('/comunas', [ExportacionController::class, 'exportarEmpresa'])->name('exportar.empresas');
+
+
 });
 
 

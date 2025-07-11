@@ -135,6 +135,9 @@
               </tbody>
             </table>
           </div>
+          <a href="{{ route('exportar.forma_pago') }}" class="btn btn-sm btn-outline-success mt-3">
+            <i class="fa fa-file-excel"></i> Exportar Formas de pago
+          </a>
         </div>
 
         {{-- Panel: Plazo de Pago --}}
@@ -158,6 +161,12 @@
               </tbody>
             </table>
           </div>
+
+          <a href="{{ route('exportar.plazo_pago') }}" class="btn btn-sm btn-outline-success mt-3">
+            <i class="fa fa-file-excel"></i> Exportar Plazos de pago
+          </a>
+
+
         </div>
 
         {{-- Panel: Empresas --}}
@@ -185,6 +194,14 @@
               </tbody>
             </table>
           </div>
+
+          <a href="{{ route('exportar.empresas') }}" class="btn btn-sm btn-outline-success mt-3">
+            <i class="fa fa-file-excel"></i> Exportar Empresas
+          </a>
+
+
+
+
         </div>
 
         {{-- Panel: Centros de Costo --}}
@@ -208,7 +225,18 @@
               </tbody>
             </table>
           </div>
+
+          
+          <a href="{{ route('exportar.centro_costo') }}" class="btn btn-sm btn-outline-success mt-3">
+            <i class="fa fa-file-excel"></i> Exportar Centros de Costo
+          </a>
         </div>
+
+
+
+        
+
+
       </div>
 
       <div class="modal-footer bg-light d-flex justify-content-between align-items-center flex-wrap">
