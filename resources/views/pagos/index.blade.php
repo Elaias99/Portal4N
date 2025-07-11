@@ -93,19 +93,16 @@
                     </thead>
                     <tbody id="tabla-pagos">
                         @foreach($compras as $compra)
-                            <tr>
+                            <tr class="{{ $compra->importante ? 'table-warning' : '' }}">
                                 <td class="d-flex align-items-center gap-2">
-                                    <form action="{{ route('pagos.toggleImportante', $compra->id) }}" method="POST" style="display:inline;">
+                                    <form action="{{ route('pagos.toggleImportante', $compra->id) }}" method="POST" class="m-0 p-0">
                                         @csrf
                                         @method('POST')
-                                        <button 
-                                            type="submit" 
-                                            class="btn btn-sm {{ $compra->importante ? 'btn-warning' : 'btn-outline-warning' }}"
-                                            title="Marcar como importante"
-                                        >
-                                            <i class="fa-solid fa-star"></i>
+                                        <button type="submit" class="bg-transparent border-0 p-0 m-0 text-warning" title="Marcar como importante" style="cursor:pointer;">
+                                            <i class="fa{{ $compra->importante ? 's' : 'r' }} fa-star"></i>
                                         </button>
                                     </form>
+
                                     <span>{{ $compra->proveedor->razon_social }}</span>
                                 </td>
                                 <td>{{ $compra->empresa->Nombre ?? '—' }}</td>
