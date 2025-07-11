@@ -18,7 +18,7 @@ class PagoController extends Controller
     {
         $query = Compra::with(['proveedor', 'empresa'])
             ->where('status', 'pendiente')
-            ->orderBy('fecha_vencimiento', 'asc');
+            ->orderBy('fecha_vencimiento', 'desc');
 
         // Filtro por empresa
         if ($request->filled('empresa_id')) {
@@ -35,7 +35,8 @@ class PagoController extends Controller
             $query->whereDate('fecha_documento', $request->input('fecha_documento'));
         }
 
-        $compras = $query->get();
+        $compras = $query->paginate(10)->appends($request->query());
+
         $totalGeneral = $this->calcularTotalGeneral($compras);
 
         $proveedores = Proveedor::all();
