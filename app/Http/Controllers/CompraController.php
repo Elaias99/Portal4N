@@ -18,6 +18,7 @@ use App\Models\TipoCuenta;
 use App\Imports\CompraImport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ProveedoresFaltantesExport;
+use Illuminate\Support\Str;
 
 use App\Exports\CompraExport;
 
@@ -362,7 +363,7 @@ class CompraController extends Controller
             $import = new CompraImport;
             Excel::import($import, $request->file('archivo_excel'));
 
-            // 👉 Guardar proveedores faltantes en sesión normal
+            // Guardar proveedores faltantes en sesión
             if (count($import->proveedoresFaltantes) > 0) {
                 session()->put('proveedores_faltantes', $import->proveedoresFaltantes);
             }
@@ -372,18 +373,23 @@ class CompraController extends Controller
                 'omitidas' => $import->omitidas,
                 'errores' => $import->errores,
                 'erroresDuplicados' => $import->erroresDuplicados,
-                'erroresValidacion' => $import->erroresValidacion,
+                'erroresValidacion' => collect($import->errores)
+                    ->reject(fn($e) => Str::contains($e, 'Duplicado'))
+                    ->values(),
+
                 'detalles' => $import->importadasDetalle,
+
+                'hayErrores' => count($import->errores) > 0,
+                'hayOmitidas' => $import->omitidas > 0,
+                'hayIncompletos' => false,
             ]);
-
-
-
 
 
         } catch (\Exception $e) {
             return back()->with('error', 'Error al importar el archivo: ' . $e->getMessage());
         }
     }
+
 
 
     public function descargarPlantilla()

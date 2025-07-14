@@ -9,17 +9,75 @@
 <div class="container-fluid px-3">
     <h1 class="text-center mb-4" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Lista de Compras</h1>
 
-    {{-- ALERTAS DE IMPORTACIÓN --}}
+    {{-- MENSAJES DE IMPORTACIÓN --}}
+    {{-- MENSAJES DE IMPORTACIÓN --}}
     @if (session('import_result'))
-        <div class="alert alert-info shadow-sm">
+        <div class="alert alert-info shadow-sm mb-3">
             <strong>📦 Importación finalizada</strong>
-            <ul>
+            <ul class="mb-1">
                 <li>✅ Compras importadas: <strong>{{ session('import_result.importadas') }}</strong></li>
                 <li>⚠️ Compras omitidas: <strong>{{ session('import_result.omitidas') }}</strong></li>
             </ul>
+
+            @if (count(session('import_result.detalles', [])))
+                <details class="mt-2">
+                    <summary>✅ Ver detalles de compras importadas ({{ count(session('import_result.detalles')) }})</summary>
+                    <ul class="mt-2">
+                        @foreach (session('import_result.detalles') as $detalle)
+                            <li>{{ $detalle }}</li>
+                        @endforeach
+                    </ul>
+                </details>
+            @endif
         </div>
+
+        {{-- 🔁 COMPRAS DUPLICADAS --}}
+        @if (count(session('import_result.erroresDuplicados', [])))
+            <div class="alert alert-warning shadow-sm">
+                🔁 Compras duplicadas detectadas.
+                <details class="mt-2">
+                    <summary>Ver duplicados ({{ count(session('import_result.erroresDuplicados')) }})</summary>
+                    <ul class="mt-2">
+                        @foreach (session('import_result.erroresDuplicados') as $e)
+                            <li>{!! $e !!}</li>
+                        @endforeach
+                    </ul>
+                </details>
+            </div>
+        @endif
+
+        {{-- ❌ ERRORES DE VALIDACIÓN --}}
+        @if (count(session('import_result.erroresValidacion', [])))
+            <div class="alert alert-danger shadow-sm">
+                ❌ Errores de validación encontrados.
+                <details class="mt-2">
+                    <summary>Ver errores de validación ({{ count(session('import_result.erroresValidacion')) }})</summary>
+                    <ul class="mt-2">
+                        @foreach (session('import_result.erroresValidacion') as $e)
+                            <li>{!! $e !!}</li>
+                        @endforeach
+                    </ul>
+                </details>
+            </div>
+        @endif
+
+        {{-- ❗ CAMPOS INVÁLIDOS --}}
+        @if (count(session('import_result.erroresCamposInvalidos', [])))
+            <div class="alert alert-warning shadow-sm">
+                ❗ Problemas con campos como fechas, montos o usuarios.
+                <details class="mt-2">
+                    <summary>Ver campos inválidos ({{ count(session('import_result.erroresCamposInvalidos')) }})</summary>
+                    <ul class="mt-2">
+                        @foreach (session('import_result.erroresCamposInvalidos') as $e)
+                            <li>{!! $e !!}</li>
+                        @endforeach
+                    </ul>
+                </details>
+            </div>
+        @endif
     @endif
 
+    {{-- ⚠️ ERRORES DEL FORMULARIO (LARAVEL) --}}
     @if ($errors->any())
         <div class="alert alert-danger shadow-sm">
             <strong>❌ Se encontraron errores en el formulario:</strong>
@@ -31,64 +89,7 @@
         </div>
     @endif
 
-    {{-- ERRORES DE IMPORTACIÓN --}}
-    @if (session('import_result.importadas') == 0 && session('import_result.omitidas') > 0)
-        <div class="alert alert-warning shadow-sm">
-            ⚠️ Todas las filas fueron omitidas.
-            @if (session('import_result.erroresDuplicados'))
-                <details class="mt-2">
-                    <summary>🔁 Compras duplicadas ({{ count(session('import_result.erroresDuplicados')) }})</summary>
-                    <ul>
-                        @foreach (session('import_result.erroresDuplicados') as $error)
-                            <li>{!! $error !!}</li>
-                        @endforeach
-                    </ul>
-                </details>
-            @endif
 
-            @if (session('import_result.erroresValidacion'))
-                <details class="mt-2">
-                    <summary>❌ Errores de validación ({{ count(session('import_result.erroresValidacion')) }})</summary>
-                    <ul>
-                        @foreach (session('import_result.erroresValidacion') as $error)
-                            <li>{!! $error !!}</li>
-                        @endforeach
-                    </ul>
-                </details>
-            @endif
-        </div>
-    @endif
-
-    @if (session('import_result.importadas') == 0 && session('import_result.omitidas') > 0 && empty(session('import_result.erroresValidacion')) && empty(session('import_result.erroresDuplicados')))
-        <div class="alert alert-secondary shadow-sm">
-            ℹ️ El archivo fue procesado pero no se encontró ninguna compra nueva para importar.
-        </div>
-    @endif
-
-    @if (session('import_result.importadas'))
-        <div class="alert alert-success shadow-sm position-relative" role="alert">
-            ✅ Compras importadas: <strong>{{ session('import_result.importadas') }}</strong>
-            @if(session('import_result.detalles'))
-                <button class="btn btn-sm btn-outline-dark position-absolute end-0 top-0 m-2" type="button" data-toggle="collapse" data-target="#importSuccessCollapse">
-                    Ver detalles
-                </button>
-                <div class="collapse mt-3" id="importSuccessCollapse">
-                    <ul class="mb-0">
-                        @foreach (session('import_result.detalles') as $detalle)
-                            <li>{{ $detalle }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-        </div>
-    @endif
-
-    @if (session('success'))
-        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-            <i class="fa-regular fa-circle-check me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
 
     @if (session('proveedores_faltantes'))
         <div class="d-flex flex-wrap gap-2 align-items-center mb-4">
