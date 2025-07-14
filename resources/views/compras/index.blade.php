@@ -128,24 +128,30 @@
                         <label>Razón Social</label>
                         <input type="text" name="search" class="form-control" placeholder="Ej: Acme Ltda." value="{{ request('search') }}">
                     </div>
+
+
                     <div class="mb-3">
                         <label>Año</label>
                         <select name="year" class="form-control">
                             <option value="">Todos</option>
                             @foreach ([2025, 2024, 2023] as $año)
-                                <option value="{{ $año }}" {{ request('year') == $año ? 'selected' : '' }}>{{ $año }}</option>
+                                <option value="{{ $año }}" {{ ($añoActivo ?? request('year')) == $año ? 'selected' : '' }}>{{ $año }}</option>
                             @endforeach
                         </select>
                     </div>
+
+
+
                     <div class="mb-3">
                         <label>Mes</label>
                         <select name="month" class="form-control">
                             <option value="">Todos</option>
-                            @foreach (['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre'] as $mes)
-                                <option value="{{ $mes }}" {{ request('month') == $mes ? 'selected' : '' }}>{{ $mes }}</option>
+                            @foreach (['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'] as $mes)
+                                <option value="{{ $mes }}" {{ ($mesActivo ?? request('month')) == $mes ? 'selected' : '' }}>{{ $mes }}</option>
                             @endforeach
                         </select>
                     </div>
+
                     <div class="mb-3">
                         <label>Estado</label>
                         <select name="status" class="form-control">

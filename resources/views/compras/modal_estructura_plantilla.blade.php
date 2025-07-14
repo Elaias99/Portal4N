@@ -234,6 +234,42 @@
 
 
 
+        {{-- Panel: Consideraciones --}}
+        <div id="panelConsideraciones" class="d-none">
+          <h5 class="mt-3 mb-3 font-weight-bold text-dark">Consideraciones de Importación</h5>
+
+          <div class="border rounded p-4 bg-white text-dark" style="font-size: 15px; line-height: 1.8;">
+            <p class="mb-3" style="font-weight: 500;">Campos clave que debes revisar:</p>
+            <ul class="pl-3 mb-0" style="list-style-type: disc;">
+              <li><strong>Status:</strong> debe ser exactamente <code>Pagado</code> o <code>Pendiente</code>. Cualquier otro valor será ignorado.</li>
+
+              <li><strong>Usuario:</strong> debe coincidir con el nombre exacto registrado en el sistema.<br>
+                <span class="text-muted" style="font-size: 14px;">Ejemplo: <code>Luis</code>, <code>Hans</code></span>
+              </li>
+
+              <li><strong>Número de documento:</strong> no debe estar vacío ni ser igual a <code>0</code>.</li>
+
+              <li><strong>Fecha documento:</strong> debe usar el formato <code>dd/mm/aaaa</code><br>
+                <span class="text-muted" style="font-size: 14px;">Ejemplo: <code>10/07/2025</code></span>
+              </li>
+
+              <li><strong>Pago Total:</strong> puede contener comas o puntos como separadores, pero debe ser un número válido.<br>
+                <span class="text-muted" style="font-size: 14px;">
+                  Válidos: <code>1234.56</code>, <code>1,234.50</code>, <code>5000</code><br>
+                  Inválidos: <code>mil pesos</code>, <code>uno</code>, <code>abc123</code>
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+
+
+
+
+
+
+
         
 
 
@@ -249,6 +285,9 @@
           <button onclick="mostrarPanelCompras('panelPlazoPago')" class="btn btn-light border shadow-sm"><small>Plazo Pago</small></button>
           <button onclick="mostrarPanelCompras('panelEmpresas')" class="btn btn-light border shadow-sm"><small>Empresas</small></button>
           <button onclick="mostrarPanelCompras('panelCentrosCostos')" class="btn btn-light border shadow-sm"><small>Centros Costo</small></button>
+
+          <button onclick="mostrarPanelCompras('panelConsideraciones')" class="btn btn-light border shadow-sm"><small>Consideraciones</small></button>
+
         </div>
         <div>
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
@@ -268,7 +307,8 @@
       'panelFormaPago',
       'panelPlazoPago',
       'panelEmpresas',
-      'panelCentrosCostos'
+      'panelCentrosCostos',
+      'panelConsideraciones', // 👈 agrega este
     ];
     paneles.forEach(pid => {
       const el = document.getElementById(pid);

@@ -42,7 +42,7 @@ class ProveedorController extends Controller
         }
 
         // ✅ Aplica paginación al final
-        $proveedores = $query->orderBy('id', 'asc')->paginate(10);
+        $proveedores = $query->orderBy('razon_social', 'asc')->paginate(10);
 
         // Extras
         $bancos = Banco::all();

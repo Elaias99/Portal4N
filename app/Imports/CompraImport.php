@@ -169,7 +169,8 @@ class CompraImport implements ToModel, WithHeadingRow
             'forma_pago_id' => $forma_pago_id,
             'glosa' => $row['glosa'],
             'observacion' => $row['observacion'],
-            'pago_total' => $this->normalizarMonto($row['pago_total']),
+            'pago_total' => $this->normalizarMonto($row['pago_total'], $numeroDocumento),
+
             'fecha_vencimiento' => $fecha_vencimiento,
             'año' => $row['ano'],
             'mes' => $row['mes'],
@@ -205,23 +206,30 @@ class CompraImport implements ToModel, WithHeadingRow
         return filter_var($valor, FILTER_VALIDATE_URL);
     }
 
-    private function normalizarMonto($valor)
+    private function normalizarMonto($valor, $documentoReferencia = null)
     {
         if (is_null($valor)) return null;
 
-        // Convertir a string, eliminar comas y espacios
-        $valor = str_replace(',', '', trim((string)$valor));
+        // Eliminar comas, signos $ y espacios
+        $limpio = str_replace([',', '$', ' '], '', (string)$valor);
 
-        // Reemplazar posibles separadores decimales con punto
-        $valor = str_replace(['$', ' '], '', $valor);
-
-        // Validar número
-        if (!is_numeric($valor)) {
-            return null; // puedes lanzar un error aquí si lo prefieres
+        // Validar si es numérico
+        if (!is_numeric($limpio)) {
+            $this->errores[] = "<div style='background:#fff5f5;border-left:4px solid #f44336;padding:15px;margin-bottom:15px;'>
+                <p><strong>❌ Monto inválido en 'pago_total'</strong></p>
+                <ul>
+                    <li>Valor original: <strong>{$valor}</strong></li>
+                    <li>Documento: <strong>{$documentoReferencia}</strong></li>
+                    <li>💡 Asegúrate de ingresar solo números. Puedes usar comas para miles y punto como decimal (ej: 1,000.50)</li>
+                </ul></div>";
+            $this->erroresValidacion[] = end($this->errores);
+            $this->omitidas++;
+            return null;
         }
 
-        return round((float) $valor, 2);
+        return round((float) $limpio, 2);
     }
+
 
 
 

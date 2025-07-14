@@ -33,6 +33,15 @@ class CompraController extends Controller
     {
         $query = Compra::with(['user', 'empresa', 'proveedor']);
 
+        // Detectar año y mes más reciente registrados en compras
+        $ultimaCompra = Compra::orderBy('año', 'desc')
+            ->orderByRaw("FIELD(mes, 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre') DESC")
+            ->first();
+
+        $mesActivo = $request->filled('month') ? $request->month : ($ultimaCompra->mes ?? null);
+        $anioActivo = $request->filled('year') ? $request->year : ($ultimaCompra->año ?? null);
+
+
         // Filtros
         if ($request->filled('year')) {
             $query->where('año', $request->year);
@@ -55,7 +64,11 @@ class CompraController extends Controller
         }
 
         // Paginación
-        $compras = $query->orderBy('created_at', 'asc')->paginate(15);
+        $compras = $query
+            ->orderBy('año', 'desc')
+            ->orderByRaw("FIELD(mes, 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre') DESC")
+            ->paginate(15);
+
 
         // Proveedores para posibles otros filtros
         $proveedores = Proveedor::all();
@@ -77,7 +90,9 @@ class CompraController extends Controller
             'plazosPago',
             'tiposDocumento',
             'empresas',
-            'centrosCostos'
+            'centrosCostos',
+            'mesActivo',
+            'anioActivo',
         ));
 
     }
