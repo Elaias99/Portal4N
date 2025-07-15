@@ -340,8 +340,15 @@ Route::get('/tutorial', function () {
 Route::get('/proveedores/descargar-plantilla', [App\Http\Controllers\ProveedorController::class, 'descargarPlantilla'])->name('proveedores.plantilla');
 //Ruta para exportar en Excel el listado de los proveedores
 Route::get('/proveedores/export', [ProveedorController::class, 'export'])->name('proveedores.exportar');
-Route::resource('proveedores', 'App\Http\Controllers\ProveedorController')->middleware('auth');
+
 Route::post('/importar-proveedores', [ProveedorImportController::class, 'importar'])->name('importar.proveedores');
+Route::post('/proveedores/mapear-columnas', [ProveedorImportController::class, 'mapearColumnas'])
+    ->name('proveedores.mapear');
+Route::post('/proveedores/generar-plantilla-corregida', [ProveedorImportController::class, 'generarArchivoCorregido'])
+    ->name('proveedores.generar-corregido');
+Route::resource('proveedores', 'App\Http\Controllers\ProveedorController')->middleware('auth');
+
+
 Route::get('/subir-proveedores', function () {
     return view('importar');
 });

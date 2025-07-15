@@ -34,6 +34,34 @@
           </p>
         </div>
 
+
+        {{-- Panel: Plantilla --}}
+        {{-- <div id="ReordenarArchivo">
+          <div class="card mb-3">
+            <div class="card-body">
+              <p class="mb-2 text-muted">
+                Reordenamiento automático del archivo original para ajustarse a la plantilla
+
+              </p>
+
+
+              <form action="{{ route('proveedores.generar-corregido') }}" method="POST" enctype="multipart/form-data" class="mt-3">
+                @csrf
+                <div class="mb-2">
+                  <label for="archivoCorregido" class="form-label">Subir archivo original para convertir a plantilla:</label>
+                  <input type="file" name="archivo" id="archivoCorregido" class="form-control" accept=".xlsx,.xls" required>
+                </div>
+                <button type="submit" class="btn btn-outline-success">
+                  <i class="fa-solid fa-file-arrow-down me-1"></i> Generar archivo corregido
+                </button>
+              </form>
+
+
+            </div>
+          </div>
+        </div> --}}
+
+
         {{-- Panel: Plantilla --}}
         <div id="panelArchivo">
           <div class="card mb-3">
@@ -48,18 +76,17 @@
           </div>
         </div>
 
+        {{-- Generar archivo corregido --}}
+
+
+
         {{-- Panel: Bancos --}}
         <div id="panelBancos" class="d-none">
           <div class="table-responsive">
 
-
             <h5 class="mt-3 mb-3 font-weight-bold text-dark">
                 Bancos
             </h5>
-
-
-
-
             <table class="table table-sm table-hover table-bordered bg-white rounded shadow-sm">
                 <thead class="thead-dark">
                     <tr>
@@ -158,9 +185,17 @@
       <div class="modal-footer bg-light d-flex justify-content-between align-items-center flex-wrap">
         {{-- Navegación izquierda --}}
         <div class="d-flex flex-wrap gap-2">
+
+          {{-- <button onclick="mostrarPanel('ReordenarArchivo')" class="btn btn-light border shadow-sm">
+            <small>Funcionalidad de reordenamiento automático</small>
+          </button> --}}
+
+
           <button onclick="mostrarPanel('panelArchivo')" class="btn btn-light border shadow-sm">
             <small>Plantilla de ejemplo</small>
           </button>
+
+
           <button onclick="mostrarPanel('panelBancos')" class="btn btn-light border shadow-sm">
             <small>Bancos</small>
           </button>

@@ -10,7 +10,6 @@
     <h1 class="text-center mb-4" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Lista de Compras</h1>
 
     {{-- MENSAJES DE IMPORTACIÓN --}}
-    {{-- MENSAJES DE IMPORTACIÓN --}}
     @if (session('import_result'))
         <div class="alert alert-info shadow-sm mb-3">
             <strong>📦 Importación finalizada</strong>
