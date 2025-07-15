@@ -107,7 +107,7 @@
         {{-- FILTROS Y GESTIÓN --}}
         <div class="col-lg-2 mb-4">
             <div class="card shadow-sm p-3 mb-4">
-                <h5 class="fw-bold mb-3">📁 Gestión Masiva</h5>
+                <h5 class="fw-bold mb-3">Gestión Masiva</h5>
                 {{-- Importar --}}
                 <button type="button" class="btn btn-outline-success btn-block py-2 mb-2" data-toggle="modal" data-target="#modalImportarExcelCompras">
                     <i class="fa fa-file-excel mr-1"></i> Importar Excel
@@ -121,35 +121,20 @@
             </div>
 
             <div class="card shadow-sm p-3">
-                <h5 class="fw-bold mb-3">🎯 Filtros</h5>
+                <h5 class="fw-bold mb-3">Filtros</h5>
                 <form method="GET" action="{{ route('compras.index') }}">
                     <div class="mb-3">
                         <label>Razón Social</label>
                         <input type="text" name="search" class="form-control" placeholder="Ej: Acme Ltda." value="{{ request('search') }}">
                     </div>
 
-
                     <div class="mb-3">
-                        <label>Año</label>
-                        <select name="year" class="form-control">
-                            <option value="">Todos</option>
-                            @foreach ([2025, 2024, 2023] as $año)
-                                <option value="{{ $año }}" {{ ($añoActivo ?? request('year')) == $año ? 'selected' : '' }}>{{ $año }}</option>
-                            @endforeach
-                        </select>
+                        <label>RUT Proveedor</label>
+                        <input type="text" name="rut" class="form-control" placeholder="Ej: 12345678-9" value="{{ request('rut') }}">
                     </div>
 
 
 
-                    <div class="mb-3">
-                        <label>Mes</label>
-                        <select name="month" class="form-control">
-                            <option value="">Todos</option>
-                            @foreach (['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'] as $mes)
-                                <option value="{{ $mes }}" {{ ($mesActivo ?? request('month')) == $mes ? 'selected' : '' }}>{{ $mes }}</option>
-                            @endforeach
-                        </select>
-                    </div>
 
                     <div class="mb-3">
                         <label>Estado</label>
@@ -175,7 +160,7 @@
                     <i class="fa fa-info-circle mr-1"></i> Ver estructura y plantilla
                 </button>
                 <a href="{{ route('compras.create') }}" class="btn btn-primary btn-sm">
-                    <i class="fa fa-plus me-1"></i> Agregar Compra
+                    <i class="fa-solid fa-cart-plus me-1"></i> Agregar Compra 
                 </a>
             </div>
 

@@ -63,6 +63,14 @@ class CompraController extends Controller
             });
         }
 
+        // Filtro por RUT del proveedor
+        if ($request->filled('rut')) {
+            $rut = $request->rut;
+            $query->whereHas('proveedor', function ($q) use ($rut) {
+                $q->where('rut', 'like', '%' . $rut . '%');
+            });
+        }
+
         // Paginación
         $compras = $query
             ->orderBy('año', 'desc')
