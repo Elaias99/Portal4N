@@ -139,16 +139,30 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Comuna:</label>
-                        <select name="comuna" class="form-select form-select-sm">
-                            <option value="">- Seleccionar Comuna -</option>
-                            @foreach($comunas as $comuna)
-                                <option value="{{ $comuna->id }}" {{ request('comuna') == $comuna->id ? 'selected' : '' }}>
-                                    {{ $comuna->Nombre }}
+                        <label class="form-label">Tipo de Cuenta:</label>
+                        <select name="tipo_cuenta" class="form-select form-select-sm">
+                            <option value="">- Seleccionar Tipo de Cuenta -</option>
+                            @foreach($tiposCuenta as $cuenta)
+                                <option value="{{ $cuenta->id }}" {{ request('tipo_cuenta') == $cuenta->id ? 'selected' : '' }}>
+                                    {{ $cuenta->nombre }}
                                 </option>
                             @endforeach
                         </select>
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Documento:</label>
+                        <select name="tipo_pago" class="form-select form-select-sm">
+                            <option value="">- Seleccionar Tipo de Documento -</option>
+                            @foreach($tiposDocumento as $documento)
+                                <option value="{{ $documento->id }}" {{ request('tipo_pago') == $documento->id ? 'selected' : '' }}>
+                                    {{ $documento->nombre }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+
 
                     <div class="d-grid gap-2 mt-3">
                         <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
