@@ -75,7 +75,31 @@ class CompraController extends Controller
         $compras = $query
             ->orderBy('año', 'desc')
             ->orderByRaw("FIELD(mes, 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre') DESC")
-            ->paginate(15);
+            ->paginate(10);
+
+        $camposOpcionales = [
+            'empresa' => 'Empresa',
+            'rut' => 'RUT',
+            'proveedor' => 'Proveedor',
+            'centro_costo' => 'Centro de Costo',
+            'glosa' => 'Glosa',
+            'observacion' => 'Observación',
+            'tipo_de_documento' => 'Tipo de Documento',
+            'plazo_pago' => 'Plazo de Pago',
+            'forma_pago' => 'Forma de Pago',
+            'pago_total' => 'Pago Total',
+            'fecha_vencimiento' => 'Fecha de Vencimiento',
+            'año' => 'Año',
+            'mes' => 'Mes',
+            'fecha_documento' => 'Fecha Documento',
+            'numero_documento' => 'N° Documento',
+            'oc' => 'Orden de Compra',
+            'status' => 'Estado',
+            'usuario' => 'Usuario',
+            'archivo_oc' => 'Archivo OC',
+            'archivo_documento' => 'Archivo Documento',
+        ];
+
 
 
         // Proveedores para posibles otros filtros
@@ -101,14 +125,10 @@ class CompraController extends Controller
             'centrosCostos',
             'mesActivo',
             'anioActivo',
+            'camposOpcionales',
         ));
 
     }
-
-
-
-
-
 
     /**
      * Show the form for creating a new resource.
@@ -465,10 +485,12 @@ class CompraController extends Controller
     }
 
 
-    public function export()
+    public function export(Request $request)
     {
-        return Excel::download(new CompraExport, 'compras.xlsx');
+        $opciones = $request->input('opciones', []);
+        return Excel::download(new CompraExport($opciones), 'compras.xlsx');
     }
+
 
 
 

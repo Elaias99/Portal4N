@@ -6,7 +6,7 @@
 @endphp
 
 @section('content')
-<div class="container-fluid px-3">
+<div class="container">
     <h1 class="text-center mb-4" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Lista de Compras</h1>
 
     {{-- MENSAJES DE IMPORTACIÓN --}}
@@ -106,67 +106,93 @@
     <div class="row">
         {{-- FILTROS Y GESTIÓN --}}
         <div class="col-lg-2 mb-4">
+
+
+                {{-- Gestión Masiva --}}
             <div class="card shadow-sm p-3 mb-4">
-                <h5 class="fw-bold mb-3">Gestión Masiva</h5>
+                <h5 class="fw-bold mb-3">Gestión Masiva de Compras</h5>
+
                 {{-- Importar --}}
-                <button type="button" class="btn btn-outline-success btn-block py-2 mb-2" data-toggle="modal" data-target="#modalImportarExcelCompras">
-                    <i class="fa fa-file-excel mr-1"></i> Importar Excel
-                </button>
+                <form class="mb-2">
+                    @csrf
+                    <input type="file" name="archivo" id="archivoInput" accept=".xlsx,.xls" style="display: none;">
+                    <button type="button" class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center"
+                        data-toggle="modal" data-target="#modalImportarExcelCompras">
+                        <i class="fa-solid fa-file-excel me-1"></i> Importar Excel
+                    </button>
+                </form>
+
                 {{-- Exportar --}}
-                <form action="{{ route('compras.exportar') }}" method="GET">
-                    <button type="submit" class="btn btn-outline-primary btn-block py-2">
-                        <i class="fa fa-file-excel mr-1"></i> Exportar Excel
+                <form class="mb-2">
+                    <button type="button" class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center"
+                        data-toggle="modal" data-target="#modalExportarCompras">
+                        <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
                     </button>
                 </form>
             </div>
 
             <div class="card shadow-sm p-3">
-                <h5 class="fw-bold mb-3">Filtros</h5>
-                <form method="GET" action="{{ route('compras.index') }}">
-                    <div class="mb-3">
-                        <label>Razón Social</label>
-                        <input type="text" name="search" class="form-control" placeholder="Ej: Acme Ltda." value="{{ request('search') }}">
-                    </div>
+                    <form method="GET" action="{{ route('compras.index') }}">
+                        <h5 class="fw-bold mb-3">Filtrar Compras</h5>
 
-                    <div class="mb-3">
-                        <label>RUT Proveedor</label>
-                        <input type="text" name="rut" class="form-control" placeholder="Ej: 12345678-9" value="{{ request('rut') }}">
-                    </div>
+                        <div class="mb-3">
+                            <label class="form-label">Razón Social:</label>
+                            <input type="text" name="search" class="form-control" placeholder="Ej: Acme Ltda." value="{{ request('search') }}">
+                        </div>
 
+                        <div class="mb-3">
+                            <label class="form-label">RUT Proveedor:</label>
+                            <input type="text" name="rut" class="form-control" placeholder="Ej: 12345678-9" value="{{ request('rut') }}">
+                        </div>
 
+                        <div class="mb-3">
+                            <label class="form-label">Estado:</label>
+                            <select name="status" class="form-select form-select-sm">
+                                <option value="">Todos</option>
+                                @foreach (['Pendiente', 'Pagado', 'Abonado', 'No Pagar'] as $estado)
+                                    <option value="{{ $estado }}" {{ request('status') == $estado ? 'selected' : '' }}>
+                                        {{ $estado }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
 
-
-                    <div class="mb-3">
-                        <label>Estado</label>
-                        <select name="status" class="form-control">
-                            <option value="">Todos</option>
-                            @foreach (['Pendiente', 'Pagado', 'Abonado', 'No Pagar'] as $estado)
-                                <option value="{{ $estado }}" {{ request('status') == $estado ? 'selected' : '' }}>{{ $estado }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="d-grid gap-2 mt-3">
-                        <button type="submit" class="btn btn-primary">Filtrar</button>
-                        <a href="{{ route('compras.index') }}" class="btn btn-outline-secondary">Limpiar</a>
-                    </div>
-                </form>
+                        <div class="d-grid gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
+                            <a href="{{ route('compras.index') }}" class="btn btn-outline-secondary">Limpiar</a>
+                        </div>
+                    </form>
             </div>
+
+
+
         </div>
+
+        
 
         {{-- TABLA PRINCIPAL --}}
         <div class="col-lg-9">
-            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
-                <button class="btn btn-outline-primary btn-sm" data-toggle="modal" data-target="#modalImportarComprasInfo">
-                    <i class="fa fa-info-circle mr-1"></i> Ver estructura y plantilla
-                </button>
-                <a href="{{ route('compras.create') }}" class="btn btn-primary btn-sm">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+
+                <div class="d-flex flex-wrap align-items-center">
+
+
+                    <button type="button" class="btn btn-outline-primary btn-sm mr-2 mb-2" data-toggle="modal" data-target="#modalImportarComprasInfo">
+                        <i class="fa fa-info-circle mr-1"></i> Ver estructura y plantilla
+                    </button>
+
+                </div>
+
+
+
+                <a href="{{ route('compras.create') }}" class="btn btn-primary btn-sm shadow-sm">
                     <i class="fa-solid fa-cart-plus me-1"></i> Agregar Compra 
                 </a>
             </div>
 
             {{-- TABLA --}}
             <div class="table-responsive shadow-sm rounded">
-                <table class="table table-striped table-hover align-middle text-nowrap">
+                <table class="table table-hover align-middle">
                     <thead class="bg-secondary text-white">
                         <tr>
                             <th>#</th>
@@ -265,5 +291,7 @@
 
 @include('compras.modal_importar_excel')
 @include('compras.modal_estructura_plantilla')
+
+@include('compras.modal_exportar_compras')
 
 @endsection
