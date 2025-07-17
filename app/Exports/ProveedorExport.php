@@ -9,13 +9,18 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
-
 use Illuminate\Contracts\Queue\ShouldQueue;
-
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class ProveedorExport implements FromQuery, WithHeadings, WithStyles, ShouldAutoSize, WithMapping, WithChunkReading, ShouldQueue
 {
+    protected $opcionales;
+
+    public function __construct(array $opcionales = [])
+    {
+        $this->opcionales = $opcionales;
+    }
+
     public function query()
     {
         return Proveedor::with(['banco', 'tipoCuenta', 'tipoPago', 'comuna']);
@@ -28,65 +33,65 @@ class ProveedorExport implements FromQuery, WithHeadings, WithStyles, ShouldAuto
 
     public function map($proveedor): array
     {
-        return [
-            $proveedor->razon_social,
-            $proveedor->rut,
-            $proveedor->banco->nombre ?? 'Sin Registro',
-            $proveedor->tipoCuenta->nombre ?? 'Sin Registro',
-            $proveedor->nro_cuenta,
-            $proveedor->tipoPago->nombre ?? 'Sin Registro',
-            $proveedor->telefono_empresa,
-            $proveedor->Nombre_RepresentanteLegal,
-            $proveedor->Rut_RepresentanteLegal,
-            $proveedor->Telefono_RepresentanteLegal,
-            $proveedor->Correo_RepresentanteLegal,
-            $proveedor->contacto_nombre,
-            $proveedor->contacto_telefono,
-            $proveedor->contacto_correo,
-            $proveedor->giro_comercial,
-            $proveedor->direccion_facturacion,
-            $proveedor->direccion_despacho,
-            $proveedor->nombre_contacto2,
-            $proveedor->telefono_contacto2,
-            $proveedor->correo_contacto2,
-            $proveedor->correo_banco,
-            $proveedor->nombre_razon_social_banco,
-            $proveedor->cargo_contacto1,
-            $proveedor->cargo_contacto2,
-            $proveedor->comuna->Nombre ?? 'Sin Comuna',
-        ];
+        $data = [];
+
+        foreach ($this->opcionales as $columna) {
+            switch ($columna) {
+                case 'banco':
+                    $data[] = $proveedor->banco->nombre ?? 'Sin banco';
+                    break;
+                case 'tipo_cuenta':
+                    $data[] = $proveedor->tipoCuenta->nombre ?? 'Sin tipo';
+                    break;
+                case 'tipo_pago':
+                    $data[] = $proveedor->tipoPago->nombre ?? 'Sin tipo';
+                    break;
+                case 'comuna':
+                    $data[] = $proveedor->comuna->Nombre ?? 'Sin Comuna';
+                    break;
+                default:
+                    $data[] = $proveedor->{$columna} ?? '—';
+                    break;
+            }
+        }
+
+        return $data;
     }
+
 
     public function headings(): array
     {
-        return [
-            'Razón Social',
-            'RUT',
-            'Banco',
-            'Tipo de Cuenta',
-            'Número de Cuenta',
-            'Tipo de Documento',
-            'Teléfono Empresa',
-            'Nombre Representante Legal',
-            'RUT Representante Legal',
-            'Teléfono Representante Legal',
-            'Correo Representante Legal',
-            'Contacto 1 - Nombre',
-            'Contacto 1 - Teléfono',
-            'Contacto 1 - Correo',
-            'Giro Comercial',
-            'Dirección Facturación',
-            'Dirección Despacho',
-            'Contacto 2 - Nombre',
-            'Contacto 2 - Teléfono',
-            'Contacto 2 - Correo',
-            'Correo Banco',
-            'Razón Social Banco',
-            'Cargo Contacto 1',
-            'Cargo Contacto 2',
-            'Comuna',
+        $etiquetas = [
+            'razon_social' => 'Razón Social',
+            'rut' => 'RUT',
+            'nro_cuenta' => 'Número de Cuenta',
+            'telefono_empresa' => 'Teléfono Empresa',
+            'Nombre_RepresentanteLegal' => 'Nombre Representante Legal',
+            'Rut_RepresentanteLegal' => 'RUT Representante Legal',
+            'Telefono_RepresentanteLegal' => 'Teléfono Representante Legal',
+            'Correo_RepresentanteLegal' => 'Correo Representante Legal',
+            'contacto_nombre' => 'Contacto 1 - Nombre',
+            'contacto_telefono' => 'Contacto 1 - Teléfono',
+            'contacto_correo' => 'Contacto 1 - Correo',
+            'giro_comercial' => 'Giro Comercial',
+            'direccion_facturacion' => 'Dirección Facturación',
+            'direccion_despacho' => 'Dirección Despacho',
+            'nombre_contacto2' => 'Contacto 2 - Nombre',
+            'telefono_contacto2' => 'Contacto 2 - Teléfono',
+            'correo_contacto2' => 'Contacto 2 - Correo',
+            'correo_banco' => 'Correo Banco',
+            'nombre_razon_social_banco' => 'Razón Social Banco',
+            'cargo_contacto1' => 'Cargo Contacto 1',
+            'cargo_contacto2' => 'Cargo Contacto 2',
+            'banco' => 'Banco',
+            'tipo_cuenta' => 'Tipo de Cuenta',
+            'tipo_pago' => 'Tipo de Documento',
+            'comuna' => 'Comuna',
         ];
+
+        return array_map(fn($campo) => $etiquetas[$campo] ?? ucfirst(str_replace('_', ' ', $campo)), $this->opcionales);
     }
+
 
     public function styles(Worksheet $sheet)
     {

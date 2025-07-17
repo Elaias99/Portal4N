@@ -95,19 +95,22 @@
                     </button>
                 </form>
 
-
                 {{-- Exportar --}}
-                <form action="{{ route('proveedores.exportar') }}" method="GET">
+                <form class="mb-2"> {{-- SIN id aquí --}}
+                    
+                    <button type="button" class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center"
+                        data-toggle="modal" data-target="#modalExportarProveedores">
+                        <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
+                    </button>
+                </form>
+
+                {{-- <form action="{{ route('proveedores.exportar') }}" method="GET">
                     <button type="submit"
                         class="btn btn-outline-primary btn-block py-2 d-flex align-items-center justify-content-center">
                         <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
                     </button>
-                </form>
+                </form> --}}
             </div>
-
-
-
-
 
             <div class="card shadow-sm p-3">
                 
@@ -184,20 +187,12 @@
                         <i class="fa fa-info-circle mr-1"></i> Ver estructura y plantilla
                     </button>
 
-                    <form id="importForm" action="{{ route('importar.proveedores') }}" method="POST" enctype="multipart/form-data">
-                        @csrf
-                        <input type="file" name="archivo" id="archivoInput" accept=".xlsx,.xls" style="display: none;">
-                    </form>
-
                 </div>
-
 
                 <a href="{{ route('proveedores.create') }}" class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="tooltip" title="Agregar Proveedor">
                     <i class="fa-solid fa-user-plus me-1"></i> Agregar
                 </a>
             </div>
-
-
 
             {{-- Alerta de éxito --}}
             @if(session('success'))
@@ -317,10 +312,6 @@
                 {{ $proveedores->appends(request()->query())->links('pagination::bootstrap-4') }}
             </div>
 
-
-
-
-
         </div>
     </div>
 </div>
@@ -334,19 +325,9 @@
         });
     });
 </script>
-
-<script>
-    document.getElementById('toggleImportarBtn').addEventListener('click', function () {
-        document.getElementById('archivoInput').click();
-    });
-
-    document.getElementById('archivoInput').addEventListener('change', function () {
-        document.getElementById('importForm').submit();
-    });
-</script>
-
 @include('proveedores.modal_importar')
 @include('proveedores.modal_importar_proveedores')
+@include('proveedores.modal_exportar_proveedores')
 
 
 @endsection

@@ -337,7 +337,7 @@ Route::get('/tutorial', function () {
 
 //Ruta para los proveedores
 // Ruta para descargar la plantilla vacía de proveedores
-Route::get('/proveedores/descargar-plantilla', [App\Http\Controllers\ProveedorController::class, 'descargarPlantilla'])->name('proveedores.plantilla');
+Route::get('/proveedores/descargar-plantilla', [ProveedorController::class, 'descargarPlantilla'])->name('proveedores.plantilla');
 //Ruta para exportar en Excel el listado de los proveedores
 Route::get('/proveedores/export', [ProveedorController::class, 'export'])->name('proveedores.exportar');
 

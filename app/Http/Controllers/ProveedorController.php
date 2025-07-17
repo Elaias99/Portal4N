@@ -11,6 +11,7 @@ use App\Models\Banco;
 use App\Models\Comuna;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\PlantillaProveedoresExport;
+use Illuminate\Support\Facades\Schema;
 
 class ProveedorController extends Controller
 {
@@ -44,12 +45,34 @@ class ProveedorController extends Controller
 
         $proveedores = $query->orderBy('razon_social', 'asc')->paginate(10);
 
+
+        $columnas = Schema::getColumnListing('proveedores');
+
+        $excluir = ['id', 'created_at', 'updated_at', 'banco_id', 'tipo_cuenta_id', 'tipo_pago_id', 'comuna_id'];
+        $columnasFiltradas = collect($columnas)
+            ->reject(fn($col) => in_array($col, $excluir))
+            ->mapWithKeys(function ($col) {
+                return [$col => ucwords(str_replace('_', ' ', str_replace('nro', 'N°', $col)))];
+            })
+            ->toArray();
+
+        // Agregar manualmente relaciones
+        $columnasFiltradas['banco'] = 'Banco';
+        $columnasFiltradas['tipo_cuenta'] = 'Tipo de Cuenta';
+        $columnasFiltradas['tipo_pago'] = 'Tipo de Documento';
+        $columnasFiltradas['comuna'] = 'Comuna';
+
+        $camposOpcionales = $columnasFiltradas;
+
+
+
         return view('proveedores.index', [
             'proveedores' => $proveedores,
             'bancos' => Banco::all(),
             'comunas' => Comuna::all(), // opcionalmente lo podrías quitar si ya no lo usás en la vista
             'tiposCuenta' => TipoCuenta::all(),
             'tiposDocumento' => TipoDocumento::all(),
+            'camposOpcionales' => $camposOpcionales,
         ]);
     }
 
@@ -226,10 +249,13 @@ class ProveedorController extends Controller
         return redirect()->route('proveedores.index')->with('success', 'Proveedor eliminado con éxito.');
     }
 
-    public function export()
+    public function export(Request $request)
     {
-        return Excel::download(new ProveedorExport, 'proveedores.xlsx');
+        $opcionales = $request->input('opciones', []);
+
+        return Excel::download(new ProveedorExport($opcionales), 'proveedores.xlsx');
     }
+
 
 
 
@@ -237,5 +263,17 @@ class ProveedorController extends Controller
     {
         return Excel::download(new PlantillaProveedoresExport, 'plantilla_proveedores.xlsx');
     }
+
+    public function mostrarFormularioExport()
+    {
+        $camposOpcionales = [
+            'banco' => 'Banco',
+            'tipo_cuenta' => 'Tipo de Cuenta',
+            'tipo_pago' => 'Tipo de Documento',
+        ];
+
+        return view('proveedores.modal_exportar_proveedores', compact('camposOpcionales'));
+    }
+
 
 }
