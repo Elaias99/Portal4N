@@ -11,24 +11,33 @@ use Maatwebsite\Excel\Concerns\WithChunkReading;
 
 class CompraExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithChunkReading
 {
-    protected $opciones;
+    protected array $opciones;
+    protected array $camposPermitidos = [
+        'empresa', 'rut', 'proveedor', 'centro_costo', 'glosa', 'observacion',
+        'tipo_de_documento', 'plazo_pago', 'forma_pago', 'pago_total',
+        'fecha_vencimiento', 'año', 'mes', 'fecha_documento',
+        'numero_documento', 'oc', 'status', 'usuario', 'archivo_oc', 'archivo_documento',
+    ];
 
     public function __construct(array $opciones = [])
     {
-        $this->opciones = $opciones;
+        // Validar campos permitidos
+        $this->opciones = array_values(array_intersect($opciones, $this->camposPermitidos));
     }
 
     public function query()
     {
-        return Compra::with([
-            'empresa',
-            'proveedor',
-            'centroCosto',
-            'tipoPago',
-            'plazoPago',
-            'formaPago',
-            'user'
-        ]);
+        $relaciones = [];
+
+        if (in_array('empresa', $this->opciones))      $relaciones[] = 'empresa';
+        if (in_array('rut', $this->opciones) || in_array('proveedor', $this->opciones)) $relaciones[] = 'proveedor';
+        if (in_array('centro_costo', $this->opciones)) $relaciones[] = 'centroCosto';
+        if (in_array('tipo_de_documento', $this->opciones)) $relaciones[] = 'tipoPago';
+        if (in_array('plazo_pago', $this->opciones))   $relaciones[] = 'plazoPago';
+        if (in_array('forma_pago', $this->opciones))   $relaciones[] = 'formaPago';
+        if (in_array('usuario', $this->opciones))      $relaciones[] = 'user';
+
+        return Compra::with($relaciones);
     }
 
     public function chunkSize(): int
@@ -54,12 +63,6 @@ class CompraExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSi
                 case 'centro_costo':
                     $campos[] = $compra->centroCosto->nombre ?? 'Sin Registro';
                     break;
-                case 'glosa':
-                    $campos[] = $compra->glosa;
-                    break;
-                case 'observacion':
-                    $campos[] = $compra->observacion;
-                    break;
                 case 'tipo_de_documento':
                     $campos[] = $compra->tipoPago->nombre ?? 'Sin Registro';
                     break;
@@ -69,38 +72,15 @@ class CompraExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSi
                 case 'forma_pago':
                     $campos[] = $compra->formaPago->nombre ?? 'Sin Registro';
                     break;
-                case 'pago_total':
-                    $campos[] = $compra->pago_total;
-                    break;
-                case 'fecha_vencimiento':
-                    $campos[] = optional($compra->fecha_vencimiento)->format('Y-m-d');
-                    break;
-                case 'año':
-                    $campos[] = $compra->año;
-                    break;
-                case 'mes':
-                    $campos[] = $compra->mes;
-                    break;
-                case 'fecha_documento':
-                    $campos[] = optional($compra->fecha_documento)->format('Y-m-d');
-                    break;
-                case 'numero_documento':
-                    $campos[] = $compra->numero_documento;
-                    break;
-                case 'oc':
-                    $campos[] = $compra->oc;
-                    break;
-                case 'status':
-                    $campos[] = $compra->status;
-                    break;
                 case 'usuario':
                     $campos[] = $compra->user->name ?? 'Sin Registro';
                     break;
-                case 'archivo_oc':
-                    $campos[] = $compra->archivo_oc;
+                case 'fecha_vencimiento':
+                case 'fecha_documento':
+                    $campos[] = optional($compra->{$campo})->format('Y-m-d');
                     break;
-                case 'archivo_documento':
-                    $campos[] = $compra->archivo_documento;
+                default:
+                    $campos[] = $compra->{$campo} ?? '—';
                     break;
             }
         }
@@ -133,6 +113,6 @@ class CompraExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSi
             'archivo_documento' => 'Archivo Documento',
         ];
 
-        return array_map(fn($key) => $titulos[$key] ?? $key, $this->opciones);
+        return array_map(fn($key) => $titulos[$key] ?? ucfirst($key), $this->opciones);
     }
 }

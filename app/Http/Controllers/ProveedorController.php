@@ -258,8 +258,28 @@ class ProveedorController extends Controller
     {
         $opcionales = $request->input('opciones', []);
 
-        return Excel::download(new ProveedorExport($opcionales), 'proveedores.xlsx');
+        // Lista de columnas válidas (debe coincidir con la del exportador)
+        $columnasPermitidas = [
+            'razon_social', 'rut', 'nro_cuenta', 'telefono_empresa',
+            'Nombre_RepresentanteLegal', 'Rut_RepresentanteLegal', 'Telefono_RepresentanteLegal', 'Correo_RepresentanteLegal',
+            'contacto_nombre', 'contacto_telefono', 'contacto_correo',
+            'giro_comercial', 'direccion_facturacion', 'direccion_despacho',
+            'nombre_contacto2', 'telefono_contacto2', 'correo_contacto2',
+            'correo_banco', 'nombre_razon_social_banco', 'cargo_contacto1', 'cargo_contacto2',
+            'banco', 'tipo_cuenta', 'tipo_pago', 'comuna',
+        ];
+
+        // Filtra solo los campos válidos
+        $opcionalesValidos = array_values(array_intersect($opcionales, $columnasPermitidas));
+
+        // Evita exportaciones vacías
+        if (empty($opcionalesValidos)) {
+            return redirect()->back()->with('error', 'Debes seleccionar al menos un campo para exportar.');
+        }
+
+        return Excel::download(new ProveedorExport($opcionalesValidos), 'proveedores.xlsx');
     }
+
 
 
 

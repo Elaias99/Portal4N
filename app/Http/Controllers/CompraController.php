@@ -488,7 +488,23 @@ class CompraController extends Controller
     public function export(Request $request)
     {
         $opciones = $request->input('opciones', []);
-        return Excel::download(new CompraExport($opciones), 'compras.xlsx');
+
+        // Lista de campos válidos
+        $camposPermitidos = [
+            'empresa', 'rut', 'proveedor', 'centro_costo', 'glosa', 'observacion',
+            'tipo_de_documento', 'plazo_pago', 'forma_pago', 'pago_total',
+            'fecha_vencimiento', 'año', 'mes', 'fecha_documento',
+            'numero_documento', 'oc', 'status', 'usuario', 'archivo_oc', 'archivo_documento',
+        ];
+
+        // Validar y limpiar campos recibidos
+        $opcionesValidas = array_values(array_intersect($opciones, $camposPermitidos));
+
+        if (empty($opcionesValidas)) {
+            return redirect()->back()->with('error', 'Debes seleccionar al menos un campo para exportar.');
+        }
+
+        return Excel::download(new CompraExport($opcionesValidas), 'compras.xlsx');
     }
 
 

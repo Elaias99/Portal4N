@@ -14,16 +14,33 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class ProveedorExport implements FromQuery, WithHeadings, WithStyles, ShouldAutoSize, WithMapping, WithChunkReading, ShouldQueue
 {
-    protected $opcionales;
+    protected array $opcionales;
+    protected array $columnasPermitidas = [
+        'razon_social', 'rut', 'nro_cuenta', 'telefono_empresa',
+        'Nombre_RepresentanteLegal', 'Rut_RepresentanteLegal', 'Telefono_RepresentanteLegal', 'Correo_RepresentanteLegal',
+        'contacto_nombre', 'contacto_telefono', 'contacto_correo',
+        'giro_comercial', 'direccion_facturacion', 'direccion_despacho',
+        'nombre_contacto2', 'telefono_contacto2', 'correo_contacto2',
+        'correo_banco', 'nombre_razon_social_banco', 'cargo_contacto1', 'cargo_contacto2',
+        'banco', 'tipo_cuenta', 'tipo_pago', 'comuna',
+    ];
 
     public function __construct(array $opcionales = [])
     {
-        $this->opcionales = $opcionales;
+        // Validar campos permitidos
+        $this->opcionales = array_values(array_intersect($opcionales, $this->columnasPermitidas));
     }
 
     public function query()
     {
-        return Proveedor::with(['banco', 'tipoCuenta', 'tipoPago', 'comuna']);
+        $relaciones = [];
+
+        if (in_array('banco', $this->opcionales)) $relaciones[] = 'banco';
+        if (in_array('tipo_cuenta', $this->opcionales)) $relaciones[] = 'tipoCuenta';
+        if (in_array('tipo_pago', $this->opcionales)) $relaciones[] = 'tipoPago';
+        if (in_array('comuna', $this->opcionales)) $relaciones[] = 'comuna';
+
+        return Proveedor::with($relaciones);
     }
 
     public function chunkSize(): int
@@ -58,7 +75,6 @@ class ProveedorExport implements FromQuery, WithHeadings, WithStyles, ShouldAuto
         return $data;
     }
 
-
     public function headings(): array
     {
         $etiquetas = [
@@ -91,7 +107,6 @@ class ProveedorExport implements FromQuery, WithHeadings, WithStyles, ShouldAuto
 
         return array_map(fn($campo) => $etiquetas[$campo] ?? ucfirst(str_replace('_', ' ', $campo)), $this->opcionales);
     }
-
 
     public function styles(Worksheet $sheet)
     {
