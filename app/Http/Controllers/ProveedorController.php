@@ -43,6 +43,11 @@ class ProveedorController extends Controller
             $query->where('tipo_pago_id', $request->tipo_pago);
         }
 
+
+        
+
+
+
         $proveedores = $query->orderBy('razon_social', 'asc')->paginate(10);
 
 

@@ -104,12 +104,7 @@
                     </button>
                 </form>
 
-                {{-- <form action="{{ route('proveedores.exportar') }}" method="GET">
-                    <button type="submit"
-                        class="btn btn-outline-primary btn-block py-2 d-flex align-items-center justify-content-center">
-                        <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
-                    </button>
-                </form> --}}
+
             </div>
 
             <div class="card shadow-sm p-3">

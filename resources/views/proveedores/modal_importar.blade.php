@@ -76,10 +76,6 @@
           </div>
         </div>
 
-        {{-- Generar archivo corregido --}}
-
-
-
         {{-- Panel: Bancos --}}
         <div id="panelBancos" class="d-none">
           <div class="table-responsive">
@@ -110,6 +106,9 @@
           </a>
         </div>
 
+
+
+
         {{-- Panel: Tipos de Cuenta --}}
         <div id="panelCuentas" class="d-none">
           <div class="table-responsive">
@@ -135,27 +134,22 @@
                 </tbody>
             </table>
 
-
-
-
           </div>
           <a href="{{ route('exportar.tipo_cuentas') }}" class="btn btn-sm btn-outline-success mt-3">
             <i class="fa fa-file-excel"></i> Exportar tipos de cuenta
           </a>
         </div>
 
+
+
+
+
         {{-- Panel: Tipos de Documento --}}
         <div id="panelDocumentos" class="d-none">
           <div class="table-responsive">
-
-            
             <h5 class="mt-3 mb-3 font-weight-bold text-dark">
                 Tipo Documento
             </h5>
-
-
-
-
             <table class="table table-sm table-hover table-bordered bg-white rounded shadow-sm">
                 <thead class="thead-dark">
                     <tr>
@@ -180,6 +174,28 @@
             <i class="fa fa-file-excel"></i> Exportar tipos de documento
           </a>
         </div>
+
+
+
+        <div id="panelComuna" class="d-none">
+          <div class="card mb-3">
+            <div class="card-body">
+              <p class="mb-2 text-muted">
+                Exportar lista de las comunas.
+              </p>
+              <a href="{{ route('comunas.export') }}" class="btn btn-primary">
+                <i class="fa fa-download me-1"></i> Exportar lista de comunas
+              </a>
+            </div>
+          </div>
+        </div>
+
+
+
+
+
+
+
       </div>
 
       <div class="modal-footer bg-light d-flex justify-content-between align-items-center flex-wrap">
@@ -196,6 +212,8 @@
           </button>
 
 
+
+
           <button onclick="mostrarPanel('panelBancos')" class="btn btn-light border shadow-sm">
             <small>Bancos</small>
           </button>
@@ -204,6 +222,10 @@
           </button>
           <button onclick="mostrarPanel('panelDocumentos')" class="btn btn-light border shadow-sm">
             <small>Tipo Doc.</small>
+          </button>
+
+          <button onclick="mostrarPanel('panelComuna')" class="btn btn-light border shadow-sm">
+            <small>Comunas</small>
           </button>
         </div>
 
@@ -219,7 +241,7 @@
 
 <script>
   function mostrarPanel(id) {
-    const paneles = ['panelArchivo', 'panelBancos', 'panelCuentas', 'panelDocumentos'];
+    const paneles = ['panelArchivo','panelComuna', 'panelBancos', 'panelCuentas', 'panelDocumentos'];
     paneles.forEach(pid => {
       document.getElementById(pid).classList.add('d-none');
     });

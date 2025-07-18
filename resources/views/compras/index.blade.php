@@ -107,7 +107,6 @@
         {{-- FILTROS Y GESTIÓN --}}
         <div class="col-lg-2 mb-4">
 
-
                 {{-- Gestión Masiva --}}
             <div class="card shadow-sm p-3 mb-4">
                 <h5 class="fw-bold mb-3">Gestión Masiva de Compras</h5>
@@ -164,27 +163,17 @@
                     </form>
             </div>
 
-
-
         </div>
-
-        
 
         {{-- TABLA PRINCIPAL --}}
         <div class="col-lg-9">
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
 
                 <div class="d-flex flex-wrap align-items-center">
-
-
                     <button type="button" class="btn btn-outline-primary btn-sm mr-2 mb-2" data-toggle="modal" data-target="#modalImportarComprasInfo">
                         <i class="fa fa-info-circle mr-1"></i> Ver estructura y plantilla
                     </button>
-
                 </div>
-
-
-
                 <a href="{{ route('compras.create') }}" class="btn btn-primary btn-sm shadow-sm">
                     <i class="fa-solid fa-cart-plus me-1"></i> Agregar Compra 
                 </a>
@@ -195,7 +184,6 @@
                 <table class="table table-hover align-middle">
                     <thead class="bg-secondary text-white">
                         <tr>
-                            <th>#</th>
                             <th>Usuario</th>
                             <th>Centro Costo</th>
                             <th>Glosa</th>
@@ -222,7 +210,6 @@
                     <tbody>
                         @forelse ($compras as $compra)
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
                                 <td>{{ $compra->user->name ?? '-' }}</td>
                                 <td>{{ $compra->centroCosto->nombre ?? '-' }}</td>
                                 <td>{{ $compra->glosa }}</td>
