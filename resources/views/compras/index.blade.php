@@ -9,6 +9,20 @@
 <div class="container">
     <h1 class="text-center mb-4" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Lista de Compras</h1>
 
+
+    @if (session('faltantes_plantilla_compras'))
+        <div class="alert alert-danger shadow-sm mb-3">
+            <strong>❌ El archivo no coincide con la plantilla oficial.</strong>
+            <p class="mb-1">Faltan columnas:</p>
+            <ul class="mb-0">
+                @foreach (session('faltantes_plantilla_compras') as $columna)
+                    <li>📛 {{ $columna }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+
     {{-- MENSAJES DE IMPORTACIÓN --}}
     @if (session('import_result'))
         <div class="alert alert-info shadow-sm mb-3">

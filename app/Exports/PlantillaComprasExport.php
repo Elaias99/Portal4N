@@ -11,7 +11,7 @@ class PlantillaComprasExport implements FromCollection, WithHeadings
     public function collection()
     {
         return new Collection([
-            [
+            [ // Descripciones para el usuario
                 'Puede ingresar el ID (Ej: 1) o el nombre exacto en la tabla empresas (Ej: 4Nortes SPA)',
                 'Puede ingresar el ID del proveedor o el RUT (Ej: 12345678-9)',
                 'Puede ingresar el ID o razón social exacta del proveedor',
@@ -37,6 +37,11 @@ class PlantillaComprasExport implements FromCollection, WithHeadings
     }
 
     public function headings(): array
+    {
+        return self::campos();
+    }
+
+    public static function campos(): array
     {
         return [
             'empresa',

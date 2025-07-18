@@ -10,19 +10,44 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Exports\PlantillaProveedoresExport;
 
 class ProveedorImportController extends Controller
 {
+    
+
     public function importar(Request $request)
     {
         $request->validate([
             'archivo' => 'required|mimes:xlsx,xls'
         ]);
 
-        $importador = new ProveedoresImport();
-
         try {
-            Excel::import($importador, $request->file('archivo'));
+            // 1️⃣ Cargar encabezados del archivo
+            $archivo = $request->file('archivo');
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($archivo);
+            $hoja = $spreadsheet->getActiveSheet();
+            $encabezadosArchivo = $hoja->rangeToArray('A1:' . $hoja->getHighestColumn() . '1')[0];
+
+            // 2️⃣ Obtener encabezados esperados desde la plantilla oficial
+            $encabezadosEsperados = (new \App\Exports\PlantillaProveedoresExport)->headings();
+
+
+
+            // 3️⃣ Validar si faltan columnas
+            $faltantes = array_diff(
+                array_map('strtolower', $encabezadosEsperados),
+                array_map('strtolower', $encabezadosArchivo)
+            );
+
+            if (!empty($faltantes)) {
+                return back()->with('faltantes_plantilla', $faltantes);
+
+            }
+
+            // 4️⃣ Si todo está correcto, importar
+            $importador = new \App\Imports\ProveedoresImport();
+            \Maatwebsite\Excel\Facades\Excel::import($importador, $archivo);
 
             session()->flash('import_result_proveedores', [
                 'importadas' => $importador->importadas,
@@ -34,7 +59,6 @@ class ProveedorImportController extends Controller
                 'hayOmitidas' => $importador->omitidas > 0,
                 'hayIncompletos' => count($importador->conDatosIncompletos) > 0,
 
-                // 🔽 Clasificación explícita para separar mensajes en la vista
                 'erroresDuplicados' => collect($importador->errores)->filter(
                     fn($e) => str_contains($e, 'ya existe el proveedor')
                 )->values(),
@@ -53,6 +77,7 @@ class ProveedorImportController extends Controller
             return back()->with('error', 'Error durante la importación: ' . $e->getMessage());
         }
     }
+
 
 
 

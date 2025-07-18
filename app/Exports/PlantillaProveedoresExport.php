@@ -10,11 +10,15 @@ class PlantillaProveedoresExport implements FromCollection, WithHeadings
 {
     public function collection()
     {
-        // Sin datos, solo encabezados
         return new Collection([]);
     }
 
     public function headings(): array
+    {
+        return self::campos();
+    }
+
+    public static function campos(): array
     {
         return [
             'razon_social',
@@ -45,3 +49,4 @@ class PlantillaProveedoresExport implements FromCollection, WithHeadings
         ];
     }
 }
+

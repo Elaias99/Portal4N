@@ -20,6 +20,9 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ProveedoresFaltantesExport;
 use Illuminate\Support\Str;
 
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use App\Exports\PlantillaComprasExport; // Asegúrate de importar esto
+
 use App\Exports\CompraExport;
 
 
@@ -403,10 +406,30 @@ class CompraController extends Controller
         ]);
 
         try {
-            $import = new CompraImport;
-            Excel::import($import, $request->file('archivo_excel'));
+            // ✅ 1. Leer encabezados reales del archivo importado
+            $archivo = $request->file('archivo_excel');
+            $spreadsheet = IOFactory::load($archivo);
+            $hoja = $spreadsheet->getActiveSheet();
+            $encabezadosArchivo = $hoja->rangeToArray('A1:' . $hoja->getHighestColumn() . '1')[0];
 
-            // Guardar proveedores faltantes en sesión
+            // ✅ 2. Obtener los campos esperados de la plantilla oficial
+            $encabezadosEsperados = PlantillaComprasExport::campos();
+
+
+            // ✅ 3. Comparar columnas esperadas vs archivo
+            $faltantes = array_diff(
+                array_map('strtolower', $encabezadosEsperados),
+                array_map('strtolower', $encabezadosArchivo)
+            );
+
+            if (!empty($faltantes)) {
+                return redirect()->route('compras.index')->with('faltantes_plantilla_compras', $faltantes);
+            }
+
+            // ✅ 4. Si todo bien, continuar con importación
+            $import = new CompraImport;
+            Excel::import($import, $archivo);
+
             if (count($import->proveedoresFaltantes) > 0) {
                 session()->put('proveedores_faltantes', $import->proveedoresFaltantes);
             }
@@ -419,15 +442,11 @@ class CompraController extends Controller
                 'erroresValidacion' => collect($import->errores)
                     ->reject(fn($e) => Str::contains($e, 'Duplicado'))
                     ->values(),
-
                 'detalles' => $import->importadasDetalle,
-
                 'hayErrores' => count($import->errores) > 0,
                 'hayOmitidas' => $import->omitidas > 0,
                 'hayIncompletos' => false,
             ]);
-
-
         } catch (\Exception $e) {
             return back()->with('error', 'Error al importar el archivo: ' . $e->getMessage());
         }

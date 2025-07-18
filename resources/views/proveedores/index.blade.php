@@ -4,6 +4,23 @@
 <div class="container">
     <h1 class="text-center mb-4" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Lista de Proveedores</h1>
 
+
+    {{-- ❌ Error general, por ejemplo plantilla incorrecta --}}
+    @if (session('faltantes_plantilla'))
+        <div class="alert alert-danger shadow-sm">
+            <strong>❌ El archivo no coincide con la plantilla oficial</strong>
+            <p class="mb-1">Faltan las siguientes columnas:</p>
+            <ul class="mb-0" style="columns: 2">
+                @foreach (session('faltantes_plantilla') as $col)
+                    <li><code>{{ $col }}</code></li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+
+
+
     @if (session('import_result_proveedores'))
         <div class="alert alert-info shadow-sm">
             <strong>📋 Importación finalizada</strong>
@@ -11,6 +28,10 @@
                 <li>✅ Proveedores importados: <strong>{{ session('import_result_proveedores.importadas') }}</strong></li>
                 <li>⚠️ Proveedores omitidos: <strong>{{ session('import_result_proveedores.omitidas') }}</strong></li>
             </ul>
+
+
+
+
 
             {{-- Proveedores exitosos --}}
             @if (count(session('import_result_proveedores.exitosos', [])))
