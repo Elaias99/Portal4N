@@ -13,9 +13,19 @@ class AFPController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $afps = AFP::all();
+        $search = $request->input('search');
+        $query = AFP::query();
+
+        if ($search) {
+            $query->where('Nombre', 'like', "%{$search}%");
+        }
+        
+
+
+        $afps = $query->get();
+        
         return view('afps.index', compact('afps'));
     }
 

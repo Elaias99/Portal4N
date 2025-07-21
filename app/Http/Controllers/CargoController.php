@@ -13,10 +13,21 @@ class CargoController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         //
-        $cargos = Cargo::orderBy('Nombre', 'asc')->get();
+
+        $search = $request->input('search');
+        $query = Cargo::query();
+
+        if ($search) {
+            $query->where('Nombre', 'like', "%{$search}%");
+        }
+
+        $cargos = $query->orderBy('Nombre', 'asc')->get();
+
+    
+
         return view('cargos.index', compact('cargos'));
     }
 

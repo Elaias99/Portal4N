@@ -11,29 +11,27 @@
 <div class="container py-4">
     <div class="row">
         {{-- Columna izquierda: Filtros --}}
+
         <div class="col-lg-2 mb-4">
+            @component('layouts.columna_izquierda', [
+                'tituloTarjeta' => 'Gestión Masiva de Pagos',
+                'tituloFiltros' => 'Filtrar Por',
+                'action' => route('pagos.index')
+            ])
+                @slot('acciones')
+                    {{-- Exportar --}}
+                    <form id="formExportarPagos" action="{{ route('pagos.exportar') }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="ids" id="exportar-ids">
+                        <button type="button"
+                            class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center"
+                            id="btnExportarPagos">
+                            <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
+                        </button>
+                    </form>
+                @endslot
 
-            <div class="card shadow-sm p-3 mb-4">
-                <h5 class="fw-bold mb-3">Gestión Masiva de Pagos</h5>
-
-        
-                {{-- Exportar --}}
-                <form id="formExportarPagos" action="{{ route('pagos.exportar') }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="ids" id="exportar-ids">
-                    <button type="button"
-                        class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center"
-                        id="btnExportarPagos">
-                        <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
-                    </button>
-                </form>
-
-            </div>
-
-            <div class="card shadow-sm p-3">
-                <form method="GET" action="{{ route('pagos.index') }}">
-                    <h5 class="fw-bold mb-3">🎯 Filtros</h5>
-
+                @slot('filtros')
                     <div class="mb-3">
                         <label for="empresa_id" class="form-label fw-semibold">Empresa</label>
                         <select name="empresa_id" id="empresa_id" class="form-select">
@@ -62,14 +60,11 @@
                         <label for="fecha_documento" class="form-label fw-semibold">Fecha del Documento</label>
                         <input type="date" name="fecha_documento" id="fecha_documento" class="form-control" value="{{ request('fecha_documento') }}">
                     </div>
-
-                    <div class="d-grid gap-2 mt-3">
-                        <button type="submit" class="btn btn-primary">Filtrar</button>
-                        <a href="{{ route('pagos.index') }}" class="btn btn-outline-secondary">Limpiar</a>
-                    </div>
-                </form>
-            </div>
+                @endslot
+            @endcomponent
         </div>
+
+
 
         {{-- Columna derecha: Tabla --}}
         {{-- Reemplazar dentro del <div class="col-lg-9"> --}}

@@ -101,40 +101,33 @@
     <div class="row">
 
         <div class="col-lg-2 mb-4">
+            @component('layouts.columna_izquierda', [
+                'tituloTarjeta' => 'Gestión Masiva de Proveedores',
+                'tituloFiltros' => 'Filtrar Compras',
+                'action' => route('proveedores.index')
+            ])
+                @slot('acciones')
+                    {{-- Importar --}}
+                    <form class="mb-2">
+                        @csrf
+                        <input type="file" name="archivo" id="archivoInput" accept=".xlsx,.xls" style="display: none;">
 
-            <div class="card shadow-sm p-3 mb-4">
-                <h5 class="fw-bold mb-3">Gestión Masiva de Proveedores</h5>
+                        <button type="button" class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center"
+                            data-toggle="modal" data-target="#modalImportarExcelProveedores">
+                            <i class="fa-solid fa-file-excel me-1"></i> Importar Excel
+                        </button>
+                    </form>
 
-                {{-- Importar --}}
-                <form class="mb-2"> {{-- SIN id aquí --}}
-                    @csrf
-                    <input type="file" name="archivo" id="archivoInput" accept=".xlsx,.xls" style="display: none;">
-                    
-                    <button type="button" class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center"
-                        data-toggle="modal" data-target="#modalImportarExcelProveedores">
-                        <i class="fa-solid fa-file-excel me-1"></i> Importar Excel
-                    </button>
-                </form>
+                    {{-- Exportar --}}
+                    <form class="mb-2">
+                        <button type="button" class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center"
+                            data-toggle="modal" data-target="#modalExportarProveedores">
+                            <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
+                        </button>
+                    </form>
+                @endslot
 
-                {{-- Exportar --}}
-                <form class="mb-2"> {{-- SIN id aquí --}}
-                    
-                    <button type="button" class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center"
-                        data-toggle="modal" data-target="#modalExportarProveedores">
-                        <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
-                    </button>
-                </form>
-
-
-            </div>
-
-            <div class="card shadow-sm p-3">
-                
-
-                <form method="GET" action="{{ route('proveedores.index') }}">
-                    <h5 class="fw-bold mb-3">Filtrar Proveedores</h5>
-
-
+                @slot('filtros')
                     <div class="mb-3">
                         <label class="form-label">Razón Social:</label>
                         <input type="text" name="razon_social" class="form-control" placeholder="Ej: Acme Ltda." value="{{ request('razon_social') }}">
@@ -180,17 +173,10 @@
                             @endforeach
                         </select>
                     </div>
-
-
-
-                    <div class="d-grid gap-2 mt-3">
-                        <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
-                        <a href="{{ route('proveedores.index') }}" class="btn btn-outline-secondary">Limpiar</a>
-                    </div>
-                </form>
-
-            </div>
+                @endslot
+            @endcomponent
         </div>
+
 
         {{-- Contenido principal: acciones + tabla --}}
         <div class="col-lg-9">

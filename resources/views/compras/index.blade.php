@@ -120,64 +120,57 @@
     <div class="row">
         {{-- FILTROS Y GESTIÓN --}}
         <div class="col-lg-2 mb-4">
-
-                {{-- Gestión Masiva --}}
-            <div class="card shadow-sm p-3 mb-4">
-                <h5 class="fw-bold mb-3">Gestión Masiva de Compras</h5>
-
-                {{-- Importar --}}
-                <form class="mb-2">
-                    @csrf
-                    <input type="file" name="archivo" id="archivoInput" accept=".xlsx,.xls" style="display: none;">
-                    <button type="button" class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center"
-                        data-toggle="modal" data-target="#modalImportarExcelCompras">
-                        <i class="fa-solid fa-file-excel me-1"></i> Importar Excel
-                    </button>
-                </form>
-
-                {{-- Exportar --}}
-                <form class="mb-2">
-                    <button type="button" class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center"
-                        data-toggle="modal" data-target="#modalExportarCompras">
-                        <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
-                    </button>
-                </form>
-            </div>
-
-            <div class="card shadow-sm p-3">
-                    <form method="GET" action="{{ route('compras.index') }}">
-                        <h5 class="fw-bold mb-3">Filtrar Compras</h5>
-
-                        <div class="mb-3">
-                            <label class="form-label">Razón Social:</label>
-                            <input type="text" name="search" class="form-control" placeholder="Ej: Acme Ltda." value="{{ request('search') }}">
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">RUT Proveedor:</label>
-                            <input type="text" name="rut" class="form-control" placeholder="Ej: 12345678-9" value="{{ request('rut') }}">
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Estado:</label>
-                            <select name="status" class="form-select form-select-sm">
-                                <option value="">Todos</option>
-                                @foreach (['Pendiente', 'Pagado', 'Abonado', 'No Pagar'] as $estado)
-                                    <option value="{{ $estado }}" {{ request('status') == $estado ? 'selected' : '' }}>
-                                        {{ $estado }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="d-grid gap-2 mt-3">
-                            <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
-                            <a href="{{ route('compras.index') }}" class="btn btn-outline-secondary">Limpiar</a>
-                        </div>
+            @component('layouts.columna_izquierda', [
+                'tituloTarjeta' => 'Gestión Masiva de Compras',
+                'tituloFiltros' => 'Filtrar Compras',
+                'action' => route('compras.index')
+            ])
+                @slot('acciones')
+                    {{-- Importar --}}
+                    <form class="mb-2">
+                        @csrf
+                        <input type="file" name="archivo" id="archivoInput" accept=".xlsx,.xls" style="display: none;">
+                        <button type="button" class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center"
+                            data-toggle="modal" data-target="#modalImportarExcelCompras">
+                            <i class="fa-solid fa-file-excel me-1"></i> Importar Excel
+                        </button>
                     </form>
-            </div>
 
+                    {{-- Exportar --}}
+                    <form class="mb-2">
+                        <button type="button" class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center"
+                            data-toggle="modal" data-target="#modalExportarCompras">
+                            <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
+                        </button>
+                    </form>
+                @endslot
+
+                @slot('filtros')
+                    <div class="mb-3">
+                        <label class="form-label">Razón Social:</label>
+                        <input type="text" name="search" class="form-control" placeholder="Ej: Acme Ltda." value="{{ request('search') }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">RUT Proveedor:</label>
+                        <input type="text" name="rut" class="form-control" placeholder="Ej: 12345678-9" value="{{ request('rut') }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Estado:</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">Todos</option>
+                            @foreach (['Pendiente', 'Pagado', 'Abonado', 'No Pagar'] as $estado)
+                                <option value="{{ $estado }}" {{ request('status') == $estado ? 'selected' : '' }}>
+                                    {{ $estado }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endslot
+            @endcomponent
         </div>
+
 
         {{-- TABLA PRINCIPAL --}}
         <div class="col-lg-9">

@@ -12,10 +12,6 @@ $notificaciones = Auth::user()->unreadNotifications
     ])
     ->sortByDesc('created_at');
 @endphp
-
-
-
-
 @section('content')
 
 <div class="container"> {{-- O si quieres ocupar todo el ancho: container-fluid --}}
@@ -31,45 +27,36 @@ $notificaciones = Auth::user()->unreadNotifications
     <br>
 
     <div class="row">
+
         <!-- Sidebar de filtros -->
         <div class="col-lg-2">
+            @component('layouts.columna_izquierda', [
+                'tituloTarjeta' => 'Accesos rápidos',
+                'tituloFiltros' => 'Filtrar Por',
+                'action' => route('empleados.index')
+            ])
+                @slot('acciones')
+                    <div class="d-grid gap-2 mt-2">
+                        <a href="{{ route('contratos.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Contratos">
+                            <i class="fa-solid fa-file-signature me-2"></i> Contratos
+                        </a>
 
-            <div class="card shadow-sm p-3 mt-6">
-                <h5 class="fw-bold">Accesos rápidos</h5>
+                        <a href="{{ route('historial-vacacion.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Vacaciones">
+                            <i class="fa-solid fa-plane-departure me-2"></i> Vacaciones
+                        </a>
 
-                <div class="d-grid gap-2 mt-2">
-                    <a href="{{ route('contratos.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Contratos">
-                        <i class="fa-solid fa-file-signature me-2"></i> Contratos
-                    </a>
+                        <a href="{{ route('areas.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Áreas">
+                            <i class="fa-solid fa-person me-2"></i> Áreas
+                        </a>
+                    </div>
+                @endslot
 
-                    <a href="{{ route('historial-vacacion.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Vacaciones">
-                        <i class="fa-solid fa-plane-departure me-2"></i> Vacaciones
-                    </a>
-
-                    <a href="{{ route('areas.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="areas">
-                        <i class="fa-solid fa-person me-2"></i> Areas
-                    </a>
-
-
-                </div>
-            </div>
-
-            <br>
-
-
-
-
-            <div class="card shadow-sm p-3">
-                <h5 class="fw-bold">Filtrar por</h5>
-
-                <form method="GET" action="{{ route('empleados.index') }}">
-                    <!-- Campo de búsqueda -->
+                @slot('filtros')
                     <div class="mb-3">
                         <label class="form-label">Nombre:</label>
                         <input type="text" name="search" class="form-control" placeholder="Buscar..." value="{{ request('search') }}">
                     </div>
 
-                    <!-- Filtro por Cargo -->
                     <div class="mb-3">
                         <label class="form-label">Cargo:</label>
                         <select name="cargo_id" class="form-select form-select-sm">
@@ -82,7 +69,6 @@ $notificaciones = Auth::user()->unreadNotifications
                         </select>
                     </div>
 
-                    <!-- Filtro por Empresa -->
                     <div class="mb-3">
                         <label class="form-label">Empresa:</label>
                         <select name="empresa_id" class="form-select form-select-sm">
@@ -95,7 +81,6 @@ $notificaciones = Auth::user()->unreadNotifications
                         </select>
                     </div>
 
-                    <!-- Beneficios -->
                     <div class="mb-3">
                         <h6 class="fw-bold">Beneficios:</h6>
                         <div class="form-check">
@@ -107,20 +92,11 @@ $notificaciones = Auth::user()->unreadNotifications
                             <input class="form-check-input" type="checkbox" name="mostrar_desvinculados" value="1" {{ request('mostrar_desvinculados') ? 'checked' : '' }}>
                             <label class="form-check-label">Mostrar desvinculados</label>
                         </div>
-
                     </div>
-
-                    <!-- Botones de acción -->
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
-                        <a href="{{ route('empleados.index') }}" class="btn btn-outline-secondary">Limpiar Filtros</a>
-                    </div>
-                </form>
-
-
-            </div>
-
+                @endslot
+            @endcomponent
         </div>
+
 
 
         <!-- Contenido principal -->
