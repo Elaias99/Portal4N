@@ -13,10 +13,18 @@ class SaludController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
-        $saluds = Salud::all();
+        
+        $search = $request->input('search');
+        $query = Salud::query();
+
+        if ($search) {
+            $query->where('Nombre', 'like', "%{$search}%");
+
+        }
+
+        $saluds = $query->get();
         return view('saluds.index', compact('saluds'));
     }
 

@@ -12,10 +12,20 @@ class EstadoCivilController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         //
-        $estadoCivils = EstadoCivil::all();
+        $search = $request->input('search');
+        $query = EstadoCivil::query();
+
+        if ($search) {
+            $query->where('Nombre', 'like', "%{$search}%");
+
+        }
+
+
+
+        $estadoCivils = $query->get();
         return view('estado_civil.index', compact('estadoCivils'));
     }
 

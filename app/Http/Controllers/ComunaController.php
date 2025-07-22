@@ -14,14 +14,21 @@ class ComunaController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
-        $regions = Region::with(['comunas' => function ($query) {
+        $buscar = $request->input('search');
+
+        $regions = Region::with(['comunas' => function ($query) use ($buscar) {
             $query->orderBy('Nombre', 'asc');
-        }])->get();
-        return view('comunas.index', compact('regions'));
+
+            if ($buscar) {
+                $query->where('Nombre', 'like', "%{$buscar}%");
+            }
+        }])->orderBy('Nombre', 'asc')->get();
+
+        return view('comunas.index', compact('regions', 'buscar'));
     }
+
 
     /**
      * Show the form for creating a new resource.

@@ -12,10 +12,18 @@ class SistemaTrabajoController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         //
-        $sistemasTrabajo = SistemaTrabajo::all();
+        $search = $request->input('search');
+        $query = SistemaTrabajo::query();
+
+        if($search){
+            $query->where('nombre', 'like', "%{$search}%");
+        }
+
+
+        $sistemasTrabajo = $query->get();
         return view('sistema_trabajos.index', compact('sistemasTrabajo'));
     }
 

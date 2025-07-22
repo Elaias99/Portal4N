@@ -12,9 +12,20 @@ class SituacionController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         //
+        $search = $request->input('search');
+        $query = Situacion::query();
+
+        if ($search) {
+            $query->where('Nombre', 'like', "%{$search}%");
+
+        }
+
+
+
+
         $situacions = Situacion::all();
         return view('situacions.index', compact('situacions'));
 

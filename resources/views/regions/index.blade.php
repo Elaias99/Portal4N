@@ -3,7 +3,7 @@
 @section('content')
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="text-primary">Listado de Regiones</h1>
+        <h1 class="text-center mb-4">Listado de Regiones</h1>
         <a href="{{ route('regions.create') }}" class="btn btn-primary">Agregar Región</a>
     </div>
         

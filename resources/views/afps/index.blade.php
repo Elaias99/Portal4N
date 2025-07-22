@@ -33,14 +33,14 @@
 
 
         <div class="col-lg-10">
-            <div class="card-body">
+            <div class="table-responsive">
                 <table class="table table-hover">
                     <thead class="thead-light">
                         <tr>
                             <th>Nombre</th>
                             <th>Tasa de Cotización (%)</th>
                             <th>Tasa SIS (%)</th>
-                            <th class="text-center">Acciones</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -51,18 +51,24 @@
                             <td>{{ number_format($afp->tasaAfp->tasa_sis ?? 0, 2, ',', '.') }}%</td>
 
                             <td class="text-center">
-                                <a href="{{ route('afps.edit', $afp->id) }}" class="btn btn-sm btn-warning" aria-label="Editar AFP {{ $afp->Nombre }}">
-                                    <i class="fas fa-edit"></i> Editar
-                                </a>
+                                <div class="d-flex flex-column gap-1">
+                                    <a href="{{ route('afps.edit', $afp->id) }}" class="btn btn-sm btn-warning w-100 text-center d-inline-block">
+                                        <i class="fas fa-edit"></i> Editar
+                                    </a>
 
-                                <form action="{{ route('afps.destroy', $afp->id) }}" method="POST" style="display:inline-block;">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" aria-label="Eliminar AFP {{ $afp->Nombre }}" onclick="return confirm('¿Seguro que deseas eliminar esta AFP?');">
-                                        <i class="fas fa-trash-alt"></i> Eliminar
-                                    </button>
-                                </form>
+                                    <form action="{{ route('afps.destroy', $afp->id) }}" method="POST" class="w-100">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-danger w-100 text-center d-inline-block" onclick="return confirm('¿Seguro que deseas eliminar esta AFP?');">
+                                            <i class="fas fa-trash-alt"></i> Eliminar
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
+
+
+
+                            
                         </tr>
                         @endforeach
                     </tbody>

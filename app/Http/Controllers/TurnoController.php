@@ -8,15 +8,25 @@ use Illuminate\Http\Request;
 use App\Http\Requests\Turno\StoreTurnoRequest;
 use App\Http\Requests\Turno\UpdateTurnoRequest;
 
+use function Laravel\Prompts\search;
+
 class TurnoController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         //
-        $turnos = Turno::all();
+        $search = $request->input('search');
+        $query  = Turno::query();
+
+        if ($search) {
+            $query->where('nombre', 'like', "%{$search}%");
+        }
+
+
+        $turnos = $query->get();
         return view('turnos.index', compact('turnos'));
     }
 

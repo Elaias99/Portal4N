@@ -7,17 +7,27 @@ use Illuminate\Http\Request;
 
 use App\Http\Requests\TipoVestimenta\StoreTipoVestimentaRequest;
 use App\Http\Requests\TipoVestimenta\UpdateTipoVestimentaRequest;
-
+use App\Models\TipoZona;
 
 class TipoVestimentaController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         //
-        $tipoVestimentas = TipoVestimenta::all();
+        $search = $request->input('search');
+        $query = TipoVestimenta::query();
+
+        if ($search) {
+            $query->where('Nombre', 'like', "%{$search}%");
+
+        }
+
+
+
+        $tipoVestimentas = $query->get();
         return view('tipo_vestimentas.index', compact('tipoVestimentas'));
     }
 
