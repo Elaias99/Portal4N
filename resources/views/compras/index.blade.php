@@ -244,27 +244,53 @@
                                         <a href="{{ Str::startsWith($compra->archivo_documento, ['http', 'https']) ? $compra->archivo_documento : route('compras.descargarArchivoDocumento', $compra->id) }}" target="_blank">Ver</a>
                                     @endif
                                 </td>
-                                <td>
-                                    <form action="{{ route('compras.updateStatus', $compra->id) }}" method="POST">
-                                        @csrf @method('PATCH')
-                                        <select name="status" class="form-control form-control-sm" onchange="this.form.submit()">
-                                            @foreach (['Pendiente', 'Pagado', 'Abonado', 'No Pagar'] as $estado)
-                                                <option value="{{ $estado }}" {{ $compra->status === $estado ? 'selected' : '' }}>{{ $estado }}</option>
-                                            @endforeach
-                                        </select>
-                                    </form>
+                                <td style="width: 130px;" class="text-center">
+                                    
+                                    
+                                    <div class="d-flex flex-column gap-1">
+                                        <form action="{{ route('compras.updateStatus', $compra->id) }}" method="POST" class="w-100 text-center d-inline-block">
+                                            @csrf @method('PATCH')
+                                            <select name="status" class="form-control form-control-xl" onchange="this.form.submit()">
+                                                @foreach (['Pendiente', 'Pagado', 'Abonado', 'No Pagar'] as $estado)
+                                                    <option value="{{ $estado }}" {{ $compra->status === $estado ? 'selected' : '' }}>{{ $estado }}</option>
+                                                @endforeach
+                                            </select>
+                                        </form>
+                                    </div>
+
+
                                 </td>
-                                <td class="text-center">
-                                    <a href="{{ route('compras.edit', $compra->id) }}" class="btn btn-warning btn-sm me-1">
-                                        <i class="fa fa-pen"></i>
-                                    </a>
-                                    <form action="{{ route('compras.destroy', $compra->id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar esta compra?');">
-                                        @csrf @method('DELETE')
-                                        <button class="btn btn-danger btn-sm">
-                                            <i class="fa fa-trash"></i>
-                                        </button>
-                                    </form>
-                                </td>
+
+
+
+                                {{-- <td style="width: 130px;" class="text-center">
+
+                                    <div class="d-flex flex-column gap-1">
+                                        <a href="{{ route('compras.edit', $compra->id) }}" class="btn btn-sm btn-warning w-100 text-center d-inline-block">
+                                            <i class="fa fa-pen"></i>
+                                        </a>
+                                        <form action="{{ route('compras.destroy', $compra->id) }}" method="POST" class="w-100" onsubmit="return confirm('¿Eliminar esta compra?');">
+                                            @csrf @method('DELETE')
+                                            <button class="btn btn-sm btn-danger w-100 text-center d-inline-block">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+
+
+                                </td> --}}
+
+                                @include('layouts.acciones', [
+                                    'edit' => route('compras.edit', $compra->id),
+                                    'delete' => route('compras.destroy', $compra->id),
+                                    'mensaje' => '¿Eliminar esta compra?'
+                                ])
+
+
+
+
+
+
                             </tr>
                         @empty
                             <tr>

@@ -12,7 +12,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="text-center">Lista de AFPs</h1>
         <a href="{{ route('afps.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Crear AFP
+            <i class="fas fa-plus"></i> AFP
         </a>
     </div>
 
@@ -28,9 +28,6 @@
                 '
             ])
         </div>
-
-
-
 
         <div class="col-lg-10">
             <div class="table-responsive">
@@ -50,12 +47,12 @@
                             <td>{{ number_format($afp->tasaAfp->tasa_cotizacion ?? 0, 2, ',', '.') }}%</td>
                             <td>{{ number_format($afp->tasaAfp->tasa_sis ?? 0, 2, ',', '.') }}%</td>
 
-                            <td class="text-center">
+                            {{-- Botones de acción --}}
+                            {{-- <td style="width: 130px;" class="text-center">
                                 <div class="d-flex flex-column gap-1">
                                     <a href="{{ route('afps.edit', $afp->id) }}" class="btn btn-sm btn-warning w-100 text-center d-inline-block">
                                         <i class="fas fa-edit"></i> Editar
                                     </a>
-
                                     <form action="{{ route('afps.destroy', $afp->id) }}" method="POST" class="w-100">
                                         @csrf
                                         @method('DELETE')
@@ -64,11 +61,14 @@
                                         </button>
                                     </form>
                                 </div>
-                            </td>
+                            </td> --}}
+                            @include('layouts.acciones', [
+                                'edit' => route('afps.edit', $afp->id),
+                                'delete' => route('afps.destroy', $afp->id),
+                                'mensaje' => '¿Seguro que deseas eliminar esta AFP?'
+                            ])
 
 
-
-                            
                         </tr>
                         @endforeach
                     </tbody>
@@ -76,17 +76,7 @@
             </div>
         </div>
 
-
-
-
-
     </div>
-
-
-
-
-
-
 
     <footer class="mt-4 text-center">
         <a href="https://www.previred.com/indicadores-previsionales/" target="_blank" class="text-info">

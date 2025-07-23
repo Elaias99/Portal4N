@@ -56,18 +56,29 @@
                                         <td>{{ $empresa->banco->nombre }}</td>
                                         <td>{{ $empresa->comuna->Nombre }}</td>
                                         <td>{{ $empresa->comuna->region->Nombre ?? 'Sin región' }}</td>
-                                        <td>
-                                            <a href="{{ route('empresas.edit', $empresa->id) }}" class="btn btn-sm btn-warning mb-1">
-                                                <i class="fas fa-edit"></i> Editar
-                                            </a>
-                                            <form action="{{ route('empresas.destroy', $empresa->id) }}" method="POST" style="display:inline-block;">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Estás seguro de que deseas eliminar la empresa?')">
-                                                    <i class="fas fa-trash-alt"></i> Eliminar
-                                                </button>
-                                            </form>
+
+
+
+                                        {{-- Botones de acción --}}
+                                        <td style="width: 130px;" class="text-center">
+                                            <div class="d-flex flex-column gap-1">
+                                                <a href="{{ route('empresas.edit', $empresa->id) }}" class="btn btn-sm btn-warning mb-1">
+                                                    <i class="fas fa-edit"></i> Editar
+                                                </a>
+                                                <form action="{{ route('empresas.destroy', $empresa->id) }}" method="POST" style="display:inline-block;">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Estás seguro de que deseas eliminar la empresa?')">
+                                                        <i class="fas fa-trash-alt"></i> Eliminar
+                                                    </button>
+                                                </form>
+                                            </div>
                                         </td>
+
+
+
+
+
                                     </tr>
                                 @endforeach
                             </tbody>

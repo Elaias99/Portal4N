@@ -14,7 +14,7 @@
 
         
         <a href="{{ route('comunas.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Crear Comuna
+            <i class="fas fa-plus"></i> Comuna
         </a>
 
    
@@ -23,35 +23,39 @@
     <div class="row">
         {{-- Filtro con layout reutilizable --}}
         <div class="col-lg-2">
-            {{-- Tarjeta superior con botones de gestión --}}
-            <div class="card shadow-sm p-3 mb-4">
-                <h5 class="fw-bold mb-3">Gestión de Comunas</h5>
 
-                <div class="d-grid gap-2">
-                    <a href="{{ route('clasificacion-operativa.index') }}" class="btn btn-primary">
-                        Operadores
-                    </a>
-
-                    <a href="{{ route('comunas.export') }}" class="btn btn-success">
-                        <i class="fas fa-file-excel"></i> Exportar Comunas a Excel
-                    </a>
-                </div>
-            </div>
-
-            {{-- Filtros usando el layout como componente --}}
-            @component('layouts.filtros', [
-                'titulo' => 'Filtrar Nombre',
+            @component('layouts.columna_izquierda', [
+                'tituloTarjeta' => 'Gestión Masiva de Comunas',
+                'tituloFiltros' => 'Filtrar Comuna',
                 'action' => route('comunas.index')
             ])
-                @slot('campos')
-                    <input type="text" name="search" id="comunaSearch" class="form-control" placeholder="Buscar comuna..." value="{{ request('search') }}">
+                @slot('acciones')
+
+                    <form class="mb-2">
+                        
+                        <a href="{{ route('comunas.export') }}" class="btn btn-success">
+                            <i class="fas fa-file-excel"></i> Exportar a Excel
+                        </a>
+                        
+                    </form>
+     
+                @endslot
+
+                @slot('filtros')
+
+                    <div class="mb-3">
+                        <label class="form-label">Filtrar Nombre:</label>
+                        <input type="text" name="search" id="comunaSearch" class="form-control" placeholder="Buscar comuna..." value="{{ request('search') }}">
+                    </div>
+
                 @endslot
             @endcomponent
         </div>
+     
 
 
         {{-- Listado agrupado y filtrable --}}
-        <div class="col-lg-10">
+        <div class="col-lg-9">
             <div class="accordion" id="accordionRegions">
                 @foreach($regions as $region)
                     <div class="accordion-item region-item">
@@ -62,8 +66,8 @@
                         </h2>
                         <div id="collapse{{ $region->id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ $region->id }}" data-bs-parent="#accordionRegions">
                             <div class="accordion-body">
-                                <table class="table table-light table-hover">
-                                    <thead>
+                                <table class="table table-hover">
+                                    <thead class="thead-light">
                                         <tr>
                                             <th>Nombre Comuna</th>
                                             <th>Acciones</th>
@@ -73,18 +77,40 @@
                                         @foreach($region->comunas as $comuna)
                                             <tr class="comuna-item">
                                                 <td class="comuna-nombre">{{ $comuna->Nombre }}</td>
-                                                <td>
-                                                    <a class="btn btn-warning" href="{{ route('comunas.edit', $comuna->id) }}">
-                                                        <i class="fas fa-edit"></i> Editar
-                                                    </a>
-                                                    <form action="{{ route('comunas.destroy', $comuna->id) }}" method="POST" style="display:inline">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button class="btn btn-danger" type="submit" onclick="return confirm('¿Seguro que deseas eliminar esta Comuna?')">
-                                                            <i class="fas fa-trash-alt"></i> Eliminar
-                                                        </button>
-                                                    </form>
-                                                </td>
+
+                                                @include('layouts.acciones', [
+                                                    'edit' => route('comunas.edit', $comuna->id),
+                                                    'delete' => route('comunas.destroy', $comuna->id),
+                                                    'mensaje' => '¿Seguro que deseas eliminar esta Comuna?'
+                                                ])
+
+
+
+
+
+                                                {{-- Botones de acción --}}
+                                                {{-- <td style="width: 130px;" class="text-center">
+
+                                                    <div class="d-flex flex-column gap-1">
+                                                        <a class="btn btn-sm btn-warning w-100 text-center d-inline-block" href="{{ route('comunas.edit', $comuna->id) }}">
+                                                            <i class="fas fa-edit"></i> Editar
+                                                        </a>
+                                                        <form action="{{ route('comunas.destroy', $comuna->id) }}" method="POST" class="w-100">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button class="btn btn-sm btn-danger w-100 text-center d-inline-block" type="submit" onclick="return confirm('¿Seguro que deseas eliminar esta Comuna?')">
+                                                                <i class="fas fa-trash-alt"></i> Eliminar
+                                                            </button>
+                                                        </form>
+                                                    </div>
+
+
+                                                </td> --}}
+
+
+
+
+
                                             </tr>
                                         @endforeach
                                     </tbody>
