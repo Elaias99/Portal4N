@@ -63,32 +63,7 @@
                                 'mensaje' => '¿Seguro que deseas eliminar este Estado Laboral?'
                             ])
 
-                            {{-- <td style="width: 130px;" class="text-center">
-                                <div class="d-flex flex-column gap-1">
 
-
-
-                                    <a href="{{ route('situacions.edit', $situacion->id) }}" class="btn btn-sm btn-warning w-100 text-center d-inline-block">
-                                        <i class="fas fa-edit"></i>Editar
-                                    </a>
-
-
-                                    <form action="{{ route('situacions.destroy', $situacion->id) }}" method="POST" class="w-100">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger w-100 text-center d-inline-block" onclick="return confirm('¿Estás seguro de que deseas eliminar esta situación laboral?')">
-                                            <i class="fas fa-trash-alt"></i> Eliminar
-                                        </button>
-                                    </form>
-
-                                </div>
-
-
-                            </td> --}}
-
-
-
-                            
                         </tr>
                         @endforeach
 

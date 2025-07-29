@@ -12,7 +12,7 @@ use App\Http\Controllers\FacturaController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\ProveedorImportController;
 use App\Http\Controllers\CompraController;
-use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\BancoController;
 use App\Http\Controllers\AsistenciaController;
 use App\Models\User;
 use App\Http\Controllers\SolicitudManualController;
@@ -188,6 +188,25 @@ Route::resource('clasificacion-operativa', \App\Http\Controllers\ClasificacionOp
 Route::resource('empresas', '\App\Http\Controllers\EmpresaController')->middleware('auth');
 Route::resource('cargos', '\App\Http\Controllers\CargoController')->middleware('auth');
 Route::resource('afps', 'App\Http\Controllers\AFPController')->middleware('auth');
+
+
+// Ruta para módulo de Bancos
+Route::resource('bancos', 'App\Http\Controllers\BancoController')->middleware('auth');
+
+
+// Ruta para módulo Centro Costo
+Route::resource('centro_costos', 'App\Http\Controllers\Centro_CostoController')->middleware('auth');
+
+
+// Ruta para módulo Tipo Cuenta
+Route::resource('tipo_cuentas', 'App\Http\Controllers\TipoCuentaController')->middleware('auth');
+
+// Ruta para módulo Tipo Documento
+Route::resource('tipo_documentos', 'App\Http\Controllers\TipoDocumentoController')->middleware('auth');
+
+// Ruta para módulo Forma Pago
+Route::resource('forma_pagos', 'App\Http\Controllers\FormaPagoController')->middleware('auth');
+
 
 Route::get('/comunas/export', [ComunaController::class, 'export'])->name('comunas.export');
 Route::resource('comunas', 'App\Http\Controllers\ComunaController')->middleware('auth');

@@ -191,6 +191,52 @@
             </div>
         </div>
 
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ __('Gestionar Bancos') }}</h5>
+                    <p class="card-text">Administrar Bancos.</p>
+                    <a href="{{ route('bancos.index') }}" class="btn btn-primary">{{ __('Gestionar Bancos') }}</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ __('Gestionar Centro Costos') }}</h5>
+                    <p class="card-text">Administrar Centro Costos.</p>
+                    <a href="{{ route('centro_costos.index') }}" class="btn btn-primary">{{ __('Gestionar Centro Costos') }}</a>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ __('Gestionar Tipo Cuenta') }}</h5>
+                    <p class="card-text">Administrar Tipo Cuenta.</p>
+                    <a href="{{ route('tipo_cuentas.index') }}" class="btn btn-primary">{{ __('Gestionar Tipo Cuenta') }}</a>
+                </div>
+            </div>
+        </div>
+
+
+
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ __('Gestionar Tipo Documento') }}</h5>
+                    <p class="card-text">Administrar Tipo Documento.</p>
+                    <a href="{{ route('tipo_documentos.index') }}" class="btn btn-primary">{{ __('Gestionar Tipo Cuenta') }}</a>
+                </div>
+            </div>
+        </div>
+
+
+
+
     </div>
 </div>
 
