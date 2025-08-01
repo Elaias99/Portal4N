@@ -310,7 +310,7 @@ class ManifiestoController extends Controller
             $hermano = str_contains($codigo, '-') ? ($codigosOrdenados[$codigo] ?? '') : '';
 
             return array_merge(
-                array_merge([Carbon::parse($fila[0])->format('d-m-Y')], array_slice($fila, 1, 6)),
+                array_merge([Carbon::parse($fila[0])], array_slice($fila, 1, 6)),
                 [''],
                 [$codigoBase, $hermano]
             );
