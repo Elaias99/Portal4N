@@ -26,6 +26,8 @@ use App\Http\Controllers\TrackingDashboardController;
 use App\Http\Controllers\ContratoController;
 use App\Http\Controllers\ExportacionController;
 
+use App\Http\Controllers\ManifiestoController;
+
 use App\Http\Controllers\TrackingProductoController;
 
 Route::get('/', function () {
@@ -323,6 +325,17 @@ Route::resource('compras', CompraController::class);
 Route::post('/compras/importar', [CompraController::class, 'importar'])->name('compras.importar');
 
 Route::patch('/compras/{id}/status', [CompraController::class, 'updateStatus'])->name('compras.updateStatus');
+
+
+// MANIFIESTO
+Route::get('/manifiesto', [ManifiestoController::class, 'index'])->name('manifiesto.index');
+Route::post('/manifiesto/upload', [ManifiestoController::class, 'upload'])->name('manifiesto.upload');
+Route::post('/manifiesto/store', [ManifiestoController::class, 'store'])->name('manifiesto.store');
+// Nueva ruta para procesar tabla pegada desde el correo
+Route::post('/manifiesto/pegar', [ManifiestoController::class, 'paste'])->name('manifiesto.paste');
+Route::get('/manifiestos/export', [ManifiestoController::class, 'export'])->name('manifiestos.export');
+Route::get('/manifiestos/limpiar', [ManifiestoController::class, 'limpiar'])->name('manifiestos.limpiar');
+Route::post('/manifiesto/confirmar-area', [ManifiestoController::class, 'confirmarArea'])->name('manifiesto.confirmar-area');
 
 
 

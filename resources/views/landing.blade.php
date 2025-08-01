@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
 
 
     @vite([
@@ -52,6 +54,39 @@
     </section>
 
     <footer>© 2024 4Nlogistica. Todos los derechos reservados.</footer>
+
+
+    <!-- Botón de acceso a manifiestos -->
+    <a href="{{ route('manifiesto.index') }}"
+    title="Ir a herramientas"
+    style="
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+        font-size: 22px;
+        background-color: rgba(0, 123, 255, 0.3); /* color azul más translúcido */
+        color: rgba(255, 255, 255, 0.6);           /* icono blanco suave */
+        border-radius: 50%;
+        width: 45px;
+        height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        box-shadow: none;
+        transition: background-color 0.3s, color 0.3s;
+    "
+    onmouseover="this.style.backgroundColor='rgba(0, 123, 255, 0.6)'; this.style.color='white';"
+    onmouseout="this.style.backgroundColor='rgba(0, 123, 255, 0.3)'; this.style.color='rgba(255,255,255,0.6)';"
+    >
+    <i class="fas fa-cog"></i>
+    </a>
+
+
+
+
+
 
 </body>
 </html>
