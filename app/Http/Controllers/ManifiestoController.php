@@ -82,27 +82,23 @@ class ManifiestoController extends Controller
             return back()->with('error', 'No hay suficientes filas para procesar.');
         }
 
-        $variantes = [
-            '# bulto' => ['# bulto', 'nº bulto', 'bulto'],
-            'codigo' => ['codigo', 'cod envio', 'código', 'cod'],
-            'tamaño' => ['tamaño', 'tamano'],
-            'atencion' => ['atencion', 'atención'],
-            'comuna' => ['comuna'],
-            'area' => ['area'],
-        ];
+        // 🧠 Detectar encabezados inteligentemente
+        $encabezadoMap = $this->detectarEncabezados(array_slice($lineas, 0, 10)); // buscamos entre las primeras 10 líneas
 
-        $cabecera = array_slice($lineas, 0, 6);
-        $cabecera = array_map('strtolower', $cabecera);
+        dd($encabezadoMap);
 
-        foreach (array_keys($variantes) as $i => $clave) {
-            $valorPegado = strtolower(trim($cabecera[$i] ?? ''));
-            $aliasValidos = array_map('strtolower', $variantes[$clave]);
-            if (!in_array($valorPegado, $aliasValidos)) {
-                return back()->with('error', 'Los encabezados no coinciden con el formato esperado.');
+
+        $camposEsperados = ['bulto', 'codigo', 'tamaño', 'atencion', 'comuna', 'area'];
+        foreach ($camposEsperados as $campo) {
+            if (!array_key_exists($campo, $encabezadoMap)) {
+                return back()->with('error', "No se pudo detectar la columna: $campo");
             }
         }
 
-        $datos = array_slice($lineas, 6);
+        // 🟡 Cortamos las líneas de datos después del último encabezado detectado
+        $inicioDatos = max($encabezadoMap) + 1;
+        $datos = array_slice($lineas, $inicioDatos);
+
         $filas = [];
         $hayAreaFaltante = false;
         $areasConocidas = ['ecommerce', 'mayorista', 'sac'];
@@ -117,7 +113,7 @@ class ManifiestoController extends Controller
                 $hayAreaFaltante = true;
             }
         } else {
-            // 🧠 Mantener tu lógica original
+            // 🧠 Procesar filas con lógica adaptada
             for ($i = 0; $i < count($datos); ) {
                 $bloque = array_slice($datos, $i, 4);
 
@@ -145,7 +141,7 @@ class ManifiestoController extends Controller
 
         if ($hayAreaFaltante) {
             return view('manifiesto.index', [
-                'headers' => array_keys($variantes),
+                'headers' => ['# bulto', 'codigo', 'tamaño', 'atencion', 'comuna', 'area'],
                 'rows' => [],
                 'codigosDuplicados' => [],
                 'filasSinArea' => $filas,
@@ -166,17 +162,18 @@ class ManifiestoController extends Controller
             });
         })->toArray();
 
-        $codigos = array_column($filasTotales, 2);
+        $codigos = array_column($filasTotales, 2); // columna del código
         $frecuencias = array_count_values($codigos);
         $codigosDuplicados = array_filter($frecuencias, fn($veces) => $veces > 1);
 
         return view('manifiesto.index', [
-            'headers' => array_merge(['Fecha'], array_keys($variantes)),
+            'headers' => ['Fecha', '# bulto', 'codigo', 'tamaño', 'atencion', 'comuna', 'area'],
             'rows' => $filasTotales,
             'codigosDuplicados' => $codigosDuplicados,
             'filasSinArea' => [],
         ]);
     }
+
 
     // 👉 Agregamos este método privado al controlador
     private function esFormatoReducido(array $datos): bool
@@ -243,21 +240,11 @@ class ManifiestoController extends Controller
         ]);
     }
 
-
-
-
-
-
-
     public function limpiar()
     {
         session()->forget('manifiestos_acumulados');
         return redirect()->route('manifiesto.index')->with('success', 'Registros limpiados exitosamente.');
     }
-
-
-
-
 
     public function export(Request $request)
     {
@@ -343,6 +330,45 @@ class ManifiestoController extends Controller
             'manifiesto_' . now()->format('Ymd_His') . '.xlsx'
         );
     }
+
+
+
+
+
+    private function detectarEncabezados(array $lineas): array
+    {
+        $mapeo = [];
+        $sinonimos = [
+            'bulto' => ['bulto', '# bulto', 'nº bulto'],
+            'codigo' => ['codigo', 'cod envio', 'código', 'cod', 'cod envió'],
+            'tamaño' => ['tamaño', 'tamano', 'talla'],
+            'atencion' => ['atencion', 'atención', 'cliente'],
+            'comuna' => ['comuna', 'localidad'],
+            'area' => ['area', 'área', 'zona'],
+        ];
+
+        foreach ($lineas as $index => $linea) {
+
+            
+            $normalizado = strtolower(trim(strtr($linea, [
+                'Á' => 'a', 'É' => 'e', 'Í' => 'i', 'Ó' => 'o', 'Ú' => 'u', 'Ñ' => 'n',
+                'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ñ' => 'n'
+            ])));
+
+
+            foreach ($sinonimos as $clave => $variantes) {
+                foreach ($variantes as $variante) {
+                    if (Str::contains($normalizado, strtolower($variante))) {
+                        $mapeo[$clave] = $index;
+                        break 2; // salimos del segundo foreach y seguimos con el siguiente encabezado
+                    }
+                }
+            }
+        }
+
+        return $mapeo;
+    }
+
 
 
 
