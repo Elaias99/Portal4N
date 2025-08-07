@@ -85,7 +85,7 @@ class ManifiestoController extends Controller
         // 🧠 Detectar encabezados inteligentemente
         $encabezadoMap = $this->detectarEncabezados(array_slice($lineas, 0, 10)); // buscamos entre las primeras 10 líneas
 
-        dd($encabezadoMap);
+        // dd($encabezadoMap);
 
 
         $camposEsperados = ['bulto', 'codigo', 'tamaño', 'atencion', 'comuna', 'area'];
@@ -138,6 +138,9 @@ class ManifiestoController extends Controller
                 }
             }
         }
+
+        // dd($filas);
+
 
         if ($hayAreaFaltante) {
             return view('manifiesto.index', [

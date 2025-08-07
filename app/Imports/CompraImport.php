@@ -147,13 +147,40 @@ class CompraImport implements ToModel, WithHeadingRow
             return null;
         }
 
-        $fecha_vencimiento = is_numeric($row['fecha_vencimiento'])
-            ? Carbon::createFromDate(1899, 12, 30)->addDays($row['fecha_vencimiento'])
-            : null;
-
         $fecha_documento = is_numeric($row['fecha_documento'])
             ? Carbon::createFromDate(1899, 12, 30)->addDays($row['fecha_documento'])
             : now();
+
+        // Calcular fecha de vencimiento si el plazo es válido
+        $plazo_nombre = PlazoPago::find($plazo_pago_id)?->nombre;
+
+        switch ($plazo_nombre) {
+            case 'Contado':
+                $fecha_vencimiento = $fecha_documento->copy();
+                break;
+            case 'Quincena':
+                $fecha_vencimiento = $this->proxViernes($fecha_documento->copy()->addDays(15));
+                break;
+            case '30 Días':
+                $fecha_vencimiento = $this->proxViernes($fecha_documento->copy()->addDays(30));
+                break;
+            case '45 Días':
+                $fecha_vencimiento = $this->proxViernes($fecha_documento->copy()->addDays(45));
+                break;
+            case '60 Días':
+                $fecha_vencimiento = $this->proxViernes($fecha_documento->copy()->addDays(60));
+                break;
+            case '1 Semana':
+                $fecha_vencimiento = $this->proxViernes($fecha_documento->copy()->addDays(7));
+                break;
+            default:
+                // Si es un plazo no reconocido (ej: "2 Cuotas"), usar el valor del Excel si viene
+                $fecha_vencimiento = is_numeric($row['fecha_vencimiento'])
+                    ? Carbon::createFromDate(1899, 12, 30)->addDays($row['fecha_vencimiento'])
+                    : null;
+                break;
+        }
+
 
         $user_id = User::where('name', trim($row['usuario']))->first()?->id ?? auth()->id();
 
@@ -229,6 +256,15 @@ class CompraImport implements ToModel, WithHeadingRow
 
         return round((float) $limpio, 2);
     }
+
+
+    private function proxViernes(Carbon $fecha)
+    {
+        return $fecha->isFriday()
+            ? $fecha
+            : $fecha->next(Carbon::FRIDAY);
+    }
+
 
 
 

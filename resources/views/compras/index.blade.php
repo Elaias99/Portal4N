@@ -167,6 +167,20 @@
                             @endforeach
                         </select>
                     </div>
+
+
+                    <div class="mb-3">
+                        <label class="form-label">Plazo de Pago:</label>
+                        <select name="plazo_pago_id" class="form-select form-select-sm">
+                            <option value="">Todos</option>
+                            @foreach ($plazosPago as $plazo)
+                                <option value="{{ $plazo->id }}" {{ request('plazo_pago_id') == $plazo->id ? 'selected' : '' }}>
+                                    {{ $plazo->nombre }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
                 @endslot
             @endcomponent
         </div>
@@ -262,23 +276,6 @@
                                 </td>
 
 
-
-                                {{-- <td style="width: 130px;" class="text-center">
-
-                                    <div class="d-flex flex-column gap-1">
-                                        <a href="{{ route('compras.edit', $compra->id) }}" class="btn btn-sm btn-warning w-100 text-center d-inline-block">
-                                            <i class="fa fa-pen"></i>
-                                        </a>
-                                        <form action="{{ route('compras.destroy', $compra->id) }}" method="POST" class="w-100" onsubmit="return confirm('¿Eliminar esta compra?');">
-                                            @csrf @method('DELETE')
-                                            <button class="btn btn-sm btn-danger w-100 text-center d-inline-block">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
-                                        </form>
-                                    </div>
-
-
-                                </td> --}}
 
                                 @include('layouts.acciones', [
                                     'edit' => route('compras.edit', $compra->id),

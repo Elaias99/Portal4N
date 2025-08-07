@@ -19,6 +19,7 @@ use App\Imports\CompraImport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ProveedoresFaltantesExport;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use App\Exports\PlantillaComprasExport; // Asegúrate de importar esto
@@ -57,6 +58,12 @@ class CompraController extends Controller
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
+
+        // Filtro por Plazo de Pago
+        if ($request->filled('plazo_pago_id')) {
+            $query->where('plazo_pago_id', $request->plazo_pago_id);
+        }
+
 
         // ✅ Buscador por razon_social del proveedor
         if ($request->filled('search')) {
@@ -209,6 +216,42 @@ class CompraController extends Controller
         $user = Auth::user();
         $validatedData['user_id'] = $user->id; // Usar el ID del usuario autenticado
 
+
+
+        // Obtener fecha base del documento
+        $fechaDocumento = isset($validatedData['fecha_documento'])
+            ? Carbon::parse($validatedData['fecha_documento'])
+            : Carbon::now(); // En caso de que esté vacío
+
+        // Obtener nombre del plazo desde su ID
+        $plazo = PlazoPago::find($validatedData['plazo_pago_id']);
+        $nombrePlazo = $plazo ? $plazo->nombre : null;
+
+        if ($nombrePlazo === 'Contado') {
+            // Obtener la opción seleccionada por el usuario en el frontend
+            $opcion = $request->input('opcion_contado', 'hoy');
+
+            $vencimiento = $opcion === 'viernes'
+                ? $fechaDocumento->copy()->next(Carbon::FRIDAY)
+                : $fechaDocumento;
+        } else {
+            // Definir días según nombre del plazo
+            switch ($nombrePlazo) {
+                case 'Quincena': $dias = 15; break;
+                case '30 Días': $dias = 30; break;
+                case '45 Días': $dias = 45; break;
+                case '60 Días': $dias = 60; break;
+                default: $dias = 0;
+            }
+
+            $base = $fechaDocumento->copy()->addDays($dias);
+            $vencimiento = $base->isFriday() ? $base : $base->copy()->next(Carbon::FRIDAY);
+        }
+
+        // Sobrescribimos lo que venga en el request, con la lógica correcta
+        $validatedData['fecha_vencimiento'] = $vencimiento->format('Y-m-d');
+
+
         // Manejar los archivos adjuntos
         if ($request->hasFile('archivo_oc')) {
             $archivoOC = $request->file('archivo_oc');
@@ -313,6 +356,38 @@ class CompraController extends Controller
             $nombreDoc = $archivoDoc->getClientOriginalName(); // Obtener el nombre original del archivo
             $validatedData['archivo_documento'] = $archivoDoc->storeAs('documentos', $nombreDoc); // Guardar con el nombre original
         }
+
+        // Obtener fecha base del documento
+        $fechaDocumento = isset($validatedData['fecha_documento'])
+            ? Carbon::parse($validatedData['fecha_documento'])
+            : Carbon::now(); // En caso de que esté vacío
+
+        // Obtener nombre del plazo desde su ID
+        $plazo = PlazoPago::find($validatedData['plazo_pago_id']);
+        $nombrePlazo = $plazo ? $plazo->nombre : null;
+
+        if ($nombrePlazo === 'Contado') {
+            // Obtener la opción seleccionada (por ahora asumimos 'hoy')
+            $opcion = $request->input('opcion_contado', 'hoy');
+
+            $vencimiento = ($opcion === 'viernes')
+                ? $fechaDocumento->copy()->next(Carbon::FRIDAY)
+                : $fechaDocumento;
+        } else {
+            // Definir días según nombre del plazo
+            switch ($nombrePlazo) {
+                case 'Quincena': $dias = 15; break;
+                case '30 Días': $dias = 30; break;
+                case '45 Días': $dias = 45; break;
+                case '60 Días': $dias = 60; break;
+                default: $dias = 0;
+            }
+
+            $base = $fechaDocumento->copy()->addDays($dias);
+            $vencimiento = $base->isFriday() ? $base : $base->copy()->next(Carbon::FRIDAY);
+        }
+
+        $validatedData['fecha_vencimiento'] = $vencimiento->format('Y-m-d');
         
 
         // Actualizar la compra con los nuevos datos
