@@ -11,7 +11,6 @@
 <div class="container py-4">
     <div class="row">
         {{-- Columna izquierda: Filtros --}}
-
         <div class="col-lg-2 mb-4">
             @component('layouts.columna_izquierda', [
                 'tituloTarjeta' => 'Gestión Masiva de Pagos',
@@ -64,11 +63,8 @@
             @endcomponent
         </div>
 
-
-
-        {{-- Columna derecha: Tabla --}}
-        {{-- Reemplazar dentro del <div class="col-lg-9"> --}}
-        <div class="col-lg-9">
+        {{-- Columna central: Tabla --}}
+        <div class="col-lg-7">
             <div class="table-responsive shadow-sm rounded">
                 <table class="table table-hover align-middle">
                     <thead class="bg-secondary text-white">
@@ -97,7 +93,6 @@
                                             <i class="fa{{ $compra->importante ? 's' : 'r' }} fa-star"></i>
                                         </button>
                                     </form>
-
                                     <span>{{ $compra->proveedor->razon_social }}</span>
                                 </td>
                                 <td>{{ $compra->empresa->Nombre ?? '—' }}</td>
@@ -126,17 +121,55 @@
                     </div>
                 </div>
             </div>
-        </div>
-
 
             <div class="mt-4 d-flex justify-content-center">
                 {{ $compras->links('pagination::bootstrap-4') }}
             </div>
+        </div>
+
+        {{-- Columna derecha: Resumen próximos pagos --}}
+        <div class="col-lg-3 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3">Próximos Pagos</h5>
+
+                    <ul class="list-unstyled mb-0">
+                        @forelse($proximosPagos as $pago)
+                            @php
+                                $fechaPago = \Carbon\Carbon::parse($pago->fecha_vencimiento);
+                                $diasRestantes = $fechaPago->diffInDays(now(), false);
+                                $claseFecha = $diasRestantes <= 2 ? 'text-danger fw-bold' : ($diasRestantes <= 5 ? 'text-warning fw-semibold' : 'text-muted');
+                            @endphp
+                            <li class="d-flex justify-content-between align-items-center border-bottom py-2">
+                                <span class="{{ $claseFecha }} small">
+                                    {{ $fechaPago->format('d-m') }}
+                                </span>
+                                <span class="fw-semibold small text-end" style="min-width: 90px;">
+                                    ${{ number_format($pago->pago_total, 0, ',', '.') }}
+                                </span>
+                            </li>
+                        @empty
+                            <li class="text-muted text-center py-2">No hay pagos próximos</li>
+                        @endforelse
+                    </ul>
+
+                    @if($proximosPagos->count() > 0)
+                        <div class="mt-3 text-end fw-bold border-top pt-2">
+                            Total: ${{ number_format($proximosPagos->sum('pago_total'), 0, ',', '.') }}
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+
+
+
+
     </div>
 </div>
 
 @endsection
-
 
 {{-- JavaScript --}}
 <script>
@@ -144,18 +177,14 @@
         const checkboxes = document.querySelectorAll('.seleccion-pago');
         const totalSpan = document.getElementById('total-pagar');
         const restoSpan = document.getElementById('resto-pagos');
-        const filas = document.querySelectorAll('#tabla-pagos tbody tr');
         const selectAll = document.getElementById('selectAll');
-
         const exportBtn = document.getElementById('btnExportarPagos');
         const exportInput = document.getElementById('exportar-ids');
         const exportForm = document.getElementById('formExportarPagos');
-
         const totalGeneral = {{ $totalGeneral }};
 
         function actualizarTotales() {
             let total = 0;
-
             checkboxes.forEach(cb => {
                 const monto = parseInt(cb.getAttribute('data-monto'));
                 const celda = cb.closest('tr').querySelector('.acumulado-cell');
@@ -166,13 +195,11 @@
                     celda.textContent = '—';
                 }
             });
-
             totalSpan.textContent = total.toLocaleString('es-CL');
             restoSpan.textContent = (totalGeneral - total).toLocaleString('es-CL');
         }
 
         checkboxes.forEach(cb => cb.addEventListener('change', actualizarTotales));
-
         selectAll?.addEventListener('change', function () {
             checkboxes.forEach(cb => cb.checked = selectAll.checked);
             actualizarTotales();
@@ -182,28 +209,20 @@
             const seleccionados = Array.from(checkboxes)
                 .filter(cb => cb.checked)
                 .map(cb => cb.getAttribute('data-id'));
-
             if (seleccionados.length === 0) {
                 alert('Debes seleccionar al menos un pago para exportar.');
                 return;
             }
-
             exportInput.value = JSON.stringify(seleccionados);
-
-            // Enviamos el formulario
             exportForm.submit();
-
-            // Después de 2 segundos, redirige a la misma vista para refrescar y limpiar
             setTimeout(() => {
                 window.location.href = "{{ route('pagos.index', ['exportado' => 'ok']) }}";
             }, 2000);
         });
-
     });
 </script>
 
 <script>
-    // Elimina el parámetro 'exportado' de la URL después de cargar la página
     if (window.location.search.includes('exportado=ok')) {
         const url = new URL(window.location.href);
         url.searchParams.delete('exportado');
@@ -216,13 +235,10 @@
         document.querySelectorAll('.toggle-importante').forEach(button => {
             button.addEventListener('click', function () {
                 const id = this.dataset.id;
-                const button = this;
-    
                 fetch(`/pagos/${id}/importante`, {
                     method: 'PATCH',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
                     },
@@ -242,5 +258,3 @@
         });
     });
 </script>
-    
-

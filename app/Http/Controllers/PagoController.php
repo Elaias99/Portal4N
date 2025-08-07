@@ -45,13 +45,22 @@ class PagoController extends Controller
         $proveedores = Proveedor::all();
         $empresas = Empresa::all();
 
+
+        $proximosPagos = Compra::with('proveedor')
+            ->where('status', 'pendiente')
+            ->whereDate('fecha_vencimiento', '>', now())
+            ->orderBy('fecha_vencimiento', 'asc')
+            ->limit(5)
+            ->get();
+
+
         // ✅ Detectar si se acaba de exportar
         $mensaje = null;
         if ($request->query('exportado') === 'ok') {
             $mensaje = 'Pagos exportados correctamente y marcados como Pagado.';
         }
 
-        return view('pagos.index', compact('compras', 'totalGeneral', 'proveedores', 'empresas', 'mensaje'));
+        return view('pagos.index', compact('compras', 'totalGeneral', 'proveedores', 'empresas', 'mensaje','proximosPagos'));
     }
 
 
