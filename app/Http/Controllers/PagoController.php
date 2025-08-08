@@ -50,8 +50,23 @@ class PagoController extends Controller
             ->where('status', 'pendiente')
             ->whereDate('fecha_vencimiento', '>', now())
             ->orderBy('fecha_vencimiento', 'asc')
-            ->limit(5)
-            ->get();
+            ->get()
+            ->groupBy(function($compra) {
+                // Normaliza la fecha al viernes de esa semana
+                return \Carbon\Carbon::parse($compra->fecha_vencimiento)->next(\Carbon\Carbon::FRIDAY)->format('Y-m-d');
+            })
+            ->map(function($grupo) {
+                return [
+                    'fecha' => \Carbon\Carbon::parse($grupo->first()->fecha_vencimiento)
+                                ->next(\Carbon\Carbon::FRIDAY)
+                                ->format('Y-m-d'),
+                    'cantidad' => $grupo->count(),
+                    'total' => $grupo->sum('pago_total')
+                ];
+            })
+            ->sortBy('fecha')
+            ->values();
+
 
 
         // ✅ Detectar si se acaba de exportar

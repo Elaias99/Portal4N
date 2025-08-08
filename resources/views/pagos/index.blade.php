@@ -129,6 +129,8 @@
 
         {{-- Columna derecha: Resumen próximos pagos --}}
         <div class="col-lg-3 mb-4">
+
+
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <h5 class="fw-bold mb-3">Próximos Pagos</h5>
@@ -136,16 +138,15 @@
                     <ul class="list-unstyled mb-0">
                         @forelse($proximosPagos as $pago)
                             @php
-                                $fechaPago = \Carbon\Carbon::parse($pago->fecha_vencimiento);
-                                $diasRestantes = $fechaPago->diffInDays(now(), false);
-                                $claseFecha = $diasRestantes <= 2 ? 'text-danger fw-bold' : ($diasRestantes <= 5 ? 'text-warning fw-semibold' : 'text-muted');
+                                $fechaPago = \Carbon\Carbon::parse($pago['fecha']);
                             @endphp
-                            <li class="d-flex justify-content-between align-items-center border-bottom py-2">
-                                <span class="{{ $claseFecha }} small">
-                                    {{ $fechaPago->format('d-m') }}
+                            <li class="d-flex justify-content-between align-items-center py-2">
+                                <span class="small">
+                                    <strong>{{ $fechaPago->format('d-m') }}</strong> 
+                                    ({{ $pago['cantidad'] }} proveedores)
                                 </span>
-                                <span class="fw-semibold small text-end" style="min-width: 90px;">
-                                    ${{ number_format($pago->pago_total, 0, ',', '.') }}
+                                <span class="fw-semibold small text-end">
+                                    ${{ number_format($pago['total'], 0, ',', '.') }}
                                 </span>
                             </li>
                         @empty
@@ -153,13 +154,18 @@
                         @endforelse
                     </ul>
 
+                    {{-- Total general solo una vez --}}
                     @if($proximosPagos->count() > 0)
                         <div class="mt-3 text-end fw-bold border-top pt-2">
-                            Total: ${{ number_format($proximosPagos->sum('pago_total'), 0, ',', '.') }}
+                            Total general: ${{ number_format(collect($proximosPagos)->sum('total'), 0, ',', '.') }}
                         </div>
                     @endif
                 </div>
             </div>
+
+
+
+
         </div>
 
 
