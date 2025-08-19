@@ -2,271 +2,232 @@
 
 namespace App\Imports;
 
-use App\Models\Compra;
-use App\Models\Proveedor;
+use Maatwebsite\Excel\Concerns\ToCollection;
+use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Illuminate\Support\Collection;
 use App\Models\Empresa;
+use App\Models\Proveedor;
 use App\Models\CentroCosto;
+use App\Models\PlazoPago;
 use App\Models\FormaPago;
 use App\Models\TipoDocumento;
-use App\Models\PlazoPago;
-use App\Models\User;
+use Carbon\Carbon; // al inicio del archivo
 
-use Illuminate\Support\Str;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
-use Maatwebsite\Excel\Concerns\ToModel;
-use Maatwebsite\Excel\Concerns\WithHeadingRow;
-
-class CompraImport implements ToModel, WithHeadingRow
+class CompraImport implements ToCollection, WithHeadingRow 
 {
-    public $importadas = 0;
-    public $omitidas = 0;
-    public $errores = [];
-    public $importadasDetalle = [];
+
+
+    public $rowsData = [];
+
     public $proveedoresFaltantes = [];
 
-    public $erroresDuplicados = [];
-    public $erroresValidacion = [];
 
-    protected $empresas;
-    protected $centros;
-    protected $documentos;
-    protected $plazos;
-    protected $formas;
-    protected $proveedores;
+    public $errorMessages = [
+        'fk' => [],
+        'duplicados' => []
+    ];
 
-    public function __construct()
+
+
+    public function collection(Collection $rows)
     {
-        $this->empresas    = Empresa::all();
-        $this->centros     = CentroCosto::all();
-        $this->documentos  = TipoDocumento::all();
-        $this->plazos      = PlazoPago::all();
-        $this->formas      = FormaPago::all();
-        $this->proveedores = Proveedor::all();
-    }
+        $ordenEsperado = [
+        'empresa', 'rut', 'proveedor', 'centro_costo', 'glosa',
+        'observacion', 'tipo_de_documento', 'plazo_pago', 'forma_pago',
+        'pago_total', 'fecha_vencimiento', 'ano', 'mes', 'fecha_documento',
+        'numero_documento', 'oc', 'status', 'usuario', 'archivo_oc', 'archivo_documento',
+        ];
 
-    public function model(array $row)
-    {
-        $empresa_id = $this->match($this->empresas, 'Nombre', $row['empresa']);
-        $centro_costo_id = $this->match($this->centros, 'nombre', $row['centro_costo']);
-        $plazo_pago_id = $this->match($this->plazos, 'nombre', $row['plazo_pago']);
-        $forma_pago_id = $this->match($this->formas, 'nombre', $row['forma_pago']);
+        $headersArchivo = array_keys($rows->first()->toArray());
 
-        $proveedor_id = null;
-        $proveedor_rut = null;
-
-        if (!empty($row['rut'])) {
-            $rut_normalizado = Str::lower(str_replace('-', '', trim($row['rut'])));
-            $proveedor = $this->proveedores->first(function ($p) use ($rut_normalizado) {
-                return Str::lower(str_replace('-', '', trim($p->rut))) === $rut_normalizado;
-            });
-
-            $proveedor_id = $proveedor?->id;
-            $proveedor_rut = $proveedor?->rut;
+        if ($headersArchivo !== $ordenEsperado) {
+            // Detener y lanzar un error legible
+            throw new \Exception("❌ El archivo no respeta el orden de la plantilla.");
+        
         }
 
-        if (!$proveedor_id) {
-            $proveedor = $this->proveedores->first(function ($p) use ($row) {
-                return $this->normalizarNombre($p->razon_social) === $this->normalizarNombre($row['proveedor']);
-            });
 
-            $proveedor_id = $proveedor?->id;
-            $proveedor_rut = $proveedor?->rut;
-        }
 
-        $tipo_documento_id = $this->match($this->documentos, 'nombre', $row['tipo_de_documento']) ?? 
-                             ($proveedor_id ? Proveedor::find($proveedor_id)?->tipo_pago_id : null);
+        $validacionesFK = [
+            'empresa' => [
+                'modelo' => Empresa::class,
+                'campo'  => 'Nombre',
+                'mensaje' => "La empresa '%s' no existe. Proveedor: %s"
+            ],
+            'proveedor' => [
+                'modelo' => Proveedor::class,
+                // El proveedor es especial porque puede buscar por RUT o por razón social,
+                // esto lo vamos a manejar aparte en el bucle.
+                'campo'  => 'razon_social',
+                'mensaje' => "El proveedor '%s' no existe. RUT: %s"
+            ],
+            'centro_costo' => [
+                'modelo' => CentroCosto::class,
+                'campo'  => 'nombre',
+                'mensaje' => "El centro de costo '%s' no existe. Proveedor: %s"
+            ],
+            'tipo_de_documento' => [
+                'modelo' => TipoDocumento::class,
+                'campo'  => 'nombre',
+                'mensaje' => "El tipo de documento '%s' no existe. Proveedor: %s"
+            ],
+            'plazo_pago' => [
+                'modelo' => PlazoPago::class,
+                'campo'  => 'nombre',
+                'mensaje' => "El plazo de pago '%s' no existe. Proveedor: %s"
+            ],
+            'forma_pago' => [
+                'modelo' => FormaPago::class,
+                'campo'  => 'nombre',
+                'mensaje' => "La forma de pago '%s' no existe. Proveedor: %s"
+            ]
+        ];
 
-        $erroresCampos = [];
 
-        if (!$empresa_id) $erroresCampos[] = 'La empresa ingresada <strong>"' . e($row['empresa']) . '"</strong> no existe.';
-        if (!$proveedor_id) {
-            $erroresCampos[] = 'El proveedor ingresado <strong>"' . e($row['proveedor']) . '"</strong> no existe.';
 
-            $nombreProveedor = $row['proveedor'] ?? '';
-            if (!collect($this->proveedoresFaltantes)->pluck('razon_social')->contains($nombreProveedor)) {
-                Log::info('Proveedor faltante registrado (único)', ['proveedor' => $nombreProveedor]);
-                $this->proveedoresFaltantes[] = ['razon_social' => $nombreProveedor, 'rut' => $row['rut'] ?? ''] + array_fill_keys([
-                    'banco', 'tipo_cuenta', 'nro_cuenta', 'tipo_de_documento',
-                    'telefono_empresa', 'nombre_representantelegal', 'rut_representantelegal',
-                    'telefono_representantelegal', 'correo_representantelegal', 'contacto_nombre',
-                    'contacto_telefono', 'contacto_correo', 'giro_comercial', 'direccion_facturacion',
-                    'direccion_despacho', 'nombre_contacto2', 'telefono_contacto2', 'correo_contacto2',
-                    'correo_banco', 'nombre_razon_social_banco', 'cargo_contacto1', 'cargo_contacto2', 'comuna_empresa'
-                ], '');
+        foreach ($rows as $row) {
+            $fila = $row->toArray();
+
+            // --- Validaciones de FK ---
+            foreach ($validacionesFK as $columna => $config) {
+                $modelo = $config['modelo'];
+                $campo  = $config['campo'];
+
+                // Caso especial: proveedor
+                if ($columna === 'proveedor') {
+                    $registroEncontrado = null;
+                    if (!empty($row['rut'])) {
+                        $registroEncontrado = Proveedor::where('rut', $row['rut'])->first();
+                    }
+                    if (!$registroEncontrado && !empty($row[$columna])) {
+                        $registroEncontrado = $modelo::where($campo, $row[$columna])->first();
+                    }
+                } else {
+                    $registroEncontrado = !empty($row[$columna])
+                        ? $modelo::where($campo, $row[$columna])->first()
+                        : null;
+                }
+
+                if (!$registroEncontrado) {
+                    if ($columna === 'proveedor') {
+                        $this->errorMessages['fk'][] = sprintf(
+                            $config['mensaje'],
+                            $row[$columna], // razón social
+                            $row['rut']     // rut real
+                        );
+
+                        if (!empty($row['rut']) && !empty($row[$columna])) {
+                            $this->proveedoresFaltantes[] = [
+                                'rut' => $row['rut'],
+                                'razon_social' => $row[$columna],
+                            ];
+                        }
+                    } else {
+                        $this->errorMessages['fk'][] = sprintf(
+                            $config['mensaje'],
+                            $row[$columna],
+                            $row['proveedor']
+                        );
+                    }
+                }
+
+
+
+                $pos = array_search($columna, array_keys($fila));
+                $fila = array_slice($fila, 0, $pos, true)
+                    + [$columna . '_status' => $registroEncontrado ? '✅ OK' : '❌ No encontrado']
+                    + array_slice($fila, $pos, null, true);
             }
-        }
-        if (!$centro_costo_id) $erroresCampos[] = 'El centro de costo <strong>"' . e($row['centro_costo']) . '"</strong> no está registrado.';
-        if (!$tipo_documento_id) $erroresCampos[] = 'El tipo de documento <strong>"' . e($row['tipo_de_documento']) . '"</strong> no coincide.';
-        if (!$plazo_pago_id) $erroresCampos[] = 'El plazo de pago <strong>"' . e($row['plazo_pago']) . '"</strong> no es válido.';
-        if (!$forma_pago_id) $erroresCampos[] = 'La forma de pago <strong>"' . e($row['forma_pago']) . '"</strong> no está registrada.';
 
-        if ($erroresCampos) {
-            $doc = $row['numero_documento'] ?? 'Sin número';
-            $mensaje = "<div style='background:#fff5f5;border-left:4px solid #f44336;padding:15px;margin-bottom:15px;font-family:sans-serif;'>
-                <p><strong>❌ Error al importar la fila</strong> — <strong>Documento:</strong> {$doc}</p><ul>";
-            foreach ($erroresCampos as $e) $mensaje .= "<li>{$e}</li>";
-            $mensaje .= "</ul><p style='color:#555;font-size:13px;'>💡 <em>Revisa si hay errores de escritura o si falta registrar estos valores en el sistema.</em></p></div>";
-            $this->errores[] = $mensaje;
-            $this->erroresValidacion[] = $mensaje;
-            $this->omitidas++;
-            return null;
-        }
+            $duplicado = false;
+            if (
+                ($fila['proveedor_status'] ?? '') === '✅ OK' &&
+                ($fila['tipo_de_documento_status'] ?? '') === '✅ OK' &&
+                $fila['numero_documento'] !== null && $fila['numero_documento'] !== '' // 👈 permite 0
+            ) {
+                $proveedorId = Proveedor::where('rut', $row['rut'])
+                    ->orWhere('razon_social', $row['proveedor'])
+                    ->value('id');
 
-        $numeroDocumento = trim((string)($row['numero_documento'] ?? ''));
-        if ($numeroDocumento === '' || $numeroDocumento === '0') {
-            $prov = $row['proveedor'] ?? 'Desconocido';
-            $this->errores[] = "<div style='background:#fff5f5;border-left:4px solid #f44336;padding:15px;margin-bottom:15px;'>
-                <p><strong>❌ Número de documento inválido</strong></p>
-                <ul><li>Proveedor: <strong>{$prov}</strong></li><li>Documento: <strong>{$numeroDocumento}</strong></li>
-                <li>💡 El número de documento no puede estar vacío ni ser igual a \"0\".</li></ul></div>";
-            $this->omitidas++;
-            return null;
-        }
+                $tipoDocId = TipoDocumento::where('nombre', $row['tipo_de_documento'])->value('id');
 
-        $existe = Compra::where('tipo_pago_id', $tipo_documento_id)
-            ->where('numero_documento', $numeroDocumento)
-            ->where('proveedor_id', $proveedor_id)
-            ->exists();
-
-        if ($existe) {
-            Log::info('⚠️ Compra omitida por duplicado', ['proveedor_id' => $proveedor_id, 'numero_documento' => $numeroDocumento]);
-            $empresaNombre = Empresa::find($empresa_id)?->Nombre ?? $row['empresa'];
-            $proveedorNombre = Proveedor::find($proveedor_id)?->razon_social ?? $row['proveedor'];
-            $tipoNombre = TipoDocumento::find($tipo_documento_id)?->nombre ?? $row['tipo_de_documento'];
-
-            $mensaje = "⚠️ Duplicado — Empresa: {$empresaNombre}, Proveedor: {$proveedorNombre}, Tipo Doc: {$tipoNombre}, N° Doc: {$numeroDocumento}";
-            $this->erroresDuplicados[] = $mensaje;
-            $this->errores[] = $mensaje;
-            $this->omitidas++;
-            return null;
-
-            
-            $this->erroresDuplicados[] = end($this->errores);
-            $this->omitidas++;
-            return null;
-        }
-
-        $fecha_documento = is_numeric($row['fecha_documento'])
-            ? Carbon::createFromDate(1899, 12, 30)->addDays($row['fecha_documento'])
-            : now();
-
-        // Calcular fecha de vencimiento si el plazo es válido
-        $plazo_nombre = PlazoPago::find($plazo_pago_id)?->nombre;
-
-        switch ($plazo_nombre) {
-            case 'Contado':
-                $fecha_vencimiento = $fecha_documento->copy();
-                break;
-            case 'Quincena':
-                $fecha_vencimiento = $this->proxViernes($fecha_documento->copy()->addDays(15));
-                break;
-            case '30 Días':
-                $fecha_vencimiento = $this->proxViernes($fecha_documento->copy()->addDays(30));
-                break;
-            case '45 Días':
-                $fecha_vencimiento = $this->proxViernes($fecha_documento->copy()->addDays(45));
-                break;
-            case '60 Días':
-                $fecha_vencimiento = $this->proxViernes($fecha_documento->copy()->addDays(60));
-                break;
-            case '1 Semana':
-                $fecha_vencimiento = $this->proxViernes($fecha_documento->copy()->addDays(7));
-                break;
-            default:
-                // Si es un plazo no reconocido (ej: "2 Cuotas"), usar el valor del Excel si viene
-                $fecha_vencimiento = is_numeric($row['fecha_vencimiento'])
-                    ? Carbon::createFromDate(1899, 12, 30)->addDays($row['fecha_vencimiento'])
-                    : null;
-                break;
-        }
+                if ($proveedorId && $tipoDocId) {
+                    $duplicado = \App\Models\Compra::where('proveedor_id', $proveedorId)
+                        ->where('numero_documento', $row['numero_documento'])
+                        ->where('tipo_pago_id', $tipoDocId)
+                        ->exists();
+                }
+            }
 
 
-        $user_id = User::where('name', trim($row['usuario']))->first()?->id ?? auth()->id();
 
-        $this->importadas++;
-        $this->importadasDetalle[] = "{$row['empresa']} — {$row['proveedor']} — Doc: {$row['tipo_de_documento']} N° {$numeroDocumento}";
+            $posDup = array_search('numero_documento', array_keys($fila));
+            $fila = array_slice($fila, 0, $posDup + 1, true)
+                + ['duplicado_status' => $duplicado ? '❌ Duplicado encontrado' : '✅ OK']
+                + array_slice($fila, $posDup + 1, null, true);
 
-        return new Compra([
-            'empresa_id' => $empresa_id,
-            'proveedor_id' => $proveedor_id,
-            'centro_costo_id' => $centro_costo_id,
-            'tipo_pago_id' => $tipo_documento_id,
-            'plazo_pago_id' => $plazo_pago_id,
-            'forma_pago_id' => $forma_pago_id,
-            'glosa' => $row['glosa'],
-            'observacion' => $row['observacion'],
-            'pago_total' => $this->normalizarMonto($row['pago_total'], $numeroDocumento),
+            if ($duplicado) {
+                $this->errorMessages['duplicados'][] = "Duplicado detectado: Proveedor '{$row['proveedor']}', Número de documento '{$row['numero_documento']}', Tipo de documento '{$row['tipo_de_documento']}'";
+            }
 
-            'fecha_vencimiento' => $fecha_vencimiento,
-            'año' => $row['ano'],
-            'mes' => $row['mes'],
-            'fecha_documento' => $fecha_documento,
-            'numero_documento' => $numeroDocumento,
-            'oc' => $row['oc'],
-            'archivo_oc' => $this->esUrlValida($row['archivo_oc']) ? $row['archivo_oc'] : null,
-            'archivo_documento' => $this->esUrlValida($row['archivo_documento']) ? $row['archivo_documento'] : null,
-            'user_id' => $user_id,
-            'status' => $row['status'] ?? 'Pendiente',
-        ]);
-    }
+            // --- Limpieza de pago_total ---
+            if (!empty($fila['pago_total'])) {
+                $pagoTotal = preg_replace('/[^\d.,]/', '', $fila['pago_total']);
+                $pagoTotal = str_replace(',', '', $pagoTotal);
+                $fila['pago_total'] = (float) $pagoTotal;
+            } else {
+                $fila['pago_total'] = null;
+            }
 
-    private function match($collection, $col, $valor)
-    {
-        if (!$valor) return null;
+            // --- Conversión de fecha_vencimiento ---
+            if (!empty($fila['fecha_vencimiento'])) {
+                if (is_numeric($fila['fecha_vencimiento'])) {
+                    $fila['fecha_vencimiento'] = Carbon::createFromDate(1899, 12, 30)
+                        ->addDays($fila['fecha_vencimiento'])
+                        ->format('Y-m-d');
+                } else {
+                    try {
+                        $fila['fecha_vencimiento'] = Carbon::parse($fila['fecha_vencimiento'])->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $fila['fecha_vencimiento'] = null;
+                    }
+                }
+            }
 
-        $valNorm = strtolower(trim($valor));
+            // --- Conversión de fecha_documento ---
+            if (!empty($fila['fecha_documento'])) {
+                if (is_numeric($fila['fecha_documento'])) {
+                    $fila['fecha_documento'] = Carbon::createFromDate(1899, 12, 30)
+                        ->addDays($fila['fecha_documento'])
+                        ->format('Y-m-d');
+                } else {
+                    try {
+                        $fila['fecha_documento'] = Carbon::parse($fila['fecha_documento'])->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $fila['fecha_documento'] = null;
+                    }
+                }
+            } else {
+                // 📌 Regla: si es "Contado" y hay fecha_vencimiento definida, usarla como fecha_documento
+                if (
+                    isset($fila['plazo_pago']) &&
+                    strtolower(trim($fila['plazo_pago'])) === 'contado' &&
+                    !empty($fila['fecha_vencimiento'])
+                ) {
+                    // En este punto fecha_vencimiento ya fue normalizada arriba (Y-m-d)
+                    $fila['fecha_documento'] = $fila['fecha_vencimiento'];
+                }
+            }
 
-        return $collection->first(function ($item) use ($col, $valNorm) {
-            return strtolower(trim($item->$col)) === $valNorm;
-        })?->id;
-    }
-
-
-    private function normalizarNombre($valor)
-    {
-        return Str::of($valor)->lower()->replace(['.', ',', '  '], '')->trim()->__toString();
-    }
-
-    private function esUrlValida($valor)
-    {
-        return filter_var($valor, FILTER_VALIDATE_URL);
-    }
-
-    private function normalizarMonto($valor, $documentoReferencia = null)
-    {
-        if (is_null($valor)) return null;
-
-        // Eliminar comas, signos $ y espacios
-        $limpio = str_replace([',', '$', ' '], '', (string)$valor);
-
-        // Validar si es numérico
-        if (!is_numeric($limpio)) {
-            $this->errores[] = "<div style='background:#fff5f5;border-left:4px solid #f44336;padding:15px;margin-bottom:15px;'>
-                <p><strong>❌ Monto inválido en 'pago_total'</strong></p>
-                <ul>
-                    <li>Valor original: <strong>{$valor}</strong></li>
-                    <li>Documento: <strong>{$documentoReferencia}</strong></li>
-                    <li>💡 Asegúrate de ingresar solo números. Puedes usar comas para miles y punto como decimal (ej: 1,000.50)</li>
-                </ul></div>";
-            $this->erroresValidacion[] = end($this->errores);
-            $this->omitidas++;
-            return null;
+            // --- Guardar la fila procesada ---
+            $this->rowsData[] = $fila;
         }
 
-        return round((float) $limpio, 2);
+
+
+
+
+        
     }
-
-
-    private function proxViernes(Carbon $fecha)
-    {
-        return $fecha->isFriday()
-            ? $fecha
-            : $fecha->next(Carbon::FRIDAY);
-    }
-
-
-
-
 
 }

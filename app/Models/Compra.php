@@ -49,6 +49,12 @@ class Compra extends Model
         'importante',
     ];
 
+    protected $casts = [
+        'fecha_vencimiento' => 'date',
+        'fecha_documento'   => 'date',
+    ];
+
+
     // Relación con el modelo Proveedor
     public function proveedor()
     {

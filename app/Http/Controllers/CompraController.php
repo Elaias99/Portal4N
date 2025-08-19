@@ -15,17 +15,13 @@ use Illuminate\Support\Facades\Log;
 use App\Models\TipoDocumento;
 use App\Models\Banco;
 use App\Models\TipoCuenta;
-use App\Imports\CompraImport;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\ProveedoresFaltantesExport;
-use Illuminate\Support\Str;
 use Carbon\Carbon;
 
-use PhpOffice\PhpSpreadsheet\IOFactory;
-use App\Exports\PlantillaComprasExport; // Asegúrate de importar esto
 
+use App\Imports\CompraImport;
 use App\Exports\CompraExport;
-
+use App\Exports\ProveedoresFaltantesExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 
 class CompraController extends Controller
@@ -121,6 +117,8 @@ class CompraController extends Controller
         $tiposDocumento = TipoDocumento::all();
         $empresas = Empresa::all();
         $centrosCostos = CentroCosto::all();
+
+        Log::info('Sesión al cargar index', session()->all());
 
 
         return view('compras.index', compact(
@@ -424,6 +422,133 @@ class CompraController extends Controller
 
 
 
+    public function importar(Request $request)
+    {
+        $request->validate([
+            'archivo_excel' => 'required|file|mimes:xlsx,xls'
+        ]);
+
+        $import = new CompraImport();
+        Excel::import($import, $request->file('archivo_excel'));
+
+        $rows = $import->rowsData;
+        $errors = $import->errorMessages; // Usamos directamente los mensajes del import
+        $contador = 0;
+        $comprasExitosas = [];
+
+        foreach ($rows as $row) {
+            if (
+                $row['empresa_status'] !== '✅ OK' ||
+                $row['proveedor_status'] !== '✅ OK' ||
+                $row['centro_costo_status'] !== '✅ OK' ||
+                $row['tipo_de_documento_status'] !== '✅ OK' || // <- corregido aquí
+                $row['plazo_pago_status'] !== '✅ OK' ||
+                $row['forma_pago_status'] !== '✅ OK' ||
+                $row['duplicado_status'] !== '✅ OK'
+
+            ) {
+                continue;
+            }
+
+            Compra::create([
+                'empresa_id'        => Empresa::where('Nombre', $row['empresa'])->value('id'),
+                'proveedor_id'      => Proveedor::where('rut', $row['rut'])
+                                        ->orWhere('razon_social', $row['proveedor'])->value('id'),
+                'centro_costo_id'   => CentroCosto::where('nombre', $row['centro_costo'])->value('id'),
+                'tipo_pago_id'      => TipoDocumento::where('nombre', $row['tipo_de_documento'])->value('id'),
+                'plazo_pago_id'     => PlazoPago::where('nombre', $row['plazo_pago'])->value('id'),
+                'forma_pago_id'     => FormaPago::where('nombre', $row['forma_pago'])->value('id'),
+                'glosa'             => $row['glosa'],
+                'observacion'       => $row['observacion'],
+                'pago_total'        => $row['pago_total'],
+                'fecha_vencimiento' => $row['fecha_vencimiento'],
+                'año'               => $row['ano'],
+                'mes'               => $row['mes'],
+                'fecha_documento'   => $row['fecha_documento'],
+                'numero_documento'  => $row['numero_documento'],
+                'oc'                => $row['oc'],
+                'status'            => $row['status'],
+                'user_id'           => Auth::id(),
+            ]);
+
+            $contador++;
+
+            // 👇 Guardar solo proveedor y número de doc
+            $comprasExitosas[] = [
+                'proveedor' => $row['proveedor'],
+                'numero_documento' => $row['numero_documento'],
+            ];
+
+
+        }
+
+
+        if (!empty($import->proveedoresFaltantes)) {
+            session()->put('proveedores_faltantes_excel', $import->proveedoresFaltantes);
+        }
+
+        // 🔎 Log para depuración de sesión/flash
+        Log::info('Debug flash después de importar', [
+            'flash' => session()->get('_flash'),
+            'all'   => session()->all(),
+        ]);
+
+        // 🔎 Log para depuración
+        Log::info('📦 Importación de compras finalizada', [
+            'insertadas' => $contador,
+            'faltantes' => count($import->proveedoresFaltantes),
+            'session_id' => session()->getId(),
+            'flash_keys' => [
+                'success' => "Importación completada.",
+                'compras_importadas' => $contador,
+                'errorsFK' => count($import->errorMessages['fk']),
+                'errorsDuplicados' => count($import->errorMessages['duplicados']),
+            ],
+        ]);
+
+        
+        Log::info('Redirect con flashes', [
+            'flash' => session()->get('_flash')
+        ]);
+
+
+
+        return redirect()
+            ->route('compras.index')
+            ->with('success', "Importación completada.")
+            ->with('compras_importadas', $contador)
+            ->with('compras_exitosas', $comprasExitosas) // 👈 guardamos detalle reducido
+            ->with('errorsFK', $import->errorMessages['fk'])
+            ->with('errorsDuplicados', $import->errorMessages['duplicados']);
+
+        
+
+
+    }
+
+
+
+
+    public function exportarProveedoresFaltantes()
+    {
+        $proveedores = session()->get('proveedores_faltantes_excel', []);
+
+        if (empty($proveedores)) {
+            return redirect()->route('compras.index')->with('error', 'No hay proveedores faltantes para exportar.');
+        }
+
+        // Descargar Excel
+        $response = Excel::download(new ProveedoresFaltantesExport($proveedores), 'proveedores_faltantes.xlsx');
+
+        // ✅ Limpiar después de la respuesta
+        session()->forget('proveedores_faltantes_excel');
+
+        return $response;
+    }
+
+
+
+
 
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -474,64 +599,9 @@ class CompraController extends Controller
         return redirect()->route('compras.index')->with('success', 'Estado actualizado correctamente.');
     }
 
-    public function importar(Request $request)
-    {
-        $request->validate([
-            'archivo_excel' => 'required|file|mimes:xlsx,xls,csv'
-        ]);
-
-        try {
-            // ✅ 1. Leer encabezados reales del archivo importado
-            $archivo = $request->file('archivo_excel');
-            $spreadsheet = IOFactory::load($archivo);
-            $hoja = $spreadsheet->getActiveSheet();
-            $encabezadosArchivo = $hoja->rangeToArray('A1:' . $hoja->getHighestColumn() . '1')[0];
-
-            // ✅ 2. Obtener los campos esperados de la plantilla oficial
-            $encabezadosEsperados = PlantillaComprasExport::campos();
-
-
-            // ✅ 3. Comparar columnas esperadas vs archivo
-            $faltantes = array_diff(
-                array_map('strtolower', $encabezadosEsperados),
-                array_map('strtolower', $encabezadosArchivo)
-            );
-
-            if (!empty($faltantes)) {
-                return redirect()->route('compras.index')->with('faltantes_plantilla_compras', $faltantes);
-            }
-
-            // ✅ 4. Si todo bien, continuar con importación
-            $import = new CompraImport;
-            Excel::import($import, $archivo);
-
-            if (count($import->proveedoresFaltantes) > 0) {
-                session()->put('proveedores_faltantes', $import->proveedoresFaltantes);
-            }
-
-            return redirect()->route('compras.index')->with('import_result', [
-                'importadas' => $import->importadas,
-                'omitidas' => $import->omitidas,
-                'errores' => $import->errores,
-                'erroresDuplicados' => $import->erroresDuplicados,
-                'erroresValidacion' => collect($import->errores)
-                    ->reject(fn($e) => Str::contains($e, 'Duplicado'))
-                    ->values(),
-                'detalles' => $import->importadasDetalle,
-                'hayErrores' => count($import->errores) > 0,
-                'hayOmitidas' => $import->omitidas > 0,
-                'hayIncompletos' => false,
-            ]);
-        } catch (\Exception $e) {
-            return back()->with('error', 'Error al importar el archivo: ' . $e->getMessage());
-        }
-    }
-
-
 
     public function descargarPlantilla()
     {
-        Log::info('📥 Se ejecutó el método descargarPlantilla');
 
         try {
             return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\PlantillaComprasExport, 'plantilla_compras.xlsx');
@@ -552,30 +622,6 @@ class CompraController extends Controller
             'success' => true,
             'importante' => $compra->importante
         ]);
-    }
-
-    public function exportarProveedoresFaltantes()
-    {
-        $faltantes = session('proveedores_faltantes', []);
-
-        if (empty($faltantes)) {
-            return redirect()->route('compras.index')->with('error', 'No hay proveedores faltantes para exportar.');
-        }
-
-        // ✅ Limpiamos la sesión de proveedores faltantes después de exportar
-        // session()->forget('proveedores_faltantes');
-
-        return \Maatwebsite\Excel\Facades\Excel::download(
-            new \App\Exports\ProveedoresFaltantesExport($faltantes),
-            'proveedores_faltantes.xlsx'
-        );
-    }
-
-
-    public function limpiarProveedoresFaltantes()
-    {
-        session()->forget('proveedores_faltantes');
-        return redirect()->route('compras.index')->with('success', 'Lista de proveedores faltantes limpiada.');
     }
 
 

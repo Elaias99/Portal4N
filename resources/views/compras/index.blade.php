@@ -1,123 +1,121 @@
 @extends('layouts.app')
-@php use Illuminate\Support\Str; @endphp
-
-@php
-    $importResult = (array) session('import_result');
-@endphp
-
 @section('content')
-<div class="container">
-    <h1 class="text-center mb-4" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Lista de Compras</h1>
 
 
-    @if (session('faltantes_plantilla_compras'))
-        <div class="alert alert-danger shadow-sm mb-3">
-            <strong>❌ El archivo no coincide con la plantilla oficial.</strong>
-            <p class="mb-1">Faltan columnas:</p>
-            <ul class="mb-0">
-                @foreach (session('faltantes_plantilla_compras') as $columna)
-                    <li>📛 {{ $columna }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+{{-- @if(session('compras_importadas'))
+    <div class="alert alert-success">
+        <h5>Importación exitosa</h5>
+        <p>Se importaron correctamente <strong>{{ session('compras_importadas') }}</strong> compras.</p>
+    </div>
+@endif --}}
 
+@if(session('compras_importadas'))
+    <div class="container mb-4">
+        <div class="alert alert-success col-lg-8 mx-auto">
+            <h5>Importación exitosa</h5>
+            <p>
+                Se importaron correctamente 
+                <strong>{{ session('compras_importadas') }}</strong> compras.
+            </p>
 
-    {{-- MENSAJES DE IMPORTACIÓN --}}
-    @if (session('import_result'))
-        <div class="alert alert-info shadow-sm mb-3">
-            <strong>📦 Importación finalizada</strong>
-            <ul class="mb-1">
-                <li>✅ Compras importadas: <strong>{{ session('import_result.importadas') }}</strong></li>
-                <li>⚠️ Compras omitidas: <strong>{{ session('import_result.omitidas') }}</strong></li>
-            </ul>
-
-            @if (count(session('import_result.detalles', [])))
-                <details class="mt-2">
-                    <summary>✅ Ver detalles de compras importadas ({{ count(session('import_result.detalles')) }})</summary>
-                    <ul class="mt-2">
-                        @foreach (session('import_result.detalles') as $detalle)
-                            <li>{{ $detalle }}</li>
+            @if(session('compras_exitosas') && count(session('compras_exitosas')) > 0)
+                <div style="max-height: 200px; overflow-y: auto;" class="mt-2">
+                    <h6>Detalle:</h6>
+                    <ul class="mb-0 small">
+                        @foreach(session('compras_exitosas') as $compra)
+                            <li>
+                                {{ $compra['proveedor'] }} — 
+                                Documento: {{ $compra['numero_documento'] ?? '-' }}
+                            </li>
                         @endforeach
                     </ul>
-                </details>
+                </div>
             @endif
         </div>
+    </div>
+@endif
 
-        {{-- 🔁 COMPRAS DUPLICADAS --}}
-        @if (count(session('import_result.erroresDuplicados', [])))
-            <div class="alert alert-warning shadow-sm">
-                🔁 Compras duplicadas detectadas.
-                <details class="mt-2">
-                    <summary>Ver duplicados ({{ count(session('import_result.erroresDuplicados')) }})</summary>
-                    <ul class="mt-2">
-                        @foreach (session('import_result.erroresDuplicados') as $e)
-                            <li>{!! $e !!}</li>
-                        @endforeach
-                    </ul>
-                </details>
-            </div>
-        @endif
 
-        {{-- ❌ ERRORES DE VALIDACIÓN --}}
-        @if (count(session('import_result.erroresValidacion', [])))
-            <div class="alert alert-danger shadow-sm">
-                ❌ Errores de validación encontrados.
-                <details class="mt-2">
-                    <summary>Ver errores de validación ({{ count(session('import_result.erroresValidacion')) }})</summary>
-                    <ul class="mt-2">
-                        @foreach (session('import_result.erroresValidacion') as $e)
-                            <li>{!! $e !!}</li>
-                        @endforeach
-                    </ul>
-                </details>
-            </div>
-        @endif
 
-        {{-- ❗ CAMPOS INVÁLIDOS --}}
-        @if (count(session('import_result.erroresCamposInvalidos', [])))
-            <div class="alert alert-warning shadow-sm">
-                ❗ Problemas con campos como fechas, montos o usuarios.
-                <details class="mt-2">
-                    <summary>Ver campos inválidos ({{ count(session('import_result.erroresCamposInvalidos')) }})</summary>
-                    <ul class="mt-2">
-                        @foreach (session('import_result.erroresCamposInvalidos') as $e)
-                            <li>{!! $e !!}</li>
-                        @endforeach
-                    </ul>
-                </details>
-            </div>
-        @endif
-    @endif
 
-    {{-- ⚠️ ERRORES DEL FORMULARIO (LARAVEL) --}}
-    @if ($errors->any())
-        <div class="alert alert-danger shadow-sm">
-            <strong>❌ Se encontraron errores en el formulario:</strong>
+
+
+{{-- @if(session('errorsFK') || session('errorsDuplicados'))
+<div class="mb-4">
+
+    @if(session('errorsFK'))
+        <div class="alert alert-danger" style="max-height: 200px; overflow-y: auto;">
+            <h5>Errores de Claves Foráneas</h5>
             <ul class="mb-0">
-                @foreach ($errors->all() as $error)
+                @foreach(session('errorsFK') as $error)
                     <li>{{ $error }}</li>
                 @endforeach
             </ul>
         </div>
     @endif
 
+    @if(session('errorsDuplicados'))
+        <div class="alert alert-warning" style="max-height: 200px; overflow-y: auto;">
+            <h5>Duplicados Detectados</h5>
+            <ul class="mb-0">
+                @foreach(session('errorsDuplicados') as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+</div>
+@endif --}}
+@if(session('errorsFK') || session('errorsDuplicados'))
+<div class="container mb-4">
 
-
-    @if (session('proveedores_faltantes'))
-        <div class="d-flex flex-wrap gap-2 align-items-center mb-4">
-            <a href="{{ route('compras.exportarProveedoresFaltantes') }}" class="btn btn-warning">
-                📥 Descargar proveedores faltantes
-            </a>
-            <form action="{{ route('compras.limpiarProveedoresFaltantes') }}" method="POST">
-                @csrf
-                <button class="btn btn-outline-danger btn-sm">❌ Limpiar lista</button>
-            </form>
+    @if(session('errorsFK'))
+        <div class="alert alert-danger col-lg-8 mx-auto" style="max-height: 200px; overflow-y: auto;">
+            <h5>Errores de Claves Foráneas</h5>
+            <ul class="mb-0">
+                @foreach(session('errorsFK') as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
         </div>
     @endif
 
-    {{-- CONTENIDO --}}
+    @if(session('errorsDuplicados'))
+        <div class="alert alert-warning col-lg-8 mx-auto" style="max-height: 200px; overflow-y: auto;">
+            <h5>Duplicados Detectados</h5>
+            <ul class="mb-0">
+                @foreach(session('errorsDuplicados') as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+</div>
+@endif
+
+
+
+
+
+<div class="container">
+    <h1 class="text-center mb-4" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Lista de Compras</h1>
+
+
+    @if(session('proveedores_faltantes_excel') && count(session('proveedores_faltantes_excel')) > 0)
+        <a href="{{ route('compras.exportarProveedoresFaltantes') }}" 
+        class="btn btn-outline-warning btn-block py-2 d-flex align-items-center justify-content-center mb-2">
+            <i class="fa-solid fa-triangle-exclamation me-1"></i> Descargar Proveedores Faltantes
+        </a>
+    @endif
+
+
+
+
+
+
     <div class="row">
+
+
         {{-- FILTROS Y GESTIÓN --}}
         <div class="col-lg-2 mb-4">
             @component('layouts.columna_izquierda', [
@@ -143,6 +141,7 @@
                             <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
                         </button>
                     </form>
+
                 @endslot
 
                 @slot('filtros')
@@ -185,9 +184,8 @@
             @endcomponent
         </div>
 
-
-        {{-- TABLA PRINCIPAL --}}
         <div class="col-lg-9">
+
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
 
                 <div class="d-flex flex-wrap align-items-center">
@@ -200,7 +198,9 @@
                 </a>
             </div>
 
-            {{-- TABLA --}}
+            
+
+            
             <div class="table-responsive shadow-sm rounded">
                 <table class="table table-hover align-middle">
                     <thead class="bg-secondary text-white">
@@ -222,10 +222,7 @@
                             <th>Total</th>
                             <th>Venc.</th>
                             <th>Forma</th>
-                            <th>OC File</th>
-                            <th>Doc File</th>
                             <th>Estado</th>
-                            <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -248,59 +245,21 @@
                                 <td>${{ number_format($compra->pago_total, 0, ',', '.') }}</td>
                                 <td>{{ $compra->fecha_vencimiento }}</td>
                                 <td>{{ $compra->formaPago->nombre ?? '-' }}</td>
-                                <td>
-                                    @if ($compra->archivo_oc)
-                                        <a href="{{ Str::startsWith($compra->archivo_oc, ['http', 'https']) ? $compra->archivo_oc : route('compras.descargarArchivoOC', $compra->id) }}" target="_blank">Ver</a>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if ($compra->archivo_documento)
-                                        <a href="{{ Str::startsWith($compra->archivo_documento, ['http', 'https']) ? $compra->archivo_documento : route('compras.descargarArchivoDocumento', $compra->id) }}" target="_blank">Ver</a>
-                                    @endif
-                                </td>
-                                <td style="width: 130px;" class="text-center">
-                                    
-                                    
-                                    <div class="d-flex flex-column gap-1">
-                                        <form action="{{ route('compras.updateStatus', $compra->id) }}" method="POST" class="w-100 text-center d-inline-block">
-                                            @csrf @method('PATCH')
-                                            <select name="status" class="form-control form-control-xl" onchange="this.form.submit()">
-                                                @foreach (['Pendiente', 'Pagado', 'Abonado', 'No Pagar'] as $estado)
-                                                    <option value="{{ $estado }}" {{ $compra->status === $estado ? 'selected' : '' }}>{{ $estado }}</option>
-                                                @endforeach
-                                            </select>
-                                        </form>
-                                    </div>
-
-
-                                </td>
-
-
-
-                                @include('layouts.acciones', [
-                                    'edit' => route('compras.edit', $compra->id),
-                                    'delete' => route('compras.destroy', $compra->id),
-                                    'mensaje' => '¿Eliminar esta compra?'
-                                ])
-
-
-
-
-
-
+                                <td>{{ $compra->status }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="22" class="text-center text-muted">No hay compras registradas.</td>
+                                <td colspan="19" class="text-center text-muted">
+                                    No hay compras registradas.
+                                </td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
 
-            {{-- PAGINACIÓN --}}
             <div class="mt-3 d-flex justify-content-center">
-                {{ $compras->appends(request()->query())->links('pagination::bootstrap-4') }}
+                {{ $compras->links('pagination::bootstrap-4') }}
             </div>
         </div>
     </div>
@@ -308,7 +267,6 @@
 
 @include('compras.modal_importar_excel')
 @include('compras.modal_estructura_plantilla')
-
 @include('compras.modal_exportar_compras')
 
 @endsection

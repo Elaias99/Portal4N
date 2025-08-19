@@ -314,17 +314,21 @@ Route::resource('areas', 'App\Http\Controllers\AreaController')->middleware('aut
 
 
 // Ruta para las compras
-Route::get('/compras/exportar-proveedores-faltantes', [CompraController::class, 'exportarProveedoresFaltantes'])->name('compras.exportarProveedoresFaltantes');
-Route::post('/compras/limpiar-proveedores-faltantes', [CompraController::class, 'limpiarProveedoresFaltantes'])->name('compras.limpiarProveedoresFaltantes');
-
-
+// Rutas estáticas primero
+Route::get('/compras/exportar-proveedores-faltantes', [CompraController::class, 'exportarProveedoresFaltantes'])
+    ->name('compras.exportarProveedoresFaltantes');
+Route::post('/compras/importar', [CompraController::class, 'importar'])->name('compras.importar');
+Route::post('/compras/confirmar-importacion', [CompraController::class, 'confirmarImportacion'])->name('compras.confirmarImportacion');
 Route::get('/compras/descargar-plantilla', [CompraController::class, 'descargarPlantilla'])->name('compras.plantilla');
 Route::get('/compras/exportar', [CompraController::class, 'export'])->name('compras.exportar');
 
-Route::resource('compras', CompraController::class);
-Route::post('/compras/importar', [CompraController::class, 'importar'])->name('compras.importar');
-
+// Rutas con parámetros después
+Route::get('/compras/{id}/archivo-oc', [CompraController::class, 'descargarArchivoOC'])->name('compras.descargarArchivoOC');
+Route::get('/compras/{id}/archivo-documento', [CompraController::class, 'descargarArchivoDocumento'])->name('compras.descargarArchivoDocumento');
 Route::patch('/compras/{id}/status', [CompraController::class, 'updateStatus'])->name('compras.updateStatus');
+
+// Recurso al final
+Route::resource('compras', CompraController::class);
 
 
 // MANIFIESTO
@@ -385,10 +389,6 @@ Route::get('/subir-proveedores', function () {
     return view('importar');
 });
 
-
-//Ruta para compras
-Route::get('compras/{id}/archivo-oc', [CompraController::class, 'descargarArchivoOC'])->name('compras.descargarArchivoOC');
-Route::get('compras/{id}/archivo-documento', [CompraController::class, 'descargarArchivoDocumento'])->name('compras.descargarArchivoDocumento');
 
 
 

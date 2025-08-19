@@ -75,10 +75,15 @@ class CompraExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSi
                 case 'usuario':
                     $campos[] = $compra->user->name ?? 'Sin Registro';
                     break;
+
+
                 case 'fecha_vencimiento':
                 case 'fecha_documento':
-                    $campos[] = optional($compra->{$campo})->format('Y-m-d');
+                    $campos[] = $compra->{$campo}?->format('Y-m-d'); // ya es Carbon por el cast
                     break;
+
+
+
                 default:
                     $campos[] = $compra->{$campo} ?? '—';
                     break;
