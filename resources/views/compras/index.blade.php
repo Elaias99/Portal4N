@@ -1,6 +1,44 @@
 @extends('layouts.app')
 @section('content')
 
+<style>
+
+    /* --- TABLA CUSTOM --- */
+    .custom-table thead {
+        background-color: #f8f9fa;   /* gris claro */
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .custom-table th, 
+    .custom-table td {
+        border-color: #e9ecef !important;  /* bordes más suaves */
+        padding: 0.75rem 0.5rem;
+        vertical-align: middle;
+    }
+
+    .custom-table tbody tr:hover {
+        background-color: #f5f7fa;  /* efecto hover más sutil */
+    }
+
+    /* Números y totales */
+    /* .custom-table td.text-right {
+        font-family: 'Roboto Mono', monospace;
+        font-size: 0.95rem;
+    } */
+
+    /* Estado con colores */
+    .custom-table .badge {
+        font-size: 0.75rem;
+        padding: 0.5em 0.6em;
+        border-radius: 0.5rem;
+    }
+
+
+
+</style>
+
 
 @if(session('compras_importadas'))
     <div class="container mb-4">
@@ -73,7 +111,7 @@
     <div class="row">
 
         {{-- FILTROS Y GESTIÓN --}}
-        <div class="col-lg-2 mb-4">
+        <div class="col-lg-2 mb-1">
             @component('layouts.columna_izquierda', [
                 'tituloTarjeta' => 'Gestión Masiva de Compras',
                 'tituloFiltros' => 'Filtrar Compras',
@@ -81,7 +119,7 @@
             ])
                 @slot('acciones')
                     {{-- Importar --}}
-                    <form class="mb-2">
+                    <form class="mb-1">
                         @csrf
                         <input type="file" name="archivo" id="archivoInput" accept=".xlsx,.xls" style="display: none;">
                         <button type="button" class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center"
@@ -91,7 +129,7 @@
                     </form>
 
                     {{-- Exportar --}}
-                    <form class="mb-2">
+                    <form class="mb-1">
                         <button type="button" class="btn btn-outline-success btn-block py-2 d-flex align-items-center justify-content-center"
                             data-toggle="modal" data-target="#modalExportarCompras">
                             <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
@@ -140,7 +178,7 @@
             @endcomponent
         </div>
 
-        <div class="col-lg-9">
+        <div class="col-lg-10">
 
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
 
@@ -156,56 +194,73 @@
 
             
 
-            
-            <div class="table-responsive shadow-sm rounded">
-                <table class="table table-hover align-middle">
-                    <thead class="bg-secondary text-white">
+            <div class="table-responsive rounded shadow-sm">
+                <table class="table table-hover align-middle custom-table">
+                    <thead>
                         <tr>
+                            <th>ID</th>
                             <th>Usuario</th>
                             <th>Centro Costo</th>
-                            <th>Glosa</th>
-                            <th>Obs.</th>
-                            <th>Plazo</th>
+                            <th class="w-25">Glosa</th>
+                            <th class="d-none d-md-table-cell">Observación</th>
+                            <th>Plazo de Pago</th>
                             <th>Empresa</th>
-                            <th>Año</th>
-                            <th>Mes</th>
-                            <th>Proveedor</th>
-                            <th>RUT</th>
-                            <th>Tipo Doc</th>
-                            <th>Fecha</th>
-                            <th>N°</th>
-                            <th>OC</th>
-                            <th>Total</th>
-                            <th>Venc.</th>
-                            <th>Forma</th>
+                            <th>Periodo</th>
+                            <th class="w-25">Proveedor</th>
+                            <th class="d-none d-md-table-cell">RUT Proveedor</th>
+                            <th>Tipo Documento</th>
+                            <th class="text-center">Fecha Documento</th>
+                            <th>N° Doc.</th>
+                            <th class="d-none d-md-table-cell">OC</th>
+                            <th class="text-right">Total</th>
+                            <th class="text-center">Fecha Vencimiento</th>
+                            <th class="d-none d-md-table-cell">Forma de Pago</th>
                             <th>Estado</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($compras as $compra)
                             <tr>
+                                <td>{{ $compra->id ?? '-' }}</td>
                                 <td>{{ $compra->user->name ?? '-' }}</td>
                                 <td>{{ $compra->centroCosto->nombre ?? '-' }}</td>
-                                <td>{{ $compra->glosa }}</td>
-                                <td>{{ $compra->observacion }}</td>
+                                <td class="text-truncate" style="max-width:180px;">{{ $compra->glosa }}</td>
+                                <td class="d-none d-md-table-cell text-truncate" style="max-width:180px;">{{ $compra->observacion }}</td>
                                 <td>{{ $compra->plazoPago->nombre ?? '-' }}</td>
                                 <td>{{ $compra->empresa->Nombre ?? '-' }}</td>
-                                <td>{{ $compra->año }}</td>
-                                <td>{{ $compra->mes }}</td>
+                                <td>{{ $compra->año }} / {{ $compra->mes }}</td>
                                 <td>{{ $compra->proveedor->razon_social }}</td>
-                                <td>{{ $compra->proveedor->rut }}</td>
+                                <td class="d-none d-md-table-cell">{{ $compra->proveedor->rut }}</td>
                                 <td>{{ $compra->tipoPago->nombre ?? '-' }}</td>
-                                <td>{{ $compra->fecha_documento }}</td>
+                                <td class="text-center text-muted text-nowrap">
+                                    {{ optional($compra->fecha_documento)->format('Y-m-d') ?? '-' }}
+                                </td>
                                 <td>{{ $compra->numero_documento }}</td>
-                                <td>{{ $compra->oc }}</td>
-                                <td>${{ number_format($compra->pago_total, 0, ',', '.') }}</td>
-                                <td>{{ $compra->fecha_vencimiento }}</td>
-                                <td>{{ $compra->formaPago->nombre ?? '-' }}</td>
-                                <td>{{ $compra->status }}</td>
+                                <td class="d-none d-md-table-cell">{{ $compra->oc }}</td>
+
+
+                                <td class="text-right">
+                                    ${{ number_format($compra->pago_total, 0, ',', '.') }}
+                                </td>
+
+
+                                <td class="text-center text-muted text-nowrap">
+                                    {{ optional($compra->fecha_vencimiento)->format('Y-m-d') ?? '-' }}
+                                </td>
+                                <td class="d-none d-md-table-cell">{{ $compra->formaPago->nombre ?? '-' }}</td>
+                                <td>
+                                    <span class="badge 
+                                        @if($compra->status === 'Pagado') bg-success 
+                                        @elseif($compra->status === 'Pendiente') bg-warning text-dark 
+                                        @elseif($compra->status === 'No Pagar') bg-danger 
+                                        @else bg-secondary @endif">
+                                        {{ $compra->status }}
+                                    </span>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="19" class="text-center text-muted">
+                                <td colspan="17" class="text-center text-muted">
                                     No hay compras registradas.
                                 </td>
                             </tr>
@@ -213,6 +268,9 @@
                     </tbody>
                 </table>
             </div>
+
+
+
 
             <div class="mt-3 d-flex justify-content-center">
                 {{ $compras->links('pagination::bootstrap-4') }}

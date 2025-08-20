@@ -79,9 +79,13 @@ class CompraController extends Controller
 
         // Paginación
         $compras = $query
-            ->orderBy('año', 'desc')
+            ->orderByRaw("CASE WHEN status = 'Pendiente' THEN 1 ELSE 2 END") // ✅ Pendientes primero
+            ->orderByRaw("CASE WHEN status = 'Pendiente' THEN fecha_vencimiento END DESC") // ✅ Entre pendientes, ordenar por fecha vencimiento ascendente
+            ->orderBy('año', 'desc') // ✅ Para los demás (pagados), se sigue mostrando por año y mes
             ->orderByRaw("FIELD(mes, 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre') DESC")
             ->paginate(10);
+
+
 
         $camposOpcionales = [
             'empresa' => 'Empresa',

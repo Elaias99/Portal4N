@@ -142,7 +142,7 @@
                             @endphp
                             <li class="d-flex justify-content-between align-items-center py-2">
                                 <button 
-                                    class="btn btn-link p-0 small text-left ver-detalle-pagos"
+                                    class="btn btn-sm p-0 small text-left ver-detalle-pagos"
                                     data-toggle="modal" 
                                     data-target="#modalProximosPagos"
                                     data-detalle='@json($pago["detalles"] ?? [])'>
