@@ -141,14 +141,20 @@
                                 $fechaPago = \Carbon\Carbon::parse($pago['fecha']);
                             @endphp
                             <li class="d-flex justify-content-between align-items-center py-2">
-                                <span class="small">
+                                <button 
+                                    class="btn btn-link p-0 small text-left ver-detalle-pagos"
+                                    data-toggle="modal" 
+                                    data-target="#modalProximosPagos"
+                                    data-detalle='@json($pago["detalles"] ?? [])'>
                                     <strong>{{ $fechaPago->format('d-m') }}</strong> 
                                     ({{ $pago['cantidad'] }} proveedores)
-                                </span>
+                                </button>
                                 <span class="fw-semibold small text-end">
                                     ${{ number_format($pago['total'], 0, ',', '.') }}
                                 </span>
                             </li>
+
+
                         @empty
                             <li class="text-muted text-center py-2">No hay pagos próximos</li>
                         @endforelse
@@ -174,6 +180,9 @@
 
     </div>
 </div>
+
+@include('pagos.modal_detalle')
+
 
 @endsection
 
@@ -264,3 +273,7 @@
         });
     });
 </script>
+
+
+
+

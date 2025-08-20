@@ -25,7 +25,7 @@ use App\Http\Controllers\ComunaController;
 use App\Http\Controllers\TrackingDashboardController;
 use App\Http\Controllers\ContratoController;
 use App\Http\Controllers\ExportacionController;
-
+use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\ManifiestoController;
 
 use App\Http\Controllers\TrackingProductoController;
@@ -90,15 +90,24 @@ route::post('/notifications/mark-all-read', function () {
 
 //agregar una ruta para consultar notificaciones
 Route::get('/notificaciones/recientes', function () {
+    // 🔑 Mantener vivos los flashes para el siguiente request
+    session()->reflash();
+
+    // 📝 Log de verificación temporal
+    Log::info('♻️ Reflash ejecutado en /notificaciones/recientes', [
+        'session_flash' => session()->get('_flash'),
+        'session_keys'  => array_keys(session()->all()),
+    ]);
+
     $notificaciones = Auth::user()->unreadNotifications
-        ->sortByDesc('created_at') // ya es una colección, puedes ordenar así
+        ->sortByDesc('created_at')
         ->take(5)
         ->map(function ($n) {
             return [
-                'id' => $n->id,
+                'id'      => $n->id,
                 'mensaje' => $n->data['mensaje'],
-                'link' => $n->data['link'] . '?notificacion_id=' . $n->id,
-                'tipo' => $n->type,
+                'link'    => $n->data['link'] . '?notificacion_id=' . $n->id,
+                'tipo'    => $n->type,
             ];
         });
 
@@ -107,6 +116,8 @@ Route::get('/notificaciones/recientes', function () {
         'items' => $notificaciones->values()
     ]);
 })->middleware('auth');
+
+
 
 
 Route::get('/notificaciones/empleado', function () {

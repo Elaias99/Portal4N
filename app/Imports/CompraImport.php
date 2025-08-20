@@ -18,6 +18,7 @@ class CompraImport implements ToCollection, WithHeadingRow
 
 
     public $rowsData = [];
+    protected $seenKeys = [];
 
     public $proveedoresFaltantes = [];
 
@@ -157,6 +158,24 @@ class CompraImport implements ToCollection, WithHeadingRow
                         ->where('tipo_pago_id', $tipoDocId)
                         ->exists();
                 }
+
+                // ✅ Verificar también duplicados dentro del mismo archivo
+                $clave = $proveedorId 
+                    . '-' . $tipoDocId 
+                    . '-' . $row['numero_documento'] 
+                    . '-' . (float) $fila['pago_total'] 
+                    . '-' . $row['ano'] 
+                    . '-' . $row['mes']
+                    . '-' . trim($row['glosa']);;
+
+                if (in_array($clave, $this->seenKeys)) {
+                    $duplicado = true;
+                } else {
+                    $this->seenKeys[] = $clave;
+                }
+
+
+
             }
 
 

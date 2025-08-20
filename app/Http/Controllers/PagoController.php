@@ -16,12 +16,10 @@ class PagoController extends Controller
     //
     public function index(Request $request)
     {
-        
         $query = Compra::with(['proveedor', 'empresa'])
             ->where('status', 'pendiente')
             ->whereBetween('fecha_vencimiento', [now()->startOfWeek(), now()->endOfWeek()])
             ->orderBy('fecha_vencimiento', 'asc');
-
 
         // Filtro por empresa
         if ($request->filled('empresa_id')) {
@@ -45,29 +43,41 @@ class PagoController extends Controller
         $proveedores = Proveedor::all();
         $empresas = Empresa::all();
 
-
-        $proximosPagos = Compra::with('proveedor')
+        // 👉 Próximos pagos agrupados por el viernes de la misma semana (lunes-domingo juntos)
+        $proximosPagos = Compra::with(['proveedor','empresa'])
             ->where('status', 'pendiente')
-            ->whereDate('fecha_vencimiento', '>', now())
+            ->whereDate('fecha_vencimiento', '>', now()->endOfWeek(\Carbon\Carbon::SUNDAY))
+
             ->orderBy('fecha_vencimiento', 'asc')
             ->get()
             ->groupBy(function($compra) {
-                // Normaliza la fecha al viernes de esa semana
-                return \Carbon\Carbon::parse($compra->fecha_vencimiento)->next(\Carbon\Carbon::FRIDAY)->format('Y-m-d');
+                $fecha = \Carbon\Carbon::parse($compra->fecha_vencimiento);
+                // Tomar lunes como inicio de semana y sumar 4 días → viernes
+                return $fecha->copy()->startOfWeek(\Carbon\Carbon::MONDAY)->addDays(4)->format('Y-m-d');
             })
             ->map(function($grupo) {
+                $fechaGrupo = \Carbon\Carbon::parse($grupo->first()->fecha_vencimiento)
+                    ->copy()->startOfWeek(\Carbon\Carbon::MONDAY)->addDays(4);
+
                 return [
-                    'fecha' => \Carbon\Carbon::parse($grupo->first()->fecha_vencimiento)
-                                ->next(\Carbon\Carbon::FRIDAY)
-                                ->format('Y-m-d'),
+                    'fecha' => $fechaGrupo->format('Y-m-d'),
                     'cantidad' => $grupo->count(),
-                    'total' => $grupo->sum('pago_total')
+                    'total' => $grupo->sum('pago_total'),
+                    'detalles' => $grupo->map(function($compra) {
+                        return [
+                            'proveedor' => $compra->proveedor->razon_social ?? '—',
+                            'empresa' => $compra->empresa->Nombre ?? '—',
+                            'fecha_vencimiento' => \Carbon\Carbon::parse($compra->fecha_vencimiento)->format('d-m-Y'),
+                            'monto' => $compra->pago_total,
+                        ];
+                    })->values()
                 ];
             })
             ->sortBy('fecha')
             ->values();
 
-
+        // 👀 Debug temporal
+        // dd($proximosPagos->toArray());
 
         // ✅ Detectar si se acaba de exportar
         $mensaje = null;
@@ -75,8 +85,12 @@ class PagoController extends Controller
             $mensaje = 'Pagos exportados correctamente y marcados como Pagado.';
         }
 
-        return view('pagos.index', compact('compras', 'totalGeneral', 'proveedores', 'empresas', 'mensaje','proximosPagos'));
+        return view('pagos.index', compact(
+            'compras', 'totalGeneral', 'proveedores', 'empresas', 'mensaje','proximosPagos'
+        ));
     }
+
+
 
 
 

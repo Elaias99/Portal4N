@@ -2,13 +2,6 @@
 @section('content')
 
 
-{{-- @if(session('compras_importadas'))
-    <div class="alert alert-success">
-        <h5>Importación exitosa</h5>
-        <p>Se importaron correctamente <strong>{{ session('compras_importadas') }}</strong> compras.</p>
-    </div>
-@endif --}}
-
 @if(session('compras_importadas'))
     <div class="container mb-4">
         <div class="alert alert-success col-lg-8 mx-auto">
@@ -36,36 +29,6 @@
 @endif
 
 
-
-
-
-
-{{-- @if(session('errorsFK') || session('errorsDuplicados'))
-<div class="mb-4">
-
-    @if(session('errorsFK'))
-        <div class="alert alert-danger" style="max-height: 200px; overflow-y: auto;">
-            <h5>Errores de Claves Foráneas</h5>
-            <ul class="mb-0">
-                @foreach(session('errorsFK') as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    @if(session('errorsDuplicados'))
-        <div class="alert alert-warning" style="max-height: 200px; overflow-y: auto;">
-            <h5>Duplicados Detectados</h5>
-            <ul class="mb-0">
-                @foreach(session('errorsDuplicados') as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-</div>
-@endif --}}
 @if(session('errorsFK') || session('errorsDuplicados'))
 <div class="container mb-4">
 
@@ -100,7 +63,6 @@
 <div class="container">
     <h1 class="text-center mb-4" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">Lista de Compras</h1>
 
-
     @if(session('proveedores_faltantes_excel') && count(session('proveedores_faltantes_excel')) > 0)
         <a href="{{ route('compras.exportarProveedoresFaltantes') }}" 
         class="btn btn-outline-warning btn-block py-2 d-flex align-items-center justify-content-center mb-2">
@@ -108,13 +70,7 @@
         </a>
     @endif
 
-
-
-
-
-
     <div class="row">
-
 
         {{-- FILTROS Y GESTIÓN --}}
         <div class="col-lg-2 mb-4">
