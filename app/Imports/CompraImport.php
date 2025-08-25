@@ -208,13 +208,11 @@ class CompraImport implements ToCollection, WithHeadingRow
                         ->where('empresa_id', $empresaId)
                         ->where('tipo_pago_id', $tipoDocId)
                         ->where('numero_documento', $numeroDoc)
-                        ->whereRaw('ROUND(pago_total,2) = ?', [$monto])
+                        ->whereRaw('ROUND(COALESCE(pago_total,0),2) = ?', [$monto ?? 0])
                         ->where('glosa', $glosa)
-                        ->where(function ($q) use ($fechaDoc) {
-                            $q->whereDate('fecha_documento', $fechaDoc)
-                              ->orWhereDate('fecha_vencimiento', $fechaDoc);
-                        })
+                        ->whereRaw('COALESCE(fecha_documento, fecha_vencimiento) = ?', [$fechaDoc])
                         ->exists();
+
 
                     if (in_array($clave, $this->seenKeys) || $existeEnBD) {
                         $duplicado = true;
