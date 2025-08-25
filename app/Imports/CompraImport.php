@@ -189,7 +189,10 @@ class CompraImport implements ToCollection, WithHeadingRow
                 $empresaId = Empresa::where('Nombre', $row['empresa'])->value('id');
 
                 if ($proveedorId && $tipoDocId && $empresaId) {
-                    $numeroDoc = !empty($row['numero_documento']) ? trim($row['numero_documento']) : 'S/D';
+                    $numeroDoc = (isset($row['numero_documento']) && trim($row['numero_documento']) !== '')
+                        ? trim($row['numero_documento'])
+                        : 'S/D';
+
                     $monto     = (float) $fila['pago_total'];
                     $glosa     = trim($row['glosa']);
                     $fechaDoc  = !empty($fila['fecha_documento'])
