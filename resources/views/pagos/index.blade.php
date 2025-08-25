@@ -2,11 +2,12 @@
 
 @section('content')
 
-@if(!empty($mensaje))
+@if(session('mensaje'))
     <div class="alert alert-success shadow-sm">
-        <strong>✅ {{ $mensaje }}</strong>
+        <strong>✅ {{ session('mensaje') }}</strong>
     </div>
 @endif
+
 
 <div class="container py-4">
     <div class="row">
@@ -229,13 +230,16 @@
                 return;
             }
             exportInput.value = JSON.stringify(seleccionados);
-            exportForm.submit();
-            setTimeout(() => {
-                window.location.href = "{{ route('pagos.index', ['exportado' => 'ok']) }}";
-            }, 2000);
+            exportForm.submit(); // ⬅️ Solo enviamos el form
         });
+
+        // ✅ Si venimos con export_ready, dispara la descarga
+        @if(session('export_ready'))
+            window.location = "{{ route('pagos.descargar') }}";
+        @endif
     });
 </script>
+
 
 <script>
     if (window.location.search.includes('exportado=ok')) {

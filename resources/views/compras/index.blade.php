@@ -22,12 +22,6 @@
         background-color: #f5f7fa;  /* efecto hover más sutil */
     }
 
-    /* Números y totales */
-    /* .custom-table td.text-right {
-        font-family: 'Roboto Mono', monospace;
-        font-size: 0.95rem;
-    } */
-
     /* Estado con colores */
     .custom-table .badge {
         font-size: 0.75rem;

@@ -419,9 +419,12 @@ Route::resource('historial-vacacion', HistorialVacacionController::class);
 
     
 // Pagos
-Route::post('/pagos/{id}/importante', [PagoController::class, 'toggleImportante'])->name('pagos.toggleImportante');
-Route::resource('pagos','App\Http\Controllers\PagoController')->middleware('auth');
 Route::post('/pagos/exportar', [PagoController::class, 'exportarSeleccionados'])->name('pagos.exportar');
+Route::post('/pagos/{id}/importante', [PagoController::class, 'toggleImportante'])->name('pagos.toggleImportante');
+Route::get('/pagos/descargar', [PagoController::class, 'descargar'])->name('pagos.descargar');
+Route::resource('pagos','App\Http\Controllers\PagoController')->middleware('auth');
+
+
 
 
 

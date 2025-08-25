@@ -76,7 +76,7 @@ class PagoController extends Controller
             ->sortBy('fecha')
             ->values();
 
-        // 👀 Debug temporal
+        // Debug temporal
         // dd($proximosPagos->toArray());
 
         // ✅ Detectar si se acaba de exportar
@@ -109,12 +109,29 @@ class PagoController extends Controller
             return back()->with('error', 'No se seleccionaron compras para exportar.');
         }
 
-        // ✅ Paso nuevo: actualizar el estado a "Pagado"
         Compra::whereIn('id', $ids)->update(['status' => 'Pagado']);
 
-        // Luego, proceder con la exportación
+        // Guardar en sesión los IDs seleccionados
+        session()->put('pagos_exportar_ids', $ids);
+
+        return redirect()
+            ->route('pagos.index')
+            ->with('export_ready', true)
+            ->with('mensaje', 'Los pagos fueron marcados como Pagado. El archivo de Excel se está descargando');
+
+    }
+
+    public function descargar()
+    {
+        $ids = session()->pull('pagos_exportar_ids', []); // pull = obtener y limpiar
+        if (empty($ids)) {
+            return redirect()->route('pagos.index')->with('error', 'No hay pagos para exportar.');
+        }
+
         return Excel::download(new PagosSeleccionadosExport($ids), 'pagos_seleccionados.xlsx');
     }
+
+
 
 
     public function toggleImportante($id)
