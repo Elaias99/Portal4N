@@ -140,8 +140,12 @@ class PagoController extends Controller
         $compra->importante = !$compra->importante;
         $compra->save();
 
-        return redirect()->back()->with('success', 'Compra marcada como importante');
+        return response()->json([
+            'success' => true,
+            'importante' => $compra->importante,
+        ]);
     }
+
 
 
 

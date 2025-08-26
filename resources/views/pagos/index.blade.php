@@ -68,44 +68,74 @@
         <div class="col-lg-7">
             <div class="table-responsive shadow-sm rounded">
                 <table class="table table-hover align-middle">
-                    <thead class="bg-secondary text-white">
+                    <thead class="thead-dark">
                         <tr>
-                            <th>Razón Social</th>
-                            <th>Empresa</th>
-                            <th>Fecha Vencimiento</th>
-                            <th class="text-end">Monto Total</th>
-                            <th class="text-center align-middle">
+                            <th class="text-uppercase font-weight-bold">Razón Social</th>
+                            <th class="text-uppercase font-weight-bold">Empresa</th>
+                            <th class="text-uppercase font-weight-bold">Fecha Vencimiento</th>
+                            <th class="text-end text-uppercase font-weight-bold">Monto Total</th>
+                            <th class="text-center align-middle text-uppercase font-weight-bold" style="width: 80px;">
                                 <label for="selectAll" class="form-check d-flex justify-content-center align-items-center gap-2 mb-0">
                                     <input type="checkbox" id="selectAll" class="form-check-input">
                                     <span class="small">Todos</span>
                                 </label>
                             </th>
-                            <th class="text-end">TOTAL</th>
+                            <th class="text-end text-uppercase font-weight-bold">TOTAL</th>
                         </tr>
                     </thead>
+
                     <tbody id="tabla-pagos">
-                        @foreach($compras as $compra)
-                            <tr class="{{ $compra->importante ? 'table-warning' : '' }}">
-                                <td class="d-flex align-items-center gap-2">
-                                    <form action="{{ route('pagos.toggleImportante', $compra->id) }}" method="POST" class="m-0 p-0">
-                                        @csrf
-                                        @method('POST')
-                                        <button type="submit" class="bg-transparent border-0 p-0 m-0 text-warning" title="Marcar como importante" style="cursor:pointer;">
-                                            <i class="fa{{ $compra->importante ? 's' : 'r' }} fa-star"></i>
-                                        </button>
-                                    </form>
+                    @foreach($compras as $compra)
+                        <tr class="{{ $compra->importante ? 'table-warning' : '' }}">
+                            {{-- Columna Razón Social con estrella --}}
+                            <td class="align-middle">
+                                <div class="d-inline-flex align-items-center">
+                                    <button 
+                                        type="button"
+                                        class="btn-toggle-importante bg-transparent border-0 p-0 m-0 text-warning mr-2"
+                                        data-id="{{ $compra->id }}"
+                                        style="cursor:pointer;"
+                                        title="Marcar como importante">
+                                        <i class="fa{{ $compra->importante ? 's' : 'r' }} fa-star"></i>
+                                    </button>
+
                                     <span>{{ $compra->proveedor->razon_social }}</span>
-                                </td>
-                                <td>{{ $compra->empresa->Nombre ?? '—' }}</td>
-                                <td>{{ \Carbon\Carbon::parse($compra->fecha_vencimiento)->format('d-m-Y') }}</td>
-                                <td class="text-end monto">${{ number_format($compra->pago_total, 0, ',', '.') }}</td>
-                                <td class="text-center">
-                                    <input type="checkbox" class="seleccion-pago" data-id="{{ $compra->id }}" data-monto="{{ $compra->pago_total }}">
-                                </td>
-                                <td class="text-end acumulado-cell">—</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
+                                </div>
+                            </td>
+
+
+                            {{-- Empresa --}}
+                            <td class="align-middle">
+                                {{ $compra->empresa->Nombre ?? '—' }}
+                            </td>
+
+                            {{-- Fecha Vencimiento --}}
+                            <td class="align-middle">
+                                {{ \Carbon\Carbon::parse($compra->fecha_vencimiento)->format('d-m-Y') }}
+                            </td>
+
+                            {{-- Monto Total --}}
+                            <td class="text-end monto font-weight-bold text-dark align-middle">
+                                ${{ number_format($compra->pago_total, 0, ',', '.') }}
+                            </td>
+
+                            {{-- Checkbox selección --}}
+                            <td class="text-center align-middle">
+                                <input type="checkbox" 
+                                    class="seleccion-pago" 
+                                    data-id="{{ $compra->id }}" 
+                                    data-monto="{{ $compra->pago_total }}">
+                            </td>
+
+                            {{-- Acumulado --}}
+                            <td class="text-end acumulado-cell align-middle">—</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+
+
+
+
                 </table>
             </div>
 
@@ -113,15 +143,25 @@
             <div class="mt-5">
                 <div class="card border-0 shadow-sm px-4 py-3">
                     <div class="row align-items-center">
+                        {{-- Total seleccionado --}}
                         <div class="col-md-6">
-                            <h4 class="fw-bold m-0">Total a pagar: <span class="text">$<span id="total-pagar">0</span></span></h4>
+                            <h4 class="fw-bold m-0">
+                                Total a pagar: 
+                                <span class="text-dark">$<span id="total-pagar">0</span></span>
+                            </h4>
                         </div>
+
+                        {{-- Total pendiente --}}
                         <div class="col-md-6 text-md-end mt-2 mt-md-0">
-                            <h5 class="m-0">Resto: <span class="text-muted">$<span id="resto-pagos">{{ number_format($totalGeneral, 0, ',', '.') }}</span></span></h5>
+                            <small class="text-muted">
+                                Pendiente esta semana: 
+                                $<span id="resto-pagos">{{ number_format($totalGeneral, 0, ',', '.') }}</span>
+                            </small>
                         </div>
                     </div>
                 </div>
             </div>
+
 
             <div class="mt-4 d-flex justify-content-center">
                 {{ $compras->links('pagination::bootstrap-4') }}
@@ -251,9 +291,12 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        document.querySelectorAll('.toggle-importante').forEach(button => {
+        document.querySelectorAll('.btn-toggle-importante').forEach(button => {
             button.addEventListener('click', function () {
                 const id = this.dataset.id;
+                const icon = this.querySelector('i');
+                const row = this.closest('tr');
+
                 fetch(`/pagos/${id}/importante`, {
                     method: 'PATCH',
                     headers: {
@@ -265,8 +308,17 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        button.classList.toggle('btn-warning', data.importante);
-                        button.classList.toggle('btn-outline-warning', !data.importante);
+                        if (data.importante) {
+                            // marcar como importante
+                            icon.classList.remove('far');
+                            icon.classList.add('fas');
+                            row.classList.add('table-warning');
+                        } else {
+                            // desmarcar como importante
+                            icon.classList.remove('fas');
+                            icon.classList.add('far');
+                            row.classList.remove('table-warning');
+                        }
                     }
                 })
                 .catch(error => {
@@ -277,6 +329,7 @@
         });
     });
 </script>
+
 
 
 
