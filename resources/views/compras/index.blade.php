@@ -30,6 +30,9 @@
     }
 
 
+    
+
+
 
 </style>
 
@@ -168,6 +171,31 @@
                         </select>
                     </div>
 
+
+                    <div class="mb-3">
+                        <label class="form-label">Fecha Documento:</label>
+                        <div class="input-group input-group-sm mb-3">
+                            <span class="input-group-text">Desde</span>
+                            <input type="date" name="fecha_desde" class="form-control" value="{{ request('fecha_desde') }}">
+                        </div>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">Hasta</span>
+                            <input type="date" name="fecha_hasta" class="form-control" value="{{ request('fecha_hasta') }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Fecha Vencimiento:</label>
+                        <div class="input-group input-group-sm mb-3">
+                            <span class="input-group-text">Desde</span>
+                            <input type="date" name="vencimiento_desde" class="form-control" value="{{ request('vencimiento_desde') }}">
+                        </div>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">Hasta</span>
+                            <input type="date" name="vencimiento_hasta" class="form-control" value="{{ request('vencimiento_hasta') }}">
+                        </div>
+                    </div>
+
                 @endslot
             @endcomponent
         </div>
@@ -247,10 +275,15 @@
                                         @if($compra->status === 'Pagado') bg-success 
                                         @elseif($compra->status === 'Pendiente') bg-warning text-dark 
                                         @elseif($compra->status === 'No Pagar') bg-danger 
-                                        @else bg-secondary @endif">
+                                        @else bg-secondary @endif"
+                                        @if($compra->status === 'Pagado' && $compra->updated_at)
+                                            title="Pagado el {{ $compra->updated_at->format('d-m-Y') }}"
+                                            data-toggle="tooltip"
+                                        @endif>
                                         {{ $compra->status }}
                                     </span>
                                 </td>
+
                             </tr>
                         @empty
                             <tr>
@@ -276,5 +309,7 @@
 @include('compras.modal_importar_excel')
 @include('compras.modal_estructura_plantilla')
 @include('compras.modal_exportar_compras')
+
+
 
 @endsection

@@ -41,7 +41,6 @@ class CompraController extends Controller
         $mesActivo = $request->filled('month') ? $request->month : ($ultimaCompra->mes ?? null);
         $anioActivo = $request->filled('year') ? $request->year : ($ultimaCompra->año ?? null);
 
-
         // Filtros
         if ($request->filled('year')) {
             $query->where('año', $request->year);
@@ -60,8 +59,7 @@ class CompraController extends Controller
             $query->where('plazo_pago_id', $request->plazo_pago_id);
         }
 
-
-        // ✅ Buscador por razon_social del proveedor
+        // Buscador por razón social
         if ($request->filled('search')) {
             $search = $request->search;
             $query->whereHas('proveedor', function ($q) use ($search) {
@@ -77,15 +75,32 @@ class CompraController extends Controller
             });
         }
 
-        // Paginación
+        // 🔎 Filtro por rango de fechas (fecha_documento)
+        if ($request->filled('fecha_desde') && $request->filled('fecha_hasta')) {
+            $query->whereBetween('fecha_documento', [$request->fecha_desde, $request->fecha_hasta]);
+        } elseif ($request->filled('fecha_desde')) {
+            $query->whereDate('fecha_documento', '>=', $request->fecha_desde);
+        } elseif ($request->filled('fecha_hasta')) {
+            $query->whereDate('fecha_documento', '<=', $request->fecha_hasta);
+        }
+
+        // 🔎 Filtro por rango de fechas (fecha_vencimiento)
+        if ($request->filled('vencimiento_desde') && $request->filled('vencimiento_hasta')) {
+            $query->whereBetween('fecha_vencimiento', [$request->vencimiento_desde, $request->vencimiento_hasta]);
+        } elseif ($request->filled('vencimiento_desde')) {
+            $query->whereDate('fecha_vencimiento', '>=', $request->vencimiento_desde);
+        } elseif ($request->filled('vencimiento_hasta')) {
+            $query->whereDate('fecha_vencimiento', '<=', $request->vencimiento_hasta);
+        }
+
+        // Paginación con filtros persistentes
         $compras = $query
-            ->orderByRaw("CASE WHEN status = 'Pendiente' THEN 1 ELSE 2 END") // ✅ Pendientes primero
-            ->orderByRaw("CASE WHEN status = 'Pendiente' THEN fecha_vencimiento END DESC") // ✅ Entre pendientes, ordenar por fecha vencimiento ascendente
-            ->orderBy('año', 'desc') // ✅ Para los demás (pagados), se sigue mostrando por año y mes
+            ->orderByRaw("CASE WHEN status = 'Pendiente' THEN 1 ELSE 2 END") // Pendientes primero
+            ->orderByRaw("CASE WHEN status = 'Pendiente' THEN fecha_vencimiento END DESC")
+            ->orderBy('año', 'desc')
             ->orderByRaw("FIELD(mes, 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre') DESC")
-            ->paginate(10);
-
-
+            ->paginate(10)
+            ->appends($request->query()); // 👈 asegura mantener los filtros
 
         $camposOpcionales = [
             'empresa' => 'Empresa',
@@ -110,9 +125,7 @@ class CompraController extends Controller
             'archivo_documento' => 'Archivo Documento',
         ];
 
-
-
-        // Proveedores para posibles otros filtros
+        // Proveedores para filtros
         $proveedores = Proveedor::all();
         $bancos = Banco::all();
         $tipoCuentas = TipoCuenta::all();
@@ -122,8 +135,7 @@ class CompraController extends Controller
         $empresas = Empresa::all();
         $centrosCostos = CentroCosto::all();
 
-        Log::info('Sesión al cargar index', session()->all());
-
+        // Log::info('Sesión al cargar index', session()->all());
 
         return view('compras.index', compact(
             'compras',
@@ -139,8 +151,8 @@ class CompraController extends Controller
             'anioActivo',
             'camposOpcionales',
         ));
-
     }
+
 
     /**
      * Show the form for creating a new resource.
