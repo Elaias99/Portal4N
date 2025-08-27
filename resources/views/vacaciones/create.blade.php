@@ -29,11 +29,16 @@
     @endif
 
     <!-- Mostrar siempre los días proporcionales acumulados -->
-    <div class="alert alert-info">
-        <strong>Días Proporcionales Acumulados:</strong> {{ $diasProporcionales }}
+    <!-- Mostrar siempre los días proporcionales acumulados -->
+    <div class="alert alert-info d-flex align-items-center justify-content-between">
+        <div>
+            <strong>Días Proporcionales Acumulados:</strong> {{ $diasProporcionales }}
+        </div>
+        <!-- Botón con ícono de información -->
+        <button type="button" class="btn btn-link p-0 ml-2" data-toggle="modal" data-target="#infoDiasModal">
+            <i class="fa fa-info-circle fa-lg text-dark"></i>
+        </button>
     </div>
-
-
 
     @if ($solicitudPendiente)
         <!-- Mensaje si ya hay una solicitud pendiente -->
@@ -92,4 +97,8 @@
 
     <a href="{{ route('empleados.perfil') }}" class="btn btn-outline-secondary btn-block mt-4">Atrás</a>
 </div>
+
+@include('vacaciones.modal_info_dias')
+
+
 @endsection
