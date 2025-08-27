@@ -159,7 +159,7 @@
                     </div>
 
 
-                    <div class="mb-3">
+                    {{-- <div class="mb-3">
                         <label class="form-label">Plazo de Pago:</label>
                         <select name="plazo_pago_id" class="form-select form-select-sm">
                             <option value="">Todos</option>
@@ -169,7 +169,7 @@
                                 </option>
                             @endforeach
                         </select>
-                    </div>
+                    </div> --}}
 
 
                     <div class="mb-3">
@@ -218,58 +218,37 @@
 
             <div class="table-responsive rounded shadow-sm">
                 <table class="table table-hover align-middle custom-table">
+
+
                     <thead>
                         <tr>
                             <th>ID</th>
+                            <th>Estado</th>
                             <th>Usuario</th>
+
+                            <th class="w-25">Proveedor</th>
+                            <th class="d-none d-md-table-cell">RUT Proveedor</th>
+                            <th>Empresa</th>
+
+                            <th>Tipo Documento</th>
+                            <th>N° Doc.</th>
+                            <th class="text-center">Fecha Documento</th>
+
                             <th>Centro Costo</th>
                             <th class="w-25">Glosa</th>
                             <th class="d-none d-md-table-cell">Observación</th>
-                            <th>Plazo de Pago</th>
-                            <th>Empresa</th>
-                            <th>Periodo</th>
-                            <th class="w-25">Proveedor</th>
-                            <th class="d-none d-md-table-cell">RUT Proveedor</th>
-                            <th>Tipo Documento</th>
-                            <th class="text-center">Fecha Documento</th>
-                            <th>N° Doc.</th>
                             <th class="d-none d-md-table-cell">OC</th>
+
+                            <th>Plazo de Pago</th>
+                            <th class="d-none d-md-table-cell">Forma de Pago</th>
                             <th class="text-right">Total</th>
                             <th class="text-center">Fecha Vencimiento</th>
-                            <th class="d-none d-md-table-cell">Forma de Pago</th>
-                            <th>Estado</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($compras as $compra)
                             <tr>
                                 <td>{{ $compra->id ?? '-' }}</td>
-                                <td>{{ $compra->user->name ?? '-' }}</td>
-                                <td>{{ $compra->centroCosto->nombre ?? '-' }}</td>
-                                <td class="text-truncate" style="max-width:180px;">{{ $compra->glosa }}</td>
-                                <td class="d-none d-md-table-cell text-truncate" style="max-width:180px;">{{ $compra->observacion }}</td>
-                                <td>{{ $compra->plazoPago->nombre ?? '-' }}</td>
-                                <td>{{ $compra->empresa->Nombre ?? '-' }}</td>
-                                <td>{{ $compra->año }} / {{ $compra->mes }}</td>
-                                <td>{{ $compra->proveedor->razon_social }}</td>
-                                <td class="d-none d-md-table-cell">{{ $compra->proveedor->rut }}</td>
-                                <td>{{ $compra->tipoPago->nombre ?? '-' }}</td>
-                                <td class="text-center text-muted text-nowrap">
-                                    {{ optional($compra->fecha_documento)->format('Y-m-d') ?? '-' }}
-                                </td>
-                                <td>{{ $compra->numero_documento }}</td>
-                                <td class="d-none d-md-table-cell">{{ $compra->oc }}</td>
-
-
-                                <td class="text-right">
-                                    ${{ number_format($compra->pago_total, 0, ',', '.') }}
-                                </td>
-
-
-                                <td class="text-center text-muted text-nowrap">
-                                    {{ optional($compra->fecha_vencimiento)->format('Y-m-d') ?? '-' }}
-                                </td>
-                                <td class="d-none d-md-table-cell">{{ $compra->formaPago->nombre ?? '-' }}</td>
                                 <td>
                                     <span class="badge 
                                         @if($compra->status === 'Pagado') bg-success 
@@ -283,7 +262,29 @@
                                         {{ $compra->status }}
                                     </span>
                                 </td>
+                                <td>{{ $compra->user->name ?? '-' }}</td>
 
+                                <td>{{ $compra->proveedor->razon_social }}</td>
+                                <td class="d-none d-md-table-cell">{{ $compra->proveedor->rut }}</td>
+                                <td>{{ $compra->empresa->Nombre ?? '-' }}</td>
+
+                                <td>{{ $compra->tipoPago->nombre ?? '-' }}</td>
+                                <td>{{ $compra->numero_documento }}</td>
+                                <td class="text-center text-muted text-nowrap">
+                                    {{ optional($compra->fecha_documento)->format('Y-m-d') ?? '-' }}
+                                </td>
+
+                                <td>{{ $compra->centroCosto->nombre ?? '-' }}</td>
+                                <td class="text-truncate" style="max-width:180px;">{{ $compra->glosa }}</td>
+                                <td class="d-none d-md-table-cell text-truncate" style="max-width:180px;">{{ $compra->observacion }}</td>
+                                <td class="d-none d-md-table-cell">{{ $compra->oc }}</td>
+
+                                <td>{{ $compra->plazoPago->nombre ?? '-' }}</td>
+                                <td class="d-none d-md-table-cell">{{ $compra->formaPago->nombre ?? '-' }}</td>
+                                <td class="text-right">${{ number_format($compra->pago_total, 0, ',', '.') }}</td>
+                                <td class="text-center text-muted text-nowrap">
+                                    {{ optional($compra->fecha_vencimiento)->format('Y-m-d') ?? '-' }}
+                                </td>
                             </tr>
                         @empty
                             <tr>
@@ -293,6 +294,12 @@
                             </tr>
                         @endforelse
                     </tbody>
+
+
+
+
+
+
                 </table>
             </div>
 

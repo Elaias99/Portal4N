@@ -109,27 +109,31 @@ class PagoController extends Controller
             return back()->with('error', 'No se seleccionaron compras para exportar.');
         }
 
-        Compra::whereIn('id', $ids)->update(['status' => 'Pagado']);
-
         // Guardar en sesión los IDs seleccionados
         session()->put('pagos_exportar_ids', $ids);
 
         return redirect()
             ->route('pagos.index')
-            ->with('export_ready', true)
-            ->with('mensaje', 'Los pagos fueron marcados como Pagado. El archivo de Excel se está descargando');
-
+            ->with('export_ready', true) // la vista ejecutará window.location a descargar()
+            ->with('mensaje', 'Se está preparando el archivo de Excel...');
     }
+
 
     public function descargar()
     {
-        $ids = session()->pull('pagos_exportar_ids', []); // pull = obtener y limpiar
+        $ids = session()->pull('pagos_exportar_ids', []); // obtener y limpiar
         if (empty($ids)) {
             return redirect()->route('pagos.index')->with('error', 'No hay pagos para exportar.');
         }
 
+        // Ahora sí marcar como pagado
+        Compra::whereIn('id', $ids)->update(['status' => 'Pagado']);
+
+        // Generar y descargar el archivo Excel
         return Excel::download(new PagosSeleccionadosExport($ids), 'pagos_seleccionados.xlsx');
     }
+
+
 
 
 
