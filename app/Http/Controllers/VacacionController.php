@@ -87,7 +87,7 @@ class VacacionController extends Controller
         
             // Enviar correo al jefe directo
             Mail::to($jefe->email)
-                ->cc('benjaminrojas@4nlogistica.cl')
+                
                 ->send(new VacacionesSolicitadas($solicitud));
 
         }

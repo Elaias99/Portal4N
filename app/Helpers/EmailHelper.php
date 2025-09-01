@@ -89,18 +89,18 @@ if (!function_exists('resolveCorreoNotificacion')) {
         // Mapeo entre correos internos del sistema y los correos reales de Outlook
         $mapeoCorreosReales = [
             'e.correa.p@4nlogistica.cl' => 'eliascorrea@4nlogistica.cl', //
-            // 'j.guerrero.g@4nlogistica.cl' => 'jocelynguerrero@4nlogistica.cl', //
-            // 'd.medina.p@4nlogistica.cl' => 'daniela.medina@4nlogistica.cl', //
-            // 'e.obreque.f@4nlogistica.cl'=>'elizabeth.obreque@4nlogistica.cl', //
-            // 'r.suazo.m@4nlogistica.cl'=>'raul.suazo@4nlogistica.cl', //
-            // 'l.delabarra.b@4nlogistica.cl'=>'luisdelabarra@4nlogistica.cl', //
-            // 'j.soza.b@4nlogistica.cl'=>'jp.soza@4nlogistica.cl', //
-            // 'b.rojas.s@4nlogistica.cl'=>'benjaminrojas@4nlogistica.cl', //
-            // 'h.delabarra.b@4nlogistica.cl'=>'hansdelabarra@4nlogistica.cl', //
-            // 'o.godoy.s@4nlogistica.cl'=>'Marcelo@4nlogistica.cl',
-            // 'm.salas.a@4nlogistica.cl'=>'francisca.salas@4nlogistica.cl', //
-            // 'm.diaz.s@4nlogistica.cl'=>'marieladiaz@4nlogistica.cl', //
-            // 'n.cuadros.m@4nlogistica.cl'=>'maritzacuadros@4nlogistica.cl', //
+            'j.guerrero.g@4nlogistica.cl' => 'jocelynguerrero@4nlogistica.cl', //
+            'd.medina.p@4nlogistica.cl' => 'daniela.medina@4nlogistica.cl', //
+            'e.obreque.f@4nlogistica.cl'=>'elizabeth.obreque@4nlogistica.cl', //
+            'r.suazo.m@4nlogistica.cl'=>'raul.suazo@4nlogistica.cl', //
+            'l.delabarra.b@4nlogistica.cl'=>'luisdelabarra@4nlogistica.cl', //
+            'j.soza.b@4nlogistica.cl'=>'jp.soza@4nlogistica.cl', //
+          
+            'h.delabarra.b@4nlogistica.cl'=>'hansdelabarra@4nlogistica.cl', //
+            'o.godoy.s@4nlogistica.cl'=>'Marcelo@4nlogistica.cl',
+            'm.salas.a@4nlogistica.cl'=>'francisca.salas@4nlogistica.cl', //
+            'm.diaz.s@4nlogistica.cl'=>'marieladiaz@4nlogistica.cl', //
+            'n.cuadros.m@4nlogistica.cl'=>'maritzacuadros@4nlogistica.cl', //
 
             // Agrega aquí más relaciones reales según tu empresa
         ];

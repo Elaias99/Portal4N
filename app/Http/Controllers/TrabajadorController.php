@@ -32,6 +32,9 @@ use App\Models\Jefe;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
+use App\Mail\CumpleaniosNotificacion;
+use Illuminate\Support\Facades\Mail;
+
 
 
 class TrabajadorController extends Controller
@@ -569,13 +572,25 @@ class TrabajadorController extends Controller
     private function markBirthdays($empleados)
     {
         $today = \Carbon\Carbon::now();
+        $cumpleanieros = collect();
 
         foreach ($empleados as $empleado) {
             if ($empleado->FechaNacimiento->format('m-d') == $today->format('m-d')) {
                 $empleado->is_birthday = true;
+                $cumpleanieros->push($empleado);
             } else {
                 $empleado->is_birthday = false;
             }
+        }
+
+        // Si hay cumpleañeros → enviar correo
+        if ($cumpleanieros->isNotEmpty()) {
+            $destinatarios = [
+                'elizabeth.obreque@4nlogistica.cl',
+                'hansdelabarra@4nlogistica.cl',
+            ];
+
+            Mail::to($destinatarios)->send(new CumpleaniosNotificacion($cumpleanieros));
         }
 
         return $empleados;
