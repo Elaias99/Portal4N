@@ -27,6 +27,7 @@ use App\Http\Controllers\ContratoController;
 use App\Http\Controllers\ExportacionController;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\ManifiestoController;
+use App\Http\Controllers\EquipoController;
 
 use App\Http\Controllers\TrackingProductoController;
 
@@ -236,7 +237,7 @@ Route::resource('regions', 'App\Http\Controllers\RegionController')->middleware(
 Route::resource('tipo_vestimentas', 'App\Http\Controllers\TipoVestimentaController')->middleware('auth');
 Route::resource('tallas', 'App\Http\Controllers\TallaController')->middleware('auth');
 Route::resource('hijos', 'App\Http\Controllers\HijoController')->middleware('auth');
-
+Route::resource('equipos', EquipoController::class);
 
 // 📄 Descargar archivo PDF del contrato
 Route::get('contratos/{id}/download', [ContratoController::class, 'download'])
