@@ -11,14 +11,19 @@ class TallaController extends Controller
 {
     public function index()
     {
+        // 
         $tallas = Talla::whereHas('trabajador', function ($q) {
-            $q->whereNull('deleted_at');
-        })->with([
-            'trabajador' => function ($q) {
-                $q->whereNull('deleted_at');
-            },
-            'tipoVestimenta'
-        ])->get();
+            $q->whereNull('deleted_at') // evita eliminados lógicamente
+            ->whereHas('sistemaTrabajo', function ($sub) {
+                $sub->where('nombre', '!=', 'Desvinculado');
+            })
+            ->whereHas('situacion', function ($sub) {
+                $sub->where('Nombre', '!=', 'Desvinculado');
+            });
+        })
+        ->with(['trabajador', 'tipoVestimenta'])
+        ->get();
+
 
         return view('tallas.index', compact('tallas'));
     }

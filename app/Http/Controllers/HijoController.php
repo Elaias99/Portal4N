@@ -14,7 +14,15 @@ class HijoController extends Controller
     public function index()
     {
         //
-        $trabajadores = Trabajador::with('hijos')->get();
+        $trabajadores = Trabajador::with('hijos')
+            ->whereHas('sistemaTrabajo', function ($q){
+                $q->where('nombre', '!=', 'Desvinculado');
+            })
+            ->whereHas('situacion', function($q){
+                $q->where('Nombre', '!=', 'Desvinculado');
+            })
+            ->orderBy('Nombre', 'asc')
+            ->get();
         return view('hijos.index', compact('trabajadores'));
     }
 

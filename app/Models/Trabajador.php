@@ -33,10 +33,6 @@ class Trabajador extends Model
     ];
     
 
-
-
-
-
     // Definir relaciones con otros modelos
     public function empresa() {
         return $this->belongsTo(Empresa::class);

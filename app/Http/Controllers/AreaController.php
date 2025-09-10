@@ -9,9 +9,14 @@ class AreaController extends Controller
 {
     public function index()
     {
-        $areas = Area::all();
-        $trabajadores = Trabajador::whereNull('deleted_at')->get(); // solo activos
-        return view('areas.index', compact('areas', 'trabajadores'));
+        $areas = Area::with('trabajadores')->get();
+        $trabajadores = Trabajador::whereNull('deleted_at')
+            ->whereHas('sistemaTrabajo', fn($q) => $q->where('nombre','!=','Desvinculado'))
+            ->whereHas('situacion', fn($q) => $q->where('Nombre','!=','Desvinculado'))
+            ->get();
+
+
+        return view('areas.index', compact('areas','trabajadores'));
     }
 
     public function create()

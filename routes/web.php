@@ -238,6 +238,9 @@ Route::resource('tipo_vestimentas', 'App\Http\Controllers\TipoVestimentaControll
 Route::resource('tallas', 'App\Http\Controllers\TallaController')->middleware('auth');
 Route::resource('hijos', 'App\Http\Controllers\HijoController')->middleware('auth');
 Route::resource('equipos', EquipoController::class);
+// Ruta para desvincular un empleado
+Route::post('/empleados/{id}/desvincular', [App\Http\Controllers\TrabajadorController::class, 'desvincular'])->name('empleados.desvincular');
+
 
 // 📄 Descargar archivo PDF del contrato
 Route::get('contratos/{id}/download', [ContratoController::class, 'download'])

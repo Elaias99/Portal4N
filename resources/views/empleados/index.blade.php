@@ -82,11 +82,11 @@ $notificaciones = Auth::user()->unreadNotifications
                     </div>
 
                     <div class="mb-3">
-                        <h6 class="fw-bold">Beneficios:</h6>
+                        {{-- <h6 class="fw-bold">Beneficios:</h6>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="casino" value="1" {{ request('casino') ? 'checked' : '' }}>
                             <label class="form-check-label">Acceso al Casino</label>
-                        </div>
+                        </div> --}}
 
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="mostrar_desvinculados" value="1" {{ request('mostrar_desvinculados') ? 'checked' : '' }}>

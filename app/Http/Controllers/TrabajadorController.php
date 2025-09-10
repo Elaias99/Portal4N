@@ -31,7 +31,7 @@ use App\Models\Jefe;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-
+use App\Models\Desvinculacion;
 use App\Mail\CumpleaniosNotificacion;
 use Illuminate\Support\Facades\Mail;
 
@@ -370,14 +370,48 @@ class TrabajadorController extends Controller
 
     public function mostrarLocalidad()
     {
-        // Obtener todos los empleados junto con su comuna y región, ordenados por el nombre de los empleados
         $empleados = Trabajador::with('comuna.region')
-                            ->orderBy('Nombre', 'asc') // Ordenar alfabéticamente por nombre
-                            ->get();
+            ->whereHas('sistemaTrabajo', function ($q) {
+                $q->where('nombre', '!=', 'Desvinculado');
+            })
+            ->whereHas('situacion', function ($q) {
+                $q->where('Nombre', '!=', 'Desvinculado');
+            })
+            ->orderBy('Nombre', 'asc')
+            ->get();
 
-        // Pasar los empleados a la vista
         return view('empleados.localidades', compact('empleados'));
     }
+
+
+    public function desvincular($id)
+    {
+        $trabajador = Trabajador::findOrFail($id);
+
+        // IDs fijos de la base para "Desvinculado"
+        $situacionId = 2;
+        $sistemaTrabajoId = 4;
+
+        // Crear registro en tabla desvinculaciones
+        Desvinculacion::create([
+            'trabajador_id'      => $trabajador->id,
+            'situacion_id'       => $situacionId,
+            'sistema_trabajo_id' => $sistemaTrabajoId,
+            'fecha_desvinculo'   => now()->toDateString(),
+            'motivo'             => null,
+        ]);
+
+        // Actualizar el trabajador para marcarlo como desvinculado
+        $trabajador->update([
+            'situacion_id'       => $situacionId,
+            'sistema_trabajo_id' => $sistemaTrabajoId,
+        ]);
+
+        return redirect()->route('empleados.index')
+                        ->with('success', 'El trabajador ha sido desvinculado correctamente.');
+    }
+
+
 
 
 
@@ -575,7 +609,18 @@ class TrabajadorController extends Controller
         $cumpleanieros = collect();
 
         foreach ($empleados as $empleado) {
-            if ($empleado->FechaNacimiento->format('m-d') == $today->format('m-d')) {
+            // Ignorar si el empleado está desvinculado
+            $esDesvinculado = optional($empleado->situacion)->Nombre === 'Desvinculado'
+                || optional($empleado->sistemaTrabajo)->nombre === 'Desvinculado'
+                || \App\Models\Desvinculacion::where('trabajador_id', $empleado->id)->exists();
+
+            if ($esDesvinculado) {
+                $empleado->is_birthday = false;
+                continue;
+            }
+
+            // Validar cumpleaños
+            if ($empleado->FechaNacimiento->format('m-d') === $today->format('m-d')) {
                 $empleado->is_birthday = true;
                 $cumpleanieros->push($empleado);
             } else {
@@ -595,6 +640,7 @@ class TrabajadorController extends Controller
 
         return $empleados;
     }
+
 
     private function sortEmpleados($empleados)
     {

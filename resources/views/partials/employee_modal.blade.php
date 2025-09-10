@@ -64,9 +64,21 @@
       </div>
 
       <div class="modal-footer">
-        <img src="{{ asset('images/logo.png') }}" alt="Logo de la Empresa" class="img-fluid" style="max-height: 40px; margin-right: auto;" loading="lazy">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+          <img src="{{ asset('images/logo.png') }}" alt="Logo de la Empresa" class="img-fluid" style="max-height: 40px; margin-right: auto;" loading="lazy">
+
+          @role('admin')
+          <form action="{{ route('empleados.desvincular', $empleado->id) }}" method="POST" style="display:inline;">
+              @csrf
+              <button type="submit" class="btn btn-warning"
+                      onclick="return confirm('¿Seguro que deseas desvincular a este empleado?');">
+                  <i class="fa-solid fa-user-slash me-1"></i> Desvincular
+              </button>
+          </form>
+          @endrole
+
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
       </div>
+
     </div>
   </div>
 </div>

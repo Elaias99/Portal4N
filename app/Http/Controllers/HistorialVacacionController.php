@@ -19,29 +19,45 @@ class HistorialVacacionController extends Controller
         // Obtener el usuario autenticado
         $user = Auth::user();
 
-        // Si el usuario no proporciona un trabajador específico, listar todos los trabajadores
+        // Si el usuario no proporciona un trabajador específico, listar todos los trabajadores activos
         $trabajadorId = $request->get('trabajador_id');
 
         if (!$trabajadorId) {
-            
-            $trabajadores = Trabajador::all();
-        
+            $trabajadores = Trabajador::whereHas('sistemaTrabajo', function ($q) {
+                    $q->where('nombre', '!=', 'Desvinculado');
+                })
+                ->whereHas('situacion', function ($q) {
+                    $q->where('Nombre', '!=', 'Desvinculado');
+                })
+                ->whereNull('deleted_at')
+                ->orderBy('Nombre', 'asc')
+                ->get();
+
             return view('historial_vacacion.index', compact('trabajadores'));
         }
 
-        // Obtener el trabajador seleccionado por su ID
-        $trabajador = Trabajador::find($trabajadorId);
+        // Obtener el trabajador seleccionado (solo si está activo)
+        $trabajador = Trabajador::where('id', $trabajadorId)
+            ->whereHas('sistemaTrabajo', function ($q) {
+                $q->where('nombre', '!=', 'Desvinculado');
+            })
+            ->whereHas('situacion', function ($q) {
+                $q->where('Nombre', '!=', 'Desvinculado');
+            })
+            ->whereNull('deleted_at')
+            ->first();
 
         if (!$trabajador) {
-            return redirect()->route('historial_vacacion.index')->with('error', 'Trabajador no encontrado.');
+            return redirect()->route('historial_vacacion.index')
+                ->with('error', 'El trabajador no fue encontrado o está desvinculado.');
         }
 
-        // Obtener todas las vacaciones históricas del empleado desde HistorialVacacion
+        // Obtener todas las vacaciones históricas del empleado
         $historialVacaciones = HistorialVacacion::where('trabajador_id', $trabajador->id)
             ->orderBy('fecha_inicio', 'asc')
             ->get();
 
-        // Obtener todas las solicitudes de vacaciones aprobadas desde el modelo Solicitud
+        // Obtener todas las solicitudes de vacaciones aprobadas
         $solicitudesAprobadas = Solicitud::where('trabajador_id', $trabajador->id)
             ->where('campo', 'Vacaciones')
             ->where('estado', 'aprobado')
@@ -50,7 +66,9 @@ class HistorialVacacionController extends Controller
 
         // Obtener los feriados desde la API pública
         $response = Http::get('https://apis.digital.gob.cl/fl/feriados');
-        $feriados = $response->successful() ? collect($response->json())->pluck('fecha') : collect(); // Obtener solo las fechas
+        $feriados = $response->successful()
+            ? collect($response->json())->pluck('fecha')
+            : collect();
 
         // Calcular los días laborales para cada solicitud reciente
         $solicitudesAprobadas->each(function ($solicitud) use ($feriados) {
@@ -59,28 +77,27 @@ class HistorialVacacionController extends Controller
 
             $diasLaborales = 0;
             while ($fechaInicio <= $fechaFin) {
-                // Contar solo días laborales (excluir fines de semana y feriados)
                 if ($fechaInicio->isWeekday() && !$feriados->contains($fechaInicio->toDateString())) {
                     $diasLaborales++;
                 }
                 $fechaInicio->addDay();
             }
 
-            // Asignar los valores a las propiedades de la solicitud
-            $solicitud->dias_tomados = $diasLaborales; // Días laborales solicitados (Días Tomados)
-            // Días descontados según el tipo de solicitud
+            $solicitud->dias_tomados = $diasLaborales;
             $solicitud->dias_descontados = ($solicitud->tipo_dia === 'vacaciones') ? $diasLaborales : 0;
         });
 
-        // Calcular los días descontados para cada registro histórico de vacaciones
+        // Calcular los días descontados para cada registro histórico
         $historialVacaciones->each(function ($historial) {
-            // Si el tipo de día es "vacaciones", los días descontados son los días laborales tomados
-            $historial->dias_descontados = ($historial->tipo_dia === 'vacaciones') ? $historial->dias_laborales : 0;
+            $historial->dias_descontados = ($historial->tipo_dia === 'vacaciones')
+                ? $historial->dias_laborales
+                : 0;
         });
 
-        // Pasar las solicitudes históricas y recientes a la vista
+        // Pasar las solicitudes e historial a la vista
         return view('historial_vacacion.index', compact('historialVacaciones', 'solicitudesAprobadas', 'trabajador'));
     }
+
 
 
 
