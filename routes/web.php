@@ -28,6 +28,7 @@ use App\Http\Controllers\ExportacionController;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\ManifiestoController;
 use App\Http\Controllers\EquipoController;
+use App\Http\Controllers\CotizadorController;
 
 use App\Http\Controllers\TrackingProductoController;
 
@@ -238,6 +239,16 @@ Route::resource('tipo_vestimentas', 'App\Http\Controllers\TipoVestimentaControll
 Route::resource('tallas', 'App\Http\Controllers\TallaController')->middleware('auth');
 Route::resource('hijos', 'App\Http\Controllers\HijoController')->middleware('auth');
 Route::resource('equipos', EquipoController::class);
+
+
+// Cotizadores
+Route::resource('cotizadores', CotizadorController::class);
+
+Route::post('/cotizadores/calcular-distancia', [CotizadorController::class, 'calcularDistancia'])
+    ->name('cotizadores.calcular-distancia');
+
+
+
 // Ruta para desvincular un empleado
 Route::post('/empleados/{id}/desvincular', [App\Http\Controllers\TrabajadorController::class, 'desvincular'])->name('empleados.desvincular');
 
