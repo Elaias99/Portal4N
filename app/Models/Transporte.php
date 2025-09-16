@@ -12,13 +12,13 @@ class Transporte extends Model
     protected $table = 'transportes';
 
     protected $fillable = [
-        'nombre',
-
+        'nombre',      // Ej: "Camión"
+        'perfil_api',  // Ej: "driving-hgv"
     ];
 
-    public function rutas()
+    public function cotizaciones()
     {
-        return $this->hasMany(RutaGeografica::class, 'transporte_id');
+        return $this->hasMany(Cotizador::class);
     }
 
 

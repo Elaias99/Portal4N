@@ -57,6 +57,23 @@
 
                 {{-- Campos dinámicos según servicio --}}
                 <div id="campos-transporte" class="d-none">
+
+
+                    <div class="mb-3">
+                        <label for="transporte_id" class="form-label">Tipo de movilización</label>
+                        <select name="transporte_id" id="transporte_id" class="form-select" required>
+                            <option value="">-- Selecciona un tipo --</option>
+                            @foreach($transportes as $transporte)
+                                <option value="{{ $transporte->id }}" data-perfil="{{ $transporte->perfil_api }}">
+                                    {{ $transporte->nombre }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+
+
+
                     <div class="mb-3">
                         <label for="Origen" class="form-label">Origen</label>
                         <input type="text" name="Origen" id="Origen" class="form-control">
@@ -76,6 +93,7 @@
                         <input type="number" step="0.01" name="distancia_km" id="distancia_km" class="form-control">
                     </div>
 
+
                     <div class="mb-3">
                         <button type="button" id="btnCalcular" class="btn btn-secondary">Calcular distancia</button>
                         <span id="resultadoDistancia" class="ms-3 text-primary fw-bold"></span>
@@ -84,12 +102,48 @@
                     <div id="resultadoRuta" class="mt-3"></div>
                 </div>
 
-                <div id="campos-courier" class="d-none">
+
+
+
+                <div id="campos-maquila" class="d-none">
+
+                    {{-- Con/Sin insumo --}}
                     <div class="mb-3">
-                        <label for="detalle_courier" class="form-label">Detalle Courier</label>
-                        <input type="text" id="detalle_courier" class="form-control" placeholder="Ej: Empresa courier">
+                        <label for="insumo" class="form-label">¿Quién aporta el insumo?</label>
+                        <select name="insumo" id="insumo" class="form-select" required>
+                            <option value="">-- Selecciona --</option>
+                            <option value="proveedor">Proveedor (nosotros)</option>
+                            <option value="cliente">Cliente</option>
+                        </select>
                     </div>
+
+
+                    <div class="mb-3 d-none" id="detalleInsumoWrapper">
+                        <label for="detalle_insumo" class="form-label">Detalle del insumo</label>
+                        <input type="text" name="detalle_insumo" id="detalle_insumo" 
+                            class="form-control" placeholder="Ej: Cajas de cartón, cinta de embalaje...">
+                    </div>
+
+
+                    {{-- Unidades --}}
+                    <div class="mb-3">
+                        <label for="unidades" class="form-label">Unidades</label>
+                        <input type="number" name="unidades" id="unidades" class="form-control" min="1" required>
+                    </div>
+
+                    {{-- Tipo de maquila --}}
+                    <div class="mb-3">
+                        <label for="tipo_maquila" class="form-label">Tipo de maquila</label>
+                        <input type="text" name="tipo_maquila" id="tipo_maquila" class="form-control" placeholder="Ej: Caja, Bolsa, Pallet..." required>
+                    </div>
+
                 </div>
+
+
+
+
+
+
 
                 <div id="campos-almacenaje" class="d-none">
                     <div class="mb-3">
@@ -115,82 +169,124 @@
 
     {{-- Listado de cotizaciones --}}
     <div class="card">
-        <div class="card-body">
-            <h5 class="card-title">Listado de Cotizaciones</h5>
-            <div class="table-responsive">
-                <table class="table table-striped align-middle">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Cliente</th>
-                            <th>Servicio</th>
-                            <th>Origen</th>
-                            <th>Destino</th>
-                            <th>Distancia (km)</th>
-                            <th>Estado</th>
-                            <th>Creado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($cotizaciones as $coti)
+            <div class="card-body">
+                <h5 class="card-title">Listado de Cotizaciones</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead>
                             <tr>
-                                <td>{{ $coti->id }}</td>
-                                <td>{{ $coti->nombre_cliente }}</td>
-                                <td>{{ $coti->servicio->nombre ?? 'N/A' }}</td>
-                                <td>{{ $coti->Origen }}</td>
-                                <td>{{ $coti->Destino }}</td>
-                                <td>
-                                    @if($coti->distancia_km)
-                                        {{ number_format($coti->distancia_km, 2) }} km
-                                    @else
-                                        -
-                                    @endif
-                                </td>
-                                <td>
-                                    <span class="badge 
-                                        @if($coti->estado == 'pendiente') bg-warning 
-                                        @elseif($coti->estado == 'aprobada') bg-success 
-                                        @else bg-danger @endif">
-                                        {{ ucfirst($coti->estado) }}
-                                    </span>
-                                </td>
-                                <td>{{ $coti->created_at->format('d-m-Y') }}</td>
+                                <th>ID</th>
+                                <th>Cliente</th>
+                                <th>Servicio</th>
+
+                                {{-- Columnas dinámicas --}}
+                                <th>Detalles</th>
+
+                                <th>Estado</th>
+                                <th>Creado</th>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="text-center">No hay cotizaciones registradas.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @forelse ($cotizaciones as $coti)
+                                <tr>
+                                    <td>{{ $coti->id }}</td>
+                                    <td>{{ $coti->nombre_cliente }}</td>
+                                    <td>{{ $coti->servicio->nombre ?? 'N/A' }}</td>
+
+                                    {{-- Mostrar diferente según servicio --}}
+                                    <td>
+                                        @if($coti->servicio->nombre === 'Transporte')
+                                            <strong>Origen:</strong> {{ $coti->Origen ?? '-' }} <br>
+                                            <strong>Destino:</strong> {{ $coti->Destino ?? '-' }} <br>
+                                            <strong>Distancia:</strong> 
+                                                @if($coti->distancia_km)
+                                                    {{ number_format($coti->distancia_km, 2) }} km
+                                                @else
+                                                    -
+                                                @endif
+                                        @elseif($coti->servicio->nombre === 'Maquila' && $coti->maquilado)
+                                            <strong>Insumo:</strong> {{ $coti->maquilado->insumo ?? '-' }} <br>
+                                            <strong>Unidades:</strong> {{ $coti->maquilado->unidades ?? '-' }} <br>
+                                            <strong>Tipo:</strong> {{ $coti->maquilado->tipo_maquila ?? '-' }} <br>
+                                            <strong>Detalle:</strong> {{ $coti->maquilado->detalle_insumo ?? '-' }}
+                                        @elseif($coti->servicio->nombre === 'Maquila')
+                                            <em>Sin detalles de maquila</em>
+                                        @else
+                                            <em>Sin detalles</em>
+                                        @endif
+
+
+                                    </td>
+
+                                    <td>
+                                        <span class="badge 
+                                            @if($coti->estado == 'pendiente') bg-warning 
+                                            @elseif($coti->estado == 'aprobada') bg-success 
+                                            @else bg-danger @endif">
+                                            {{ ucfirst($coti->estado) }}
+                                        </span>
+                                    </td>
+                                    <td>{{ $coti->created_at->format('d-m-Y') }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="text-center">No hay cotizaciones registradas.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-    </div>
 
-</div>
+
+    </div>
 
 {{-- Script para mostrar/ocultar campos dinámicos --}}
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const servicioSelect = document.getElementById("servicio");
     const camposTransporte = document.getElementById("campos-transporte");
-    const camposCourier = document.getElementById("campos-courier");
+    const camposMaquila = document.getElementById("campos-maquila");
     const camposAlmacenaje = document.getElementById("campos-almacenaje");
+    const insumoSelect = document.getElementById("insumo");
+    const detalleInsumo = document.getElementById("detalle_insumo");
 
     function toggleCampos() {
         const texto = servicioSelect.options[servicioSelect.selectedIndex].text;
+
         camposTransporte.classList.add("d-none");
-        camposCourier.classList.add("d-none");
+        camposMaquila.classList.add("d-none");
         camposAlmacenaje.classList.add("d-none");
+
+        // Siempre quitar required al inicio
+        const transporteSelect = document.getElementById("transporte_id");
+        transporteSelect.removeAttribute("required");
 
         if (texto === "Transporte") {
             camposTransporte.classList.remove("d-none");
+            transporteSelect.setAttribute("required", "required");
         } else if (texto === "Maquila") {
-            camposCourier.classList.remove("d-none");
+            camposMaquila.classList.remove("d-none");
         } else if (texto === "Almacenaje") {
             camposAlmacenaje.classList.remove("d-none");
         }
     }
+
+
+    // Mostrar u ocultar detalle_insumo según elección
+    function toggleDetalleInsumo() {
+        if (insumoSelect.value === "proveedor") {
+            detalleInsumo.closest(".mb-3").classList.remove("d-none");
+            detalleInsumo.removeAttribute("disabled");
+        } else {
+            detalleInsumo.closest(".mb-3").classList.add("d-none");
+            detalleInsumo.value = "";
+            detalleInsumo.setAttribute("disabled", "disabled");
+        }
+    }
+
+
 
 
     async function geocodificar(direccion) {
@@ -246,7 +342,18 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
 
                 // Ahora calculamos distancia
-                const data = { origen_lat: origenLat, origen_lon: origenLon, destino_lat: destinoLat, destino_lon: destinoLon };
+                // Ahora calculamos distancia
+                const transporteSelect = document.getElementById("transporte_id");
+                const perfil = transporteSelect.options[transporteSelect.selectedIndex].dataset.perfil;
+
+                const data = { 
+                    origen_lat: origenLat, 
+                    origen_lon: origenLon, 
+                    destino_lat: destinoLat, 
+                    destino_lon: destinoLon,
+                    perfil: perfil // 👈 enviar al backend
+                };
+
                 const res = await fetch("{{ route('cotizadores.calcular-distancia') }}", {
                     method: "POST",
                     headers: {
@@ -256,6 +363,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     },
                     body: JSON.stringify(data)
                 });
+
 
                 const json = await res.json();
 
@@ -273,6 +381,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 resultadoDistancia.textContent = "Error: " + e.message;
             }
         });
+
+        // Escuchar cambios en el select insumo
+        if (insumoSelect) {
+            insumoSelect.addEventListener("change", toggleDetalleInsumo);
+            toggleDetalleInsumo(); // inicializar al cargar
+        }
+
 
 });
 </script>

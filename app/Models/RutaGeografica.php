@@ -27,10 +27,6 @@ class RutaGeografica extends Model
         return $this->belongsTo(TipoZona::class);
     }
 
-    public function transporte()
-    {
-        return $this->belongsTo(Transporte::class);
-    }
 
     public function origen()
     {

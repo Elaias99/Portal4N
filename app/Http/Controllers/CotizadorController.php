@@ -15,11 +15,13 @@ class CotizadorController extends Controller
      */
     public function index()
     {
-        $cotizaciones = Cotizador::with('servicio')->get(); // carga también el servicio relacionado
-        $servicios = Servicio::all(); // lista de servicios para el dropdown
+        $cotizaciones = Cotizador::with(['servicio', 'transporte', 'maquilado'])->get(); 
+        $servicios = Servicio::all(); 
+        $transportes = \App\Models\Transporte::all();
 
-        return view('cotizadores.index', compact('cotizaciones', 'servicios'));
+        return view('cotizadores.index', compact('cotizaciones', 'servicios', 'transportes'));
     }
+
 
 
     /**
@@ -35,29 +37,63 @@ class CotizadorController extends Controller
      */
     public function store(Request $request)
     {
-        // Validaciones básicas
+        // Validaciones comunes
         $request->validate([
             'nombre_cliente' => 'required|string|max:255',
             'servicio_id'    => 'required|exists:servicios,id',
-            'Origen'         => 'required|string|max:255',
-            'Destino'        => 'required|string|max:255',
-            'distancia_km'   => 'required|numeric|min:0',
-
-            'origen_lat'     => 'required|numeric|between:-90,90',
-            'origen_lon'     => 'required|numeric|between:-180,180',
-            'destino_lat'    => 'required|numeric|between:-90,90',
-            'destino_lon'    => 'required|numeric|between:-180,180',
-
-            'estado'         => 'in:pendiente,aprobada,rechazada'
+            'estado'         => 'in:pendiente,aprobada,rechazada',
         ]);
 
-        // Crear la cotización
-        Cotizador::create($request->all());
+        $data = [
+            'nombre_cliente' => $request->nombre_cliente,
+            'servicio_id'    => $request->servicio_id,
+            'estado'         => $request->estado,
+        ];
 
-        // Redirigir con mensaje de éxito
+        // Si el servicio es Transporte
+        if ((int) $request->servicio_id === 1) {
+            $request->validate([
+                'transporte_id'  => 'required|exists:transportes,id',
+                'Origen'         => 'required|string|max:255',
+                'Destino'        => 'required|string|max:255',
+                'distancia_km'   => 'required|numeric|min:0',
+                'origen_lat'     => 'required|numeric|between:-90,90',
+                'origen_lon'     => 'required|numeric|between:-180,180',
+                'destino_lat'    => 'required|numeric|between:-90,90',
+                'destino_lon'    => 'required|numeric|between:-180,180',
+            ]);
+
+            $data = array_merge($data, $request->only([
+                'transporte_id', 'Origen', 'Destino',
+                'origen_lat', 'origen_lon',
+                'destino_lat', 'destino_lon',
+                'distancia_km'
+            ]));
+        }
+
+        // Crear primero el Cotizador
+        $cotizador = Cotizador::create($data);
+
+        // Si el servicio es Maquila → crear registro en la nueva tabla
+        if ((int) $request->servicio_id === 2) {
+            $request->validate([
+                'insumo'         => 'nullable|in:proveedor,cliente',
+                'unidades'       => 'required|integer|min:1',
+                'tipo_maquila'   => 'nullable|string|max:255',
+                'detalle_insumo' => 'nullable|string|max:255',
+            ]);
+
+            $cotizador->maquilado()->create($request->only([
+                'insumo', 'unidades', 'tipo_maquila', 'detalle_insumo'
+            ]));
+        }
+
         return redirect()->route('cotizadores.index')
-                        ->with('success', 'Cotización creada correctamente.');
+            ->with('success', 'Cotización creada correctamente.');
     }
+
+
+
 
 
 
@@ -97,11 +133,19 @@ class CotizadorController extends Controller
 
     public function calcularDistancia(Request $request)
     {
+        // Si en algún caso llaman este método sin ser transporte, evitamos el cálculo
+        if ($request->input('perfil') === null) {
+            return response()->json([
+                'error' => 'El cálculo de distancia solo aplica para Transporte.'
+            ], 400);
+        }
+
         $request->validate([
             'origen_lat'  => 'required|numeric|between:-90,90',
             'origen_lon'  => 'required|numeric|between:-180,180',
             'destino_lat' => 'required|numeric|between:-90,90',
-            'destino_lon' => 'required|numeric|between:-180,180',
+            'destino_lon' => 'required|numeric|between:-90,90',
+            'perfil'      => 'required|string|in:driving-car,driving-hgv,cycling-regular,foot-walking'
         ]);
 
         $coords = [
@@ -109,19 +153,19 @@ class CotizadorController extends Controller
             [(float) $request->destino_lon, (float) $request->destino_lat],
         ];
 
-        // 👀 Log para verificar coordenadas usadas
+        $perfil = $request->perfil;
+
         Log::info('Coordenadas enviadas a ORS', [
             'origen'  => $coords[0],
             'destino' => $coords[1],
+            'perfil'  => $perfil,
         ]);
 
         $response = Http::withHeaders([
             'Authorization' => config('services.ors.key'),
-        ])->post('https://api.openrouteservice.org/v2/directions/driving-car', [
+        ])->post("https://api.openrouteservice.org/v2/directions/{$perfil}", [
             'coordinates' => $coords,
-            
         ]);
-
 
         Log::info('Respuesta ORS:', $response->json());
 
@@ -136,6 +180,8 @@ class CotizadorController extends Controller
             'detalle' => $response->body()
         ], 500);
     }
+
+
 
 
 
