@@ -22,6 +22,8 @@ class CotizadorController extends Controller
             'maquilado.tipoMaquila' // 👈 relación nueva
         ])->get();
 
+        // dd($cotizaciones->toArray()); // 👈 debug
+
         $servicios = Servicio::all();
         $transportes = \App\Models\Transporte::all();
         $tiposMaquila = \App\Models\TipoMaquilado::all(); // 👈 nuevo catálogo

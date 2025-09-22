@@ -21,7 +21,7 @@ class Cotizador extends Model
 
     public function transporte()
     {
-        return $this->belongsTo(Transporte::class);
+        return $this->belongsTo(Transporte::class, 'transporte_id');
     }
 
     public function maquilado()

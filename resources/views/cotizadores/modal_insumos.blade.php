@@ -54,16 +54,27 @@
       const btnAgregar = document.getElementById("btnAgregarInsumo");
       const totalSpan = document.getElementById("totalInsumos");
 
+      // Formateador de moneda en CLP
+      const formatter = new Intl.NumberFormat("es-CL", {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+      });
+
       function recalcularTotales() {
           let total = 0;
           tablaBody.querySelectorAll("tr").forEach(tr => {
               const cantidad = parseFloat(tr.querySelector(".cantidad").value) || 0;
               const precio = parseFloat(tr.querySelector(".precio").value) || 0;
               const subtotal = cantidad * precio;
-              tr.querySelector(".subtotal").value = subtotal.toFixed(2);
+
+              // Mostrar subtotal formateado
+              tr.querySelector(".subtotal").value = formatter.format(subtotal);
+
               total += subtotal;
           });
-          totalSpan.textContent = total.toFixed(2);
+
+          // Mostrar total formateado
+          totalSpan.textContent = formatter.format(total);
       }
 
       if (btnAgregar) {

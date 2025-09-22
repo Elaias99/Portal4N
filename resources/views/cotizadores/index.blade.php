@@ -56,51 +56,18 @@
                 </div>
 
                 {{-- Campos dinámicos según servicio --}}
+                {{-- Transporte (usa modal) --}}
                 <div id="campos-transporte" class="d-none">
-
-
-                    <div class="mb-3">
-                        <label for="transporte_id" class="form-label">Tipo de movilización</label>
-                        <select name="transporte_id" id="transporte_id" class="form-select" required>
-                            <option value="">-- Selecciona un tipo --</option>
-                            @foreach($transportes as $transporte)
-                                <option value="{{ $transporte->id }}" data-perfil="{{ $transporte->perfil_api }}">
-                                    {{ $transporte->nombre }}
-                                </option>
-                            @endforeach
-                        </select>
+                    <div id="btnModalTransporteWrapper">
+                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalTransporte">
+                            ➕ Agregar transporte
+                        </button>
                     </div>
-
-
-
-
-                    <div class="mb-3">
-                        <label for="Origen" class="form-label">Origen</label>
-                        <input type="text" name="Origen" id="Origen" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label for="Destino" class="form-label">Destino</label>
-                        <input type="text" name="Destino" id="Destino" class="form-control">
-                    </div>
-
-                    <input type="hidden" name="origen_lat" id="origen_lat">
-                    <input type="hidden" name="origen_lon" id="origen_lon">
-                    <input type="hidden" name="destino_lat" id="destino_lat">
-                    <input type="hidden" name="destino_lon" id="destino_lon">
-
-                    <div class="mb-3">
-                        <label for="distancia_km" class="form-label">Distancia (km)</label>
-                        <input type="number" step="0.01" name="distancia_km" id="distancia_km" class="form-control">
-                    </div>
-
-
-                    <div class="mb-3">
-                        <button type="button" id="btnCalcular" class="btn btn-secondary">Calcular distancia</button>
-                        <span id="resultadoDistancia" class="ms-3 text-primary fw-bold"></span>
-                    </div>
-
-                    <div id="resultadoRuta" class="mt-3"></div>
                 </div>
+
+                {{-- Incluir modal de transporte --}}
+                @include('cotizadores.modal_transporte')
+
 
 
 
@@ -157,102 +124,94 @@
 
     {{-- Listado de cotizaciones --}}
     <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">Listado de Cotizaciones</h5>
-                <div class="table-responsive">
-                    <table class="table table-striped align-middle">
-                        <thead>
+        <div class="card-body">
+            <h5 class="card-title">Listado de Cotizaciones</h5>
+            <div class="table-responsive">
+                <table class="table table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Cliente</th>
+                            <th>Servicio</th>
+                            {{-- Columnas dinámicas --}}
+                            <th>Detalles</th>
+                            <th>Estado</th>
+                            <th>Creado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($cotizaciones as $coti)
                             <tr>
-                                <th>ID</th>
-                                <th>Cliente</th>
-                                <th>Servicio</th>
+                                <td>{{ $coti->id }}</td>
+                                <td>{{ $coti->nombre_cliente }}</td>
+                                <td>{{ $coti->servicio->nombre ?? 'N/A' }}</td>
 
-                                {{-- Columnas dinámicas --}}
-                                <th>Detalles</th>
-
-                                <th>Estado</th>
-                                <th>Creado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($cotizaciones as $coti)
-                                <tr>
-                                    <td>{{ $coti->id }}</td>
-                                    <td>{{ $coti->nombre_cliente }}</td>
-                                    <td>{{ $coti->servicio->nombre ?? 'N/A' }}</td>
-
-                                    {{-- Mostrar diferente según servicio --}}
-                                    <td>
-                                        @if($coti->servicio->nombre === 'Transporte')
-                                            <strong>Origen:</strong> {{ $coti->Origen ?? '-' }} <br>
-                                            <strong>Destino:</strong> {{ $coti->Destino ?? '-' }} <br>
-                                            <strong>Distancia:</strong> 
-                                                @if($coti->distancia_km)
-                                                    {{ number_format($coti->distancia_km, 2) }} km
-                                                @else
-                                                    -
-                                                @endif
-
-
-                                        @elseif($coti->servicio->nombre === 'Maquila' && $coti->maquilado)
-                                            @if($coti->maquilado->insumo === 'proveedor')
-                                                <strong>Insumos (Proveedor):</strong>
-                                                <table class="table table-sm mt-2">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Detalle</th>
-                                                            <th>Cantidad</th>
-                                                            <th>Precio</th>
-                                                            <th>Subtotal</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach($coti->maquilado->insumos as $insumo)
-                                                            <tr>
-                                                                <td>{{ $insumo->detalle }}</td>
-                                                                <td>{{ $insumo->cantidad }}</td>
-                                                                <td>{{ number_format($insumo->precio, 0, ',', '.') }}</td>
-                                                                <td>{{ number_format($insumo->subtotal, 0, ',', '.') }}</td>
-                                                            </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                                <strong>Total: </strong>
-                                                {{ number_format($coti->maquilado->insumos->sum('subtotal'), 0, ',', '.') }}
+                                {{-- Mostrar diferente según servicio --}}
+                                <td>
+                                    @if($coti->servicio->nombre === 'Transporte')
+                                        <strong>Tipo de movilización:</strong> {{ $coti->transporte->nombre ?? '-' }} <br>
+                                        <strong>Origen:</strong> {{ $coti->Origen ?? '-' }} <br>
+                                        <strong>Destino:</strong> {{ $coti->Destino ?? '-' }} <br>
+                                        <strong>Distancia:</strong> 
+                                            @if($coti->distancia_km)
+                                                {{ number_format($coti->distancia_km, 2) }} km
                                             @else
-                                                <strong>Insumo:</strong> Cliente <br>
-                                                <strong>Tipo de maquila:</strong> {{ $coti->maquilado->tipoMaquila->nombre ?? '-' }} <br>
+                                                -
                                             @endif
+
+                                    @elseif($coti->servicio->nombre === 'Maquila' && $coti->maquilado)
+                                        @if($coti->maquilado->insumo === 'proveedor')
+                                            <strong>Insumos (Proveedor):</strong>
+                                            <table class="table table-sm mt-2">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Detalle</th>
+                                                        <th>Cantidad</th>
+                                                        <th>Precio</th>
+                                                        <th>Subtotal</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($coti->maquilado->insumos as $insumo)
+                                                        <tr>
+                                                            <td>{{ $insumo->detalle }}</td>
+                                                            <td>{{ $insumo->cantidad }}</td>
+                                                            <td>{{ number_format($insumo->precio, 0, ',', '.') }}</td>
+                                                            <td>{{ number_format($insumo->subtotal, 0, ',', '.') }}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                            <strong>Total: </strong>
+                                            {{ number_format($coti->maquilado->insumos->sum('subtotal'), 0, ',', '.') }}
+                                        @else
+                                            <strong>Insumo:</strong> Cliente <br>
+                                            <strong>Tipo de maquila:</strong> {{ $coti->maquilado->tipoMaquila->nombre ?? '-' }} <br>
                                         @endif
+                                    @endif
+                                </td>
 
-
-
-
-                                    </td>
-
-                                    <td>
-                                        <span class="badge 
-                                            @if($coti->estado == 'pendiente') bg-warning 
-                                            @elseif($coti->estado == 'aprobada') bg-success 
-                                            @else bg-danger @endif">
-                                            {{ ucfirst($coti->estado) }}
-                                        </span>
-                                    </td>
-                                    <td>{{ $coti->created_at->format('d-m-Y') }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="text-center">No hay cotizaciones registradas.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                                <td>
+                                    <span class="badge 
+                                        @if($coti->estado == 'pendiente') bg-warning 
+                                        @elseif($coti->estado == 'aprobada') bg-success 
+                                        @else bg-danger @endif">
+                                        {{ ucfirst($coti->estado) }}
+                                    </span>
+                                </td>
+                                <td>{{ $coti->created_at->format('d-m-Y') }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="text-center">No hay cotizaciones registradas.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
-
-
     </div>
+
 
 {{-- Script para mostrar/ocultar campos dinámicos --}}
 <script>
@@ -268,26 +227,29 @@
         function toggleCampos() {
             const texto = servicioSelect.options[servicioSelect.selectedIndex].text;
 
+            // Ocultar todo al inicio
             camposTransporte.classList.add("d-none");
             camposMaquila.classList.add("d-none");
 
-            // Quitar required de todo al inicio
+            // Quitar required de todo
             document.querySelectorAll("#campos-transporte [required], #campos-maquila [required]").forEach(el => {
                 el.removeAttribute("required");
             });
 
             if (texto === "Transporte") {
+                // Mostrar solo el botón que abre el modal de transporte
                 camposTransporte.classList.remove("d-none");
-                document.getElementById("transporte_id")?.setAttribute("required", "required");
-                document.getElementById("Origen")?.setAttribute("required", "required");
-                document.getElementById("Destino")?.setAttribute("required", "required");
-                document.getElementById("distancia_km")?.setAttribute("required", "required");
+
             } else if (texto === "Maquila") {
                 camposMaquila.classList.remove("d-none");
                 document.getElementById("insumo")?.setAttribute("required", "required");
                 document.getElementById("tipo_maquila_id")?.setAttribute("required", "required");
+
+                // 👇 Forzar que se apliquen las reglas de insumo
+                toggleDetalleInsumo();
             }
         }
+
 
         // Mostrar botón del modal (solo proveedor)
         function toggleDetalleInsumo() {
@@ -407,6 +369,7 @@
         }
     });
 </script>
+
 
 
 @endsection
