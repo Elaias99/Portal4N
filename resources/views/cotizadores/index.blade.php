@@ -117,39 +117,25 @@
                         </select>
                     </div>
 
-
-                    <div class="mb-3 d-none" id="detalleInsumoWrapper">
-                        <label for="detalle_insumo" class="form-label">Detalle del insumo</label>
-                        <input type="text" name="detalle_insumo" id="detalle_insumo" 
-                            class="form-control" placeholder="Ej: Cajas de cartón, cinta de embalaje...">
+                    {{-- Botón para abrir modal (solo proveedor) --}}
+                    <div id="btnModalWrapper" class="d-none">
+                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalInsumos">
+                            ➕ Agregar insumos
+                        </button>
                     </div>
 
-
-                    {{-- Unidades --}}
-                    <div class="mb-3">
-                        <label for="unidades" class="form-label">Unidades</label>
-                        <input type="number" name="unidades" id="unidades" class="form-control" min="1" required>
-                    </div>
 
                     {{-- Tipo de maquila --}}
                     <div class="mb-3">
-                        <label for="tipo_maquila" class="form-label">Tipo de maquila</label>
-                        <input type="text" name="tipo_maquila" id="tipo_maquila" class="form-control" placeholder="Ej: Caja, Bolsa, Pallet..." required>
+                        <label for="tipo_maquila_id" class="form-label">Tipo de maquila</label>
+                        <select name="tipo_maquila_id" id="tipo_maquila_id" class="form-select" required>
+                            <option value="">-- Selecciona un tipo de maquila --</option>
+                            @foreach($tiposMaquila as $tipo)
+                                <option value="{{ $tipo->id }}">{{ $tipo->nombre }}</option>
+                            @endforeach
+                        </select>
                     </div>
 
-                </div>
-
-
-
-
-
-
-
-                <div id="campos-almacenaje" class="d-none">
-                    <div class="mb-3">
-                        <label for="detalle_almacenaje" class="form-label">Detalle Almacenaje</label>
-                        <input type="text" id="detalle_almacenaje" class="form-control" placeholder="Ej: Tiempo estimado en días">
-                    </div>
                 </div>
 
                 {{-- Estado --}}
@@ -161,6 +147,8 @@
                         <option value="rechazada">Rechazada</option>
                     </select>
                 </div>
+
+                @include('cotizadores.modal_insumos')
 
                 <button type="submit" class="btn btn-primary">Guardar Cotización</button>
             </form>
@@ -204,16 +192,40 @@
                                                 @else
                                                     -
                                                 @endif
+
+
                                         @elseif($coti->servicio->nombre === 'Maquila' && $coti->maquilado)
-                                            <strong>Insumo:</strong> {{ $coti->maquilado->insumo ?? '-' }} <br>
-                                            <strong>Unidades:</strong> {{ $coti->maquilado->unidades ?? '-' }} <br>
-                                            <strong>Tipo:</strong> {{ $coti->maquilado->tipo_maquila ?? '-' }} <br>
-                                            <strong>Detalle:</strong> {{ $coti->maquilado->detalle_insumo ?? '-' }}
-                                        @elseif($coti->servicio->nombre === 'Maquila')
-                                            <em>Sin detalles de maquila</em>
-                                        @else
-                                            <em>Sin detalles</em>
+                                            @if($coti->maquilado->insumo === 'proveedor')
+                                                <strong>Insumos (Proveedor):</strong>
+                                                <table class="table table-sm mt-2">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Detalle</th>
+                                                            <th>Cantidad</th>
+                                                            <th>Precio</th>
+                                                            <th>Subtotal</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach($coti->maquilado->insumos as $insumo)
+                                                            <tr>
+                                                                <td>{{ $insumo->detalle }}</td>
+                                                                <td>{{ $insumo->cantidad }}</td>
+                                                                <td>{{ number_format($insumo->precio, 0, ',', '.') }}</td>
+                                                                <td>{{ number_format($insumo->subtotal, 0, ',', '.') }}</td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                                <strong>Total: </strong>
+                                                {{ number_format($coti->maquilado->insumos->sum('subtotal'), 0, ',', '.') }}
+                                            @else
+                                                <strong>Insumo:</strong> Cliente <br>
+                                                <strong>Tipo de maquila:</strong> {{ $coti->maquilado->tipoMaquila->nombre ?? '-' }} <br>
+                                            @endif
                                         @endif
+
+
 
 
                                     </td>
@@ -244,151 +256,157 @@
 
 {{-- Script para mostrar/ocultar campos dinámicos --}}
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-    const servicioSelect = document.getElementById("servicio");
-    const camposTransporte = document.getElementById("campos-transporte");
-    const camposMaquila = document.getElementById("campos-maquila");
-    const camposAlmacenaje = document.getElementById("campos-almacenaje");
-    const insumoSelect = document.getElementById("insumo");
-    const detalleInsumo = document.getElementById("detalle_insumo");
+    document.addEventListener("DOMContentLoaded", function() {
+        const servicioSelect = document.getElementById("servicio");
+        const camposTransporte = document.getElementById("campos-transporte");
+        const camposMaquila = document.getElementById("campos-maquila");
+        const insumoSelect = document.getElementById("insumo");
 
-    function toggleCampos() {
-        const texto = servicioSelect.options[servicioSelect.selectedIndex].text;
+        // ======================
+        // Mostrar/ocultar campos
+        // ======================
+        function toggleCampos() {
+            const texto = servicioSelect.options[servicioSelect.selectedIndex].text;
 
-        camposTransporte.classList.add("d-none");
-        camposMaquila.classList.add("d-none");
-        camposAlmacenaje.classList.add("d-none");
+            camposTransporte.classList.add("d-none");
+            camposMaquila.classList.add("d-none");
 
-        // Siempre quitar required al inicio
-        const transporteSelect = document.getElementById("transporte_id");
-        transporteSelect.removeAttribute("required");
+            // Quitar required de todo al inicio
+            document.querySelectorAll("#campos-transporte [required], #campos-maquila [required]").forEach(el => {
+                el.removeAttribute("required");
+            });
 
-        if (texto === "Transporte") {
-            camposTransporte.classList.remove("d-none");
-            transporteSelect.setAttribute("required", "required");
-        } else if (texto === "Maquila") {
-            camposMaquila.classList.remove("d-none");
-        } else if (texto === "Almacenaje") {
-            camposAlmacenaje.classList.remove("d-none");
-        }
-    }
-
-
-    // Mostrar u ocultar detalle_insumo según elección
-    function toggleDetalleInsumo() {
-        if (insumoSelect.value === "proveedor") {
-            detalleInsumo.closest(".mb-3").classList.remove("d-none");
-            detalleInsumo.removeAttribute("disabled");
-        } else {
-            detalleInsumo.closest(".mb-3").classList.add("d-none");
-            detalleInsumo.value = "";
-            detalleInsumo.setAttribute("disabled", "disabled");
-        }
-    }
-
-
-
-
-    async function geocodificar(direccion) {
-        const res = await fetch("/api/cotizadores/geocodificar", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
-            body: JSON.stringify({ direccion })
-        });
-        return res.json();
-    }
-
-
-    servicioSelect.addEventListener("change", toggleCampos);
-    toggleCampos(); // inicializar al cargar
-
-    // Cálculo de distancia
-    const btnCalcular = document.getElementById("btnCalcular");
-        const resultadoDistancia = document.getElementById("resultadoDistancia");
-
-        btnCalcular.addEventListener("click", async function() {
-            const resultadoRuta = document.getElementById("resultadoRuta");
-            resultadoRuta.innerHTML = "";
-            resultadoDistancia.textContent = "Calculando...";
-
-            const origenTxt  = document.getElementById("Origen").value.trim();
-            const destinoTxt = document.getElementById("Destino").value.trim();
-
-            let origenLat  = document.getElementById("origen_lat").value;
-            let origenLon  = document.getElementById("origen_lon").value;
-            let destinoLat = document.getElementById("destino_lat").value;
-            let destinoLon = document.getElementById("destino_lon").value;
-
-            try {
-                // Si faltan coords de origen, geocodifica
-                if ((!origenLat || !origenLon) && origenTxt) {
-                    const geoO = await geocodificar(origenTxt);
-                    if (geoO.error) throw new Error("Origen: " + geoO.error);
-                    origenLat = geoO.lat; origenLon = geoO.lon;
-                    document.getElementById("origen_lat").value = origenLat;
-                    document.getElementById("origen_lon").value = origenLon;
-                }
-
-                // Si faltan coords de destino, geocodifica
-                if ((!destinoLat || !destinoLon) && destinoTxt) {
-                    const geoD = await geocodificar(destinoTxt);
-                    if (geoD.error) throw new Error("Destino: " + geoD.error);
-                    destinoLat = geoD.lat; destinoLon = geoD.lon;
-                    document.getElementById("destino_lat").value = destinoLat;
-                    document.getElementById("destino_lon").value = destinoLon;
-                }
-
-                // Ahora calculamos distancia
-                // Ahora calculamos distancia
-                const transporteSelect = document.getElementById("transporte_id");
-                const perfil = transporteSelect.options[transporteSelect.selectedIndex].dataset.perfil;
-
-                const data = { 
-                    origen_lat: origenLat, 
-                    origen_lon: origenLon, 
-                    destino_lat: destinoLat, 
-                    destino_lon: destinoLon,
-                    perfil: perfil // 👈 enviar al backend
-                };
-
-                const res = await fetch("{{ route('cotizadores.calcular-distancia') }}", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Accept": "application/json",
-                        "X-CSRF-TOKEN": "{{ csrf_token() }}"
-                    },
-                    body: JSON.stringify(data)
-                });
-
-
-                const json = await res.json();
-
-                if (json.distancia_km) {
-                    resultadoDistancia.textContent = `Distancia: ${json.distancia_km} km | Duración: ${json.duracion_min} min`;
-                    document.getElementById("distancia_km").value = json.distancia_km;
-
-                    resultadoRuta.innerHTML = "<h6>Indicaciones:</h6><ol>" +
-                        (json.instrucciones || []).map(instr => `<li>${instr}</li>`).join('') +
-                        "</ol>";
-                } else {
-                    resultadoDistancia.textContent = json.error || "No se pudo calcular la distancia.";
-                }
-            } catch (e) {
-                resultadoDistancia.textContent = "Error: " + e.message;
+            if (texto === "Transporte") {
+                camposTransporte.classList.remove("d-none");
+                document.getElementById("transporte_id")?.setAttribute("required", "required");
+                document.getElementById("Origen")?.setAttribute("required", "required");
+                document.getElementById("Destino")?.setAttribute("required", "required");
+                document.getElementById("distancia_km")?.setAttribute("required", "required");
+            } else if (texto === "Maquila") {
+                camposMaquila.classList.remove("d-none");
+                document.getElementById("insumo")?.setAttribute("required", "required");
+                document.getElementById("tipo_maquila_id")?.setAttribute("required", "required");
             }
-        });
+        }
 
-        // Escuchar cambios en el select insumo
+        // Mostrar botón del modal (solo proveedor)
+        function toggleDetalleInsumo() {
+            const btnModalWrapper = document.getElementById("btnModalWrapper");
+
+            if (insumoSelect.value === "proveedor") {
+                btnModalWrapper.classList.remove("d-none");
+
+                // Hacer requeridos los insumos dentro de la tabla
+                document.querySelectorAll("#tablaInsumosBody input").forEach(el => {
+                    el.setAttribute("required", "required");
+                });
+            } else {
+                btnModalWrapper.classList.add("d-none");
+
+                // Quitar required de los insumos si no aplica
+                document.querySelectorAll("#tablaInsumosBody input").forEach(el => {
+                    el.removeAttribute("required");
+                });
+            }
+        }
+
+        servicioSelect.addEventListener("change", toggleCampos);
+        toggleCampos(); // inicializar al cargar
+
         if (insumoSelect) {
             insumoSelect.addEventListener("change", toggleDetalleInsumo);
-            toggleDetalleInsumo(); // inicializar al cargar
+            toggleDetalleInsumo(); // inicializar
         }
 
+        // ======================
+        // 🚚 Cálculo de distancia
+        // ======================
+        const btnCalcular = document.getElementById("btnCalcular");
+        const resultadoDistancia = document.getElementById("resultadoDistancia");
 
-});
+        async function geocodificar(direccion) {
+            const res = await fetch("/api/cotizadores/geocodificar", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify({ direccion })
+            });
+            return res.json();
+        }
+
+        if (btnCalcular) {
+            btnCalcular.addEventListener("click", async function() {
+                const resultadoRuta = document.getElementById("resultadoRuta");
+                resultadoRuta.innerHTML = "";
+                resultadoDistancia.textContent = "Calculando...";
+
+                const origenTxt  = document.getElementById("Origen").value.trim();
+                const destinoTxt = document.getElementById("Destino").value.trim();
+
+                let origenLat  = document.getElementById("origen_lat").value;
+                let origenLon  = document.getElementById("origen_lon").value;
+                let destinoLat = document.getElementById("destino_lat").value;
+                let destinoLon = document.getElementById("destino_lon").value;
+
+                try {
+                    if ((!origenLat || !origenLon) && origenTxt) {
+                        const geoO = await geocodificar(origenTxt);
+                        if (geoO.error) throw new Error("Origen: " + geoO.error);
+                        origenLat = geoO.lat; origenLon = geoO.lon;
+                        document.getElementById("origen_lat").value = origenLat;
+                        document.getElementById("origen_lon").value = origenLon;
+                    }
+
+                    if ((!destinoLat || !destinoLon) && destinoTxt) {
+                        const geoD = await geocodificar(destinoTxt);
+                        if (geoD.error) throw new Error("Destino: " + geoD.error);
+                        destinoLat = geoD.lat; destinoLon = geoD.lon;
+                        document.getElementById("destino_lat").value = destinoLat;
+                        document.getElementById("destino_lon").value = destinoLon;
+                    }
+
+                    const transporteSelect = document.getElementById("transporte_id");
+                    const perfil = transporteSelect.options[transporteSelect.selectedIndex].dataset.perfil;
+
+                    const data = { 
+                        origen_lat: origenLat, 
+                        origen_lon: origenLon, 
+                        destino_lat: destinoLat, 
+                        destino_lon: destinoLon,
+                        perfil: perfil
+                    };
+
+                    const res = await fetch("{{ route('cotizadores.calcular-distancia') }}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Accept": "application/json",
+                            "X-CSRF-TOKEN": "{{ csrf_token() }}"
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    const json = await res.json();
+
+                    if (json.distancia_km) {
+                        resultadoDistancia.textContent = `Distancia: ${json.distancia_km} km | Duración: ${json.duracion_min} min`;
+                        document.getElementById("distancia_km").value = json.distancia_km;
+
+                        resultadoRuta.innerHTML = "<h6>Indicaciones:</h6><ol>" +
+                            (json.instrucciones || []).map(instr => `<li>${instr}</li>`).join('') +
+                            "</ol>";
+                    } else {
+                        resultadoDistancia.textContent = json.error || "No se pudo calcular la distancia.";
+                    }
+                } catch (e) {
+                    resultadoDistancia.textContent = "Error: " + e.message;
+                }
+            });
+        }
+    });
 </script>
+
+
 @endsection

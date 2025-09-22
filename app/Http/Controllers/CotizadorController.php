@@ -15,12 +15,20 @@ class CotizadorController extends Controller
      */
     public function index()
     {
-        $cotizaciones = Cotizador::with(['servicio', 'transporte', 'maquilado'])->get(); 
-        $servicios = Servicio::all(); 
-        $transportes = \App\Models\Transporte::all();
+        $cotizaciones = Cotizador::with([
+            'servicio',
+            'transporte',
+            'maquilado.insumos',
+            'maquilado.tipoMaquila' // 👈 relación nueva
+        ])->get();
 
-        return view('cotizadores.index', compact('cotizaciones', 'servicios', 'transportes'));
+        $servicios = Servicio::all();
+        $transportes = \App\Models\Transporte::all();
+        $tiposMaquila = \App\Models\TipoMaquilado::all(); // 👈 nuevo catálogo
+
+        return view('cotizadores.index', compact('cotizaciones', 'servicios', 'transportes', 'tiposMaquila'));
     }
+
 
 
 
@@ -75,18 +83,37 @@ class CotizadorController extends Controller
         $cotizador = Cotizador::create($data);
 
         // Si el servicio es Maquila → crear registro en la nueva tabla
+        // Si el servicio es Maquila → crear registro en la nueva tabla
         if ((int) $request->servicio_id === 2) {
             $request->validate([
-                'insumo'         => 'nullable|in:proveedor,cliente',
-                'unidades'       => 'required|integer|min:1',
-                'tipo_maquila'   => 'nullable|string|max:255',
-                'detalle_insumo' => 'nullable|string|max:255',
+                'insumo'           => 'required|in:proveedor,cliente',
+                'tipo_maquila_id'  => 'required|exists:tipos_maquila,id',
+
+                // validaciones para arrays de insumos cuando insumo = proveedor
+                'insumos.*.detalle'  => 'required_if:insumo,proveedor|string|max:255',
+                'insumos.*.cantidad' => 'required_if:insumo,proveedor|integer|min:1',
+                'insumos.*.precio'   => 'required_if:insumo,proveedor|numeric|min:0',
             ]);
 
-            $cotizador->maquilado()->create($request->only([
-                'insumo', 'unidades', 'tipo_maquila', 'detalle_insumo'
-            ]));
+            // Crear maquilado (ya no guardamos detalle_insumo aquí)
+            $maquilado = $cotizador->maquilado()->create([
+                'insumo'          => $request->insumo,
+                'tipo_maquila_id' => $request->tipo_maquila_id,
+            ]);
+
+            // Si el insumo lo aporta el proveedor → guardar los insumos detallados
+            if ($request->insumo === 'proveedor' && $request->has('insumos')) {
+                foreach ($request->insumos as $insumo) {
+                    $maquilado->insumos()->create([
+                        'detalle'  => $insumo['detalle'],
+                        'cantidad' => $insumo['cantidad'],
+                        'precio'   => $insumo['precio'],
+                        'subtotal' => $insumo['cantidad'] * $insumo['precio'],
+                    ]);
+                }
+            }
         }
+
 
         return redirect()->route('cotizadores.index')
             ->with('success', 'Cotización creada correctamente.');

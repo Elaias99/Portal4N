@@ -14,15 +14,25 @@ class Maquilado extends Model
     protected $fillable = [
         'cotizador_id',
         'insumo',
-        'detalle_insumo',
-        'unidades',
-        'tipo_maquila'
+
+        'tipo_maquila_id'
     ];
 
     public function cotizador()
     {
         return $this->belongsTo(Cotizador::class);
     }
+
+    public function insumos()
+    {
+        return $this->hasMany(Maquilado_Insumo::class, 'maquilado_id');
+    }
+
+    public function tipoMaquila()
+    {
+        return $this->belongsTo(TipoMaquilado::class, 'tipo_maquila_id');
+    }
+
 
 
 }
