@@ -12,7 +12,8 @@ class Cotizador extends Model
     protected $table = 'cotizadors';
 
     protected $fillable = ['nombre_cliente',
-    'servicio_id','Origen','Destino','estado','distancia_km','origen_lat', 'origen_lon', 'destino_lat', 'destino_lon','transporte_id'];
+    'servicio_id','Origen','Destino','estado','distancia_km','origen_lat', 'origen_lon', 'destino_lat', 'destino_lon','transporte_id','lleva_pioneta',
+    'con_carga', 'cantidad_pionetas', 'jornada_pioneta'];
 
     public function servicio()
     {
@@ -28,6 +29,12 @@ class Cotizador extends Model
     {
         return $this->hasOne(Maquilado::class);
     }
+
+    public function cargasTransporte()
+    {
+        return $this->hasMany(CargaTransporte::class);
+    }
+
 
 
 

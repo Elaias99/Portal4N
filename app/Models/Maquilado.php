@@ -14,8 +14,9 @@ class Maquilado extends Model
     protected $fillable = [
         'cotizador_id',
         'insumo',
-
-        'tipo_maquila_id'
+        'duracion_proceso',
+        'tipo_maquila_id',
+        'requiere_transporte',
     ];
 
     public function cotizador()

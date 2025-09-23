@@ -19,14 +19,15 @@ class CotizadorController extends Controller
             'servicio',
             'transporte',
             'maquilado.insumos',
-            'maquilado.tipoMaquila' // 👈 relación nueva
+            'maquilado.tipoMaquila',
+            'cargasTransporte' 
         ])->get();
 
-        // dd($cotizaciones->toArray()); // 👈 debug
+        
 
         $servicios = Servicio::all();
         $transportes = \App\Models\Transporte::all();
-        $tiposMaquila = \App\Models\TipoMaquilado::all(); // 👈 nuevo catálogo
+        $tiposMaquila = \App\Models\TipoMaquilado::all(); 
 
         return view('cotizadores.index', compact('cotizaciones', 'servicios', 'transportes', 'tiposMaquila'));
     }
@@ -63,33 +64,65 @@ class CotizadorController extends Controller
         // Si el servicio es Transporte
         if ((int) $request->servicio_id === 1) {
             $request->validate([
-                'transporte_id'  => 'required|exists:transportes,id',
-                'Origen'         => 'required|string|max:255',
-                'Destino'        => 'required|string|max:255',
-                'distancia_km'   => 'required|numeric|min:0',
-                'origen_lat'     => 'required|numeric|between:-90,90',
-                'origen_lon'     => 'required|numeric|between:-180,180',
-                'destino_lat'    => 'required|numeric|between:-90,90',
-                'destino_lon'    => 'required|numeric|between:-180,180',
+                'transporte_id'     => 'required|exists:transportes,id',
+                'Origen'            => 'required|string|max:255',
+                'Destino'           => 'required|string|max:255',
+                'distancia_km'      => 'required|numeric|min:0',
+                'origen_lat'        => 'required|numeric|between:-90,90',
+                'origen_lon'        => 'required|numeric|between:-180,180',
+                'destino_lat'       => 'required|numeric|between:-90,90',
+                'destino_lon'       => 'required|numeric|between:-180,180',
+                'lleva_pioneta'     => 'required|boolean',
+                'cantidad_pionetas' => 'nullable|integer|min:0',
+                'jornada_pioneta'   => 'nullable|string|max:50',
+                'con_carga'         => 'required|boolean',
             ]);
 
             $data = array_merge($data, $request->only([
-                'transporte_id', 'Origen', 'Destino',
+                'transporte_id',
+                'Origen', 'Destino',
                 'origen_lat', 'origen_lon',
                 'destino_lat', 'destino_lon',
-                'distancia_km'
+                'distancia_km',
+                'lleva_pioneta',
+                'cantidad_pionetas',
+                'jornada_pioneta',
+                'con_carga',
             ]));
         }
 
         // Crear primero el Cotizador
         $cotizador = Cotizador::create($data);
 
-        // Si el servicio es Maquila → crear registro en la nueva tabla
+        // Si el servicio es Transporte y tiene carga → crear registros de cargas
+        if ((int) $request->servicio_id === 1 && $request->con_carga == 1) {
+            $request->validate([
+                'cargas.*.descripcion' => 'required|string|max:255',
+                'cargas.*.cantidad'    => 'required|integer|min:1',
+                'cargas.*.medida'      => 'nullable|string|max:50',
+                'cargas.*.peso_total'  => 'nullable|numeric|min:0',
+                'cargas.*.unidad_peso' => 'nullable|string|max:20',
+            ]);
+
+            foreach ($request->cargas as $carga) {
+                $cotizador->cargasTransporte()->create([
+                    'descripcion' => $carga['descripcion'],
+                    'cantidad'    => $carga['cantidad'],
+                    'medida'      => $carga['medida'] ?? null,
+                    'peso_total'  => $carga['peso_total'] ?? null,
+                    'unidad_peso' => $carga['unidad_peso'] ?? null,
+                ]);
+            }
+        }
+
+
         // Si el servicio es Maquila → crear registro en la nueva tabla
         if ((int) $request->servicio_id === 2) {
             $request->validate([
                 'insumo'           => 'required|in:proveedor,cliente',
                 'tipo_maquila_id'  => 'required|exists:tipos_maquila,id',
+                'duracion_proceso'   => 'nullable|string|max:100',
+                'requiere_transporte'=> 'nullable|boolean',
 
                 // validaciones para arrays de insumos cuando insumo = proveedor
                 'insumos.*.detalle'  => 'required_if:insumo,proveedor|string|max:255',
@@ -101,6 +134,8 @@ class CotizadorController extends Controller
             $maquilado = $cotizador->maquilado()->create([
                 'insumo'          => $request->insumo,
                 'tipo_maquila_id' => $request->tipo_maquila_id,
+                'duracion_proceso'   => $request->duracion_proceso,
+                'requiere_transporte'=> $request->requiere_transporte ?? 0,
             ]);
 
             // Si el insumo lo aporta el proveedor → guardar los insumos detallados

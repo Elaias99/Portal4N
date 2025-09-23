@@ -103,6 +103,21 @@
                         </select>
                     </div>
 
+                    {{-- Duración estimada del proceso --}}
+                    <div class="mb-3">
+                        <label for="duracion_proceso" class="form-label">Duración estimada del proceso</label>
+                        <input type="text" name="duracion_proceso" id="duracion_proceso" class="form-control" placeholder="Ej: 2 horas, 1 día, 1 semana">
+                    </div>
+
+                    {{-- Requiere transporte --}}
+                    <div class="mb-3">
+                        <label for="requiere_transporte" class="form-label">¿Requiere transporte?</label>
+                        <select name="requiere_transporte" id="requiere_transporte" class="form-select">
+                            <option value="0">No</option>
+                            <option value="1">Sí</option>
+                        </select>
+                    </div>
+
                 </div>
 
                 {{-- Estado --}}
@@ -139,6 +154,8 @@
                             <th>Creado</th>
                         </tr>
                     </thead>
+
+
                     <tbody>
                         @forelse ($cotizaciones as $coti)
                             <tr>
@@ -152,12 +169,55 @@
                                         <strong>Tipo de movilización:</strong> {{ $coti->transporte->nombre ?? '-' }} <br>
                                         <strong>Origen:</strong> {{ $coti->Origen ?? '-' }} <br>
                                         <strong>Destino:</strong> {{ $coti->Destino ?? '-' }} <br>
-                                        <strong>Distancia:</strong> 
+                                        <strong>Distancia:</strong>
                                             @if($coti->distancia_km)
                                                 {{ number_format($coti->distancia_km, 2) }} km
                                             @else
                                                 -
                                             @endif
+                                        <br>
+                                        <strong>Lleva pioneta:</strong> {{ $coti->lleva_pioneta ? 'Sí' : 'No' }} <br>
+
+                                        @if($coti->lleva_pioneta)
+                                            <strong>Cantidad pionetas:</strong> {{ $coti->cantidad_pionetas ?? '-' }} <br>
+                                            <strong>Jornada:</strong> {{ $coti->jornada_pioneta ?? '-' }} <br>
+                                        @endif
+
+
+                                        <strong>Con carga:</strong> {{ $coti->con_carga ? 'Sí' : 'No' }} <br>
+
+                                        @if($coti->con_carga && $coti->cargasTransporte->count() > 0)
+                                            <strong>Detalle de cargas:</strong>
+                                            <table class="table table-sm mt-2">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Detalle carga</th>
+                                                        <th>Cantidad</th>
+                                                        <th>Medida</th>
+                                                        <th>Peso total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($coti->cargasTransporte as $carga)
+                                                        <tr>
+                                                            <td>{{ $carga->descripcion }}</td>
+                                                            <td>{{ $carga->cantidad }}</td>
+                                                            <td>{{ $carga->medida ?? '-' }}</td>
+                                                            <td>
+                                                                @if($carga->peso_total)
+                                                                    {{ rtrim(rtrim(number_format($carga->peso_total, 2, '.', ''), '0'), '.') }} {{ $carga->unidad_peso ?? '' }}
+                                                                @else
+                                                                    -
+                                                                @endif
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        @endif
+
+
+
 
                                     @elseif($coti->servicio->nombre === 'Maquila' && $coti->maquilado)
                                         @if($coti->maquilado->insumo === 'proveedor')
@@ -183,12 +243,22 @@
                                                 </tbody>
                                             </table>
                                             <strong>Total: </strong>
-                                            {{ number_format($coti->maquilado->insumos->sum('subtotal'), 0, ',', '.') }}
+                                            {{ number_format($coti->maquilado->insumos->sum('subtotal'), 0, ',', '.') }} <br>
                                         @else
                                             <strong>Insumo:</strong> Cliente <br>
                                             <strong>Tipo de maquila:</strong> {{ $coti->maquilado->tipoMaquila->nombre ?? '-' }} <br>
                                         @endif
+
+                                        {{-- Campos nuevos (se muestran siempre, sea proveedor o cliente) --}}
+                                        <strong>Duración estimada:</strong> {{ $coti->maquilado->duracion_proceso ?? '-' }} <br>
+                                        <strong>Requiere transporte:</strong> {{ $coti->maquilado->requiere_transporte ? 'Sí' : 'No' }}
                                     @endif
+
+
+
+
+
+
                                 </td>
 
                                 <td>
@@ -207,6 +277,11 @@
                             </tr>
                         @endforelse
                     </tbody>
+
+
+
+
+
                 </table>
             </div>
         </div>
@@ -237,21 +312,27 @@
             });
 
             if (texto === "Transporte") {
-                // Mostrar solo el botón que abre el modal de transporte
                 camposTransporte.classList.remove("d-none");
-
+                document.getElementById("transporte_id")?.setAttribute("required", "required");
+                document.getElementById("Origen")?.setAttribute("required", "required");
+                document.getElementById("Destino")?.setAttribute("required", "required");
             } else if (texto === "Maquila") {
                 camposMaquila.classList.remove("d-none");
                 document.getElementById("insumo")?.setAttribute("required", "required");
                 document.getElementById("tipo_maquila_id")?.setAttribute("required", "required");
+
+                // 👇 Limpiar o inicializar campos nuevos
+                document.getElementById("duracion_proceso").value = "";
+                document.getElementById("requiere_transporte").value = "0";
 
                 // 👇 Forzar que se apliquen las reglas de insumo
                 toggleDetalleInsumo();
             }
         }
 
-
-        // Mostrar botón del modal (solo proveedor)
+        // ==============================
+        // Mostrar botón del modal (proveedor)
+        // ==============================
         function toggleDetalleInsumo() {
             const btnModalWrapper = document.getElementById("btnModalWrapper");
 
@@ -369,6 +450,7 @@
         }
     });
 </script>
+
 
 
 
