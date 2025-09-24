@@ -79,15 +79,9 @@
                         </tr>
                         <tr>
                             <th scope="row">Contraseña</th>
-                            <td>
-                                @can('viewSensitive', $equipo)
-                                    <span id="pwd" data-real="{{ $equipo->contrasena }}">••••••••</span>
-                                    <button type="button" class="btn btn-link btn-sm p-0 ml-2" id="togglePwd">Mostrar</button>
-                                @else
-                                    —
-                                @endcan
-                            </td>
+                            <td>{{ $equipo->contrasena }}</td>
                         </tr>
+
                     </table>
                 </div>
             </div>
