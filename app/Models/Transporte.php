@@ -21,6 +21,12 @@ class Transporte extends Model
         return $this->hasMany(Cotizador::class);
     }
 
+    public function maquilas()
+    {
+        return $this->hasMany(MaquilaTransporte::class);
+    }
+
+
 
 
 }

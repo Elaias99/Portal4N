@@ -118,6 +118,14 @@
                         </select>
                     </div>
 
+                    {{-- Botón para abrir modal de transporte (solo si requiere = Sí) --}}
+                    <div id="btnModalTransporteMaquilaWrapper" class="d-none mb-3">
+                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalTransporte">
+                            ➕ Agregar transporte
+                        </button>
+                    </div>
+
+
                 </div>
 
                 {{-- Estado --}}
@@ -327,6 +335,9 @@
 
                 // 👇 Forzar que se apliquen las reglas de insumo
                 toggleDetalleInsumo();
+
+                // 👇 Actualizar visibilidad del botón transporte
+                toggleTransporteMaquila();
             }
         }
 
@@ -346,19 +357,45 @@
             } else {
                 btnModalWrapper.classList.add("d-none");
 
-                // Quitar required de los insumos si no aplica
+                // 👇 limpiar filas de insumos para que no viajen al backend
+                document.querySelectorAll("#tablaInsumosBody tr").forEach(tr => tr.remove());
+
+                // 👇 quitar required de insumos si quedaron
                 document.querySelectorAll("#tablaInsumosBody input").forEach(el => {
                     el.removeAttribute("required");
                 });
             }
         }
 
+
+        // ==============================
+        // Mostrar botón del modal transporte en maquila
+        // ==============================
+        const requiereTransporteSelect = document.getElementById("requiere_transporte");
+        const btnModalTransporteMaquilaWrapper = document.getElementById("btnModalTransporteMaquilaWrapper");
+
+        function toggleTransporteMaquila() {
+            if (requiereTransporteSelect && btnModalTransporteMaquilaWrapper) {
+                if (requiereTransporteSelect.value === "1") {
+                    btnModalTransporteMaquilaWrapper.classList.remove("d-none");
+                } else {
+                    btnModalTransporteMaquilaWrapper.classList.add("d-none");
+                }
+            }
+        }
+
+        // Inicializar eventos
         servicioSelect.addEventListener("change", toggleCampos);
         toggleCampos(); // inicializar al cargar
 
         if (insumoSelect) {
             insumoSelect.addEventListener("change", toggleDetalleInsumo);
             toggleDetalleInsumo(); // inicializar
+        }
+
+        if (requiereTransporteSelect) {
+            requiereTransporteSelect.addEventListener("change", toggleTransporteMaquila);
+            toggleTransporteMaquila(); // inicializar
         }
 
         // ======================
@@ -450,6 +487,7 @@
         }
     });
 </script>
+
 
 
 

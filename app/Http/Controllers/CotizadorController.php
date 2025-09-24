@@ -119,26 +119,42 @@ class CotizadorController extends Controller
         // Si el servicio es Maquila → crear registro en la nueva tabla
         if ((int) $request->servicio_id === 2) {
             $request->validate([
-                'insumo'           => 'required|in:proveedor,cliente',
-                'tipo_maquila_id'  => 'required|exists:tipos_maquila,id',
-                'duracion_proceso'   => 'nullable|string|max:100',
-                'requiere_transporte'=> 'nullable|boolean',
+                'insumo'              => 'required|in:proveedor,cliente',
+                'tipo_maquila_id'     => 'required|exists:tipos_maquila,id',
+                'duracion_proceso'    => 'nullable|string|max:100',
+                'requiere_transporte' => 'nullable|boolean',
 
                 // validaciones para arrays de insumos cuando insumo = proveedor
-                'insumos.*.detalle'  => 'required_if:insumo,proveedor|string|max:255',
-                'insumos.*.cantidad' => 'required_if:insumo,proveedor|integer|min:1',
-                'insumos.*.precio'   => 'required_if:insumo,proveedor|numeric|min:0',
+                'insumos'           => 'required_if:insumo,proveedor|array',
+                'insumos.*.detalle' => 'required_if:insumo,proveedor|string|max:255',
+                'insumos.*.cantidad'=> 'required_if:insumo,proveedor|integer|min:1',
+                'insumos.*.precio'  => 'required_if:insumo,proveedor|numeric|min:0',
+
+
+                // validaciones adicionales si requiere transporte
+                'transporte_id'     => 'required_if:requiere_transporte,1|exists:transportes,id',
+                'Origen'            => 'required_if:requiere_transporte,1|string|max:255',
+                'Destino'           => 'required_if:requiere_transporte,1|string|max:255',
+                'distancia_km'      => 'nullable|numeric|min:0',
+                'origen_lat'        => 'nullable|numeric|between:-90,90',
+                'origen_lon'        => 'nullable|numeric|between:-180,180',
+                'destino_lat'       => 'nullable|numeric|between:-90,90',
+                'destino_lon'       => 'nullable|numeric|between:-180,180',
+                'lleva_pioneta'     => 'nullable|boolean',
+                'cantidad_pionetas' => 'nullable|integer|min:0',
+                'jornada_pioneta'   => 'nullable|string|max:100',
+                'con_carga'         => 'nullable|boolean',
             ]);
 
-            // Crear maquilado (ya no guardamos detalle_insumo aquí)
+            // Crear maquilado
             $maquilado = $cotizador->maquilado()->create([
-                'insumo'          => $request->insumo,
-                'tipo_maquila_id' => $request->tipo_maquila_id,
-                'duracion_proceso'   => $request->duracion_proceso,
-                'requiere_transporte'=> $request->requiere_transporte ?? 0,
+                'insumo'              => $request->insumo,
+                'tipo_maquila_id'     => $request->tipo_maquila_id,
+                'duracion_proceso'    => $request->duracion_proceso,
+                'requiere_transporte' => $request->requiere_transporte ?? 0,
             ]);
 
-            // Si el insumo lo aporta el proveedor → guardar los insumos detallados
+            // Guardar insumos (si aplica)
             if ($request->insumo === 'proveedor' && $request->has('insumos')) {
                 foreach ($request->insumos as $insumo) {
                     $maquilado->insumos()->create([
@@ -149,7 +165,27 @@ class CotizadorController extends Controller
                     ]);
                 }
             }
+
+
+            // Guardar transporte si requiere
+            if ($request->requiere_transporte == 1) {
+                $maquilado->transporte()->create([
+                    'transporte_id'     => $request->transporte_id,
+                    'origen'            => $request->Origen,
+                    'origen_lat'        => $request->origen_lat,
+                    'origen_lon'        => $request->origen_lon,
+                    'destino'           => $request->Destino,
+                    'destino_lat'       => $request->destino_lat,
+                    'destino_lon'       => $request->destino_lon,
+                    'distancia_km'      => $request->distancia_km,
+                    'lleva_pioneta'     => $request->lleva_pioneta ?? 0,
+                    'cantidad_pionetas' => $request->cantidad_pionetas,
+                    'jornada_pioneta'   => $request->jornada_pioneta,
+                    'con_carga'         => $request->con_carga ?? 0,
+                ]);
+            }
         }
+
 
 
         return redirect()->route('cotizadores.index')

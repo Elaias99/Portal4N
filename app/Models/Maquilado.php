@@ -34,6 +34,12 @@ class Maquilado extends Model
         return $this->belongsTo(TipoMaquilado::class, 'tipo_maquila_id');
     }
 
+    public function transporte()
+    {
+        return $this->hasOne(MaquilaTransporte::class, 'maquilado_id');
+    }
+
+
 
 
 }
