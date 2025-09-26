@@ -12,4 +12,10 @@ class Cobranza extends Model
     protected $table = 'cobranzas';
 
     protected $fillable = ['rut_cliente', 'razon_social', 'servicio', 'creditos'];
+
+    // Relación: una cobranza tiene muchos documentos
+    public function documentos()
+    {
+        return $this->hasMany(DocumentoFinanciero::class, 'cobranza_id');
+    }
 }
