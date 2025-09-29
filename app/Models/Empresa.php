@@ -31,5 +31,11 @@ class Empresa extends Model
         return $this->belongsTo(Comuna::class);
     }
 
+    public function documentos()
+    {
+        return $this->hasMany(DocumentoFinanciero::class);
+    }
+
+
 
 }

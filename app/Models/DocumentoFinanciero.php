@@ -55,13 +55,22 @@ class DocumentoFinanciero extends Model
         'codigo_otro_imp',
         'valor_otro_imp',
         'tasa_otro_imp',
-        'cobranza_id',    ];
+        'cobranza_id',
+        'empresa_id'
+        
+    ];
 
     // Relación: un documento pertenece a una cobranza
     public function cobranza()
     {
         return $this->belongsTo(Cobranza::class, 'cobranza_id');
     }
+
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class);
+    }
+
 
 
 }

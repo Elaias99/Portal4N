@@ -17,6 +17,14 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
     use SkipsErrors;
 
     public $errores = [];
+    protected $empresaId;
+
+    public function __construct($empresaId = null)
+    {
+        $this->empresaId = $empresaId;
+    }
+
+
     
     public function model(array $row)
     {
@@ -98,6 +106,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                 'valor_otro_imp' => $row['valor_otro_imp'],
                 'tasa_otro_imp' => $row['tasa_otro_imp'],
                 'cobranza_id' => $cobranza?->id,
+                'empresa_id' => $this->empresaId,
             ]
         );
     }
