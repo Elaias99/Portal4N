@@ -7,6 +7,7 @@ use App\Models\DocumentoFinanciero;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\DocumentosImport;
 use Illuminate\Database\QueryException;
+use App\Exports\DocumentosExport;
 
 class DocumentoFinancieroController extends Controller
 {
@@ -96,6 +97,27 @@ class DocumentoFinancieroController extends Controller
 
         // Pasar la K a mayúscula
         return strtoupper($rut);
+    }
+
+
+    public function updateStatus(Request $request, DocumentoFinanciero $documento)
+    {
+        $request->validate([
+            'status' => 'nullable|string|max:50',
+        ]);
+
+        $documento->status = $request->status;
+        $documento->save();
+
+        return redirect()->back()->with('success', 'Estado actualizado correctamente.');
+    }
+
+
+
+    public function export()
+    {
+        $fecha = now()->format('Y-m-d_H-i-s');
+        return Excel::download(new DocumentosExport, "documentos_financieros_{$fecha}.xlsx");
     }
 
 

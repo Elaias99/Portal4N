@@ -56,7 +56,9 @@ class DocumentoFinanciero extends Model
         'valor_otro_imp',
         'tasa_otro_imp',
         'cobranza_id',
-        'empresa_id'
+        'empresa_id',
+
+        'status',
         
     ];
 

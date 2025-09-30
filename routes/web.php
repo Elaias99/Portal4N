@@ -249,6 +249,13 @@ Route::post('/cobranzas/documentos/import', [DocumentoFinancieroController::clas
 Route::get('/cobranzas/documentos', [DocumentoFinancieroController::class, 'index'])
     ->name('cobranzas.documentos');
 
+Route::patch('/documentos/{documento}/status', [DocumentoFinancieroController::class, 'updateStatus'])
+    ->name('documentos.updateStatus');
+
+Route::get('cobranzas/export', [App\Http\Controllers\DocumentoFinancieroController::class, 'export'])
+    ->name('cobranzas.export');
+
+
 Route::resource('cobranzas', CobranzaController::class);
 
 
