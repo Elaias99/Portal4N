@@ -48,8 +48,17 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
             return null;
         }
 
+
         
-        $cobranza = \App\Models\Cobranza::where('rut_cliente', $row['rut_cliente'] ?? null)->first();
+
+        
+        $cobranza = Cobranza::where('rut_cliente', $row['rut_cliente'] ?? null)->first();
+
+        if (!$cobranza) {
+            $this->errores[] = "No existe cobranza para la razón social '{$row['razon_social']}' (RUT: {$row['rut_cliente']}). 
+                                Se importó el documento, pero no se calculó fecha de vencimiento.";
+        }
+
 
         return new DocumentoFinanciero([
                 'folio' => $folioExcel,
@@ -64,6 +73,12 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                 'fecha_recepcion' => $this->transformDate($row['fecha_recepcion']),
                 'fecha_acuse_recibo' => $this->transformDate($row['fecha_acuse_recibo']),
                 'fecha_reclamo' => $this->transformDate($row['fecha_reclamo']),
+
+                // 🔹 Nuevo cálculo de fecha de vencimiento
+                'fecha_vencimiento' => $this->calcularFechaVencimiento(
+                    Carbon::parse($this->transformDate($row['fecha_docto']))->toDateString(),
+                    $cobranza?->creditos
+                ),
 
 
                 
@@ -166,4 +181,22 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
         return (int) $normalized;
     }
+
+
+    private function calcularFechaVencimiento($fechaDocto, $creditos)
+    {
+        if (!$fechaDocto || !$creditos) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($fechaDocto)->addDays((int) $creditos)->format('Y-m-d');
+        } catch (\Exception $e) {
+            return null; // en caso de error con fechas
+        }
+    }
+
+
+
+
 }

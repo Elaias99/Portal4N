@@ -67,11 +67,6 @@ class DocumentoFinancieroController extends Controller
         }
 
 
-        // dd([
-        //     'filename' => $filename,
-        //     'rut_detectado' => $rut,
-        //     'empresa_encontrada' => $empresa
-        // ]);
 
         // Pasar empresa_id al importador
         $import = new DocumentosImport($empresa?->id);
@@ -79,9 +74,10 @@ class DocumentoFinancieroController extends Controller
 
         if (count($import->errores) > 0) {
             return redirect()->route('cobranzas.documentos')
-                ->with('warning', 'Algunos registros no se importaron por folios duplicados.')
+                ->with('warning', 'La importación finalizó con observaciones.')
                 ->with('detalles_errores', $import->errores);
         }
+
 
         return redirect()->route('cobranzas.documentos')->with('success', 'Archivo importado correctamente');
     }
@@ -106,11 +102,23 @@ class DocumentoFinancieroController extends Controller
             'status' => 'nullable|string|max:50',
         ]);
 
-        $documento->status = $request->status;
+        $nuevoStatus = $request->status;
+
+        $documento->status = $nuevoStatus;
+
+        // Si es uno de los estados manuales → guardamos la fecha actual
+        if (in_array($nuevoStatus, ['Abono', 'Pago', 'Cobranza judicial'])) {
+            $documento->fecha_estado_manual = now();
+        } else {
+            // Si vuelve a un estado calculado (Al día / Vencido) limpiamos la fecha
+            $documento->fecha_estado_manual = null;
+        }
+
         $documento->save();
 
         return redirect()->back()->with('success', 'Estado actualizado correctamente.');
     }
+
 
 
 

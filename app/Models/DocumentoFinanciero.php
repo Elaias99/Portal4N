@@ -4,12 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class DocumentoFinanciero extends Model
 {
     use HasFactory;
 
     protected $table = 'documentos_financieros';
+    protected $appends = ['status_final'];
 
     protected $fillable = [
         'nro',
@@ -59,6 +61,9 @@ class DocumentoFinanciero extends Model
         'empresa_id',
 
         'status',
+        'fecha_vencimiento',
+
+        'fecha_estado_manual'
         
     ];
 
@@ -71,6 +76,41 @@ class DocumentoFinanciero extends Model
     public function empresa()
     {
         return $this->belongsTo(Empresa::class);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    public function getStatusFinalAttribute()
+    {
+        // Si tiene status manual → prevalece
+        if ($this->status) {
+            return $this->status;
+        }
+
+        // Si no tiene status manual, usar cálculo de vencimiento
+        if ($this->fecha_vencimiento) {
+            $fechaVenc = Carbon::parse($this->fecha_vencimiento);
+
+            if ($fechaVenc->isPast()) {
+                return 'Vencido';
+            } else {
+                return 'Al día';
+            }
+        }
+
+        return 'Sin cálculo';
     }
 
 

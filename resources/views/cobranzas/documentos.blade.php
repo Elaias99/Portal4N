@@ -105,8 +105,8 @@
     }
 
     .error-list {
-        max-height: 200px; /* 👈 límite en altura */
-        overflow-y: auto; /* 👈 scroll interno */
+        max-height: 200px;
+        overflow-y: auto;
         border: 1px solid #f1f1f1;
         border-radius: 6px;
         padding: 10px;
@@ -130,7 +130,6 @@
     .alert ul li {
         margin-bottom: 4px;
     }
-
 </style>
 
 @section('content')
@@ -175,8 +174,6 @@
         </div>
     @endif
 
-
-
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>Reporte de Documentos Financieros</h1>
@@ -200,25 +197,16 @@
                         </div>
 
                         <div class="mb-3">
-                            {{-- Botón de exportación --}}
                             <a href="{{ route('cobranzas.export') }}" class="btn btn-success w-100">
                                 Exportar Excel
                             </a>
                         </div>
-
-
 
                         <div class="mb-3">
                             <a href="{{ route('cobranzas.index') }}" class="btn btn-outline-secondary w-100">
                                 Cobranzas
                             </a>
                         </div>
-
-
-
-
-
-
                     @endslot
 
                     @slot('filtros')
@@ -255,14 +243,12 @@
                                 <th>Razón Social</th>
                                 <th>Folio</th>
                                 <th>Fecha Docto</th>
-                                <th>Fecha Recepción</th>
-                                <th>Fecha Acuse Recibo</th>
-                                <th>Fecha Reclamo</th>
+                                <th>Fecha Vencimiento</th>
+                                <th>Fecha Estado Manual</th>
                                 <th class="text-right">Monto Exento</th>
                                 <th class="text-right">Monto Neto</th>
                                 <th class="text-right">Monto IVA</th>
                                 <th class="text-right">Monto Total</th>
-                                
                                 <th>Tipo Docto. Ref.</th>
                                 <th>Folio Docto. Ref.</th>
                             </tr>
@@ -275,33 +261,60 @@
                                             @csrf
                                             @method('PATCH')
 
-                                            @if($doc->status == 'Pagado')
-                                                <span class="status-badge status-pagado">Pagado</span>
-                                            @elseif($doc->status == 'Pendiente')
-                                                <span class="status-badge status-pendiente">Pendiente</span>
-                                            @elseif($doc->status == 'Rechazado')
-                                                <span class="status-badge status-rechazado">Rechazado</span>
+                                            {{-- Mostrar status final --}}
+                                            @if($doc->status_final === 'Vencido')
+                                                <span class="status-badge status-rechazado">Vencido</span>
+                                            @elseif($doc->status_final === 'Al día')
+                                                <span class="status-badge status-pagado">Al día</span>
+                                            @elseif($doc->status_final === 'Pago')
+                                                <span class="status-badge status-pagado">Pago</span>
+                                            @elseif($doc->status_final === 'Abono')
+                                                <span class="status-badge status-pagado">Abono</span>
+                                            @elseif($doc->status_final === 'Cobranza judicial')
+                                                <span class="status-badge status-pagado">Cobranza judicial</span>
                                             @else
                                                 <span class="text-muted">Sin estado</span>
                                             @endif
 
-                                            <select name="status" onchange="this.form.submit()" class="form-control form-control-sm mt-1">
+                                            {{-- Select --}}
+                                            <select name="status" class="form-control form-control-sm mt-1"
+                                                    onchange="toggleFechaEstado(this, {{ $doc->id }})">
                                                 <option value="" {{ !$doc->status ? 'selected' : '' }}>Sin estado</option>
-                                                <option value="Pendiente" {{ $doc->status == 'Pendiente' ? 'selected' : '' }}>Pendiente</option>
-                                                <option value="Pagado" {{ $doc->status == 'Pagado' ? 'selected' : '' }}>Pagado</option>
-                                                <option value="Rechazado" {{ $doc->status == 'Rechazado' ? 'selected' : '' }}>Rechazado</option>
+                                                <option value="Abono" {{ $doc->status == 'Abono' ? 'selected' : '' }}>Abono</option>
+                                                <option value="Cobranza judicial" {{ $doc->status == 'Cobranza judicial' ? 'selected' : '' }}>Cobranza judicial</option>
+                                                <option value="Pago" {{ $doc->status == 'Pago' ? 'selected' : '' }}>Pago</option>
                                             </select>
+
+                                            {{-- Campo oculto para enviar la fecha desde otra columna --}}
+                                            <input type="hidden" name="fecha_estado_manual" id="fecha-hidden-{{ $doc->id }}" value="{{ $doc->fecha_estado_manual }}">
+                                            <button type="submit" class="btn btn-sm btn-primary mt-2">Guardar</button>
                                         </form>
                                     </td>
+
                                     <td>{{ $doc->empresa?->Nombre ?? 'Sin empresa' }}</td>
                                     <td>{{ $doc->tipo_doc }}</td>
                                     <td>{{ $doc->rut_cliente }}</td>
                                     <td>{{ $doc->razon_social }}</td>
                                     <td>{{ $doc->folio }}</td>
                                     <td>{{ \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') }}</td>
-                                    <td>{{ \Carbon\Carbon::parse($doc->fecha_recepcion)->format('d-m-Y H:i') }}</td>
-                                    <td>{{ $doc->fecha_acuse_recibo ? \Carbon\Carbon::parse($doc->fecha_acuse_recibo)->format('d-m-Y H:i') : '-' }}</td>
-                                    <td>{{ $doc->fecha_reclamo ? \Carbon\Carbon::parse($doc->fecha_reclamo)->format('d-m-Y H:i') : '-' }}</td>
+
+                                    <td>
+                                        @if($doc->fecha_vencimiento)
+                                            {{ \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') }}
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+
+                                    {{-- Fecha Estado Manual --}}
+                                    <td>
+                                        <input type="date" id="fecha-input-{{ $doc->id }}"
+                                               class="form-control form-control-sm"
+                                               value="{{ $doc->fecha_estado_manual ? \Carbon\Carbon::parse($doc->fecha_estado_manual)->format('Y-m-d') : '' }}"
+                                               style="display: {{ in_array($doc->status, ['Abono','Pago','Cobranza judicial']) ? 'block' : 'none' }}"
+                                               onchange="document.getElementById('fecha-hidden-{{ $doc->id }}').value = this.value">
+                                    </td>
+
                                     <td class="text-right">${{ number_format($doc->monto_exento, 0, ',', '.') }}</td>
                                     <td class="text-right">${{ number_format($doc->monto_neto, 0, ',', '.') }}</td>
                                     <td class="text-right">${{ number_format($doc->monto_iva, 0, ',', '.') }}</td>
@@ -321,4 +334,18 @@
             </div>
         </div>
     </div>
+
+<script>
+    function toggleFechaEstado(select, id) {
+        const inputFecha = document.getElementById('fecha-input-' + id);
+        if (['Abono', 'Pago', 'Cobranza judicial'].includes(select.value)) {
+            inputFecha.style.display = 'block';
+        } else {
+            inputFecha.style.display = 'none';
+            inputFecha.value = '';
+            document.getElementById('fecha-hidden-' + id).value = '';
+        }
+    }
+</script>
+
 @endsection

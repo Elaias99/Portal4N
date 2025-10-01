@@ -5,65 +5,77 @@ namespace App\Exports;
 use App\Models\DocumentoFinanciero;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
 
-class DocumentosExport implements FromCollection, WithHeadings
+class DocumentosExport implements FromCollection, WithHeadings, WithMapping
 {
     /**
      * Retorna la colección de registros a exportar
      */
     public function collection()
     {
-        return DocumentoFinanciero::select([
-            'id',
-            'nro',
-            'tipo_doc',
-            'tipo_venta',
-            'rut_cliente',
-            'razon_social',
-            'folio',
-            'fecha_docto',
-            'fecha_recepcion',
-            'fecha_acuse_recibo',
-            'fecha_reclamo',
-            'monto_exento',
-            'monto_neto',
-            'monto_iva',
-            'monto_total',
-            'iva_retenido_total',
-            'iva_retenido_parcial',
-            'iva_no_retenido',
-            'iva_propio',
-            'iva_terceros',
-            'rut_emisor_liquid_factura',
-            'neto_comision_liquid_factura',
-            'exento_comision_liquid_factura',
-            'iva_comision_liquid_factura',
-            'iva_fuera_de_plazo',
-            'tipo_docto_referencia',
-            'folio_docto_referencia',
-            'num_ident_receptor_extranjero',
-            'nacionalidad_receptor_extranjero',
-            'credito_empresa_constructora',
-            'impto_zona_franca_ley_18211',
-            'garantia_dep_envases',
-            'indicador_venta_sin_costo',
-            'indicador_servicio_periodico',
-            'monto_no_facturable',
-            'total_monto_periodo',
-            'venta_pasajes_transporte_nacional',
-            'venta_pasajes_transporte_internacional',
-            'numero_interno',
-            'codigo_sucursal',
-            'nce_nde_sobre_fact_compra',
-            'codigo_otro_imp',
-            'valor_otro_imp',
-            'tasa_otro_imp',
-            'cobranza_id',
-            'empresa_id',
-            'status', // 👈 nuestro campo nuevo
-            'created_at',
-            'updated_at',
-        ])->get();
+        // Traemos la relación con empresa para poder usarla en el mapping
+        return DocumentoFinanciero::with('empresa')->get();
+    }
+
+    /**
+     * Define cómo se exporta cada fila
+     */
+    public function map($doc): array
+    {
+        return [
+            $doc->id,
+            $doc->nro,
+            $doc->tipo_doc,
+            $doc->tipo_venta,
+            $doc->rut_cliente,
+            $doc->razon_social,
+            $doc->folio,
+            $doc->fecha_docto,
+            $doc->fecha_vencimiento,
+            $doc->status_final, // 👈 se agrega el estado calculado
+            $doc->fecha_recepcion,
+            $doc->fecha_acuse_recibo,
+            $doc->fecha_reclamo,
+            $doc->monto_exento,
+            $doc->monto_neto,
+            $doc->monto_iva,
+            $doc->monto_total,
+            $doc->iva_retenido_total,
+            $doc->iva_retenido_parcial,
+            $doc->iva_no_retenido,
+            $doc->iva_propio,
+            $doc->iva_terceros,
+            $doc->rut_emisor_liquid_factura,
+            $doc->neto_comision_liquid_factura,
+            $doc->exento_comision_liquid_factura,
+            $doc->iva_comision_liquid_factura,
+            $doc->iva_fuera_de_plazo,
+            $doc->tipo_docto_referencia,
+            $doc->folio_docto_referencia,
+            $doc->num_ident_receptor_extranjero,
+            $doc->nacionalidad_receptor_extranjero,
+            $doc->credito_empresa_constructora,
+            $doc->impto_zona_franca_ley_18211,
+            $doc->garantia_dep_envases,
+            $doc->indicador_venta_sin_costo,
+            $doc->indicador_servicio_periodico,
+            $doc->monto_no_facturable,
+            $doc->total_monto_periodo,
+            $doc->venta_pasajes_transporte_nacional,
+            $doc->venta_pasajes_transporte_internacional,
+            $doc->numero_interno,
+            $doc->codigo_sucursal,
+            $doc->nce_nde_sobre_fact_compra,
+            $doc->codigo_otro_imp,
+            $doc->valor_otro_imp,
+            $doc->tasa_otro_imp,
+            $doc->cobranza_id,
+            $doc->empresa?->Nombre ?? 'Sin empresa',
+            $doc->status,
+            $doc->created_at,
+            $doc->updated_at,
+        ];
     }
 
     /**
@@ -80,6 +92,8 @@ class DocumentosExport implements FromCollection, WithHeadings
             'Razón Social',
             'Folio',
             'Fecha Documento',
+            'Fecha Vencimiento',
+            'Estado Vencimiento', // 👈 nuevo encabezado
             'Fecha Recepción',
             'Fecha Acuse Recibo',
             'Fecha Reclamo',
@@ -117,7 +131,7 @@ class DocumentosExport implements FromCollection, WithHeadings
             'Valor Otro Impuesto',
             'Tasa Otro Impuesto',
             'Cobranza ID',
-            'Empresa ID',
+            'Empresa Nombre',
             'Status',
             'Creado en',
             'Actualizado en',
