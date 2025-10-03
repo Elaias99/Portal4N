@@ -90,10 +90,32 @@ class DocumentoFinancieroController extends Controller
         $import = new DocumentosImport($empresa?->id);
         Excel::import($import, $request->file('file'));
 
-        if (count($import->errores) > 0) {
+        $mensajes = [];
+
+        // Construir mensajes
+        if (count($import->importados) > 0) {
+            $mensajes[] = count($import->importados) . " documento importados correctamente: " 
+                        . implode(', ', $import->importados) . ".";
+        }
+
+
+        if (count($import->duplicados) > 0) {
+            $mensajes[] = "Los siguientes folios ya existían y no se importaron: " 
+                        . implode(', ', $import->duplicados);
+        }
+
+        if (count($import->sinCobranza) > 0) {
+            foreach ($import->sinCobranza as $item) {
+                $mensajes[] = "No existe cobranza para la razón social '{$item['razon_social']}' (RUT: {$item['rut_cliente']}), 
+                    folio {$item['folio']}. <a href='" . route('cobranzas.create') . "' target='_blank'>Cree la cobranza aquí</a>";
+            }
+
+        }
+
+        if (count($mensajes) > 0) {
             return redirect()->route('cobranzas.documentos')
                 ->with('warning', 'La importación finalizó con observaciones.')
-                ->with('detalles_errores', $import->errores);
+                ->with('detalles_errores', $mensajes);
         }
 
 

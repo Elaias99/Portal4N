@@ -163,7 +163,7 @@
                             <div class="error-list">
                                 <ul class="small mb-0">
                                     @foreach (session('detalles_errores') as $error)
-                                        <li>{{ $error }}</li>
+                                        <li>{!! $error !!}</li>
                                     @endforeach
                                 </ul>
                             </div>

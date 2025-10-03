@@ -17,6 +17,13 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
     use SkipsErrors;
 
     public $errores = [];
+    public $importados = [];
+    public $duplicados = [];
+    public $sinCobranza = [];
+
+
+
+
     protected $empresaId;
 
     public function __construct($empresaId = null)
@@ -44,7 +51,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
         // Validar duplicados
         if (DocumentoFinanciero::where('folio', $folioExcel)->exists()) {
-            $this->errores[] = "El folio {$folioExcel} ya existe y no será importado.";
+            $this->duplicados[] = $folioExcel;
             return null;
         }
 
@@ -53,12 +60,13 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
         
         $cobranza = Cobranza::where('rut_cliente', $row['rut_cliente'] ?? null)->first();
-
-
-
         if (!$cobranza) {
-            $this->errores[] = "No existe cobranza para la razón social '{$row['razon_social']}' (RUT: {$row['rut_cliente']}). 
-                                Se importó el documento, pero no se calculó fecha de vencimiento.";
+            $this->sinCobranza[] = [
+                'razon_social' => $row['razon_social'],
+                'rut_cliente' => $row['rut_cliente'],
+                'folio' => $folioExcel,
+            ];
+            return null;
         }
 
 
@@ -67,6 +75,8 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
             Carbon::parse($fechaDocto)->toDateString(),
             $cobranza?->creditos
         );
+
+        $this->importados[] = $folioExcel;
 
 
         return new DocumentoFinanciero([

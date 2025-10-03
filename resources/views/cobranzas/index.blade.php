@@ -4,11 +4,38 @@
 
 <div class="container">
 
+        {{-- Mensajes de éxito / error --}}
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+            {{ session('success') }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Cerrar">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    @endif
+
     <div class="row">
+
+    <div class="d-flex justify-content-between mb-3">
+        <h2>Cobranzas</h2>
+        <a href="{{ route('cobranzas.create') }}" class="btn btn-primary">+ Nueva Cobranza</a>
+    </div>   
+
+
         <div class="col-lg-10">
             <div class="card shadow-sm">
                 <div class="card-body">
+
+
+
+
                     <div class="table-responsive">
+
+
+
+
+
+
                         <table class="table table-hover align-middle text-center">
                             <thead class="thead-light">
                                 <tr>
