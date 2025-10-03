@@ -14,15 +14,20 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
      */
     public function collection()
     {
-        // Traemos la relación con empresa para poder usarla en el mapping
-        return DocumentoFinanciero::with('empresa')->get();
+        // Traemos empresa y abonos
+        return DocumentoFinanciero::with(['empresa', 'abonos'])->get();
     }
+
 
     /**
      * Define cómo se exporta cada fila
      */
     public function map($doc): array
     {
+        $totalAbonado = $doc->abonos->sum('monto');
+        $saldoPendiente = $doc->monto_total - $totalAbonado;
+        $ultimaFechaAbono = $doc->abonos->max('fecha_abono');
+
         return [
             $doc->id,
             $doc->nro,
@@ -33,7 +38,7 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             $doc->folio,
             $doc->fecha_docto,
             $doc->fecha_vencimiento,
-            $doc->status_final, // 👈 se agrega el estado calculado
+            $doc->status_final,
             $doc->fecha_recepcion,
             $doc->fecha_acuse_recibo,
             $doc->fecha_reclamo,
@@ -41,6 +46,12 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             $doc->monto_neto,
             $doc->monto_iva,
             $doc->monto_total,
+
+            // 🔹 Nuevos campos
+            $totalAbonado,
+            $saldoPendiente,
+            $ultimaFechaAbono ? \Carbon\Carbon::parse($ultimaFechaAbono)->format('Y-m-d') : null,
+
             $doc->iva_retenido_total,
             $doc->iva_retenido_parcial,
             $doc->iva_no_retenido,
@@ -78,6 +89,7 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
         ];
     }
 
+
     /**
      * Encabezados de las columnas en el Excel
      */
@@ -93,7 +105,7 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             'Folio',
             'Fecha Documento',
             'Fecha Vencimiento',
-            'Estado Vencimiento', // 👈 nuevo encabezado
+            'Estado Vencimiento',
             'Fecha Recepción',
             'Fecha Acuse Recibo',
             'Fecha Reclamo',
@@ -101,6 +113,12 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             'Monto Neto',
             'Monto IVA',
             'Monto Total',
+
+            // 🔹 Nuevos campos
+            'Total Abonado',
+            'Saldo Pendiente',
+            'Última Fecha de Abono',
+
             'IVA Retenido Total',
             'IVA Retenido Parcial',
             'IVA No Retenido',

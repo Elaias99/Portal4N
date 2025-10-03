@@ -30,8 +30,26 @@ class DocumentoFinancieroController extends Controller
             $query->where('folio', 'like', "%{$request->folio}%");
         }
 
-        if ($request->filled('fecha_docto')) {
-            $query->whereDate('fecha_docto', $request->fecha_docto);
+        if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
+            $query->whereBetween('fecha_docto', [$request->fecha_inicio, $request->fecha_fin]);
+        } elseif ($request->filled('fecha_inicio')) {
+            $query->whereDate('fecha_docto', '>=', $request->fecha_inicio);
+        } elseif ($request->filled('fecha_fin')) {
+            $query->whereDate('fecha_docto', '<=', $request->fecha_fin);
+        }
+
+        // 🔹 Filtro por rango de Fecha Vencimiento
+        if ($request->filled('vencimiento_inicio') && $request->filled('vencimiento_fin')) {
+            $query->whereBetween('fecha_vencimiento', [$request->vencimiento_inicio, $request->vencimiento_fin]);
+        } elseif ($request->filled('vencimiento_inicio')) {
+            $query->whereDate('fecha_vencimiento', '>=', $request->vencimiento_inicio);
+        } elseif ($request->filled('vencimiento_fin')) {
+            $query->whereDate('fecha_vencimiento', '<=', $request->vencimiento_fin);
+        }
+
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
         }
 
         $documentoFinancieros = $query->orderBy('fecha_docto', 'desc')->paginate(7);
@@ -108,11 +126,12 @@ class DocumentoFinancieroController extends Controller
 
         // Si es uno de los estados manuales → guardamos la fecha actual
         if (in_array($nuevoStatus, ['Abono', 'Pago', 'Cobranza judicial'])) {
-            $documento->fecha_estado_manual = now();
+            // Usa la fecha enviada desde el formulario o, si no existe, la fecha actual
+            $documento->fecha_estado_manual = $request->fecha_estado_manual ?? now();
         } else {
-            // Si vuelve a un estado calculado (Al día / Vencido) limpiamos la fecha
             $documento->fecha_estado_manual = null;
         }
+
 
         $documento->save();
 
@@ -127,6 +146,45 @@ class DocumentoFinancieroController extends Controller
         $fecha = now()->format('Y-m-d_H-i-s');
         return Excel::download(new DocumentosExport, "documentos_financieros_{$fecha}.xlsx");
     }
+
+
+
+    public function storeAbono(Request $request, DocumentoFinanciero $documento)
+    {
+        $request->validate([
+            'monto' => 'required|integer|min:1',
+            'fecha_abono' => 'required|date|before_or_equal:today',
+        ], [
+            'fecha_abono.before_or_equal' => 'La fecha del abono no debe sobrepasar la fecha actual.',
+            'fecha_abono.required' => 'La fecha del abono es obligatoria.',
+        ]);
+
+
+        // Validar que el abono no supere el saldo pendiente
+        $totalAbonado = $documento->abonos()->sum('monto');
+        $saldoPendiente = $documento->monto_total - $totalAbonado;
+
+        if ($request->monto > $saldoPendiente) {
+            return back()
+                ->withErrors(['monto' => 'El abono no puede ser mayor al saldo pendiente.'])
+                ->withInput();
+        }
+
+        // Guardar el abono en la tabla abonos
+        $documento->abonos()->create([
+            'monto' => $request->monto,
+            'fecha_abono' => $request->fecha_abono,
+        ]);
+
+        // 🔥 Actualizar el documento con status "Abono" y la fecha manual como hoy
+        $documento->update([
+            'status' => 'Abono',
+            'fecha_estado_manual' => now(),
+        ]);
+
+        return back()->with('success', 'Abono registrado correctamente.');
+    }
+
 
 
 

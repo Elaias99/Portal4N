@@ -78,6 +78,12 @@ class DocumentoFinanciero extends Model
         return $this->belongsTo(Empresa::class);
     }
 
+    public function abonos()
+    {
+        return $this->hasMany(Abono::class, 'documento_financiero_id');
+    }
+
+
 
 
 
@@ -112,6 +118,16 @@ class DocumentoFinanciero extends Model
 
         return 'Sin cálculo';
     }
+
+    public function getEstaVencidoAttribute()
+    {
+        if (!$this->fecha_vencimiento) {
+            return false;
+        }
+
+        return Carbon::parse($this->fecha_vencimiento)->isPast();
+    }
+
 
 
 

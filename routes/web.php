@@ -31,7 +31,7 @@ use App\Http\Controllers\EquipoController;
 use App\Http\Controllers\CotizadorController;
 use App\Http\Controllers\CobranzaController;
 use App\Http\Controllers\DocumentoFinancieroController;
-
+use App\Http\Controllers\AbonoController;
 use App\Http\Controllers\TrackingProductoController;
 
 Route::get('/', function () {
@@ -256,6 +256,10 @@ Route::get('cobranzas/export', [App\Http\Controllers\DocumentoFinancieroControll
     ->name('cobranzas.export');
 
 
+
+Route::post('/documentos/{documento}/abonos', [DocumentoFinancieroController::class, 'storeAbono'])
+    ->name('documentos.abonos.store');    
+
 Route::resource('cobranzas', CobranzaController::class);
 
 
@@ -266,6 +270,9 @@ Route::resource('cotizadores', CotizadorController::class);
 Route::post('/cotizadores/calcular-distancia', [CotizadorController::class, 'calcularDistancia'])
     ->name('cotizadores.calcular-distancia');
 
+// abonos
+Route::get('/documentos/{documento}/abonos', [AbonoController::class, 'index'])
+    ->name('abonos.index');
 
 
 // Ruta para desvincular un empleado

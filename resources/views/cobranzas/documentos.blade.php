@@ -204,9 +204,12 @@
 
                         <div class="mb-3">
                             <a href="{{ route('cobranzas.index') }}" class="btn btn-outline-secondary w-100">
-                                Cobranzas
+                                Creditos
                             </a>
                         </div>
+
+
+
                     @endslot
 
                     @slot('filtros')
@@ -222,10 +225,69 @@
                             <label class="form-label">Folio:</label>
                             <input type="text" name="folio" class="form-control" value="{{ request('folio') }}">
                         </div>
+
                         <div class="mb-3">
-                            <label class="form-label">Fecha Documento:</label>
-                            <input type="date" name="fecha_docto" class="form-control" value="{{ request('fecha_docto') }}">
+                            <label class="form-label">Fecha Docto:</label>
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="small text-muted">Desde</label>
+                                    <input type="date" 
+                                        name="fecha_inicio" 
+                                        class="form-control" 
+                                        value="{{ request('fecha_inicio') }}">
+                                </div>
+                                <div class="col-6">
+                                    <label class="small text-muted">Hasta</label>
+                                    <input type="date" 
+                                        name="fecha_fin" 
+                                        class="form-control" 
+                                        value="{{ request('fecha_fin') }}">
+                                </div>
+                            </div>
                         </div>
+
+
+                        <div class="mb-3">
+                            <label class="form-label">Fecha Vencimiento:</label>
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="small text-muted">Desde</label>
+                                    <input type="date" 
+                                        name="vencimiento_inicio" 
+                                        class="form-control" 
+                                        value="{{ request('vencimiento_inicio') }}">
+                                </div>
+                                <div class="col-6">
+                                    <label class="small text-muted">Hasta</label>
+                                    <input type="date" 
+                                        name="vencimiento_fin" 
+                                        class="form-control" 
+                                        value="{{ request('vencimiento_fin') }}">
+                                </div>
+                            </div>
+                        </div>
+
+
+                        
+
+
+
+
+
+
+
+                        <div class="mb-3">
+                            <label class="form-label">Estado:</label>
+                            <select name="status" class="form-control">
+                                <option value="">-- Todos --</option>
+                                <option value="Al día" {{ request('status') == 'Al día' ? 'selected' : '' }}>Al día</option>
+                                <option value="Vencido" {{ request('status') == 'Vencido' ? 'selected' : '' }}>Vencido</option>
+                                <option value="Abono" {{ request('status') == 'Abono' ? 'selected' : '' }}>Abono</option>
+                                <option value="Pago" {{ request('status') == 'Pago' ? 'selected' : '' }}>Pago</option>
+                                <option value="Cobranza judicial" {{ request('status') == 'Cobranza judicial' ? 'selected' : '' }}>Cobranza judicial</option>
+                            </select>
+                        </div>
+
                     @endslot
                 @endcomponent
             </div>
@@ -234,96 +296,110 @@
             <div class="col-lg-9">
                 <div class="table-responsive table-container">
                     <table class="table table-hover align-middle">
-                        <thead>
+
+
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Empresa</th>
+                            <th>Tipo Doc</th>
+                            <th>Rut Cliente</th>
+                            <th>Razón Social</th>
+                            <th>Folio</th>
+                            <th>Fecha Docto</th>
+                            <th>Fecha Vencimiento</th>
+                            <th>Fecha Estado Manual</th>
+                            <th class="text-right">Monto Exento</th>
+                            <th class="text-right">Monto Neto</th>
+                            <th class="text-right">Monto IVA</th>
+                            <th class="text-right">Monto Total</th>
+                            <th class="text-right">Saldo Pendiente</th>
+                            <th class="text-right">Acción</th>
+                        </tr>
+                    </thead>
+
+
+                    <tbody>
+                        @foreach ($documentoFinancieros as $doc)
                             <tr>
-                                <th>Status</th>
-                                <th>Empresa</th>
-                                <th>Tipo Doc</th>
-                                <th>Rut Cliente</th>
-                                <th>Razón Social</th>
-                                <th>Folio</th>
-                                <th>Fecha Docto</th>
-                                <th>Fecha Vencimiento</th>
-                                <th>Fecha Estado Manual</th>
-                                <th class="text-right">Monto Exento</th>
-                                <th class="text-right">Monto Neto</th>
-                                <th class="text-right">Monto IVA</th>
-                                <th class="text-right">Monto Total</th>
-                                <th>Tipo Docto. Ref.</th>
-                                <th>Folio Docto. Ref.</th>
+                                <td>
+
+                                    @if($doc->status_final === 'Vencido')
+                                        <span class="status-badge status-rechazado">Vencido</span>
+                                    @elseif($doc->status_final === 'Al día')
+                                        <span class="status-badge status-pagado">Al día</span>
+                                    @elseif(in_array($doc->status_final, ['Abono', 'Pago', 'Cobranza judicial']))
+                                        <span class="status-badge {{ $doc->esta_vencido ? 'status-rechazado' : 'status-pagado' }}">
+                                            {{ $doc->status_final }}
+                                        </span>
+                                    @else
+                                        <span class="text-muted">Sin estado</span>
+                                    @endif
+
+
+
+                                    {{-- Botón para abrir modal --}}
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-secondary mt-2" 
+                                            data-toggle="modal" 
+                                            data-target="#modalStatus-{{ $doc->id }}">
+                                        Editar
+                                    </button>
+
+                                    @include('cobranzas.modal_status', ['doc' => $doc])
+                                </td>
+
+                                <td>{{ $doc->empresa?->Nombre ?? 'Sin empresa' }}</td>
+                                <td>{{ $doc->tipo_doc }}</td>
+                                <td>{{ $doc->rut_cliente }}</td>
+                                <td>{{ $doc->razon_social }}</td>
+                                <td>{{ $doc->folio }}</td>
+                                <td>{{ \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') }}</td>
+
+                                <td>
+                                    @if($doc->fecha_vencimiento)
+                                        {{ \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') }}
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+
+                                <td>
+                                    @if($doc->fecha_estado_manual)
+                                        {{ \Carbon\Carbon::parse($doc->fecha_estado_manual)->format('d-m-Y') }}
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+
+                                <td class="text-right">${{ number_format($doc->monto_exento, 0, ',', '.') }}</td>
+                                <td class="text-right">${{ number_format($doc->monto_neto, 0, ',', '.') }}</td>
+                                <td class="text-right">${{ number_format($doc->monto_iva, 0, ',', '.') }}</td>
+                                <td class="text-right fw-bold">${{ number_format($doc->monto_total, 0, ',', '.') }}</td>
+
+                                {{-- Saldo Pendiente --}}
+                                <td class="text-right text-danger fw-bold">
+                                    ${{ number_format($doc->monto_total - $doc->abonos->sum('monto'), 0, ',', '.') }}
+                                </td>
+
+                                <td class="text-center">
+                                    @if($doc->abonos->isNotEmpty())
+                                        <a href="{{ route('abonos.index', $doc->id) }}" class="btn btn-sm btn-outline-primary">
+                                            Ver abonos ({{ $doc->abonos->count() }})
+                                        </a>
+                                    @else
+                                        <span class="text-muted">Sin abonos</span>
+                                    @endif
+                                </td>
+
+
+
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($documentoFinancieros as $doc)
-                                <tr>
-                                    <td>
-                                        <form action="{{ route('documentos.updateStatus', $doc->id) }}" method="POST" class="status-form">
-                                            @csrf
-                                            @method('PATCH')
+                        @endforeach
+                    </tbody>
 
-                                            {{-- Mostrar status final --}}
-                                            @if($doc->status_final === 'Vencido')
-                                                <span class="status-badge status-rechazado">Vencido</span>
-                                            @elseif($doc->status_final === 'Al día')
-                                                <span class="status-badge status-pagado">Al día</span>
-                                            @elseif($doc->status_final === 'Pago')
-                                                <span class="status-badge status-pagado">Pago</span>
-                                            @elseif($doc->status_final === 'Abono')
-                                                <span class="status-badge status-pagado">Abono</span>
-                                            @elseif($doc->status_final === 'Cobranza judicial')
-                                                <span class="status-badge status-pagado">Cobranza judicial</span>
-                                            @else
-                                                <span class="text-muted">Sin estado</span>
-                                            @endif
 
-                                            {{-- Select --}}
-                                            <select name="status" class="form-control form-control-sm mt-1"
-                                                    onchange="toggleFechaEstado(this, {{ $doc->id }})">
-                                                <option value="" {{ !$doc->status ? 'selected' : '' }}>Sin estado</option>
-                                                <option value="Abono" {{ $doc->status == 'Abono' ? 'selected' : '' }}>Abono</option>
-                                                <option value="Cobranza judicial" {{ $doc->status == 'Cobranza judicial' ? 'selected' : '' }}>Cobranza judicial</option>
-                                                <option value="Pago" {{ $doc->status == 'Pago' ? 'selected' : '' }}>Pago</option>
-                                            </select>
 
-                                            {{-- Campo oculto para enviar la fecha desde otra columna --}}
-                                            <input type="hidden" name="fecha_estado_manual" id="fecha-hidden-{{ $doc->id }}" value="{{ $doc->fecha_estado_manual }}">
-                                            <button type="submit" class="btn btn-sm btn-primary mt-2">Guardar</button>
-                                        </form>
-                                    </td>
-
-                                    <td>{{ $doc->empresa?->Nombre ?? 'Sin empresa' }}</td>
-                                    <td>{{ $doc->tipo_doc }}</td>
-                                    <td>{{ $doc->rut_cliente }}</td>
-                                    <td>{{ $doc->razon_social }}</td>
-                                    <td>{{ $doc->folio }}</td>
-                                    <td>{{ \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') }}</td>
-
-                                    <td>
-                                        @if($doc->fecha_vencimiento)
-                                            {{ \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') }}
-                                        @else
-                                            <span class="text-muted">-</span>
-                                        @endif
-                                    </td>
-
-                                    {{-- Fecha Estado Manual --}}
-                                    <td>
-                                        <input type="date" id="fecha-input-{{ $doc->id }}"
-                                               class="form-control form-control-sm"
-                                               value="{{ $doc->fecha_estado_manual ? \Carbon\Carbon::parse($doc->fecha_estado_manual)->format('Y-m-d') : '' }}"
-                                               style="display: {{ in_array($doc->status, ['Abono','Pago','Cobranza judicial']) ? 'block' : 'none' }}"
-                                               onchange="document.getElementById('fecha-hidden-{{ $doc->id }}').value = this.value">
-                                    </td>
-
-                                    <td class="text-right">${{ number_format($doc->monto_exento, 0, ',', '.') }}</td>
-                                    <td class="text-right">${{ number_format($doc->monto_neto, 0, ',', '.') }}</td>
-                                    <td class="text-right">${{ number_format($doc->monto_iva, 0, ',', '.') }}</td>
-                                    <td class="text-right fw-bold">${{ number_format($doc->monto_total, 0, ',', '.') }}</td>
-                                    <td>{{ $doc->tipo_docto_referencia }}</td>
-                                    <td>{{ $doc->folio_docto_referencia }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
                     </table>
                 </div>
 

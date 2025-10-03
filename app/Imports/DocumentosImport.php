@@ -54,10 +54,19 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
         
         $cobranza = Cobranza::where('rut_cliente', $row['rut_cliente'] ?? null)->first();
 
+
+
         if (!$cobranza) {
             $this->errores[] = "No existe cobranza para la razón social '{$row['razon_social']}' (RUT: {$row['rut_cliente']}). 
                                 Se importó el documento, pero no se calculó fecha de vencimiento.";
         }
+
+
+        $fechaDocto = $this->transformDate($row['fecha_docto']);
+        $fechaVencimiento = $this->calcularFechaVencimiento(
+            Carbon::parse($fechaDocto)->toDateString(),
+            $cobranza?->creditos
+        );
 
 
         return new DocumentoFinanciero([
@@ -122,6 +131,8 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                 'tasa_otro_imp' => $row['tasa_otro_imp'],
                 'cobranza_id' => $cobranza?->id,
                 'empresa_id' => $this->empresaId,
+
+                'status' => $this->definirEstadoInicial($fechaVencimiento),
             ]
         );
     }
@@ -194,6 +205,15 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
         } catch (\Exception $e) {
             return null; // en caso de error con fechas
         }
+    }
+
+    private function definirEstadoInicial($fechaVencimiento)
+    {
+        if (!$fechaVencimiento) {
+            return null; // o "Sin estado"
+        }
+
+        return Carbon::parse($fechaVencimiento)->isPast() ? 'Vencido' : 'Al día';
     }
 
 
