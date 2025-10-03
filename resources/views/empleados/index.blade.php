@@ -37,9 +37,17 @@ $notificaciones = Auth::user()->unreadNotifications
             ])
                 @slot('acciones')
                     <div class="d-grid gap-2 mt-2">
-                        <a href="{{ route('contratos.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Contratos">
-                            <i class="fa-solid fa-file-signature me-2"></i> Contratos
-                        </a>
+                        {{-- 🔹 Nuevo acceso al Reporte de Documentos Financieros --}}
+                        @if (in_array(Auth::id(), [1, 405]))
+                            <a href="{{ route('cobranzas.documentos') }}" 
+                            class="btn btn-outline-secondary text-start" 
+                            data-bs-toggle="tooltip" 
+                            title="Reporte de Documentos Financieros">
+                                <i class="fa-solid fa-file-invoice-dollar me-2"></i> Cobranzas
+                            </a>
+                        @endif
+
+
 
                         <a href="{{ route('historial-vacacion.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Vacaciones">
                             <i class="fa-solid fa-plane-departure me-2"></i> Vacaciones
@@ -48,6 +56,10 @@ $notificaciones = Auth::user()->unreadNotifications
                         <a href="{{ route('areas.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Áreas">
                             <i class="fa-solid fa-person me-2"></i> Áreas
                         </a>
+
+
+
+
                     </div>
                 @endslot
 
