@@ -120,6 +120,15 @@ class DocumentoFinancieroController extends Controller
             }
         }
 
+
+        // 🧾 3️⃣ Mensajes específicos para notas de crédito
+        if (count($import->notasCredito) > 0) {
+            foreach ($import->notasCredito as $nota) {
+                $mensajes[] = $nota;
+            }
+        }
+
+
         // ⚠️ 3️⃣ Si hubo observaciones (pero no errores estructurales)
         if (count($mensajes) > 0) {
             return redirect()->route('cobranzas.documentos')

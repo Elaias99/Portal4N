@@ -65,6 +65,8 @@ class DocumentoFinanciero extends Model
 
         'fecha_estado_manual',
         'status_original',
+
+        'referencia_id'
         
     ];
 
@@ -88,6 +90,20 @@ class DocumentoFinanciero extends Model
     {
         return $this->hasMany(MovimientoDocumento::class, 'documento_financiero_id');
     }
+
+
+    // Documento referenciado (por ejemplo, la factura asociada a una nota de crédito)
+    public function referencia()
+    {
+        return $this->belongsTo(DocumentoFinanciero::class, 'referencia_id');
+    }
+
+    // 🔁 Documentos que hacen referencia a este (por ejemplo, notas de crédito aplicadas)
+    public function referenciados()
+    {
+        return $this->hasMany(DocumentoFinanciero::class, 'referencia_id');
+    }
+
 
 
 

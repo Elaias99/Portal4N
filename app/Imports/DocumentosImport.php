@@ -20,6 +20,8 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
     public $importados = [];
     public $duplicados = [];
     public $sinCobranza = [];
+    public $notasCredito = [];
+
 
     protected $empresaId;
 
@@ -44,8 +46,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
             return null;
         }
 
-
-            // 🔹 Verificar estructura (solo la primera vez)
+        // 🔹 Verificar estructura (solo la primera vez)
         static $estructuraVerificada = false;
         if (!$estructuraVerificada) {
             $estructuraVerificada = true;
@@ -91,10 +92,50 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
         );
 
         $estadoInicial = $this->definirEstadoInicial($fechaVencimiento);
-        $this->importados[] = $folioExcel;
 
-        // 🧩 AQUÍ VIENE EL AJUSTE CLAVE
-        return new DocumentoFinanciero([
+        // 🔹 Verificar si es una Nota de Crédito (tipo 61)
+        if ((int)($row['tipo_doc'] ?? 0) === 61) {
+
+            $tipoReferencia = $row['tipo_docto_referencia'] ?? null;
+            $folioReferencia = $row['folio_docto_referencia'] ?? null;
+
+            if ($tipoReferencia && $folioReferencia) {
+                $factura = DocumentoFinanciero::where('tipo_doc', $tipoReferencia)
+                    ->where('folio', $folioReferencia)
+                    ->first();
+
+                // Crear la nota de crédito con vínculo (si existe la factura)
+                $documento = new DocumentoFinanciero([
+                    'folio' => $folioExcel,
+                    'nro' => $row['nro'],
+                    'tipo_doc' => $row['tipo_doc'],
+                    'tipo_venta' => $row['tipo_venta'],
+                    'rut_cliente' => $row['rut_cliente'],
+                    'razon_social' => $row['razon_social'],
+                    'fecha_docto' => $fechaDocto,
+                    'fecha_vencimiento' => $fechaVencimiento,
+                    'monto_total' => $this->cleanNumber($row['monto_total']),
+                    'empresa_id' => $this->empresaId,
+                    'cobranza_id' => $cobranza?->id,
+                    'status_original' => $estadoInicial,
+                    'status' => $estadoInicial,
+                    'referencia_id' => $factura?->id, // 👈 vínculo a la factura si existe
+                ]);
+
+                $documento->save();
+
+                if ($factura) {
+                    $this->notasCredito[] = "Nota de crédito folio {$row['folio']} vinculada correctamente a la factura {$factura->folio}.";
+                } else {
+                    $this->notasCredito[] = "⚠️ No se encontró la factura referenciada ({$tipoReferencia} - Folio {$folioReferencia}) para la nota de crédito {$row['folio']}.";
+                }
+
+                return null; // Evitar procesar como factura normal
+            }
+        }
+
+        // 🧩 AQUÍ VIENE EL AJUSTE CLAVE (para facturas normales)
+        $documento = new DocumentoFinanciero([
             'folio' => $folioExcel,
             'nro' => $row['nro'],
             'tipo_doc' => $row['tipo_doc'],
@@ -156,7 +197,15 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
             'status_original' => $estadoInicial,
             'status' => $estadoInicial,
         ]);
+
+        // Registrar como importado solo después de todo el proceso
+        $this->importados[] = $folioExcel;
+
+        return $documento;
     }
+
+
+
 
     public function onError(Throwable $e)
     {
