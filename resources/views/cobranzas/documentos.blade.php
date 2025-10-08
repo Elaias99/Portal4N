@@ -1,427 +1,466 @@
 @extends('layouts.app')
 
 <style>
-    /* ===== Estilos premium de la tabla ===== */
-
     body {
-        font-family: 'Segoe UI', Tahoma, sans-serif;
-        background-color: #f8f9fb;
+        font-family: 'Inter', 'Segoe UI', Tahoma, sans-serif;
+        background-color: #f5f7fa;
+        color: #2b2b2b;
+        line-height: 1.5;
     }
 
+    /* ===== TITULO ===== */
     h1 {
-        font-weight: 700;
-        color: #1c1c1c;
-        font-size: 1.8rem;
+        font-weight: 600;
+        color: #222;
+        font-size: 1.9rem;
+        text-align: center;
+        margin-bottom: 1.8rem;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
     }
 
-    /* Encabezados */
-    .table thead th {
-        background-color: #f4f6f8;
+    /* ===== CONTENEDOR TABLA ===== */
+    .table-responsive {
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+
+    /* ===== TABLA PERSONALIZADA ===== */
+    .custom-table th {
+        background-color: #f9fafb;
+        color: #495057;
         font-weight: 600;
         font-size: 0.9rem;
         text-align: center;
-        padding: 12px 10px;
-        border-bottom: 2px solid #dee2e6;
+        padding: 14px;
+        border-bottom: 2px solid #e9ecef;
     }
 
-    /* Celdas */
-    .table tbody td {
-        padding: 12px 10px;
+    .custom-table td {
+        padding: 12px;
+        font-size: 0.9rem;
         vertical-align: middle;
-        font-size: 0.88rem;
-        border-top: 1px solid #e9ecef;
+        border-top: 1px solid #f1f3f5;
+        transition: background-color 0.2s ease-in-out;
     }
 
-    /* Zebra striping */
-    .table tbody tr:nth-child(odd) {
-        background-color: #fafbfc;
+    .custom-table tr:nth-child(odd) {
+        background-color: #fcfcfc;
     }
 
-    /* Filas hover */
-    .table-hover tbody tr:hover td {
-        background-color: #eef4fb;
+    .custom-table tr:hover td {
+        background-color: #f4f8ff;
     }
 
-    /* Alinear montos */
-    .text-right {
-        text-align: right;
-    }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .fw-bold { font-weight: 600; color: #0b4da1; }
 
-    /* Resaltar monto total */
-    .fw-bold {
-        color: #0d47a1;
-        font-weight: 600;
-    }
-
-    /* Contenedor elegante */
-    .table-container {
-        border: 1px solid #dee2e6;
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.06);
-        background: #fff;
-    }
-
-    /* Estilos para STATUS */
+    /* ===== STATUS BADGES ===== */
     .status-badge {
         display: inline-block;
-        font-size: 0.8rem;
+        padding: 5px 12px;
+        font-size: 0.78rem;
         font-weight: 600;
-        padding: 5px 10px;
         border-radius: 20px;
         min-width: 90px;
         text-align: center;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .status-badge:hover {
+        transform: translateY(-1px);
+    }
+
+    .status-pagado {
+        background-color: #eaf8ee;
+        color: #198754;
+        border: 1px solid #cfe7d5;
+    }
+    .status-rechazado {
+        background-color: #fde8e8;
+        color: #b02a37;
+        border: 1px solid #f5c2c7;
     }
     .status-pendiente {
         background-color: #fff3cd;
         color: #856404;
         border: 1px solid #ffeeba;
     }
-    .status-pagado {
-        background-color: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-    }
-    .status-rechazado {
-        background-color: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-    }
 
-    .status-form select {
+    /* ===== BOTONES ===== */
+    .btn {
         font-size: 0.8rem;
-        border-radius: 6px;
-        padding: 4px 6px;
+        border-radius: 8px;
+        padding: 5px 10px;
+        transition: all 0.2s ease;
     }
 
+    .btn-outline-secondary {
+        border: 1px solid #ced4da;
+        color: #495057;
+    }
+    .btn-outline-secondary:hover {
+        background-color: #f1f3f5;
+    }
+
+    .btn-outline-primary {
+        border: 1px solid #0d6efd;
+        color: #0d6efd;
+    }
+    .btn-outline-primary:hover {
+        background-color: #e7f0ff;
+    }
+
+    /* ===== ALERTAS ===== */
     .custom-alert {
         border-left: 6px solid;
-        border-radius: 8px;
-        padding: 12px 15px;
+        border-radius: 10px;
+        padding: 14px 18px;
         background-color: #fff;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-        margin-bottom: 15px;
-        font-size: 0.9rem;
-    }
-
-    .error-list {
-        max-height: 200px;
-        overflow-y: auto;
-        border: 1px solid #f1f1f1;
-        border-radius: 6px;
-        padding: 10px;
-        background: #fffdf6;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        margin-bottom: 18px;
+        font-size: 0.92rem;
     }
 
     .alert-success {
         border-left-color: #28a745 !important;
+        background-color: #f6fbf7;
     }
 
     .alert-warning {
         border-left-color: #ffc107 !important;
+        background-color: #fffaf0;
     }
 
-    .alert-icon {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
+    /* ===== SCROLL ===== */
+    .table-responsive::-webkit-scrollbar {
+        height: 8px;
     }
-
-    .alert ul li {
-        margin-bottom: 4px;
+    .table-responsive::-webkit-scrollbar-thumb {
+        background-color: #ced4da;
+        border-radius: 10px;
+    }
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background-color: #adb5bd;
     }
 </style>
 
 @section('content')
 
-    {{-- Mensajes --}}
-    @if(session('success'))
-        <div class="alert alert-success custom-alert">
-            <div class="d-flex align-items-center">
-                <div class="alert-icon bg-success mr-2"></div>
-                <div>
-                    <strong>Éxito:</strong> {{ session('success') }}
+{{-- MENSAJES UNIFICADOS Y OPTIMIZADOS --}}
+<div class="container" style="max-width: 1150px;">
+
+    {{-- 🔴 ERROR --}}
+    @if(session('error'))
+        <div class="alert alert-danger custom-alert mx-auto shadow-sm" style="max-width: 100%; border-left:5px solid #dc3545; border-radius:10px; padding:12px 16px;">
+            <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between">
+                <div class="d-flex align-items-center mb-2 mb-md-0">
+                    <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                    <div><strong>Error:</strong> {{ session('error') }}</div>
                 </div>
+
+                @if(session('detalles_errores'))
+                    <button class="btn btn-link btn-sm p-0 text-decoration-none text-danger"
+                            type="button"
+                            data-toggle="collapse"
+                            data-target="#detallesErrores"
+                            aria-expanded="false"
+                            aria-controls="detallesErrores">
+                        <i class="bi bi-caret-down-fill"></i> Ver detalles
+                    </button>
+                @endif
+            </div>
+
+            @if(session('detalles_errores'))
+                <div id="detallesErrores" class="collapse mt-2">
+                    <div class="error-list border-top pt-2"
+                        style="max-height:180px; overflow-y:auto; background:#fff8f8; border-radius:8px; padding:8px 10px;">
+                        <ul class="small mb-0 ps-3" style="list-style-type:'⚠️ '; line-height:1.4;">
+                            @foreach (session('detalles_errores') as $error)
+                                <li class="mb-1">{!! $error !!}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            @endif
+        </div>
+    @endif
+
+
+    {{-- 🟡 WARNING --}}
+    @if(session('warning'))
+        <div class="alert alert-warning custom-alert mx-auto shadow-sm" style="max-width: 100%; border-left:5px solid #ffc107; border-radius:10px; padding:12px 16px;">
+            <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between">
+                <div class="d-flex align-items-center mb-2 mb-md-0">
+                    <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
+                    <div><strong>Atención:</strong> {{ session('warning') }}</div>
+                </div>
+
+                @if(session('detalles_errores'))
+                    <button class="btn btn-link btn-sm p-0 text-decoration-none text-warning"
+                            type="button"
+                            data-toggle="collapse"
+                            data-target="#detallesErrores"
+                            aria-expanded="false"
+                            aria-controls="detallesErrores">
+                        <i class="bi bi-caret-down-fill"></i> Ver detalles
+                    </button>
+                @endif
+            </div>
+
+            @if(session('detalles_errores'))
+                <div id="detallesErrores" class="collapse mt-2">
+                    <div class="error-list border-top pt-2"
+                        style="max-height:180px; overflow-y:auto; background:#fffef5; border-radius:8px; padding:8px 10px;">
+                        <ul class="small mb-0 ps-3" style="list-style-type:'⚠️ '; line-height:1.4;">
+                            @foreach (session('detalles_errores') as $error)
+                                <li class="mb-1">{!! $error !!}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            @endif
+        </div>
+    @endif
+
+
+    {{-- 🟢 SUCCESS --}}
+    @if(session('success'))
+        <div class="alert alert-success custom-alert mx-auto shadow-sm" style="max-width: 100%; border-left:5px solid #28a745; border-radius:10px; padding:12px 16px;">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                <div><strong>Éxito:</strong> {{ session('success') }}</div>
             </div>
         </div>
     @endif
 
-    @if(session('warning'))
-        <div class="alert alert-warning custom-alert">
-            <div class="d-flex align-items-start">
-                <div class="alert-icon bg-warning mr-2"></div>
-                <div>
-                    <strong>Atención:</strong> {{ session('warning') }}
-                    @if(session('detalles_errores'))
-                        <button class="btn btn-link btn-sm p-0 ml-2" 
-                                type="button" 
-                                data-toggle="collapse" 
-                                data-target="#detallesErrores">
-                            Ver detalles
-                        </button>
-                        <div id="detallesErrores" class="collapse mt-2">
-                            <div class="error-list">
-                                <ul class="small mb-0">
-                                    @foreach (session('detalles_errores') as $error)
-                                        <li>{!! $error !!}</li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        </div>
-                    @endif
-                </div>
-            </div>
-        </div>
-    @endif
+</div>
+
+
+
+
 
     <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>Reporte de Documentos Financieros</h1>
-        </div>
 
-        <div class="row">
-            {{-- Filtros e Importación --}}
-            <div class="col-lg-3 mb-4">
-                @component('layouts.columna_izquierda', [
-                    'tituloTarjeta' => 'Accesos rápidos',
-                    'tituloFiltros' => 'Filtrar Por',
-                    'action' => route('cobranzas.documentos')
-                ])
-                    @slot('acciones')
-                        <div class="mb-3">
-                            <form action="{{ route('cobranzas.import') }}" method="POST" enctype="multipart/form-data">
-                                @csrf
-                                <input type="file" name="file" class="form-control mb-2" required>
-                                <button class="btn btn-primary w-100" type="submit">Importar Excel</button>
-                            </form>
-                        </div>
+        <h1 class="text-center mb-4" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
+            Reporte de Documentos Financieros
+        </h1>
 
-                        <div class="mb-3">
-                            <a href="{{ route('cobranzas.export') }}" class="btn btn-success w-100">
-                                Exportar Excel
-                            </a>
-                        </div>
+        {{-- === FILTROS + GESTIÓN MASIVA === --}}
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-4" style="align-items: stretch;">
 
-                        <div class="mb-3">
-                            <a href="{{ route('cobranzas.index') }}" class="btn btn-outline-secondary w-100">
-                                Creditos
-                            </a>
-                        </div>
+            {{-- TARJETA DE FILTROS --}}
+            <div class="flex-grow-1">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <form method="GET" action="{{ route('cobranzas.documentos') }}">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-3">
+                                    <label class="form-label small text-muted">Razón Social</label>
+                                    <input type="text" name="razon_social" class="form-control form-control-sm"
+                                        placeholder="Ej: CORESA" value="{{ request('razon_social') }}">
+                                </div>
 
+                                <div class="col-md-2">
+                                    <label class="form-label small text-muted">RUT Cliente</label>
+                                    <input type="text" name="rut_cliente" class="form-control form-control-sm"
+                                        placeholder="Ej: 12345678-9" value="{{ request('rut_cliente') }}">
+                                </div>
 
+                                <div class="col-md-1">
+                                    <label class="form-label small text-muted">Folio</label>
+                                    <input type="text" name="folio" class="form-control form-control-sm"
+                                        placeholder="N°" value="{{ request('folio') }}">
+                                </div>
 
-                    @endslot
-
-                    @slot('filtros')
-                        <div class="mb-3">
-                            <label class="form-label">Razón Social:</label>
-                            <input type="text" name="razon_social" class="form-control" value="{{ request('razon_social') }}">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">RUT Cliente:</label>
-                            <input type="text" name="rut_cliente" class="form-control" value="{{ request('rut_cliente') }}">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Folio:</label>
-                            <input type="text" name="folio" class="form-control" value="{{ request('folio') }}">
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Fecha Docto:</label>
-                            <div class="row">
-                                <div class="col-6">
-                                    <label class="small text-muted">Desde</label>
-                                    <input type="date" 
-                                        name="fecha_inicio" 
-                                        class="form-control" 
+                                <div class="col-md-2">
+                                    <label class="form-label small text-muted">Fecha Dcto. desde</label>
+                                    <input type="date" name="fecha_inicio" class="form-control form-control-sm"
                                         value="{{ request('fecha_inicio') }}">
                                 </div>
-                                <div class="col-6">
-                                    <label class="small text-muted">Hasta</label>
-                                    <input type="date" 
-                                        name="fecha_fin" 
-                                        class="form-control" 
+
+                                <div class="col-md-2">
+                                    <label class="form-label small text-muted">Hasta</label>
+                                    <input type="date" name="fecha_fin" class="form-control form-control-sm"
                                         value="{{ request('fecha_fin') }}">
                                 </div>
-                            </div>
-                        </div>
 
-
-                        <div class="mb-3">
-                            <label class="form-label">Fecha Vencimiento:</label>
-                            <div class="row">
-                                <div class="col-6">
-                                    <label class="small text-muted">Desde</label>
-                                    <input type="date" 
-                                        name="vencimiento_inicio" 
-                                        class="form-control" 
-                                        value="{{ request('vencimiento_inicio') }}">
-                                </div>
-                                <div class="col-6">
-                                    <label class="small text-muted">Hasta</label>
-                                    <input type="date" 
-                                        name="vencimiento_fin" 
-                                        class="form-control" 
-                                        value="{{ request('vencimiento_fin') }}">
+                                {{-- 🔹 Filtro solo con dos opciones --}}
+                                <div class="col-md-2">
+                                    <label class="form-label small text-muted">Estado Original</label>
+                                    <select name="status" class="form-select form-select-sm">
+                                        <option value="">Todos</option>
+                                        <option value="Al día" {{ request('status') == 'Al día' ? 'selected' : '' }}>Al día</option>
+                                        <option value="Vencido" {{ request('status') == 'Vencido' ? 'selected' : '' }}>Vencido</option>
+                                    </select>
                                 </div>
                             </div>
-                        </div>
 
-
-                        
-
-
-
-
-
-
-
-                        <div class="mb-3">
-                            <label class="form-label">Estado:</label>
-                            <select name="status" class="form-control">
-                                <option value="">-- Todos --</option>
-                                <option value="Al día" {{ request('status') == 'Al día' ? 'selected' : '' }}>Al día</option>
-                                <option value="Vencido" {{ request('status') == 'Vencido' ? 'selected' : '' }}>Vencido</option>
-                                <option value="Abono" {{ request('status') == 'Abono' ? 'selected' : '' }}>Abono</option>
-                                <option value="Pago" {{ request('status') == 'Pago' ? 'selected' : '' }}>Pago</option>
-                                <option value="Cobranza judicial" {{ request('status') == 'Cobranza judicial' ? 'selected' : '' }}>Cobranza judicial</option>
-                            </select>
-                        </div>
-
-                    @endslot
-                @endcomponent
+                            <div class="d-flex justify-content-end gap-2 mt-3">
+                                <a href="{{ route('cobranzas.documentos') }}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-x-circle"></i> Limpiar
+                                </a>
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-search"></i> Buscar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
 
-            {{-- Tabla principal --}}
-            <div class="col-lg-9">
-                <div class="table-responsive table-container">
-                    <table class="table table-hover align-middle">
+            {{-- TARJETA DE GESTIÓN MASIVA --}}
+            <div style="width: 260px;">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                        <h6 class="fw-bold mb-3">Gestión Masiva</h6>
 
+                        <form action="{{ route('cobranzas.import') }}" method="POST" enctype="multipart/form-data" class="mb-3">
+                            @csrf
+                            <input type="file" name="file" class="form-control form-control-sm mb-2" required>
+                            <button type="submit" class="btn btn-success btn-sm w-100">
+                                <i class="bi bi-file-earmark-arrow-up"></i> Importar Excel
+                            </button>
+                        </form>
 
-                    <thead>
+                        <a href="{{ route('cobranzas.export') }}" class="btn btn-outline-success btn-sm w-100">
+                            <i class="bi bi-file-earmark-arrow-down"></i> Exportar Excel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- === TABLA DE REGISTROS === --}}
+        <div class="table-responsive rounded shadow-sm">
+            <table class="table table-hover align-middle custom-table">
+                <thead>
+                    <tr>
+                        <th>Estado</th>
+                        <th>Empresa</th>
+                        <th>Tipo Doc</th>
+                        <th>Rut Cliente</th>
+                        <th>Razón Social</th>
+                        <th>Folio</th>
+                        <th>Fecha Docto</th>
+                        <th>Fecha Vencimiento</th>
+                        <th>Fecha Estado Manual</th>
+                        <th class="text-right">Monto Exento</th>
+                        <th class="text-right">Monto Neto</th>
+                        <th class="text-right">Monto IVA</th>
+                        <th class="text-right">Monto Total</th>
+                        <th class="text-right">Saldo Pendiente</th>
+                        <th class="text-center">Acción</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach ($documentoFinancieros as $doc)
                         <tr>
-                            <th>Status</th>
-                            <th>Empresa</th>
-                            <th>Tipo Doc</th>
-                            <th>Rut Cliente</th>
-                            <th>Razón Social</th>
-                            <th>Folio</th>
-                            <th>Fecha Docto</th>
-                            <th>Fecha Vencimiento</th>
-                            <th>Fecha Estado Manual</th>
-                            <th class="text-right">Monto Exento</th>
-                            <th class="text-right">Monto Neto</th>
-                            <th class="text-right">Monto IVA</th>
-                            <th class="text-right">Monto Total</th>
-                            <th class="text-right">Saldo Pendiente</th>
-                            <th class="text-right">Acción</th>
+                            {{-- 🔹 Estado visible según status_original (solo 2 colores) --}}
+                            <td>
+                                @php
+                                    $color = $doc->status_original === 'Vencido' ? 'bg-danger' : 'bg-success';
+                                    $estadoMostrar = $doc->status ?? $doc->status_original;
+                                @endphp
+
+                                <span class="badge {{ $color }}">
+                                    {{ $estadoMostrar }}
+                                </span>
+
+                                {{-- Botón de editar --}}
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-secondary mt-2"
+                                        data-toggle="modal"
+                                        data-target="#modalStatus-{{ $doc->id }}">
+                                    Editar
+                                </button>
+
+                                @include('cobranzas.modal_status', ['doc' => $doc])
+                            </td>
+
+                            {{-- 🔹 Empresa --}}
+                            <td>{{ $doc->empresa?->Nombre ?? 'Sin empresa' }}</td>
+
+                            {{-- 🔹 Tipo Documento --}}
+                            <td>{{ $doc->tipo_doc }}</td>
+
+                            {{-- 🔹 Rut Cliente --}}
+                            <td>{{ $doc->rut_cliente }}</td>
+
+                            {{-- 🔹 Razón Social --}}
+                            <td>{{ $doc->razon_social }}</td>
+
+                            {{-- 🔹 Folio --}}
+                            <td>{{ $doc->folio }}</td>
+
+                            {{-- 🔹 Fecha Documento --}}
+                            <td>{{ \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') }}</td>
+
+                            {{-- 🔹 Fecha Vencimiento --}}
+                            <td>
+                                {{ $doc->fecha_vencimiento ? \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') : '-' }}
+                            </td>
+
+                            {{-- 🔹 Fecha Estado Manual --}}
+                            <td>
+                                {{ $doc->fecha_estado_manual ? \Carbon\Carbon::parse($doc->fecha_estado_manual)->format('d-m-Y') : '-' }}
+                            </td>
+
+                            {{-- 🔹 Montos --}}
+                            <td class="text-right">${{ number_format($doc->monto_exento, 0, ',', '.') }}</td>
+                            <td class="text-right">${{ number_format($doc->monto_neto, 0, ',', '.') }}</td>
+                            <td class="text-right">${{ number_format($doc->monto_iva, 0, ',', '.') }}</td>
+                            <td class="text-right fw-bold">${{ number_format($doc->monto_total, 0, ',', '.') }}</td>
+
+                            {{-- 🔹 Saldo Pendiente --}}
+                            <td class="text-right text-danger fw-bold">
+                                ${{ number_format($doc->monto_total - $doc->abonos->sum('monto'), 0, ',', '.') }}
+                            </td>
+
+                            {{-- 🔹 Abonos --}}
+                            <td class="text-center">
+                                @if($doc->abonos->isNotEmpty())
+                                    <a href="{{ route('abonos.index', $doc->id) }}" class="btn btn-sm btn-outline-primary mb-2">
+                                        Ver abonos ({{ $doc->abonos->count() }})
+                                    </a>
+                                @else
+                                    <span class="text-muted d-block mb-2">Sin abonos</span>
+                                @endif
+                            </td>
                         </tr>
-                    </thead>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
 
-
-                    <tbody>
-                        @foreach ($documentoFinancieros as $doc)
-                            <tr>
-                                <td>
-
-                                    @if($doc->status_final === 'Vencido')
-                                        <span class="status-badge status-rechazado">Vencido</span>
-                                    @elseif($doc->status_final === 'Al día')
-                                        <span class="status-badge status-pagado">Al día</span>
-                                    @elseif(in_array($doc->status_final, ['Abono', 'Pago', 'Cobranza judicial']))
-                                        <span class="status-badge {{ $doc->esta_vencido ? 'status-rechazado' : 'status-pagado' }}">
-                                            {{ $doc->status_final }}
-                                        </span>
-                                    @else
-                                        <span class="text-muted">Sin estado</span>
-                                    @endif
-
-
-
-                                    {{-- Botón para abrir modal --}}
-                                    <button type="button" 
-                                            class="btn btn-sm btn-outline-secondary mt-2" 
-                                            data-toggle="modal" 
-                                            data-target="#modalStatus-{{ $doc->id }}">
-                                        Editar
-                                    </button>
-
-                                    @include('cobranzas.modal_status', ['doc' => $doc])
-                                </td>
-
-                                <td>{{ $doc->empresa?->Nombre ?? 'Sin empresa' }}</td>
-                                <td>{{ $doc->tipo_doc }}</td>
-                                <td>{{ $doc->rut_cliente }}</td>
-                                <td>{{ $doc->razon_social }}</td>
-                                <td>{{ $doc->folio }}</td>
-                                <td>{{ \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') }}</td>
-
-                                <td>
-                                    @if($doc->fecha_vencimiento)
-                                        {{ \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') }}
-                                    @else
-                                        <span class="text-muted">-</span>
-                                    @endif
-                                </td>
-
-                                <td>
-                                    @if($doc->fecha_estado_manual)
-                                        {{ \Carbon\Carbon::parse($doc->fecha_estado_manual)->format('d-m-Y') }}
-                                    @else
-                                        <span class="text-muted">-</span>
-                                    @endif
-                                </td>
-
-                                <td class="text-right">${{ number_format($doc->monto_exento, 0, ',', '.') }}</td>
-                                <td class="text-right">${{ number_format($doc->monto_neto, 0, ',', '.') }}</td>
-                                <td class="text-right">${{ number_format($doc->monto_iva, 0, ',', '.') }}</td>
-                                <td class="text-right fw-bold">${{ number_format($doc->monto_total, 0, ',', '.') }}</td>
-
-                                {{-- Saldo Pendiente --}}
-                                <td class="text-right text-danger fw-bold">
-                                    ${{ number_format($doc->monto_total - $doc->abonos->sum('monto'), 0, ',', '.') }}
-                                </td>
-
-                                <td class="text-center">
-                                    @if($doc->abonos->isNotEmpty())
-                                        <a href="{{ route('abonos.index', $doc->id) }}" class="btn btn-sm btn-outline-primary">
-                                            Ver abonos ({{ $doc->abonos->count() }})
-                                        </a>
-                                    @else
-                                        <span class="text-muted">Sin abonos</span>
-                                    @endif
-                                </td>
-
-
-
-                            </tr>
-                        @endforeach
-                    </tbody>
-
-
-
-                    </table>
-                </div>
-
-                {{-- Paginación --}}
-                <div class="mt-3 d-flex justify-content-center">
-                    {{ $documentoFinancieros->appends(request()->query())->links('pagination::bootstrap-4') }}
-                </div>
-            </div>
+        {{-- Paginación --}}
+        <div class="mt-3 d-flex justify-content-center">
+            {{ $documentoFinancieros->appends(request()->query())->links('pagination::bootstrap-4') }}
         </div>
     </div>
 
-<script>
-    function toggleFechaEstado(select, id) {
-        const inputFecha = document.getElementById('fecha-input-' + id);
-        if (['Abono', 'Pago', 'Cobranza judicial'].includes(select.value)) {
-            inputFecha.style.display = 'block';
-        } else {
-            inputFecha.style.display = 'none';
-            inputFecha.value = '';
-            document.getElementById('fecha-hidden-' + id).value = '';
+
+
+    <script>
+        function toggleFechaEstado(select, id) {
+            const inputFecha = document.getElementById('fecha-input-' + id);
+            const hiddenFecha = document.getElementById('fecha-hidden-' + id);
+
+            // Mostrar el campo de fecha solo para estados manuales
+            if (['Abono', 'Pago', 'Cobranza judicial'].includes(select.value)) {
+                if (inputFecha) inputFecha.style.display = 'block';
+            } else {
+                if (inputFecha) {
+                    inputFecha.style.display = 'none';
+                    inputFecha.value = '';
+                }
+                if (hiddenFecha) hiddenFecha.value = '';
+            }
         }
-    }
-</script>
+    </script>
+
 
 @endsection

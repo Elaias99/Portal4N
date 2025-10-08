@@ -63,6 +63,12 @@ class User extends Authenticatable
         return $this->hasOne(User::class);
     }
 
+    public function movimientos()
+    {
+        return $this->hasMany(MovimientoDocumento::class, 'user_id');
+    }
+
+
 
 
     

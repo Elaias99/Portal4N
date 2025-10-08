@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\DocumentoFinanciero;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\DocumentosImport;
-use Illuminate\Database\QueryException;
+use App\Models\MovimientoDocumento;
 use App\Exports\DocumentosExport;
 
 class DocumentoFinancieroController extends Controller
@@ -48,11 +48,12 @@ class DocumentoFinancieroController extends Controller
         }
 
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
+    if ($request->filled('status')) {
+        $query->where('status_original', $request->status);
+    }
 
-        $documentoFinancieros = $query->orderBy('fecha_docto', 'desc')->paginate(7);
+
+        $documentoFinancieros = $query->orderBy('fecha_docto', 'desc')->paginate(5);
 
 
         return view('cobranzas.documentos', compact('documentoFinancieros'));
@@ -84,20 +85,28 @@ class DocumentoFinancieroController extends Controller
             $empresa = \App\Models\Empresa::whereRaw("REPLACE(REPLACE(rut, '.', ''), '-', '-') = ?", [$rut])->first();
         }
 
-
-
-        // Pasar empresa_id al importador
+        // Ejecutar importación
         $import = new DocumentosImport($empresa?->id);
         Excel::import($import, $request->file('file'));
 
         $mensajes = [];
 
-        // Construir mensajes
-        if (count($import->importados) > 0) {
-            $mensajes[] = count($import->importados) . " documento importados correctamente: " 
-                        . implode(', ', $import->importados) . ".";
+        // 🛑 1️⃣ Si hay errores de estructura, detener inmediatamente
+        if (count($import->errores) > 0) {
+            foreach ($import->errores as $error) {
+                $mensajes[] = "⚠️ " . $error;
+            }
+
+            return redirect()->route('cobranzas.documentos')
+                ->with('error', 'El archivo no cumple con la estructura esperada.')
+                ->with('detalles_errores', $mensajes);
         }
 
+        // ✅ 2️⃣ Construir mensajes informativos
+        if (count($import->importados) > 0) {
+            $mensajes[] = count($import->importados) . " documentos importados correctamente: " 
+                        . implode(', ', $import->importados) . ".";
+        }
 
         if (count($import->duplicados) > 0) {
             $mensajes[] = "Los siguientes folios ya existían y no se importaron: " 
@@ -109,18 +118,31 @@ class DocumentoFinancieroController extends Controller
                 $mensajes[] = "No existe cobranza para la razón social '{$item['razon_social']}' (RUT: {$item['rut_cliente']}), 
                     folio {$item['folio']}. <a href='" . route('cobranzas.create') . "' target='_blank'>Cree la cobranza aquí</a>";
             }
-
         }
 
+        // ⚠️ 3️⃣ Si hubo observaciones (pero no errores estructurales)
         if (count($mensajes) > 0) {
             return redirect()->route('cobranzas.documentos')
                 ->with('warning', 'La importación finalizó con observaciones.')
                 ->with('detalles_errores', $mensajes);
         }
 
+        // 🧾 4️⃣ Registrar movimiento solo si todo fue correcto
+        if (count($import->importados) > 0) {
+            MovimientoDocumento::create([
+                'documento_financiero_id' => null,
+                'user_id' => auth()->id(),
+                'tipo_movimiento' => 'Importación masiva',
+                'descripcion' => "Se importaron " . count($import->importados) . 
+                                " documentos desde el archivo '{$filename}' el " . now()->format('d/m/Y H:i:s'),
+            ]);
+        }
 
-        return redirect()->route('cobranzas.documentos')->with('success', 'Archivo importado correctamente');
+        // 🟢 5️⃣ Mensaje final de éxito
+        return redirect()->route('cobranzas.documentos')
+            ->with('success', 'Archivo importado correctamente.');
     }
+
 
 
 
@@ -140,25 +162,40 @@ class DocumentoFinancieroController extends Controller
     {
         $request->validate([
             'status' => 'nullable|string|max:50',
+            'fecha_estado_manual' => 'nullable|date',
         ]);
 
         $nuevoStatus = $request->status;
 
+        // 🔹 Guardamos cambios en estado manual
         $documento->status = $nuevoStatus;
 
-        // Si es uno de los estados manuales → guardamos la fecha actual
+        // 🔹 Si el estado es manual (Abono, Pago, Cobranza judicial) → guarda la fecha enviada o actual
         if (in_array($nuevoStatus, ['Abono', 'Pago', 'Cobranza judicial'])) {
-            // Usa la fecha enviada desde el formulario o, si no existe, la fecha actual
             $documento->fecha_estado_manual = $request->fecha_estado_manual ?? now();
         } else {
             $documento->fecha_estado_manual = null;
         }
 
+        $original = $documento->getOriginal();
 
-        $documento->save();
+        // Guardar solo si hay cambios
+        if ($documento->isDirty(['status', 'fecha_estado_manual'])) {
+            $documento->save();
 
-        return redirect()->back()->with('success', 'Estado actualizado correctamente.');
+            MovimientoDocumento::create([
+                'documento_financiero_id' => $documento->id,
+                'user_id' => auth()->id(),
+                'tipo_movimiento' => 'Actualización de estado manual',
+                'descripcion' => "Estado manual cambiado de '{$original['status']}' a '{$documento->status}'",
+                'datos_anteriores' => $original,
+                'datos_nuevos' => $documento->getChanges(),
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Estado manual actualizado correctamente.');
     }
+
 
 
 
@@ -168,6 +205,7 @@ class DocumentoFinancieroController extends Controller
         $fecha = now()->format('Y-m-d_H-i-s');
         return Excel::download(new DocumentosExport, "documentos_financieros_{$fecha}.xlsx");
     }
+
 
 
 
@@ -181,7 +219,6 @@ class DocumentoFinancieroController extends Controller
             'fecha_abono.required' => 'La fecha del abono es obligatoria.',
         ]);
 
-
         // Validar que el abono no supere el saldo pendiente
         $totalAbonado = $documento->abonos()->sum('monto');
         $saldoPendiente = $documento->monto_total - $totalAbonado;
@@ -192,20 +229,41 @@ class DocumentoFinancieroController extends Controller
                 ->withInput();
         }
 
-        // Guardar el abono en la tabla abonos
+        // Guardar el abono
         $documento->abonos()->create([
             'monto' => $request->monto,
             'fecha_abono' => $request->fecha_abono,
         ]);
 
-        // 🔥 Actualizar el documento con status "Abono" y la fecha manual como hoy
+        // Actualizar estado del documento
         $documento->update([
             'status' => 'Abono',
             'fecha_estado_manual' => now(),
         ]);
 
+        // Registrar movimiento
+        MovimientoDocumento::create([
+            'documento_financiero_id' => $documento->id,
+            'user_id' => auth()->id(),
+            'tipo_movimiento' => 'Abono registrado',
+            'descripcion' => "Se registró un abono de {$request->monto} el {$request->fecha_abono}",
+            'datos_nuevos' => ['monto' => $request->monto, 'fecha_abono' => $request->fecha_abono],
+        ]);
+
         return back()->with('success', 'Abono registrado correctamente.');
     }
+
+
+
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////// BOTONES DE EDITAR Y ACTUALIZAR ////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
 
 

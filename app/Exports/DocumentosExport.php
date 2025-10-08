@@ -38,7 +38,11 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             $doc->folio,
             $doc->fecha_docto,
             $doc->fecha_vencimiento,
-            $doc->status_final,
+
+            // 🔹 Nuevo: estados claros
+            $doc->status_original,   // Estado al importar (Al día / Vencido)
+            $doc->status,            // Estado actual (puede ser Abono, Pago, etc.)
+
             $doc->fecha_recepcion,
             $doc->fecha_acuse_recibo,
             $doc->fecha_reclamo,
@@ -47,11 +51,12 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             $doc->monto_iva,
             $doc->monto_total,
 
-            // 🔹 Nuevos campos
+            // 🔹 Datos de abonos
             $totalAbonado,
             $saldoPendiente,
             $ultimaFechaAbono ? \Carbon\Carbon::parse($ultimaFechaAbono)->format('Y-m-d') : null,
 
+            // 🔹 Resto de columnas
             $doc->iva_retenido_total,
             $doc->iva_retenido_parcial,
             $doc->iva_no_retenido,
@@ -83,11 +88,11 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             $doc->tasa_otro_imp,
             $doc->cobranza_id,
             $doc->empresa?->Nombre ?? 'Sin empresa',
-            $doc->status,
             $doc->created_at,
             $doc->updated_at,
         ];
     }
+
 
 
     /**
@@ -105,7 +110,8 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             'Folio',
             'Fecha Documento',
             'Fecha Vencimiento',
-            'Estado Vencimiento',
+            'Estado Original',    // Nuevo encabezado
+            'Estado Actual',      // Nuevo encabezado
             'Fecha Recepción',
             'Fecha Acuse Recibo',
             'Fecha Reclamo',
@@ -113,12 +119,9 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             'Monto Neto',
             'Monto IVA',
             'Monto Total',
-
-            // 🔹 Nuevos campos
             'Total Abonado',
             'Saldo Pendiente',
             'Última Fecha de Abono',
-
             'IVA Retenido Total',
             'IVA Retenido Parcial',
             'IVA No Retenido',
@@ -150,9 +153,9 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             'Tasa Otro Impuesto',
             'Cobranza ID',
             'Empresa Nombre',
-            'Status',
             'Creado en',
             'Actualizado en',
         ];
     }
+
 }

@@ -63,7 +63,8 @@ class DocumentoFinanciero extends Model
         'status',
         'fecha_vencimiento',
 
-        'fecha_estado_manual'
+        'fecha_estado_manual',
+        'status_original',
         
     ];
 
@@ -82,6 +83,12 @@ class DocumentoFinanciero extends Model
     {
         return $this->hasMany(Abono::class, 'documento_financiero_id');
     }
+
+    public function movimientos()
+    {
+        return $this->hasMany(MovimientoDocumento::class, 'documento_financiero_id');
+    }
+
 
 
 

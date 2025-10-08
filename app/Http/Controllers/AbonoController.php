@@ -19,4 +19,81 @@ class AbonoController extends Controller
 
         return view('abonos.index', compact('documento', 'abonos', 'totalAbonado', 'saldoPendiente'));
     }
+
+
+        /**
+     * Mostrar formulario de edición de un abono específico.
+     */
+    public function edit($id)
+    {
+        $abono = \App\Models\Abono::findOrFail($id);
+        $documento = $abono->documento;
+
+        return view('abonos.edit', compact('abono', 'documento'));
+    }
+
+    /**
+     * Actualizar los datos del abono (fecha y/o monto).
+     */
+    public function update(Request $request, $id)
+    {
+        $abono = \App\Models\Abono::findOrFail($id);
+
+        $request->validate([
+            'monto' => 'required|integer|min:1',
+            'fecha_abono' => 'required|date|before_or_equal:today',
+        ], [
+            'fecha_abono.before_or_equal' => 'La fecha del abono no debe sobrepasar la fecha actual.',
+            'fecha_abono.required' => 'La fecha del abono es obligatoria.',
+        ]);
+
+        $abono->update([
+            'monto' => $request->monto,
+            'fecha_abono' => $request->fecha_abono,
+        ]);
+
+        return redirect()
+            ->route('abonos.index', $abono->documento_financiero_id)
+            ->with('success', 'Abono actualizado correctamente.');
+    }
+
+    /**
+     * Eliminar un abono específico.
+     */
+    public function destroy($id)
+    {
+        $abono = \App\Models\Abono::findOrFail($id);
+        $documento = $abono->documento;
+
+        $abono->delete();
+
+        // Recalcular abonos restantes
+        $totalAbonos = $documento->abonos()->sum('monto');
+
+        if ($totalAbonos === 0) {
+            // Si ya no hay abonos → volver a estado automático
+            $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
+                ? 'Vencido'
+                : 'Al día';
+
+            $documento->update([
+                'status' => $nuevoEstado,
+                'fecha_estado_manual' => null,
+            ]);
+        } else {
+            // Si todavía hay abonos → mantener estado Abono
+            $documento->update([
+                'status' => 'Abono',
+                'fecha_estado_manual' => now(),
+            ]);
+        }
+
+        return redirect()
+            ->route('abonos.index', $documento->id)
+            ->with('success', 'Abono eliminado y estado actualizado correctamente.');
+    }
+
+
+
+
 }

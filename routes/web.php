@@ -255,6 +255,15 @@ Route::patch('/documentos/{documento}/status', [DocumentoFinancieroController::c
 Route::get('cobranzas/export', [App\Http\Controllers\DocumentoFinancieroController::class, 'export'])
     ->name('cobranzas.export');
 
+// Mostrar formulario de edición de un documento financiero
+Route::get('/cobranzas/documentos/{documento}/edit', [DocumentoFinancieroController::class, 'edit'])
+    ->name('cobranzas.documentos.edit');
+
+// Actualizar un documento financiero
+Route::put('/cobranzas/documentos/{documento}', [DocumentoFinancieroController::class, 'update'])
+    ->name('cobranzas.documentos.update');
+
+
 
 
 Route::post('/documentos/{documento}/abonos', [DocumentoFinancieroController::class, 'storeAbono'])
@@ -271,8 +280,22 @@ Route::post('/cotizadores/calcular-distancia', [CotizadorController::class, 'cal
     ->name('cotizadores.calcular-distancia');
 
 // abonos
+// Mostrar todos los abonos de un documento
 Route::get('/documentos/{documento}/abonos', [AbonoController::class, 'index'])
     ->name('abonos.index');
+
+// Mostrar formulario para editar un abono
+Route::get('/abonos/{id}/edit', [AbonoController::class, 'edit'])
+    ->name('abonos.edit');
+
+// Actualizar un abono existente
+Route::put('/abonos/{id}', [AbonoController::class, 'update'])
+    ->name('abonos.update');
+
+// Eliminar un abono
+Route::delete('/abonos/{id}', [AbonoController::class, 'destroy'])
+    ->name('abonos.destroy');
+
 
 
 // Ruta para desvincular un empleado
