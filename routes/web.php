@@ -33,6 +33,7 @@ use App\Http\Controllers\CobranzaController;
 use App\Http\Controllers\DocumentoFinancieroController;
 use App\Http\Controllers\AbonoController;
 use App\Http\Controllers\TrackingProductoController;
+use App\Http\Controllers\CruceController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -269,6 +270,10 @@ Route::put('/cobranzas/documentos/{documento}', [DocumentoFinancieroController::
 Route::post('/documentos/{documento}/abonos', [DocumentoFinancieroController::class, 'storeAbono'])
     ->name('documentos.abonos.store');    
 
+// 🔹 Registrar un nuevo cruce
+Route::post('/documentos/{documento}/cruces', [DocumentoFinancieroController::class, 'storeCruce'])
+    ->name('documentos.cruces.store');
+
 Route::resource('cobranzas', CobranzaController::class);
 
 
@@ -295,6 +300,14 @@ Route::put('/abonos/{id}', [AbonoController::class, 'update'])
 // Eliminar un abono
 Route::delete('/abonos/{id}', [AbonoController::class, 'destroy'])
     ->name('abonos.destroy');
+
+
+/////CRUCES
+// CRUD de cruces
+Route::get('/documentos/{documento}/cruces', [CruceController::class, 'index'])->name('cruces.index');
+Route::get('/cruces/{id}/edit', [CruceController::class, 'edit'])->name('cruces.edit');
+Route::put('/cruces/{id}', [CruceController::class, 'update'])->name('cruces.update');
+Route::delete('/cruces/{id}', [CruceController::class, 'destroy'])->name('cruces.destroy');
 
 
 

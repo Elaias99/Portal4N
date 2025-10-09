@@ -267,6 +267,50 @@ class DocumentoFinancieroController extends Controller
         return back()->with('success', 'Abono registrado correctamente.');
     }
 
+    public function storeCruce(Request $request, DocumentoFinanciero $documento)
+    {
+        $request->validate([
+            'monto' => 'required|integer|min:1',
+            'fecha_cruce' => 'required|date|before_or_equal:today',
+        ], [
+            'fecha_cruce.before_or_equal' => 'La fecha del cruce no debe sobrepasar la fecha actual.',
+            'fecha_cruce.required' => 'La fecha del cruce es obligatoria.',
+        ]);
+
+        // Validar que el cruce no supere el saldo pendiente
+        $saldoPendiente = $documento->saldo_pendiente;
+
+        if ($request->monto > $saldoPendiente) {
+            return back()
+                ->withErrors(['monto' => 'El cruce no puede ser mayor al saldo pendiente actual.'])
+                ->withInput();
+        }
+
+        // Guardar el cruce
+        $documento->cruces()->create([
+            'monto' => $request->monto,
+            'fecha_cruce' => $request->fecha_cruce,
+        ]);
+
+        // Actualizar estado del documento
+        $documento->update([
+            'status' => 'Cruce',
+            'fecha_estado_manual' => now(),
+        ]);
+
+        // Registrar movimiento
+        \App\Models\MovimientoDocumento::create([
+            'documento_financiero_id' => $documento->id,
+            'user_id' => auth()->id(),
+            'tipo_movimiento' => 'Cruce registrado',
+            'descripcion' => "Se registró un cruce de {$request->monto} el {$request->fecha_cruce}",
+            'datos_nuevos' => ['monto' => $request->monto, 'fecha_cruce' => $request->fecha_cruce],
+        ]);
+
+        return back()->with('success', 'Cruce registrado correctamente.');
+    }
+
+
 
 
 }

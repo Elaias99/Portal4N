@@ -111,6 +111,13 @@ class DocumentoFinanciero extends Model
         return $this->belongsTo(TipoDocumento::class, 'tipo_documento_id');
     }
 
+    public function cruces()
+    {
+        return $this->hasMany(Cruce::class, 'documento_financiero_id');
+    }
+
+
+
 
 
 
@@ -163,7 +170,7 @@ class DocumentoFinanciero extends Model
     {
         $saldo = $this->monto_total ?? 0;
 
-        // Asegurar que las relaciones estén cargadas para evitar consultas extra
+        // Asegurar que las relaciones estén cargadas
         $referenciados = $this->relationLoaded('referenciados')
             ? $this->referenciados
             : $this->referenciados()->get();
@@ -172,23 +179,29 @@ class DocumentoFinanciero extends Model
             ? $this->abonos
             : $this->abonos()->get();
 
-        // ✅ Restar notas de crédito (tipo_documento_id = 61)
+        $cruces = $this->relationLoaded('cruces')
+            ? $this->cruces
+            : $this->cruces()->get();
+
+        // ✅ Restar notas de crédito
         $totalNotasCredito = $referenciados
             ->where('tipo_documento_id', 61)
             ->sum('monto_total');
         $saldo -= $totalNotasCredito;
 
-        // ✅ Sumar notas de débito (tipo_documento_id = 56)
+        // ✅ Sumar notas de débito
         $totalNotasDebito = $referenciados
             ->where('tipo_documento_id', 56)
             ->sum('monto_total');
         $saldo += $totalNotasDebito;
 
-        // ✅ Restar abonos
+        // ✅ Restar abonos y cruces
         $saldo -= $abonos->sum('monto');
+        $saldo -= $cruces->sum('monto');
 
         return max($saldo, 0);
     }
+
 
 
 

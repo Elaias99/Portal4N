@@ -50,16 +50,17 @@
                         <select name="status"
                                 id="status-{{ $doc->id }}"
                                 class="form-select form-select-sm"
-                                onchange="toggleAbonoFields({{ $doc->id }})">
+                                onchange="toggleEstadoFields({{ $doc->id }})">
                             <option value="">Sin estado manual</option>
                             <option value="Abono" {{ $doc->status == 'Abono' ? 'selected' : '' }}>Abono</option>
+                            <option value="Cruce" {{ $doc->status == 'Cruce' ? 'selected' : '' }}>Cruce</option>
                             <option value="Pago" {{ $doc->status == 'Pago' ? 'selected' : '' }}>Pago</option>
                             <option value="Cobranza judicial" {{ $doc->status == 'Cobranza judicial' ? 'selected' : '' }}>Cobranza judicial</option>
                         </select>
                     </div>
 
                     {{-- Fecha Estado Manual --}}
-                    <div class="form-group mb-3 fecha-estado-{{ $doc->id }}" style="display: {{ in_array($doc->status, ['Abono','Pago','Cobranza judicial']) ? 'block' : 'none' }};">
+                    <div class="form-group mb-3 fecha-estado-{{ $doc->id }}" style="display: {{ in_array($doc->status, ['Abono','Cruce','Pago','Cobranza judicial']) ? 'block' : 'none' }};">
                         <label for="fecha_estado_manual-{{ $doc->id }}" class="form-label small text-muted">Fecha Estado Manual</label>
                         <input type="date"
                                name="fecha_estado_manual"
@@ -69,7 +70,7 @@
                     </div>
                 </form>
 
-                {{-- FORMULARIO DE ABONO (solo visible si el estado es Abono) --}}
+                {{-- FORMULARIO DE ABONO --}}
                 <form action="{{ route('documentos.abonos.store', $doc->id) }}" method="POST" id="form-abono-{{ $doc->id }}" style="display: {{ $doc->status == 'Abono' ? 'block' : 'none' }};">
                     @csrf
 
@@ -77,12 +78,11 @@
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Saldo pendiente</label>
                         <input type="text" class="form-control form-control-sm"
-                               {{-- ✅ Usar el accessor actualizado del modelo --}}
                                value="${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}"
                                readonly>
                     </div>
 
-                    {{-- Monto de abono --}}
+                    {{-- Monto del abono --}}
                     <div class="form-group mb-3">
                         <label for="monto-abono-{{ $doc->id }}" class="form-label small text-muted">Monto del abono</label>
                         <input type="number" name="monto" id="monto-abono-{{ $doc->id }}" class="form-control form-control-sm @error('monto') is-invalid @enderror" min="1" required>
@@ -96,6 +96,37 @@
                         <label for="fecha-abono-{{ $doc->id }}" class="form-label small text-muted">Fecha del abono</label>
                         <input type="date" name="fecha_abono" id="fecha-abono-{{ $doc->id }}" class="form-control form-control-sm @error('fecha_abono') is-invalid @enderror" required>
                         @error('fecha_abono')
+                            <span class="invalid-feedback d-block text-danger"><strong>{{ $message }}</strong></span>
+                        @enderror
+                    </div>
+                </form>
+
+                {{-- FORMULARIO DE CRUCE (nuevo) --}}
+                <form action="{{ route('documentos.cruces.store', $doc->id) }}" method="POST" id="form-cruce-{{ $doc->id }}" style="display: {{ $doc->status == 'Cruce' ? 'block' : 'none' }};">
+                    @csrf
+
+                    {{-- Saldo pendiente --}}
+                    <div class="form-group mb-3">
+                        <label class="form-label small text-muted">Saldo pendiente</label>
+                        <input type="text" class="form-control form-control-sm"
+                               value="${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}"
+                               readonly>
+                    </div>
+
+                    {{-- Monto del cruce --}}
+                    <div class="form-group mb-3">
+                        <label for="monto-cruce-{{ $doc->id }}" class="form-label small text-muted">Monto del cruce</label>
+                        <input type="number" name="monto" id="monto-cruce-{{ $doc->id }}" class="form-control form-control-sm @error('monto') is-invalid @enderror" min="1" required>
+                        @error('monto')
+                            <span class="invalid-feedback d-block text-danger"><strong>{{ $message }}</strong></span>
+                        @enderror
+                    </div>
+
+                    {{-- Fecha del cruce --}}
+                    <div class="form-group mb-3">
+                        <label for="fecha-cruce-{{ $doc->id }}" class="form-label small text-muted">Fecha del cruce</label>
+                        <input type="date" name="fecha_cruce" id="fecha-cruce-{{ $doc->id }}" class="form-control form-control-sm @error('fecha_cruce') is-invalid @enderror" required>
+                        @error('fecha_cruce')
                             <span class="invalid-feedback d-block text-danger"><strong>{{ $message }}</strong></span>
                         @enderror
                     </div>
@@ -115,16 +146,24 @@
 
 {{-- === SCRIPT === --}}
 <script>
-    function toggleAbonoFields(id) {
+    function toggleEstadoFields(id) {
         const estado = document.getElementById('status-' + id).value;
         const formAbono = document.getElementById('form-abono-' + id);
+        const formCruce = document.getElementById('form-cruce-' + id);
         const formEstado = document.getElementById('form-status-' + id);
 
+        // Ocultar ambos formularios
+        formAbono.style.display = 'none';
+        formCruce.style.display = 'none';
+
+        // Mostrar el que corresponda
         if (estado === 'Abono') {
             formAbono.style.display = 'block';
             formEstado.querySelector('.fecha-estado-' + id).style.display = 'block';
+        } else if (estado === 'Cruce') {
+            formCruce.style.display = 'block';
+            formEstado.querySelector('.fecha-estado-' + id).style.display = 'block';
         } else {
-            formAbono.style.display = 'none';
             formEstado.querySelector('.fecha-estado-' + id).style.display =
                 ['Pago', 'Cobranza judicial'].includes(estado) ? 'block' : 'none';
         }
@@ -134,6 +173,8 @@
         const estado = document.getElementById('status-' + id).value;
         if (estado === 'Abono') {
             document.getElementById('form-abono-' + id).submit();
+        } else if (estado === 'Cruce') {
+            document.getElementById('form-cruce-' + id).submit();
         } else {
             document.getElementById('form-status-' + id).submit();
         }
