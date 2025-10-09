@@ -5,7 +5,7 @@
             {{-- === HEADER === --}}
             <div class="modal-header position-relative">
                 <h5 class="modal-title fw-bold" id="modalStatusLabel-{{ $doc->id }}">
-                    Actualizar estado - {{ $doc->razon_social }}
+                    Actualizar estado - {{ $doc->razon_social }} - folio {{ $doc->folio }} 
                 </h5>
 
                 <button type="button"
