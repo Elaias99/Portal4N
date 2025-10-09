@@ -95,7 +95,6 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
         // 🔹 Verificar si es una Nota de Crédito (tipo 61)
         if ((int)($row['tipo_doc'] ?? 0) === 61) {
-
             $tipoReferencia = $row['tipo_docto_referencia'] ?? null;
             $folioReferencia = $row['folio_docto_referencia'] ?? null;
 
@@ -104,7 +103,6 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                     ->where('folio', $folioReferencia)
                     ->first();
 
-                // Crear la nota de crédito con vínculo (si existe la factura)
                 $documento = new DocumentoFinanciero([
                     'folio' => $folioExcel,
                     'nro' => $row['nro'],
@@ -119,7 +117,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                     'cobranza_id' => $cobranza?->id,
                     'status_original' => $estadoInicial,
                     'status' => $estadoInicial,
-                    'referencia_id' => $factura?->id, // 👈 vínculo a la factura si existe
+                    'referencia_id' => $factura?->id,
                 ]);
 
                 $documento->save();
@@ -129,10 +127,13 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                 } else {
                     $this->notasCredito[] = "⚠️ No se encontró la factura referenciada ({$tipoReferencia} - Folio {$folioReferencia}) para la nota de crédito {$row['folio']}.";
                 }
-
-                return null; // Evitar procesar como factura normal
+            } else {
+                $this->notasCredito[] = "⚠️ La nota de crédito {$row['folio']} no tiene documento de referencia y fue ignorada.";
             }
+
+            return null; // 👈 Siempre salir del bloque tipo 61
         }
+
 
         // 🧩 AQUÍ VIENE EL AJUSTE CLAVE (para facturas normales)
         $documento = new DocumentoFinanciero([

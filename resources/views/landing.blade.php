@@ -53,7 +53,7 @@
 
     </section>
 
-    <footer>© 2024 4Nlogistica. Todos los derechos reservados.</footer>
+    <footer>©4Nlogistica. Todos los derechos reservados.</footer>
 
 
     <!-- Botón de acceso a manifiestos -->

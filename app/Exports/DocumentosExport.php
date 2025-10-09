@@ -25,7 +25,8 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
     public function map($doc): array
     {
         $totalAbonado = $doc->abonos->sum('monto');
-        $saldoPendiente = $doc->monto_total - $totalAbonado;
+        $saldoPendiente = $doc->saldo_pendiente; // ✅ Usa el accessor del modelo
+
         $ultimaFechaAbono = $doc->abonos->max('fecha_abono');
 
         return [

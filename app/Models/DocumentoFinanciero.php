@@ -151,6 +151,35 @@ class DocumentoFinanciero extends Model
         return Carbon::parse($this->fecha_vencimiento)->isPast();
     }
 
+    public function getSaldoPendienteAttribute()
+    {
+        $saldo = $this->monto_total ?? 0;
+
+        // Asegurar que las relaciones estén cargadas para evitar consultas extra
+        $referenciados = $this->relationLoaded('referenciados')
+            ? $this->referenciados
+            : $this->referenciados()->get();
+
+        $abonos = $this->relationLoaded('abonos')
+            ? $this->abonos
+            : $this->abonos()->get();
+
+        // Restar notas de crédito
+        $totalNotasCredito = $referenciados->where('tipo_doc', 61)->sum('monto_total');
+        $saldo -= $totalNotasCredito;
+
+        // Sumar notas de débito
+        $totalNotasDebito = $referenciados->where('tipo_doc', 56)->sum('monto_total');
+        $saldo += $totalNotasDebito;
+
+        // Restar abonos
+        $saldo -= $abonos->sum('monto');
+
+        return max($saldo, 0);
+    }
+
+
+
 
 
 

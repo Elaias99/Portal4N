@@ -145,6 +145,11 @@
     .table-responsive::-webkit-scrollbar-thumb:hover {
         background-color: #adb5bd;
     }
+    /* .container {
+        max-width: 95% !important;
+    } */
+
+    
 </style>
 
 @section('content')
@@ -242,7 +247,7 @@
 
 
 
-    <div class="container">
+    <div class="container-fluid" style="max-width: 100%;">
 
         <h1 class="text-center mb-4" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
             Reporte de Documentos Financieros
@@ -290,12 +295,22 @@
                                 {{-- 🔹 Filtro solo con dos opciones --}}
                                 <div class="col-md-2">
                                     <label class="form-label small text-muted">Estado Original</label>
-                                    <select name="status" class="form-select form-select-sm">
-                                        <option value="">Todos</option>
-                                        <option value="Al día" {{ request('status') == 'Al día' ? 'selected' : '' }}>Al día</option>
-                                        <option value="Vencido" {{ request('status') == 'Vencido' ? 'selected' : '' }}>Vencido</option>
-                                    </select>
+
+
+                                        <select name="status" class="form-select form-select-sm">
+                                            <option value="">Todos</option>
+                                            <option value="Al día" {{ request('status') == 'Al día' ? 'selected' : '' }}>
+                                                Al día ({{ $totalAlDia ?? 0 }})
+                                            </option>
+                                            <option value="Vencido" {{ request('status') == 'Vencido' ? 'selected' : '' }}>
+                                                Vencido ({{ $totalVencido ?? 0 }})
+                                            </option>
+                                        </select>
+
+
+
                                 </div>
+
                             </div>
 
                             <div class="d-flex justify-content-end gap-2 mt-3">
@@ -385,7 +400,17 @@
                             <td>{{ $doc->empresa?->Nombre ?? 'Sin empresa' }}</td>
 
                             {{-- 🔹 Tipo Documento --}}
-                            <td>{{ $doc->tipo_doc }}</td>
+                            @php
+                                $tipoNombre = match((int)$doc->tipo_doc) {
+                                    33 => 'Factura',
+                                    34 => 'Factura Exenta',
+                                    56 => 'Nota Débito',
+                                    61 => 'Nota Crédito',
+                                    default => 'Otro',
+                                };
+                            @endphp
+                            <td>{{ $tipoNombre }}</td>
+
 
                             {{-- 🔹 Rut Cliente --}}
                             <td>{{ $doc->rut_cliente }}</td>
@@ -394,20 +419,27 @@
                             <td>{{ $doc->razon_social }}</td>
 
                             {{-- 🔹 Folio --}}
-                            <td>{{ $doc->folio }}</td>
+                            <td>{{ $doc->folio }}
+                                @if($doc->referenciados->count() > 0)
+                                    <small class="badge bg-info text-dark ms-1">
+                                        Referenciado por NC Nº{{ $doc->referenciados->pluck('folio')->join(', ') }}
+                                    </small>
+                                @elseif($doc->referencia)
+                                    <small class="badge bg-warning text-dark ms-1">
+                                        Referencia a Factura Nº{{ $doc->referencia->folio }}
+                                    </small>
+                                @endif
+                            </td>
+
+
+
+
 
                             {{-- 🔹 Fecha Documento --}}
-                            <td>{{ \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') }}</td>
+                            <td><span style="white-space: nowrap;">{{ $doc->fecha_docto ? \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') : '-' }}</span></td>
+                            <td><span style="white-space: nowrap;">{{ $doc->fecha_vencimiento ? \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') : '-' }}</span></td>
+                            <td><span style="white-space: nowrap;">{{ $doc->fecha_estado_manual ? \Carbon\Carbon::parse($doc->fecha_estado_manual)->format('d-m-Y') : '-' }}</span></td>
 
-                            {{-- 🔹 Fecha Vencimiento --}}
-                            <td>
-                                {{ $doc->fecha_vencimiento ? \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') : '-' }}
-                            </td>
-
-                            {{-- 🔹 Fecha Estado Manual --}}
-                            <td>
-                                {{ $doc->fecha_estado_manual ? \Carbon\Carbon::parse($doc->fecha_estado_manual)->format('d-m-Y') : '-' }}
-                            </td>
 
                             {{-- 🔹 Montos --}}
                             <td class="text-right">${{ number_format($doc->monto_exento, 0, ',', '.') }}</td>
@@ -416,9 +448,10 @@
                             <td class="text-right fw-bold">${{ number_format($doc->monto_total, 0, ',', '.') }}</td>
 
                             {{-- 🔹 Saldo Pendiente --}}
-                            <td class="text-right text-danger fw-bold">
-                                ${{ number_format($doc->monto_total - $doc->abonos->sum('monto'), 0, ',', '.') }}
+                            <td class="text-right fw-bold {{ $doc->saldo_pendiente == 0 ? 'text-success' : 'text-danger' }}">
+                                ${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}
                             </td>
+
 
                             {{-- 🔹 Abonos --}}
                             <td class="text-center">

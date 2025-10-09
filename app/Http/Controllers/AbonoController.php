@@ -15,7 +15,7 @@ class AbonoController extends Controller
 
         // Calcular el total abonado y el saldo pendiente
         $totalAbonado = $abonos->sum('monto');
-        $saldoPendiente = $documento->monto_total - $totalAbonado;
+        $saldoPendiente = $documento->saldo_pendiente;
 
         return view('abonos.index', compact('documento', 'abonos', 'totalAbonado', 'saldoPendiente'));
     }

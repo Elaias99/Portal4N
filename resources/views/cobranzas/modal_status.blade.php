@@ -77,7 +77,8 @@
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Saldo pendiente</label>
                         <input type="text" class="form-control form-control-sm"
-                               value="${{ number_format($doc->monto_total - $doc->abonos->sum('monto'), 0, ',', '.') }}"
+                               {{-- ✅ Usar el accessor actualizado del modelo --}}
+                               value="${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}"
                                readonly>
                     </div>
 

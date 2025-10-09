@@ -8,7 +8,7 @@
           Editar Documento Financiero
         </h5>
 
-        {{-- Botón de cierre flotante, igual que en modal_status --}}
+        {{-- Botón de cierre flotante --}}
         <button type="button"
                 class="btn btn-light btn-sm rounded-circle shadow-sm"
                 data-dismiss="modal"
@@ -61,8 +61,23 @@
                      value="{{ old('monto_total', $doc->monto_total) }}" min="0" required>
             </div>
 
+            {{-- ✅ SALDO ACTUAL (solo lectura, usando el accessor del modelo) --}}
+            <div class="col-md-3">
+              <label class="form-label small text-muted">Saldo Actual</label>
+              <input type="text" class="form-control form-control-sm" 
+                     value="${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}" readonly>
+            </div>
+
+            {{-- ⚠️ Advertencia visual --}}
+            <div class="col-12">
+              <div class="alert alert-warning py-2 px-3 small mb-0 mt-2">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                Modificar el monto total puede afectar los cálculos de abonos y notas de crédito.
+              </div>
+            </div>
+
             {{-- FECHA DOCUMENTO --}}
-            <div class="col-md-6">
+            <div class="col-md-6 mt-3">
               <label for="fecha_docto-{{ $doc->id }}" class="form-label small text-muted">Fecha Documento</label>
               <input type="date" name="fecha_docto" id="fecha_docto-{{ $doc->id }}"
                      class="form-control form-control-sm"
@@ -71,7 +86,7 @@
             </div>
 
             {{-- FECHA VENCIMIENTO --}}
-            <div class="col-md-6">
+            <div class="col-md-6 mt-3">
               <label for="fecha_vencimiento-{{ $doc->id }}" class="form-label small text-muted">Fecha Vencimiento</label>
               <input type="date" name="fecha_vencimiento" id="fecha_vencimiento-{{ $doc->id }}"
                      class="form-control form-control-sm"

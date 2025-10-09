@@ -15,9 +15,9 @@ class DocumentoFinancieroController extends Controller
 
     public function index(Request $request)
     {
-        $query = DocumentoFinanciero::with(['cobranza', 'empresa']);
+        $query = DocumentoFinanciero::with(['cobranza', 'empresa', 'abonos', 'referenciados']);
 
-        // Filtros individuales
+        // === FILTROS GENERALES ===
         if ($request->filled('razon_social')) {
             $query->where('razon_social', 'like', "%{$request->razon_social}%");
         }
@@ -38,7 +38,7 @@ class DocumentoFinancieroController extends Controller
             $query->whereDate('fecha_docto', '<=', $request->fecha_fin);
         }
 
-        // 🔹 Filtro por rango de Fecha Vencimiento
+        // === FILTRO FECHA DE VENCIMIENTO ===
         if ($request->filled('vencimiento_inicio') && $request->filled('vencimiento_fin')) {
             $query->whereBetween('fecha_vencimiento', [$request->vencimiento_inicio, $request->vencimiento_fin]);
         } elseif ($request->filled('vencimiento_inicio')) {
@@ -47,17 +47,22 @@ class DocumentoFinancieroController extends Controller
             $query->whereDate('fecha_vencimiento', '<=', $request->vencimiento_fin);
         }
 
+        // === FILTRO POR ESTADO ORIGINAL ===
+        if ($request->filled('status')) {
+            $query->where('status_original', $request->status);
+        }
 
-    if ($request->filled('status')) {
-        $query->where('status_original', $request->status);
-    }
+        // === CONTADORES (solo status_original, NO status manual) ===
+        $totalAlDia = DocumentoFinanciero::where('status_original', 'Al día')->count();
+        $totalVencido = DocumentoFinanciero::where('status_original', 'Vencido')->count();
 
-
+        // === PAGINACIÓN ===
         $documentoFinancieros = $query->orderBy('fecha_docto', 'desc')->paginate(5);
 
-
-        return view('cobranzas.documentos', compact('documentoFinancieros'));
+        return view('cobranzas.documentos', compact('documentoFinancieros', 'totalAlDia', 'totalVencido'));
     }
+
+
 
 
 
@@ -229,14 +234,14 @@ class DocumentoFinancieroController extends Controller
         ]);
 
         // Validar que el abono no supere el saldo pendiente
-        $totalAbonado = $documento->abonos()->sum('monto');
-        $saldoPendiente = $documento->monto_total - $totalAbonado;
+        $saldoPendiente = $documento->saldo_pendiente; // usa el accessor del modelo
 
         if ($request->monto > $saldoPendiente) {
             return back()
-                ->withErrors(['monto' => 'El abono no puede ser mayor al saldo pendiente.'])
+                ->withErrors(['monto' => 'El abono no puede ser mayor al saldo pendiente actual.'])
                 ->withInput();
         }
+
 
         // Guardar el abono
         $documento->abonos()->create([
@@ -261,20 +266,6 @@ class DocumentoFinancieroController extends Controller
 
         return back()->with('success', 'Abono registrado correctamente.');
     }
-
-
-
-
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////// BOTONES DE EDITAR Y ACTUALIZAR ////////////////////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-
 
 
 
