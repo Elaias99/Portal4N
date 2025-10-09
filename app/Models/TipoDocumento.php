@@ -12,4 +12,9 @@ class TipoDocumento  extends Model
     protected $table = 'tipo_documentos';
 
     protected $fillable = ['nombre'];
+
+    public function documentosFinancieros()
+    {
+        return $this->hasMany(DocumentoFinanciero::class, 'tipo_documento_id');
+    }
 }

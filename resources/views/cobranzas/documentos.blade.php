@@ -400,16 +400,9 @@
                             <td>{{ $doc->empresa?->Nombre ?? 'Sin empresa' }}</td>
 
                             {{-- 🔹 Tipo Documento --}}
-                            @php
-                                $tipoNombre = match((int)$doc->tipo_doc) {
-                                    33 => 'Factura',
-                                    34 => 'Factura Exenta',
-                                    56 => 'Nota Débito',
-                                    61 => 'Nota Crédito',
-                                    default => 'Otro',
-                                };
-                            @endphp
-                            <td>{{ $tipoNombre }}</td>
+                            {{-- 🔹 Tipo Documento --}}
+                            <td>{{ $doc->tipoDocumento?->nombre ?? 'Sin tipo' }}</td>
+
 
 
                             {{-- 🔹 Rut Cliente --}}

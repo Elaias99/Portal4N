@@ -15,7 +15,8 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
     public function collection()
     {
         // Traemos empresa y abonos
-        return DocumentoFinanciero::with(['empresa', 'abonos'])->get();
+        return DocumentoFinanciero::with(['empresa', 'abonos', 'tipoDocumento'])->get();
+
     }
 
 
@@ -32,7 +33,7 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
         return [
             $doc->id,
             $doc->nro,
-            $doc->tipo_doc,
+            $doc->tipoDocumento?->nombre ?? 'Sin tipo',
             $doc->tipo_venta,
             $doc->rut_cliente,
             $doc->razon_social,

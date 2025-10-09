@@ -66,7 +66,9 @@ class DocumentoFinanciero extends Model
         'fecha_estado_manual',
         'status_original',
 
-        'referencia_id'
+        'referencia_id',
+
+        'tipo_documento_id'
         
     ];
 
@@ -103,6 +105,12 @@ class DocumentoFinanciero extends Model
     {
         return $this->hasMany(DocumentoFinanciero::class, 'referencia_id');
     }
+
+    public function tipoDocumento()
+    {
+        return $this->belongsTo(TipoDocumento::class, 'tipo_documento_id');
+    }
+
 
 
 
@@ -164,19 +172,25 @@ class DocumentoFinanciero extends Model
             ? $this->abonos
             : $this->abonos()->get();
 
-        // Restar notas de crédito
-        $totalNotasCredito = $referenciados->where('tipo_doc', 61)->sum('monto_total');
+        // ✅ Restar notas de crédito (tipo_documento_id = 61)
+        $totalNotasCredito = $referenciados
+            ->where('tipo_documento_id', 61)
+            ->sum('monto_total');
         $saldo -= $totalNotasCredito;
 
-        // Sumar notas de débito
-        $totalNotasDebito = $referenciados->where('tipo_doc', 56)->sum('monto_total');
+        // ✅ Sumar notas de débito (tipo_documento_id = 56)
+        $totalNotasDebito = $referenciados
+            ->where('tipo_documento_id', 56)
+            ->sum('monto_total');
         $saldo += $totalNotasDebito;
 
-        // Restar abonos
+        // ✅ Restar abonos
         $saldo -= $abonos->sum('monto');
 
         return max($saldo, 0);
     }
+
+
 
 
 

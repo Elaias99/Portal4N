@@ -21,6 +21,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
     public $duplicados = [];
     public $sinCobranza = [];
     public $notasCredito = [];
+    
 
 
     protected $empresaId;
@@ -41,6 +42,8 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
     public function model(array $row)
     {
+        $tipoDocumento = \App\Models\TipoDocumento::find((int) $row['tipo_doc']);
+
         // 🔹 Evitar procesar filas completamente vacías
         if (empty(array_filter($row))) {
             return null;
@@ -99,14 +102,20 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
             $folioReferencia = $row['folio_docto_referencia'] ?? null;
 
             if ($tipoReferencia && $folioReferencia) {
-                $factura = DocumentoFinanciero::where('tipo_doc', $tipoReferencia)
+                $factura = DocumentoFinanciero::where('tipo_documento_id', $tipoReferencia)
                     ->where('folio', $folioReferencia)
                     ->first();
 
                 $documento = new DocumentoFinanciero([
                     'folio' => $folioExcel,
                     'nro' => $row['nro'],
-                    'tipo_doc' => $row['tipo_doc'],
+
+
+                    'tipo_documento_id' => $tipoDocumento?->id,
+
+
+
+
                     'tipo_venta' => $row['tipo_venta'],
                     'rut_cliente' => $row['rut_cliente'],
                     'razon_social' => $row['razon_social'],
@@ -139,7 +148,12 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
         $documento = new DocumentoFinanciero([
             'folio' => $folioExcel,
             'nro' => $row['nro'],
-            'tipo_doc' => $row['tipo_doc'],
+
+
+            'tipo_documento_id' => $tipoDocumento?->id,
+
+
+
             'tipo_venta' => $row['tipo_venta'],
             'rut_cliente' => $row['rut_cliente'],
             'razon_social' => $row['razon_social'],
