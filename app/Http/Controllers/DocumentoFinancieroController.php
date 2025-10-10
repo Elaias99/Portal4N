@@ -311,6 +311,22 @@ class DocumentoFinancieroController extends Controller
     }
 
 
+    public function show(DocumentoFinanciero $documento)
+    {
+        // Cargar relaciones relevantes
+        $documento->load(['empresa', 'abonos', 'cruces', 'referencia', 'referenciados']);
+
+        // Si está referenciado por una nota de crédito o hace referencia a una
+        $referencias = [
+            'referencia' => $documento->referencia,
+            'referenciadoPor' => $documento->referenciados,
+        ];
+
+        return view('cobranzas.detalles', compact('documento', 'referencias'));
+    }
+
+
+
 
 
 }

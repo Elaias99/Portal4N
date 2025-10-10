@@ -449,32 +449,19 @@
                             {{-- 🔹 Abonos --}}
                             <td class="text-center">
 
+                                {{-- 🚫 Si es una Nota de Crédito --}}
                                 @if($doc->tipo_documento_id == 61)
-                                    {{-- 🚫 Notas de crédito no pueden tener abonos ni cruces --}}
                                     <span class="text-muted d-block">No aplica</span>
                                 @else
-                                    {{-- 🔹 ABONOS --}}
-                                    @if($doc->abonos->isNotEmpty())
-                                        <a href="{{ route('abonos.index', $doc->id) }}" 
-                                        class="btn btn-sm btn-outline-primary mb-2 w-100">
-                                        Ver abonos ({{ $doc->abonos->count() }})
-                                        </a>
-                                    @else
-                                        <span class="text-muted d-block mb-2">Sin abonos</span>
-                                    @endif
-
-                                    {{-- 🔹 CRUCES --}}
-                                    @if($doc->cruces->isNotEmpty())
-                                        <a href="{{ route('cruces.index', $doc->id) }}" 
-                                        class="btn btn-sm btn-outline-success w-100">
-                                        Ver cruces ({{ $doc->cruces->count() }})
-                                        </a>
-                                    @else
-                                        <span class="text-muted d-block">Sin cruces</span>
-                                    @endif
+                                    {{-- 🔹 Un solo botón para ver todos los detalles --}}
+                                    <a href="{{ route('documentos.detalles', $doc->id) }}" 
+                                    class="btn btn-sm btn-outline-primary w-100">
+                                        <i class="bi bi-eye"></i> Ver Detalles
+                                    </a>
                                 @endif
 
                             </td>
+
 
 
                         </tr>
@@ -511,3 +498,6 @@
 
 
 @endsection
+
+
+

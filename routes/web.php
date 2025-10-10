@@ -265,6 +265,10 @@ Route::put('/cobranzas/documentos/{documento}', [DocumentoFinancieroController::
     ->name('cobranzas.documentos.update');
 
 
+Route::get('/documentos/{documento}/detalles', [App\Http\Controllers\DocumentoFinancieroController::class, 'show'])
+    ->name('documentos.detalles');
+
+
 
 
 Route::post('/documentos/{documento}/abonos', [DocumentoFinancieroController::class, 'storeAbono'])
