@@ -250,7 +250,7 @@
     <div class="container-fluid" style="max-width: 100%;">
 
         <h1 class="text-center mb-4" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
-            Reporte de Documentos Financieros
+            Reporte Cuentas por Cobrar
         </h1>
 
         {{-- === FILTROS + GESTIÓN MASIVA === --}}
