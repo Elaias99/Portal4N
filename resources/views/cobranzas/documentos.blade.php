@@ -497,16 +497,21 @@
                                     {{ $estadoMostrar }}
                                 </span>
 
-                                {{-- Botón de editar --}}
-                                <button type="button"
-                                        class="btn btn-sm btn-outline-secondary mt-2"
-                                        data-toggle="modal"
-                                        data-target="#modalStatus-{{ $doc->id }}">
-                                    Editar
-                                </button>
+                                {{-- Botón Editar (solo si NO es Nota de Crédito) --}}
+                                @if($doc->tipo_documento_id != 61)
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-secondary mt-2"
+                                            data-toggle="modal"
+                                            data-target="#modalStatus-{{ $doc->id }}">
+                                        Editar
+                                    </button>
 
-                                @include('cobranzas.modal_status', ['doc' => $doc])
+                                    @include('cobranzas.modal_status', ['doc' => $doc])
+                                @else
+                                    <small class="text-muted d-block mt-2">No editable</small>
+                                @endif
                             </td>
+
 
                             {{-- 🔹 Empresa --}}
                             <td>{{ $doc->empresa?->Nombre ?? 'Sin empresa' }}</td>

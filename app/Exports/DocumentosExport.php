@@ -15,14 +15,14 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
      */
     public function collection()
     {
-        // ✅ Cargamos todas las relaciones necesarias (sin quitar nada)
+        // ✅ Cargamos todas las relaciones necesarias
         return DocumentoFinanciero::with([
             'empresa',
             'abonos',
             'cruces',
             'tipoDocumento',
-            'referencia',      // 🆕 Documento referenciado (ej: factura)
-            'referenciados',   // 🆕 Documentos que lo referencian (ej: notas de crédito)
+            'referencia',      // Documento referenciado (ej: factura)
+            'referenciados',   // Documentos que lo referencian (ej: notas de crédito)
             'cobranza'
         ])->get();
     }
@@ -41,10 +41,15 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
         $ultimaFechaCruce = $doc->cruces->max('fecha_cruce');
 
         // === Saldo pendiente dinámico ===
-        // 🟢 Si el documento está marcado como Pago → saldo = 0
-        $saldoPendiente = $doc->saldo_pendiente;
+        if ($doc->tipo_documento_id == 61) {
+            // 🧾 Nota de Crédito Electrónica → mostrar saldo 0 en la exportación
+            $saldoPendiente = 0;
+        } else {
+            // 🟢 Otros documentos → calcular normalmente
+            $saldoPendiente = $doc->saldo_pendiente;
+        }
 
-        // === NUEVO: Documento Referencia (si este documento apunta a otro) ===
+        // === Documento Referencia (si este documento apunta a otro) ===
         $documentoReferencia = null;
         if ($doc->referencia) {
             $ref = $doc->referencia;
@@ -54,7 +59,7 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             }
         }
 
-        // === NUEVO: Referenciado Por (si este documento tiene otros que lo referencian) ===
+        // === Referenciado Por (si este documento tiene otros que lo referencian) ===
         $referenciadoPor = null;
         if ($doc->referenciados->isNotEmpty()) {
             $referenciadoPor = $doc->referenciados->map(function ($ref) {
@@ -97,10 +102,10 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             $totalCruzado,
             $ultimaFechaCruce ? Carbon::parse($ultimaFechaCruce)->format('Y-m-d') : null,
 
-            // 🔹 Saldo pendiente
+            // 🔹 Saldo pendiente (con control para notas de crédito)
             $saldoPendiente,
 
-            // 🆕 NUEVAS COLUMNAS DE REFERENCIA
+            // 🔹 Columnas de referencia
             $documentoReferencia,
             $referenciadoPor,
 

@@ -173,9 +173,16 @@ class DocumentoFinanciero extends Model
             return 0;
         }
 
+        // 🟣 Si es una Nota de Crédito Electrónica → mostrar saldo 0 (pero seguirá afectando internamente la factura)
+        if ($this->tipo_documento_id == 61 || 
+            (isset($this->tipoDocumento) && str_contains(strtolower($this->tipoDocumento->nombre), 'nota de crédito'))) {
+            return 0;
+        }
+
+        // 🔹 Monto base del documento
         $saldo = $this->monto_total ?? 0;
 
-        // Asegurar que las relaciones estén cargadas
+        // 🔹 Asegurar que las relaciones estén cargadas
         $referenciados = $this->relationLoaded('referenciados')
             ? $this->referenciados
             : $this->referenciados()->get();
@@ -188,7 +195,7 @@ class DocumentoFinanciero extends Model
             ? $this->cruces
             : $this->cruces()->get();
 
-        // ✅ Restar notas de crédito
+        // ✅ Restar notas de crédito (que referencian a este documento)
         $totalNotasCredito = $referenciados
             ->where('tipo_documento_id', 61)
             ->sum('monto_total');
@@ -206,6 +213,7 @@ class DocumentoFinanciero extends Model
 
         return max($saldo, 0);
     }
+
 
 
 

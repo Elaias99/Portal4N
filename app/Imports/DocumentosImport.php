@@ -101,47 +101,49 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
             $tipoReferencia = $row['tipo_docto_referencia'] ?? null;
             $folioReferencia = $row['folio_docto_referencia'] ?? null;
 
+            $factura = null;
             if ($tipoReferencia && $folioReferencia) {
                 $factura = DocumentoFinanciero::where('tipo_documento_id', $tipoReferencia)
                     ->where('folio', $folioReferencia)
                     ->first();
-
-                $documento = new DocumentoFinanciero([
-                    'folio' => $folioExcel,
-                    'nro' => $row['nro'],
-
-
-                    'tipo_documento_id' => $tipoDocumento?->id,
-
-
-
-
-                    'tipo_venta' => $row['tipo_venta'],
-                    'rut_cliente' => $row['rut_cliente'],
-                    'razon_social' => $row['razon_social'],
-                    'fecha_docto' => $fechaDocto,
-                    'fecha_vencimiento' => $fechaVencimiento,
-                    'monto_total' => $this->cleanNumber($row['monto_total']),
-                    'empresa_id' => $this->empresaId,
-                    'cobranza_id' => $cobranza?->id,
-                    'status_original' => $estadoInicial,
-                    'status' => $estadoInicial,
-                    'referencia_id' => $factura?->id,
-                ]);
-
-                $documento->save();
-
-                if ($factura) {
-                    $this->notasCredito[] = "Nota de crédito folio {$row['folio']} vinculada correctamente a la factura {$factura->folio}.";
-                } else {
-                    $this->notasCredito[] = "⚠️ No se encontró la factura referenciada ({$tipoReferencia} - Folio {$folioReferencia}) para la nota de crédito {$row['folio']}.";
-                }
-            } else {
-                $this->notasCredito[] = "⚠️ La nota de crédito {$row['folio']} no tiene documento de referencia y fue ignorada.";
             }
 
-            return null; // 👈 Siempre salir del bloque tipo 61
+            $documento = new DocumentoFinanciero([
+                'folio' => $folioExcel,
+                'nro' => $row['nro'],
+                'tipo_documento_id' => $tipoDocumento?->id,
+                'tipo_venta' => $row['tipo_venta'],
+                'rut_cliente' => $row['rut_cliente'],
+                'razon_social' => $row['razon_social'],
+                'fecha_docto' => $this->transformDate($row['fecha_docto']),
+                'fecha_recepcion' => $this->transformDate($row['fecha_recepcion']),
+                'fecha_acuse_recibo' => $this->transformDate($row['fecha_acuse_recibo']),
+                'fecha_reclamo' => $this->transformDate($row['fecha_reclamo']),
+                'fecha_vencimiento' => $this->calcularFechaVencimiento(
+                    Carbon::parse($this->transformDate($row['fecha_docto']))->toDateString(),
+                    $cobranza?->creditos
+                ),
+                'monto_exento' => $this->cleanNumber($row['monto_exento']),
+                'monto_neto' => $this->cleanNumber($row['monto_neto']),
+                'monto_iva' => $this->cleanNumber($row['monto_iva']),
+                'monto_total' => $this->cleanNumber($row['monto_total']),
+                'empresa_id' => $this->empresaId,
+                'cobranza_id' => $cobranza?->id,
+                'status_original' => $estadoInicial,
+                'status' => $estadoInicial,
+                'referencia_id' => $factura?->id,
+            ]);
+
+            $documento->save();
+
+            // Mensaje informativo
+            $this->notasCredito[] = $factura
+                ? "Nota de crédito folio {$row['folio']} vinculada correctamente a la factura {$factura->folio}."
+                : "⚠️ Nota de crédito {$row['folio']} creada sin documento de referencia.";
+
+            return $documento; // 👈 No retornes null, así la colección lo considera importado
         }
+
 
 
         // 🧩 AQUÍ VIENE EL AJUSTE CLAVE (para facturas normales)
