@@ -168,6 +168,11 @@ class DocumentoFinanciero extends Model
 
     public function getSaldoPendienteAttribute()
     {
+        // 🟢 Si el documento está marcado como Pago → saldo = 0
+        if (isset($this->status) && strtolower($this->status) === 'pago') {
+            return 0;
+        }
+
         $saldo = $this->monto_total ?? 0;
 
         // Asegurar que las relaciones estén cargadas
@@ -201,6 +206,7 @@ class DocumentoFinanciero extends Model
 
         return max($saldo, 0);
     }
+
 
 
 

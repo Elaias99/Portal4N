@@ -310,13 +310,13 @@
                                 <div class="col-md-2">
                                     <label class="form-label small text-muted">Razón Social</label>
                                     <input type="text" name="razon_social" class="form-control form-control-sm"
-                                        placeholder="Ej: RAZÓN SOCIAL" value="{{ request('razon_social') }}">
+                                        placeholder="" value="{{ request('razon_social') }}">
                                 </div>
 
-                                <div class="col-md-2">
+                                <div class="col-md-1">
                                     <label class="form-label small text-muted">RUT Cliente</label>
                                     <input type="text" name="rut_cliente" class="form-control form-control-sm"
-                                        placeholder="Ej: 12345678-9" value="{{ request('rut_cliente') }}">
+                                        placeholder="" value="{{ request('rut_cliente') }}">
                                 </div>
 
                                 <div class="col-md-1">
@@ -340,6 +340,25 @@
                                             </option>
                                         </select>
                                 </div>
+
+
+                                {{-- 🔹 Filtro por estado actual (manual) --}}
+                                <div class="col-md-2">
+                                    <label class="form-label small text-muted">Estado de Pago</label>
+                                    <select name="estado_pago" class="form-select form-select-sm">
+                                        <option value="">Todos</option>
+                                        <option value="Pagado" {{ request('estado_pago') == 'Pagado' ? 'selected' : '' }}>
+                                            Pagado ({{ $totalPagados ?? 0 }})
+                                        </option>
+                                        <option value="Pendiente" {{ request('estado_pago') == 'Pendiente' ? 'selected' : '' }}>
+                                            Pendiente ({{ $totalPendientes ?? 0 }})
+                                        </option>
+                                    </select>
+                                </div>
+
+
+
+
 
                                 <div class="col-md-2 dropdown-fechas">
                                     <label class="form-label small text-muted">Fecha Origen</label>
@@ -408,7 +427,7 @@
 
                                 {{-- 🔹 Botón alineado a la derecha --}}
                                 <a href="{{ route('cobranzas.index') }}" class="btn btn-outline-secondary btn-sm">
-                                    <i class="bi bi-x-circle"></i> Cobranzas
+                                    Detalle Cliente
                                 </a>
                             </div>
 

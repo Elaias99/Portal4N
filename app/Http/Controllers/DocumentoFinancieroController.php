@@ -52,20 +52,75 @@ class DocumentoFinancieroController extends Controller
             $query->where('status_original', $request->status);
         }
 
-        // === CONTADORES (solo status_original, NO status manual) ===
+        // === CONTADORES ===
         $totalAlDia = DocumentoFinanciero::where('status_original', 'Al día')->count();
         $totalVencido = DocumentoFinanciero::where('status_original', 'Vencido')->count();
 
-        // === PAGINACIÓN ===
-        $documentoFinancieros = $query->orderBy('fecha_docto', 'desc')->paginate(10);
+        // === OBTENER DATOS BASE ===
+        $documentoFinancieros = $query->orderBy('fecha_docto', 'desc')->get();
 
-        // Para calcular el total del saldo pendiente (usando la colección, no SQL)
-        $totalSaldoPendiente = $documentoFinancieros->getCollection()->sum(function ($doc) {
-            return $doc->saldo_pendiente; // este es tu accessor dinámico
-        });
+        // === FILTRO POR ESTADO DE PAGO (Pagado / Pendiente) ===
+        if ($request->filled('estado_pago')) {
+            $documentoFinancieros = $documentoFinancieros->filter(function ($doc) use ($request) {
+                if ($request->estado_pago === 'Pagado') {
+                    return $doc->saldo_pendiente <= 0;
+                }
+                if ($request->estado_pago === 'Pendiente') {
+                    return $doc->saldo_pendiente > 0;
+                }
+                return true;
+            });
+        }
 
-        return view('cobranzas.documentos', compact('documentoFinancieros', 'totalAlDia', 'totalVencido', 'totalSaldoPendiente'));
+        // === CÁLCULO CORREGIDO DEL SALDO PENDIENTE TOTAL ===
+        $totalSaldoPendiente = $documentoFinancieros
+            ->filter(function ($doc) {
+                // ❌ Excluir notas de crédito o débito
+                if (in_array($doc->tipo_documento_id, [61, 56])) {
+                    return false;
+                }
+
+                // ❌ Excluir documentos pagados
+                if (isset($doc->status) && strtolower($doc->status) === 'pago') {
+                    return false;
+                }
+
+                // ✅ Incluir todo lo demás
+                return true;
+            })
+            ->sum(function ($doc) {
+                return $doc->saldo_pendiente;
+            });
+
+        // === PAGINACIÓN MANUAL ===
+        $page = $request->get('page', 1);
+        $perPage = 10;
+        $offset = ($page - 1) * $perPage;
+        $itemsPaginated = $documentoFinancieros->slice($offset, $perPage)->values();
+
+        $documentoFinancieros = new \Illuminate\Pagination\LengthAwarePaginator(
+            $itemsPaginated,
+            $documentoFinancieros->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        $totalPagados = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente <= 0)->count();
+        $totalPendientes = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente > 0)->count();
+
+
+        return view('cobranzas.documentos', compact(
+            'documentoFinancieros',
+            'totalAlDia',
+            'totalVencido',
+            'totalSaldoPendiente',
+            'totalPagados',
+            'totalPendientes'
+        ));
+
     }
+
 
 
 

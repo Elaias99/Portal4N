@@ -21,8 +21,8 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             'abonos',
             'cruces',
             'tipoDocumento',
-            'referencia',      // 🆕 Relación: documento referenciado (ej: factura)
-            'referenciados',   // 🆕 Relación: documentos que lo referencian (ej: notas de crédito)
+            'referencia',      // 🆕 Documento referenciado (ej: factura)
+            'referenciados',   // 🆕 Documentos que lo referencian (ej: notas de crédito)
             'cobranza'
         ])->get();
     }
@@ -41,6 +41,7 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
         $ultimaFechaCruce = $doc->cruces->max('fecha_cruce');
 
         // === Saldo pendiente dinámico ===
+        // 🟢 Si el documento está marcado como Pago → saldo = 0
         $saldoPendiente = $doc->saldo_pendiente;
 
         // === NUEVO: Documento Referencia (si este documento apunta a otro) ===
@@ -59,7 +60,6 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             $referenciadoPor = $doc->referenciados->map(function ($ref) {
                 $monto = number_format($ref->monto_total, 0, ',', '.');
                 return $ref->tipoDocumento?->nombre . ' folio ' . $ref->folio . ' ($' . $monto . ')';
-
             })->join(', ');
         }
 
@@ -104,7 +104,7 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             $documentoReferencia,
             $referenciadoPor,
 
-            // 🔹 Otros campos (todo igual)
+            // 🔹 Otros campos
             $doc->iva_retenido_total,
             $doc->iva_retenido_parcial,
             $doc->iva_no_retenido,
@@ -170,8 +170,8 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             'Total Cruzado',
             'Última Fecha de Cruce',
             'Saldo Pendiente',
-            'Documento Referencia',   // 🆕 Nueva columna
-            'Referenciado Por',       // 🆕 Nueva columna
+            'Documento Referencia',
+            'Referenciado Por',
             'IVA Retenido Total',
             'IVA Retenido Parcial',
             'IVA No Retenido',
