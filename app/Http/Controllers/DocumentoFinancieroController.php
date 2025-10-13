@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\Auth;
 class DocumentoFinancieroController extends Controller
 {
     //
-
     public function index(Request $request)
     {
         $query = DocumentoFinanciero::with(['cobranza', 'empresa', 'abonos', 'referenciados']);
@@ -58,15 +57,15 @@ class DocumentoFinancieroController extends Controller
         $totalVencido = DocumentoFinanciero::where('status_original', 'Vencido')->count();
 
         // === PAGINACIÓN ===
-        $documentoFinancieros = $query->orderBy('fecha_docto', 'desc')->paginate(5);
+        $documentoFinancieros = $query->orderBy('fecha_docto', 'desc')->paginate(10);
 
-        return view('cobranzas.documentos', compact('documentoFinancieros', 'totalAlDia', 'totalVencido'));
+        // Para calcular el total del saldo pendiente (usando la colección, no SQL)
+        $totalSaldoPendiente = $documentoFinancieros->getCollection()->sum(function ($doc) {
+            return $doc->saldo_pendiente; // este es tu accessor dinámico
+        });
+
+        return view('cobranzas.documentos', compact('documentoFinancieros', 'totalAlDia', 'totalVencido', 'totalSaldoPendiente'));
     }
-
-
-
-
-
 
 
 

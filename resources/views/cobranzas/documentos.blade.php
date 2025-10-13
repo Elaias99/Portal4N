@@ -149,6 +149,51 @@
         max-width: 95% !important;
     } */
 
+    /* === Estilos para el dropdown de fechas === */
+    .dropdown-fechas .dropdown-toggle {
+        background-color: #f8f9fa;
+        border: 1px solid #ced4da;
+        color: #495057;
+        font-weight: 500;
+    }
+
+    .dropdown-fechas .dropdown-toggle:hover {
+        background-color: #e9ecef;
+    }
+
+    .dropdown-fechas .dropdown-menu {
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border: none;
+        min-width: 320px;
+    }
+
+    .dropdown-fechas label {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+
+    .dropdown-fechas input[type="date"] {
+        font-size: 0.9rem;
+    }
+
+    .dropdown-fechas .preset-btn {
+        width: 100%;
+        border: 1px solid #dee2e6;
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 6px 8px;
+        margin-top: 4px;
+        text-align: center;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .dropdown-fechas .preset-btn:hover {
+        background-color: #f1f3f5;
+    }
+
     
 </style>
 
@@ -262,10 +307,10 @@
                     <div class="card-body">
                         <form method="GET" action="{{ route('cobranzas.documentos') }}">
                             <div class="row g-3 align-items-end">
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <label class="form-label small text-muted">Razón Social</label>
                                     <input type="text" name="razon_social" class="form-control form-control-sm"
-                                        placeholder="Ej: CORESA" value="{{ request('razon_social') }}">
+                                        placeholder="Ej: RAZÓN SOCIAL" value="{{ request('razon_social') }}">
                                 </div>
 
                                 <div class="col-md-2">
@@ -278,18 +323,6 @@
                                     <label class="form-label small text-muted">Folio</label>
                                     <input type="text" name="folio" class="form-control form-control-sm"
                                         placeholder="N°" value="{{ request('folio') }}">
-                                </div>
-
-                                <div class="col-md-2">
-                                    <label class="form-label small text-muted">Fecha Dcto. desde</label>
-                                    <input type="date" name="fecha_inicio" class="form-control form-control-sm"
-                                        value="{{ request('fecha_inicio') }}">
-                                </div>
-
-                                <div class="col-md-2">
-                                    <label class="form-label small text-muted">Hasta</label>
-                                    <input type="date" name="fecha_fin" class="form-control form-control-sm"
-                                        value="{{ request('fecha_fin') }}">
                                 </div>
 
                                 {{-- 🔹 Filtro solo con dos opciones --}}
@@ -306,10 +339,51 @@
                                                 Vencido ({{ $totalVencido ?? 0 }})
                                             </option>
                                         </select>
-
-
-
                                 </div>
+
+                                <div class="col-md-2 dropdown-fechas">
+                                    <label class="form-label small text-muted">Fecha Origen</label>
+                                    <div class="dropdown w-100">
+                                        <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
+                                                id="dropdownFechas" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-calendar3"></i> Fecha Dcto.
+                                        </button>
+
+                                        <div class="dropdown-menu p-3">
+                                            <label class="form-label small text-muted">Desde</label>
+                                            <input type="date" name="fecha_inicio" class="form-control form-control-sm mb-2"
+                                                value="{{ request('fecha_inicio') }}">
+
+                                            <label class="form-label small text-muted">Hasta</label>
+                                            <input type="date" name="fecha_fin" class="form-control form-control-sm mb-2"
+                                                value="{{ request('fecha_fin') }}">
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                <div class="col-md-2 dropdown-fechas">
+                                    <label class="form-label small text-muted">Fecha Vencimiento</label>
+                                    <div class="dropdown w-100">
+                                        <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
+                                                id="dropdownVencimiento" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-calendar-event"></i>Fecha Venc.
+                                        </button>
+
+                                        <div class="dropdown-menu p-3">
+                                            <label class="form-label small text-muted">Desde</label>
+                                            <input type="date" name="vencimiento_inicio" class="form-control form-control-sm mb-2"
+                                                value="{{ request('vencimiento_inicio') }}">
+
+                                            <label class="form-label small text-muted">Hasta</label>
+                                            <input type="date" name="vencimiento_fin" class="form-control form-control-sm mb-2"
+                                                value="{{ request('vencimiento_fin') }}">
+                                        </div>
+                                    </div>
+                                </div>
+
+
+
 
                             </div>
 
@@ -323,11 +397,21 @@
                                 
                             </div>
 
-                            <div class="d-flex justify-content-end gap-2 mt-3">
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                {{-- 🔹 Texto alineado a la izquierda --}}
+                                <div>
+                                    <strong>Saldo pendiente total:</strong> 
+                                    <span class="text-success fw-semibold">
+                                        ${{ number_format($totalSaldoPendiente, 0, ',', '.') }}
+                                    </span>
+                                </div>
+
+                                {{-- 🔹 Botón alineado a la derecha --}}
                                 <a href="{{ route('cobranzas.index') }}" class="btn btn-outline-secondary btn-sm">
                                     <i class="bi bi-x-circle"></i> Cobranzas
-                                </a>  
+                                </a>
                             </div>
+
 
 
                         </form>

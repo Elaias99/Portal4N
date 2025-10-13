@@ -6,29 +6,62 @@ use App\Models\DocumentoFinanciero;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Carbon\Carbon;
 
 class DocumentosExport implements FromCollection, WithHeadings, WithMapping
 {
     /**
-     * Retorna la colección de registros a exportar
+     * 🔹 Retorna la colección de registros a exportar
      */
     public function collection()
     {
-        // Traemos empresa y abonos
-        return DocumentoFinanciero::with(['empresa', 'abonos', 'tipoDocumento'])->get();
-
+        // ✅ Cargamos todas las relaciones necesarias (sin quitar nada)
+        return DocumentoFinanciero::with([
+            'empresa',
+            'abonos',
+            'cruces',
+            'tipoDocumento',
+            'referencia',      // 🆕 Relación: documento referenciado (ej: factura)
+            'referenciados',   // 🆕 Relación: documentos que lo referencian (ej: notas de crédito)
+            'cobranza'
+        ])->get();
     }
 
-
     /**
-     * Define cómo se exporta cada fila
+     * 🔹 Define cómo se exporta cada fila
      */
     public function map($doc): array
     {
+        // === Cálculos de abonos ===
         $totalAbonado = $doc->abonos->sum('monto');
-        $saldoPendiente = $doc->saldo_pendiente; // ✅ Usa el accessor del modelo
-
         $ultimaFechaAbono = $doc->abonos->max('fecha_abono');
+
+        // === Cálculos de cruces ===
+        $totalCruzado = $doc->cruces->sum('monto');
+        $ultimaFechaCruce = $doc->cruces->max('fecha_cruce');
+
+        // === Saldo pendiente dinámico ===
+        $saldoPendiente = $doc->saldo_pendiente;
+
+        // === NUEVO: Documento Referencia (si este documento apunta a otro) ===
+        $documentoReferencia = null;
+        if ($doc->referencia) {
+            $ref = $doc->referencia;
+            $documentoReferencia = "{$ref->tipoDocumento?->nombre} folio {$ref->folio}";
+            if ($ref->fecha_docto) {
+                $documentoReferencia .= " ({$ref->fecha_docto})";
+            }
+        }
+
+        // === NUEVO: Referenciado Por (si este documento tiene otros que lo referencian) ===
+        $referenciadoPor = null;
+        if ($doc->referenciados->isNotEmpty()) {
+            $referenciadoPor = $doc->referenciados->map(function ($ref) {
+                $monto = number_format($ref->monto_total, 0, ',', '.');
+                return $ref->tipoDocumento?->nombre . ' folio ' . $ref->folio . ' ($' . $monto . ')';
+
+            })->join(', ');
+        }
 
         return [
             $doc->id,
@@ -41,13 +74,16 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             $doc->fecha_docto,
             $doc->fecha_vencimiento,
 
-            // 🔹 Nuevo: estados claros
-            $doc->status_original,   // Estado al importar (Al día / Vencido)
-            $doc->status,            // Estado actual (puede ser Abono, Pago, etc.)
+            // 🔹 Estados
+            $doc->status_original,
+            $doc->status,
 
+            // 🔹 Fechas administrativas
             $doc->fecha_recepcion,
             $doc->fecha_acuse_recibo,
             $doc->fecha_reclamo,
+
+            // 🔹 Montos
             $doc->monto_exento,
             $doc->monto_neto,
             $doc->monto_iva,
@@ -55,10 +91,20 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
 
             // 🔹 Datos de abonos
             $totalAbonado,
-            $saldoPendiente,
-            $ultimaFechaAbono ? \Carbon\Carbon::parse($ultimaFechaAbono)->format('Y-m-d') : null,
+            $ultimaFechaAbono ? Carbon::parse($ultimaFechaAbono)->format('Y-m-d') : null,
 
-            // 🔹 Resto de columnas
+            // 🔹 Datos de cruces
+            $totalCruzado,
+            $ultimaFechaCruce ? Carbon::parse($ultimaFechaCruce)->format('Y-m-d') : null,
+
+            // 🔹 Saldo pendiente
+            $saldoPendiente,
+
+            // 🆕 NUEVAS COLUMNAS DE REFERENCIA
+            $documentoReferencia,
+            $referenciadoPor,
+
+            // 🔹 Otros campos (todo igual)
             $doc->iva_retenido_total,
             $doc->iva_retenido_parcial,
             $doc->iva_no_retenido,
@@ -88,17 +134,15 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             $doc->codigo_otro_imp,
             $doc->valor_otro_imp,
             $doc->tasa_otro_imp,
-            $doc->cobranza_id,
+            $doc->cobranza->servicio,
             $doc->empresa?->Nombre ?? 'Sin empresa',
             $doc->created_at,
             $doc->updated_at,
         ];
     }
 
-
-
     /**
-     * Encabezados de las columnas en el Excel
+     * 🔹 Encabezados de las columnas en el Excel
      */
     public function headings(): array
     {
@@ -112,8 +156,8 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             'Folio',
             'Fecha Documento',
             'Fecha Vencimiento',
-            'Estado Original',    // Nuevo encabezado
-            'Estado Actual',      // Nuevo encabezado
+            'Estado Original',
+            'Estado Actual',
             'Fecha Recepción',
             'Fecha Acuse Recibo',
             'Fecha Reclamo',
@@ -122,8 +166,12 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             'Monto IVA',
             'Monto Total',
             'Total Abonado',
-            'Saldo Pendiente',
             'Última Fecha de Abono',
+            'Total Cruzado',
+            'Última Fecha de Cruce',
+            'Saldo Pendiente',
+            'Documento Referencia',   // 🆕 Nueva columna
+            'Referenciado Por',       // 🆕 Nueva columna
             'IVA Retenido Total',
             'IVA Retenido Parcial',
             'IVA No Retenido',
@@ -153,11 +201,10 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             'Código Otro Impuesto',
             'Valor Otro Impuesto',
             'Tasa Otro Impuesto',
-            'Cobranza ID',
+            'Servicio',
             'Empresa Nombre',
             'Creado en',
             'Actualizado en',
         ];
     }
-
 }
