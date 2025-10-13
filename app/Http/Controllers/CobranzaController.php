@@ -10,13 +10,22 @@ class CobranzaController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
-        $cobranzas = Cobranza::all();
-        return view('cobranzas.index', compact('cobranzas'));
+        $query = Cobranza::query();
 
+        if ($request->filled('buscar')) {
+            $busqueda = $request->input('buscar');
+            $query->where('razon_social', 'like', "%{$busqueda}%")
+                ->orWhere('rut_cliente', 'like', "%{$busqueda}%");
+        }
+
+        $cobranzas = $query->orderBy('id', 'desc')->paginate(10);
+
+        return view('cobranzas.index', compact('cobranzas'));
     }
+
+
 
     /**
      * Show the form for creating a new resource.

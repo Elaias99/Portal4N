@@ -320,7 +320,16 @@
                                 <button type="submit" class="btn btn-primary btn-sm">
                                     <i class="bi bi-search"></i> Buscar
                                 </button>
+                                
                             </div>
+
+                            <div class="d-flex justify-content-end gap-2 mt-3">
+                                <a href="{{ route('cobranzas.index') }}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-x-circle"></i> Cobranzas
+                                </a>  
+                            </div>
+
+
                         </form>
                     </div>
                 </div>

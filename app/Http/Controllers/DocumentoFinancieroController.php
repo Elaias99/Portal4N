@@ -8,6 +8,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\DocumentosImport;
 use App\Models\MovimientoDocumento;
 use App\Exports\DocumentosExport;
+use Illuminate\Support\Facades\Auth;
 
 class DocumentoFinancieroController extends Controller
 {
@@ -145,7 +146,7 @@ class DocumentoFinancieroController extends Controller
         if (count($import->importados) > 0) {
             MovimientoDocumento::create([
                 'documento_financiero_id' => null,
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'tipo_movimiento' => 'Importación masiva',
                 'descripcion' => "Se importaron " . count($import->importados) . 
                                 " documentos desde el archivo '{$filename}' el " . now()->format('d/m/Y H:i:s'),
@@ -199,7 +200,7 @@ class DocumentoFinancieroController extends Controller
 
             MovimientoDocumento::create([
                 'documento_financiero_id' => $documento->id,
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'tipo_movimiento' => 'Actualización de estado manual',
                 'descripcion' => "Estado manual cambiado de '{$original['status']}' a '{$documento->status}'",
                 'datos_anteriores' => $original,
@@ -258,7 +259,7 @@ class DocumentoFinancieroController extends Controller
         // Registrar movimiento
         MovimientoDocumento::create([
             'documento_financiero_id' => $documento->id,
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'tipo_movimiento' => 'Abono registrado',
             'descripcion' => "Se registró un abono de {$request->monto} el {$request->fecha_abono}",
             'datos_nuevos' => ['monto' => $request->monto, 'fecha_abono' => $request->fecha_abono],
@@ -301,7 +302,7 @@ class DocumentoFinancieroController extends Controller
         // Registrar movimiento
         \App\Models\MovimientoDocumento::create([
             'documento_financiero_id' => $documento->id,
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'tipo_movimiento' => 'Cruce registrado',
             'descripcion' => "Se registró un cruce de {$request->monto} el {$request->fecha_cruce}",
             'datos_nuevos' => ['monto' => $request->monto, 'fecha_cruce' => $request->fecha_cruce],
