@@ -133,25 +133,25 @@ class DocumentoFinancieroController extends Controller
 
         $filename = $request->file('file')->getClientOriginalName();
 
-        // Detectar RUT en el nombre del archivo
+        // 🔍 Detectar RUT en el nombre del archivo
         $rut = null;
         if (preg_match('/(\d{7,8}-[0-9Kk])/', $filename, $matches)) {
             $rut = $this->normalizarRut($matches[1]);
         }
 
-        // Buscar empresa con ese RUT
+        // 🏢 Buscar empresa con ese RUT
         $empresa = null;
         if ($rut) {
             $empresa = \App\Models\Empresa::whereRaw("REPLACE(REPLACE(rut, '.', ''), '-', '-') = ?", [$rut])->first();
         }
 
-        // Ejecutar importación
+        // 📥 Ejecutar importación
         $import = new DocumentosImport($empresa?->id);
         Excel::import($import, $request->file('file'));
 
         $mensajes = [];
 
-        // 🛑 1️⃣ Si hay errores de estructura, detener inmediatamente
+        // 🛑 1️⃣ Errores estructurales
         if (count($import->errores) > 0) {
             foreach ($import->errores as $error) {
                 $mensajes[] = "⚠️ " . $error;
@@ -162,7 +162,7 @@ class DocumentoFinancieroController extends Controller
                 ->with('detalles_errores', $mensajes);
         }
 
-        // ✅ 2️⃣ Construir mensajes informativos
+        // ✅ 2️⃣ Mensajes informativos
         if (count($import->importados) > 0) {
             $mensajes[] = count($import->importados) . " documentos importados correctamente: " 
                         . implode(', ', $import->importados) . ".";
@@ -173,7 +173,9 @@ class DocumentoFinancieroController extends Controller
                         . implode(', ', $import->duplicados);
         }
 
+        // ⚡️ 3️⃣ Cobranzas faltantes
         if (count($import->sinCobranza) > 0) {
+
             foreach ($import->sinCobranza as $item) {
                 $mensajes[] = "No existe cobranza para la razón social '{$item['razon_social']}' (RUT: {$item['rut_cliente']}), 
                 folio {$item['folio']}. <a href='#' 
@@ -181,25 +183,29 @@ class DocumentoFinancieroController extends Controller
                 data-rut='{$item['rut_cliente']}' 
                 data-razon='{$item['razon_social']}'>Cree la cobranza aquí</a>";
             }
+
+            // 💾 Guardar en sesión para flujo guiado
+            session(['sin_cobranza' => $import->sinCobranza]);
+        } else {
+            // Si no hay pendientes, limpiar sesión anterior
+            session()->forget('sin_cobranza');
         }
 
-
-        // 🧾 3️⃣ Mensajes específicos para notas de crédito
+        // 🧾 4️⃣ Notas de crédito
         if (count($import->notasCredito) > 0) {
             foreach ($import->notasCredito as $nota) {
                 $mensajes[] = $nota;
             }
         }
 
-
-        // ⚠️ 3️⃣ Si hubo observaciones (pero no errores estructurales)
+        // ⚠️ 5️⃣ Si hubo observaciones (pero no errores)
         if (count($mensajes) > 0) {
             return redirect()->route('cobranzas.documentos')
                 ->with('warning', 'La importación finalizó con observaciones.')
                 ->with('detalles_errores', $mensajes);
         }
 
-        // 🧾 4️⃣ Registrar movimiento solo si todo fue correcto
+        // 🧾 6️⃣ Registrar movimiento solo si todo fue correcto
         if (count($import->importados) > 0) {
             MovimientoDocumento::create([
                 'documento_financiero_id' => null,
@@ -210,10 +216,11 @@ class DocumentoFinancieroController extends Controller
             ]);
         }
 
-        // 🟢 5️⃣ Mensaje final de éxito
+        // 🟢 7️⃣ Mensaje final
         return redirect()->route('cobranzas.documentos')
             ->with('success', 'Archivo importado correctamente.');
     }
+
 
 
 

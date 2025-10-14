@@ -25,7 +25,8 @@
 @push('scripts')
 <script>
 $(function () {
-    // 🟢 Abrir modal con datos precargados
+
+    // 🟢 Abrir modal manualmente desde enlace
     $(document).on('click', '.crear-cobranza-link', function (e) {
         e.preventDefault();
 
@@ -55,21 +56,67 @@ $(function () {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            success: function (data) {
-                if (data.success) {
-                    $('#modalCrearCobranza').modal('hide');
-                    alert('Cobranza creada correctamente ✅');
-                    // location.reload(); // opcional
-                } else if (data.errors) {
-                    alert('Errores de validación:\n' + Object.values(data.errors).join('\n'));
-                }
-            },
+
+
+                success: function (data) {
+                    if (data.success) {
+                        $('#modalCrearCobranza').modal('hide');
+                        alert('Cobranza creada correctamente ✅');
+
+                        // 🧭 Pasar al siguiente cliente pendiente
+                        if (typeof abrirSiguienteCobranza === 'function') {
+                            console.log('➡️ Pasando al siguiente cliente...');
+                            setTimeout(() => abrirSiguienteCobranza(), 600);
+                        }
+                    } else if (data.errors) {
+                        alert('Errores de validación:\n' + Object.values(data.errors).join('\n'));
+                    }
+                },
+
+
+
             error: function (xhr) {
                 console.error(xhr.responseText);
                 alert('Ocurrió un error al guardar la cobranza.');
             }
         });
     });
+
+    // =====================================================
+    // 🧩 NUEVO: Flujo guiado automático (si hay varias pendientes)
+    // =====================================================
+    @if(session('sin_cobranza'))
+        @php
+            // 🔥 Guardamos los pendientes y limpiamos la sesión de inmediato
+            $pendientes = session('sin_cobranza');
+            session()->forget('sin_cobranza');
+        @endphp
+
+        let pendientes = @json($pendientes);
+        console.log('🧠 Pendientes cargados:', pendientes);
+
+        let indiceActual = 0;
+
+        window.abrirSiguienteCobranza = function () {
+            indiceActual++;
+            if (indiceActual >= pendientes.length) {
+                alert("✅ Todas las cobranzas pendientes han sido creadas.");
+                return;
+            }
+
+            const actual = pendientes[indiceActual];
+            $('#modalCrearCobranza #rut_cliente').val(actual.rut_cliente);
+            $('#modalCrearCobranza #razon_social').val(actual.razon_social);
+            $('#modalCrearCobranza').modal('show');
+        };
+
+        // 🟢 Iniciar el flujo automáticamente al cargar
+        const primera = pendientes[indiceActual];
+        $('#modalCrearCobranza #rut_cliente').val(primera.rut_cliente);
+        $('#modalCrearCobranza #razon_social').val(primera.razon_social);
+        $('#modalCrearCobranza').modal('show');
+    @endif
+
 });
 </script>
 @endpush
