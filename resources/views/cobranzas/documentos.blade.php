@@ -613,6 +613,9 @@
         }
     </script>
 
+@include('cobranzas._modal_create_cobranza')
+
+
 
 @endsection
 

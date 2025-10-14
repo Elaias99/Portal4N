@@ -176,7 +176,10 @@ class DocumentoFinancieroController extends Controller
         if (count($import->sinCobranza) > 0) {
             foreach ($import->sinCobranza as $item) {
                 $mensajes[] = "No existe cobranza para la razón social '{$item['razon_social']}' (RUT: {$item['rut_cliente']}), 
-                    folio {$item['folio']}. <a href='" . route('cobranzas.create') . "' target='_blank'>Cree la cobranza aquí</a>";
+                folio {$item['folio']}. <a href='#' 
+                class='btn-link text-primary crear-cobranza-link' 
+                data-rut='{$item['rut_cliente']}' 
+                data-razon='{$item['razon_social']}'>Cree la cobranza aquí</a>";
             }
         }
 

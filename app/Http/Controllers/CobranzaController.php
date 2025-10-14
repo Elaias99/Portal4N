@@ -49,7 +49,15 @@ class CobranzaController extends Controller
             'creditos'    =>  'required|string|max:255',
         ]);
 
-        Cobranza::create($validated);
+        $cobranza = Cobranza::create($validated);
+
+        // ⚡ Si la solicitud viene vía AJAX, devolver JSON
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'cobranza' => $cobranza
+            ]);
+        }
 
         return redirect()->route('cobranzas.index')
                         ->with('success', 'Cobranza creada correctamente.');
