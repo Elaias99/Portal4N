@@ -65,33 +65,38 @@ class AbonoController extends Controller
         $abono = \App\Models\Abono::findOrFail($id);
         $documento = $abono->documento;
 
+        // Eliminar el abono
         $abono->delete();
 
-        // Recalcular abonos restantes
+        // Recalcular totales
         $totalAbonos = $documento->abonos()->sum('monto');
+        $totalCruces = $documento->cruces()->sum('monto');
 
-        if ($totalAbonos === 0) {
-            // Si ya no hay abonos → volver a estado automático
+        // Lógica de actualización de estado
+        if ($totalAbonos > 0) {
+            // Aún quedan abonos → mantener estado Abono
+            $nuevoEstado = 'Abono';
+        } elseif ($totalCruces > 0) {
+            // No hay abonos, pero sí cruces → mantener Cruce
+            $nuevoEstado = 'Cruce';
+        } else {
+            // No hay ni abonos ni cruces → volver a estado automático
             $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
                 ? 'Vencido'
                 : 'Al día';
-
-            $documento->update([
-                'status' => $nuevoEstado,
-                'fecha_estado_manual' => null,
-            ]);
-        } else {
-            // Si todavía hay abonos → mantener estado Abono
-            $documento->update([
-                'status' => 'Abono',
-                'fecha_estado_manual' => now(),
-            ]);
         }
 
+        // Actualizar documento
+        $documento->update([
+            'status' => $nuevoEstado,
+            'fecha_estado_manual' => ($nuevoEstado === 'Vencido' || $nuevoEstado === 'Al día') ? null : now(),
+        ]);
+
         return redirect()
-            ->route('abonos.index', $documento->id)
+            ->route('cobranzas.documentos', $documento->id)
             ->with('success', 'Abono eliminado y estado actualizado correctamente.');
     }
+
 
 
 

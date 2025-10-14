@@ -82,22 +82,41 @@
             @if($documento->abonos->isEmpty())
                 <p class="text-muted">Sin abonos registrados.</p>
             @else
-                <table class="table table-sm table-striped">
-                    <thead>
+            <table class="table table-sm table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Fecha Abono</th>
+                        <th>Monto</th>
+                        <th class="text-center" style="width: 150px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($documento->abonos as $abono)
                         <tr>
-                            <th>Fecha Abono</th>
-                            <th>Monto</th>
+                            <td>{{ \Carbon\Carbon::parse($abono->fecha_abono)->format('d-m-Y') }}</td>
+                            <td>${{ number_format($abono->monto, 0, ',', '.') }}</td>
+                            <td class="text-center">
+                                {{-- Botón Editar --}}
+                                {{-- <a href="{{ route('abonos.edit', $abono->id) }}" class="btn btn-sm btn-primary">
+                                    Editar
+                                </a> --}}
+
+                                <form action="{{ route('abonos.destroy', $abono->id) }}" 
+                                    method="POST" 
+                                    class="d-inline"
+                                    onsubmit="return confirm('¿Seguro que deseas eliminar este abono?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        Eliminar
+                                    </button>
+                                </form>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($documento->abonos as $abono)
-                            <tr>
-                                <td>{{ \Carbon\Carbon::parse($abono->fecha_abono)->format('d-m-Y') }}</td>
-                                <td>${{ number_format($abono->monto, 0, ',', '.') }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                    @endforeach
+                </tbody>
+            </table>
+
             @endif
         </div>
     </div>
@@ -109,22 +128,52 @@
             @if($documento->cruces->isEmpty())
                 <p class="text-muted">Sin cruces registrados.</p>
             @else
-                <table class="table table-sm table-striped">
-                    <thead>
+
+
+
+            <table class="table table-sm table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Fecha Cruce</th>
+                        <th>Monto</th>
+                        <th class="text-center" style="width: 150px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($documento->cruces as $cruce)
                         <tr>
-                            <th>Fecha Cruce</th>
-                            <th>Monto</th>
+                            <td>{{ \Carbon\Carbon::parse($cruce->fecha_cruce)->format('d-m-Y') }}</td>
+                            <td>${{ number_format($cruce->monto, 0, ',', '.') }}</td>
+                            <td class="text-center">
+                                {{-- Botón Editar --}}
+                                {{-- <a href="{{ route('cruces.edit', $cruce->id) }}" 
+                                class="btn btn-sm btn-primary">
+                                    Editar
+                                </a> --}}
+
+                                {{-- Botón Eliminar --}}
+                                <form action="{{ route('cruces.destroy', $cruce->id) }}" 
+                                    method="POST" 
+                                    class="d-inline"
+                                    onsubmit="return confirm('¿Seguro que deseas eliminar este cruce?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        Eliminar
+                                    </button>
+                                </form>
+                            </td>
+
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($documento->cruces as $cruce)
-                            <tr>
-                                <td>{{ \Carbon\Carbon::parse($cruce->fecha_cruce)->format('d-m-Y') }}</td>
-                                <td>${{ number_format($cruce->monto, 0, ',', '.') }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                    @endforeach
+                </tbody>
+</table>
+
+
+
+
+
+
             @endif
         </div>
     </div>

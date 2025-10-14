@@ -65,34 +65,39 @@ class CruceController extends Controller
      */
     public function destroy($id)
     {
-        $cruce = Cruce::findOrFail($id);
+        $cruce = \App\Models\Cruce::findOrFail($id);
         $documento = $cruce->documento;
 
+        // Eliminar el cruce
         $cruce->delete();
 
-        // Recalcular total de cruces
+        // Recalcular totales
         $totalCruces = $documento->cruces()->sum('monto');
+        $totalAbonos = $documento->abonos()->sum('monto');
 
-        if ($totalCruces === 0) {
-            // Si no quedan cruces, volver a estado automático
-            $nuevoEstado = now()->gt(Carbon::parse($documento->fecha_vencimiento))
+        // Lógica de actualización de estado
+        if ($totalCruces > 0) {
+            // Aún quedan cruces → mantener estado Cruce
+            $nuevoEstado = 'Cruce';
+        } elseif ($totalAbonos > 0) {
+            // No hay cruces, pero sí abonos → mantener Abono
+            $nuevoEstado = 'Abono';
+        } else {
+            // No hay ni cruces ni abonos → volver a estado automático
+            $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
                 ? 'Vencido'
                 : 'Al día';
-
-            $documento->update([
-                'status' => $nuevoEstado,
-                'fecha_estado_manual' => null,
-            ]);
-        } else {
-            // Si aún hay cruces, mantener el estado “Cruce”
-            $documento->update([
-                'status' => 'Cruce',
-                'fecha_estado_manual' => now(),
-            ]);
         }
 
+        // Actualizar documento
+        $documento->update([
+            'status' => $nuevoEstado,
+            'fecha_estado_manual' => ($nuevoEstado === 'Vencido' || $nuevoEstado === 'Al día') ? null : now(),
+        ]);
+
         return redirect()
-            ->route('cruces.index', $documento->id)
+            ->route('cobranzas.documentos', $documento->id)
             ->with('success', 'Cruce eliminado y estado actualizado correctamente.');
     }
+
 }
