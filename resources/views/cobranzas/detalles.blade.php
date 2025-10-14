@@ -210,9 +210,10 @@
 
     {{-- 🔹 Botón para volver --}}
     <div class="text-center mt-4">
-        <a href="{{ route('cobranzas.documentos') }}" class="btn btn-secondary">
+        <a href="{{ url()->previous() }}" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> Volver al listado
         </a>
     </div>
+
 </div>
 @endsection

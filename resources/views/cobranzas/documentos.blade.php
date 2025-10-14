@@ -571,10 +571,11 @@
                                     <span class="text-muted d-block">No aplica</span>
                                 @else
                                     {{-- 🔹 Un solo botón para ver todos los detalles --}}
-                                    <a href="{{ route('documentos.detalles', $doc->id) }}" 
+                                    <a href="{{ route('documentos.detalles', $doc->id) }}?{{ http_build_query(request()->query()) }}" 
                                     class="btn btn-sm btn-outline-primary w-100">
-                                        <i class="bi bi-eye"></i> Ver Detalles
+                                    <i class="bi bi-eye"></i> Ver Detalles
                                     </a>
+
                                 @endif
 
                             </td>
