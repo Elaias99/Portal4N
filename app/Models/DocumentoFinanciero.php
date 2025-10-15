@@ -214,6 +214,18 @@ class DocumentoFinanciero extends Model
         return max($saldo, 0);
     }
 
+    public function actualizarFechaVencimiento()
+    {
+        $this->loadMissing('cobranza');
+
+        if ($this->fecha_docto && $this->cobranza && $this->cobranza->creditos) {
+            $this->fecha_vencimiento = Carbon::parse($this->fecha_docto)
+                ->addDays((int) $this->cobranza->creditos)
+                ->format('Y-m-d');
+            $this->save();
+        }
+    }
+
 
 
 
