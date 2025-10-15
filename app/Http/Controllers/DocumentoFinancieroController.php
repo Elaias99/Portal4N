@@ -151,12 +151,6 @@ class DocumentoFinancieroController extends Controller
 
         $import->afterImport();
 
-        // dd(
-        //     \App\Models\DocumentoFinanciero::where('tipo_documento_id', 61)
-        //         ->select('folio', 'folio_docto_referencia', 'referencia_id')
-        //         ->get()
-        //         ->toArray()
-        // );
 
         $mensajes = [];
 

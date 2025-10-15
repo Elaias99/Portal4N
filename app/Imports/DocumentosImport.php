@@ -29,6 +29,13 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
     public function __construct($empresaId = null)
     {
         $this->empresaId = $empresaId;
+
+        // 🔄 Re-inicialización explícita
+        $this->errores = [];
+        $this->importados = [];
+        $this->duplicados = [];
+        $this->sinCobranza = [];
+        $this->notasCredito = [];
     }
 
 
@@ -163,10 +170,10 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
             $documento->save();
 
-            // 💬 Mensaje informativo
-            $this->notasCredito[] = $factura
-                ? "✅ Nota de crédito folio {$row['folio']} vinculada correctamente a la factura {$factura->folio}."
-                : "⚠️ Nota de crédito {$row['folio']} creada sin documento de referencia.";
+            // // 💬 Mensaje informativo
+            // $this->notasCredito[] = $factura
+            //     ? "✅ Nota de crédito folio {$row['folio']} vinculada correctamente a la factura {$factura->folio}."
+            //     : "⚠️ Nota de crédito {$row['folio']} creada sin documento de referencia.";
 
             return $documento; // 👈 Retorna para que Maatwebsite la cuente como importada
         }
@@ -322,21 +329,68 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
     public function afterImport()
     {
+        $this->notasCredito = [];
+
+        // 1️⃣ Vincular las notas de crédito importadas en este archivo
         $notas = \App\Models\DocumentoFinanciero::where('tipo_documento_id', 61)
-            ->whereNull('referencia_id')
+            ->whereIn('folio', $this->importados)
             ->get();
 
         foreach ($notas as $nota) {
-            $factura = \App\Models\DocumentoFinanciero::where('folio', $nota->folio_docto_referencia)
-                ->where('tipo_documento_id', $nota->tipo_docto_referencia)
-                ->first();
+            $this->vincularNotaCredito($nota);
+        }
 
-            if ($factura) {
+        // 2️⃣ Intentar vincular notas antiguas que quedaron huérfanas
+        $notasPendientes = \App\Models\DocumentoFinanciero::where('tipo_documento_id', 61)
+            ->whereNull('referencia_id')
+            ->whereNotNull('folio_docto_referencia')
+            ->get();
+
+        foreach ($notasPendientes as $nota) {
+            $this->vincularNotaCredito($nota, false);
+        }
+    }
+
+    /**
+     * 🔗 Vincula una nota de crédito con su factura referenciada si existe
+     */
+    private function vincularNotaCredito($nota, $esImportada = true)
+    {
+        $factura = \App\Models\DocumentoFinanciero::where('folio', $nota->folio_docto_referencia)
+            ->where('tipo_documento_id', $nota->tipo_docto_referencia)
+            ->first();
+
+        if ($factura) {
+            // 1️⃣ Vincular nota -> factura
+            if (!$nota->referencia_id) {
                 $nota->referencia_id = $factura->id;
                 $nota->save();
             }
+
+
+
+            // 2️⃣ Vincular factura -> nota (relación inversa)
+            //    Esto asegura que la factura muestre "Referenciada por NC N°..."
+            if (!$factura->referenciados()->where('id', $nota->id)->exists()) {
+                $factura->referenciados()->save($nota);
+            }
+
+            $factura->refresh();
+
+            // 3️⃣ Mensaje informativo solo si fue importada en este archivo
+            if ($esImportada) {
+                $this->notasCredito[] = "✅ Nota de crédito folio {$nota->folio} vinculada correctamente a la factura {$factura->folio}.";
+            }
+        } else {
+            if ($esImportada) {
+                $this->notasCredito[] = "⚠️ Nota de crédito folio {$nota->folio} no pudo vincularse porque la factura referenciada aún no existe.";
+            }
         }
     }
+
+
+    
+
 
 
 

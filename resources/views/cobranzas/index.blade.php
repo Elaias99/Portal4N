@@ -65,6 +65,7 @@
                             <th class="text-start">Razón Social</th>
                             <th class="text-center">Servicio</th>
                             <th class="text-center">Créditos</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -74,6 +75,22 @@
                                 <td class="text-start">{{ $cobranza->razon_social }}</td>
                                 <td class="text-center">{{ $cobranza->servicio }}</td>
                                 <td class="text-center">{{ $cobranza->creditos }}</td>
+
+                                <td>
+                                    <a href="{{ route('cobranzas.edit', $cobranza->id) }}" class="btn btn-sm btn-warning">
+                                        Editar
+                                    </a>
+
+                                    <form action="{{ route('cobranzas.destroy', $cobranza->id) }}" method="POST" style="display:inline;">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Seguro que deseas eliminar esta cobranza?')">
+                                            Eliminar
+                                        </button>
+                                    </form>
+                                </td>
+
+
                             </tr>
                         @empty
                             <tr>
