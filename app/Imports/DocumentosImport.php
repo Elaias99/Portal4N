@@ -79,14 +79,24 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
         // Buscar cobranza asociada
         $cobranza = Cobranza::where('rut_cliente', $row['rut_cliente'] ?? null)->first();
+
+
         if (!$cobranza) {
-            $this->sinCobranza[] = [
-                'razon_social' => $row['razon_social'],
-                'rut_cliente' => $row['rut_cliente'],
-                'folio' => $folioExcel,
-            ];
+            // Evitar duplicados por RUT
+            $yaRegistrado = collect($this->sinCobranza)
+                ->contains(fn($item) => $item['rut_cliente'] === $row['rut_cliente']);
+
+            if (!$yaRegistrado) {
+                $this->sinCobranza[] = [
+                    'razon_social' => $row['razon_social'],
+                    'rut_cliente' => $row['rut_cliente'],
+                    'folio' => $folioExcel,
+                ];
+            }
+
             return null;
         }
+
 
         $fechaDocto = $this->transformDate($row['fecha_docto']);
         $fechaVencimiento = $this->calcularFechaVencimiento(
@@ -97,10 +107,24 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
         $estadoInicial = $this->definirEstadoInicial($fechaVencimiento);
 
         // 🔹 Verificar si es una Nota de Crédito (tipo 61)
+        // 🔹 Verificar si es una Nota de Crédito (tipo 61)
         if ((int)($row['tipo_doc'] ?? 0) === 61) {
-            $tipoReferencia = $row['tipo_docto_referencia'] ?? null;
-            $folioReferencia = $row['folio_docto_referencia'] ?? null;
 
+            // 🧩 Detección flexible para diferentes encabezados
+            $tipoReferencia = $row['tipo_docto_referencia']
+                ?? $row['tipo_doc_ref']
+                ?? $row['tipo_doc_referencia']
+                ?? $row['tipo_documento_referencia']
+                ?? $row['tpodocref']
+                ?? null;
+
+            $folioReferencia = $row['folio_docto_referencia']
+                ?? $row['folio_doc_ref']
+                ?? $row['folio_referencia']
+                ?? $row['foliodocref']
+                ?? null;
+
+            // 🔍 Buscar la factura referenciada
             $factura = null;
             if ($tipoReferencia && $folioReferencia) {
                 $factura = DocumentoFinanciero::where('tipo_documento_id', $tipoReferencia)
@@ -108,6 +132,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                     ->first();
             }
 
+            // 🧾 Crear la nota de crédito
             $documento = new DocumentoFinanciero([
                 'folio' => $folioExcel,
                 'nro' => $row['nro'],
@@ -131,18 +156,21 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                 'cobranza_id' => $cobranza?->id,
                 'status_original' => $estadoInicial,
                 'status' => $estadoInicial,
+                'tipo_docto_referencia' => $tipoReferencia,
+                'folio_docto_referencia' => $folioReferencia,
                 'referencia_id' => $factura?->id,
             ]);
 
             $documento->save();
 
-            // Mensaje informativo
+            // 💬 Mensaje informativo
             $this->notasCredito[] = $factura
-                ? "Nota de crédito folio {$row['folio']} vinculada correctamente a la factura {$factura->folio}."
+                ? "✅ Nota de crédito folio {$row['folio']} vinculada correctamente a la factura {$factura->folio}."
                 : "⚠️ Nota de crédito {$row['folio']} creada sin documento de referencia.";
 
-            return $documento; // 👈 No retornes null, así la colección lo considera importado
+            return $documento; // 👈 Retorna para que Maatwebsite la cuente como importada
         }
+
 
 
 
@@ -291,4 +319,25 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
         return Carbon::parse($fechaVencimiento)->isPast() ? 'Vencido' : 'Al día';
     }
+
+    public function afterImport()
+    {
+        $notas = \App\Models\DocumentoFinanciero::where('tipo_documento_id', 61)
+            ->whereNull('referencia_id')
+            ->get();
+
+        foreach ($notas as $nota) {
+            $factura = \App\Models\DocumentoFinanciero::where('folio', $nota->folio_docto_referencia)
+                ->where('tipo_documento_id', $nota->tipo_docto_referencia)
+                ->first();
+
+            if ($factura) {
+                $nota->referencia_id = $factura->id;
+                $nota->save();
+            }
+        }
+    }
+
+
+
 }
