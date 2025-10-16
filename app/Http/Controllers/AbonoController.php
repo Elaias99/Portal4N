@@ -97,6 +97,21 @@ class AbonoController extends Controller
             ->with('success', 'Abono eliminado y estado actualizado correctamente.');
     }
 
+    public function show()
+    {
+        // Traer todos los abonos con su documento asociado
+        $abonos = \App\Models\Abono::with('documento')
+            ->orderByDesc('fecha_abono')
+            ->get();
+
+        // Calcular totales generales
+        $totalAbonado = $abonos->sum('monto');
+        $cantidadAbonos = $abonos->count();
+
+        return view('abonos.show', compact('abonos', 'totalAbonado', 'cantidadAbonos'));
+    }
+
+
 
 
 

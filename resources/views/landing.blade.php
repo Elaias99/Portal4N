@@ -44,11 +44,12 @@
 
 
         <div class="image-container">
-            <a href="{{ route('under.construction') }}">
-                <img src="{{ asset('images/imagen3.webp') }}" alt="Logística" loading="lazy">
-                <div class="text-overlay">Logística</div>
+            <a href="{{ route('login') }}">
+                <img src="{{ asset('images/imagen3.webp') }}" alt="Finanzas" loading="lazy">
+                <div class="text-overlay">Finanzas</div>
             </a>
         </div>
+
 
 
     </section>

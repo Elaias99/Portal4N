@@ -21,6 +21,11 @@ class LoginController extends Controller
      */
     protected function authenticated(Request $request, $user)
     {
+        // 🔹 Si es la jefa de finanzas (usuario con ID 405), redirigir a cobranzas
+        if ($user->id === 405) {
+            return redirect()->route('cobranzas.general');
+        }
+
         // Verificamos si el usuario tiene un trabajador asociado
         if ($user->trabajador) {
             return redirect('/empleados/perfil');

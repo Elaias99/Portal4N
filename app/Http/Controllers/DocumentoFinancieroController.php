@@ -15,6 +15,10 @@ class DocumentoFinancieroController extends Controller
     //
     public function index(Request $request)
     {
+        if (auth()->id() !== 405) {
+            abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
+        }
+
         $query = DocumentoFinanciero::with(['cobranza', 'empresa', 'abonos', 'referenciados']);
 
         // === FILTROS GENERALES ===
@@ -120,6 +124,59 @@ class DocumentoFinancieroController extends Controller
         ));
 
     }
+
+    public function general(Request $request)
+    {
+        // 🚫 Restricción de acceso solo para usuario 405
+        if (auth()->id() !== 405) {
+            abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
+        }
+
+        $query = \App\Models\DocumentoFinanciero::with(['empresa', 'tipoDocumento', 'movimientos.user']);
+
+        // 🔍 Filtros dinámicos según el formulario
+        if ($request->filled('q')) {
+            $q = $request->input('q');
+            $query->where(function ($sub) use ($q) {
+                $sub->where('folio', 'like', "%$q%")
+                    ->orWhere('razon_social', 'like', "%$q%")
+                    ->orWhere('rut_cliente', 'like', "%$q%");
+            });
+        }
+
+        if ($request->filled('rut')) {
+            $query->where('rut_cliente', 'like', "%{$request->rut}%");
+        }
+
+        if ($request->filled('estado')) {
+            $estado = $request->estado;
+            $query->where(function ($sub) use ($estado) {
+                $sub->where('status_original', $estado)
+                    ->orWhere('status', $estado);
+            });
+        }
+
+        // 🔹 Si hay filtros, traer los resultados; si no, solo mostrar vista vacía
+        $documentos = null;
+        if ($request->hasAny(['q', 'rut', 'estado'])) {
+            $documentos = $query->orderByDesc('fecha_docto')->limit(30)->get();
+        }
+
+        // 🔹 Si hay un documento específico seleccionado
+        $documentoSeleccionado = null;
+        if ($request->filled('documento_id')) {
+            $documentoSeleccionado = \App\Models\DocumentoFinanciero::with(['empresa', 'tipoDocumento', 'movimientos.user'])
+                ->find($request->documento_id);
+        }
+
+        return view('cobranzas.general', compact('documentos', 'documentoSeleccionado'));
+    }
+
+
+
+
+
+
 
 
 

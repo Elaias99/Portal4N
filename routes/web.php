@@ -278,6 +278,9 @@ Route::post('/documentos/{documento}/abonos', [DocumentoFinancieroController::cl
 Route::post('/documentos/{documento}/cruces', [DocumentoFinancieroController::class, 'storeCruce'])
     ->name('documentos.cruces.store');
 
+Route::get('/cobranzas/general', [App\Http\Controllers\DocumentoFinancieroController::class, 'general'])
+        ->name('cobranzas.general');
+
 Route::resource('cobranzas', CobranzaController::class);
 
 
@@ -305,6 +308,9 @@ Route::put('/abonos/{id}', [AbonoController::class, 'update'])
 Route::delete('/abonos/{id}', [AbonoController::class, 'destroy'])
     ->name('abonos.destroy');
 
+Route::get('/abonos/show', [AbonoController::class, 'show'])->name('abonos.show');
+
+
 
 /////CRUCES
 // CRUD de cruces
@@ -312,6 +318,9 @@ Route::get('/documentos/{documento}/cruces', [CruceController::class, 'index'])-
 Route::get('/cruces/{id}/edit', [CruceController::class, 'edit'])->name('cruces.edit');
 Route::put('/cruces/{id}', [CruceController::class, 'update'])->name('cruces.update');
 Route::delete('/cruces/{id}', [CruceController::class, 'destroy'])->name('cruces.destroy');
+Route::get('/cruces/show', [App\Http\Controllers\CruceController::class, 'show'])
+    ->name('cruces.show');
+
 
 
 

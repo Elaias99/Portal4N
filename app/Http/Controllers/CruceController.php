@@ -100,4 +100,19 @@ class CruceController extends Controller
             ->with('success', 'Cruce eliminado y estado actualizado correctamente.');
     }
 
+    public function show()
+    {
+        // Traer todos los cruces con su documento asociado
+        $cruces = \App\Models\Cruce::with('documento')
+            ->orderByDesc('fecha_cruce')
+            ->get();
+
+        // Totales generales
+        $totalCruzado = $cruces->sum('monto');
+        $cantidadCruces = $cruces->count();
+
+        return view('cruces.show', compact('cruces', 'totalCruzado', 'cantidadCruces'));
+    }
+
+
 }
