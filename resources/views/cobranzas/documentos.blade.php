@@ -294,6 +294,13 @@
 
     <div class="container-fluid" style="max-width: 100%;">
 
+        <div class="mb-3">
+            <a href="{{ route('cobranzas.general') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fa fa-arrow-left"></i> Volver al Panel Principal
+            </a>
+        </div>
+
+
         <h1 class="text-center mb-4" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
             Reporte Cuentas por Cobrar
         </h1>
@@ -518,15 +525,15 @@
 
                             {{-- 🔹 Tipo Documento --}}
                             {{-- 🔹 Tipo Documento --}}
-                            <td>{{ $doc->tipoDocumento?->nombre ?? 'Sin tipo' }}</td>
+                            <td class="text-nowrap">{{ $doc->tipoDocumento?->nombre ?? 'Sin tipo' }}</td>
 
 
 
                             {{-- 🔹 Rut Cliente --}}
-                            <td>{{ $doc->rut_cliente }}</td>
+                            <td class="text-nowrap">{{ $doc->rut_cliente }}</td>
 
                             {{-- 🔹 Razón Social --}}
-                            <td>{{ $doc->razon_social }}</td>
+                            <td class="text-nowrap">{{ $doc->razon_social }}</td>
 
                             {{-- 🔹 Folio --}}
                             <td>{{ $doc->folio }}

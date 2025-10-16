@@ -17,40 +17,25 @@
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body d-flex flex-column align-items-center justify-content-center">
                         <i class="fa fa-file-invoice-dollar fa-3x text-primary mb-2"></i>
-                        <h6 class="fw-bold mb-1">Documentos Financieros</h6>
+                        <h6 class="fw-bold mb-1">Cuentas por Cobrar</h6>
                         <p class="small mb-0">Gestión de facturas y notas de crédito</p>
                     </div>
                 </div>
             </a>
         </div>
 
-        {{-- Historial de Abonos --}}
         <div class="col-md-3 mb-3">
-            <a href="{{ route('abonos.show') }}" class="text-decoration-none text-dark">
+            <a href="{{ route('panelfinanza.show') }}" class="text-decoration-none text-dark">
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body d-flex flex-column align-items-center justify-content-center">
-                        <i class="fa fa-coins fa-3x text-warning mb-2"></i>
-                        <h6 class="fw-bold mb-1">Historial de Abonos</h6>
-                        <p class="small mb-0">Ver todos los abonos del sistema</p>
-                    </div>
-                </div>
-            </a>
-
-        </div>
-
-        {{-- Historial de Cruces --}}
-        {{-- Historial de Cruces --}}
-        <div class="col-md-3 mb-3">
-            <a href="{{ route('cruces.show') }}" class="text-decoration-none text-dark">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-body d-flex flex-column align-items-center justify-content-center">
-                        <i class="fa fa-link fa-3x text-info mb-2"></i>
-                        <h6 class="fw-bold mb-1">Historial de Cruces</h6>
-                        <p class="small mb-0">Ver todos los cruces del sistema</p>
+                        <i class="fa fa-history fa-3x text-primary mb-2"></i>
+                        <h6 class="fw-bold mb-1">Historial de Movimientos</h6>
+                        <p class="small mb-0">Ver abonos y cruces en un solo listado</p>
                     </div>
                 </div>
             </a>
         </div>
+
 
         
     </div>

@@ -12,7 +12,7 @@ use App\Http\Controllers\FacturaController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\ProveedorImportController;
 use App\Http\Controllers\CompraController;
-use App\Http\Controllers\BancoController;
+use App\Http\Controllers\PanelFinanzaController;
 use App\Http\Controllers\AsistenciaController;
 use App\Models\User;
 use App\Http\Controllers\SolicitudManualController;
@@ -200,6 +200,11 @@ Route::resource('clasificacion-operativa', \App\Http\Controllers\ClasificacionOp
 
 
 
+///PanelFinanza//////
+Route::get('/panelfinanza/show', [App\Http\Controllers\PanelFinanzaController::class, 'show'])
+    ->name('panelfinanza.show');
+
+
 
 
 // 7. Rutas para otros modelos
@@ -328,17 +333,17 @@ Route::get('/cruces/show', [App\Http\Controllers\CruceController::class, 'show']
 Route::post('/empleados/{id}/desvincular', [App\Http\Controllers\TrabajadorController::class, 'desvincular'])->name('empleados.desvincular');
 
 
-// 📄 Descargar archivo PDF del contrato
+// Descargar archivo PDF del contrato
 Route::get('contratos/{id}/download', [ContratoController::class, 'download'])
     ->name('contratos.download')
     ->middleware('auth');
 
-// 📝 Mostrar formulario para registrar contrato (recibe ID del trabajador)
+// Mostrar formulario para registrar contrato (recibe ID del trabajador)
 Route::get('contratos/create/{trabajador}', [ContratoController::class, 'create'])
     ->name('contratos.create')
     ->middleware('auth');
 
-// 💾 Guardar contrato para trabajador (POST con ID del trabajador)
+// Guardar contrato para trabajador (POST con ID del trabajador)
 Route::post('contratos/{trabajador}', [ContratoController::class, 'store'])
     ->name('contratos.store')
     ->middleware('auth');
@@ -352,7 +357,7 @@ Route::put('contratos/{contrato}', [ContratoController::class, 'update'])
     ->middleware('auth');
 
 
-// 📋 Otras rutas de tipo resource (index y destroy)
+// Otras rutas de tipo resource (index y destroy)
 Route::resource('contratos', ContratoController::class)
     ->only(['index', 'destroy'])
     ->middleware('auth');
