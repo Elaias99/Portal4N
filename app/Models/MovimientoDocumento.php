@@ -31,7 +31,7 @@ class MovimientoDocumento extends Model
         return $this->belongsTo(DocumentoFinanciero::class, 'documento_financiero_id');
     }
 
-    public function usuario()
+    public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }

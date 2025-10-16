@@ -88,16 +88,23 @@
                                 <input type="text" name="rut" class="form-control form-control-sm"
                                     placeholder="Ej: 76.543.210-9" value="{{ request('rut') }}">
                             </div>
-                            <div class="col-md-3 mb-3">
+                            {{-- <div class="col-md-3 mb-3">
                                 <label class="small text-muted">Estado</label>
-                                <select name="estado" class="form-control form-control-sm">
+
+
+
+                                <select name="status" class="form-control form-control-sm">
                                     <option value="">Todos</option>
-                                    <option value="Al día" {{ request('estado')=='Al día'?'selected':'' }}>Al día</option>
-                                    <option value="Vencido" {{ request('estado')=='Vencido'?'selected':'' }}>Vencido</option>
-                                    <option value="Pagado" {{ request('estado')=='Pagado'?'selected':'' }}>Pagado</option>
+                                    <option value="Al día" {{ request('status')=='Al día'?'selected':'' }}>Al día</option>
+                                    <option value="Vencido" {{ request('status')=='Vencido'?'selected':'' }}>Vencido</option>
+                                    <option value="Pagado" {{ request('status')=='Pagado'?'selected':'' }}>Pagado</option>
                                 </select>
-                            </div>
-                            <div class="col-md-2 text-end mb-3">
+
+
+
+
+                            </div> --}}
+                            <div class="col-md-5 text-end mb-3">
                                 <button type="submit" class="btn btn-primary btn-sm">
                                     <i class="fa fa-search"></i> Buscar
                                 </button>
@@ -131,14 +138,21 @@
                                     <td>{{ $doc->rut_cliente }}</td>
                                     <td>{{ $doc->fecha_docto }}</td>
                                     <td>{{ $doc->fecha_vencimiento }}</td>
+
+
                                     <td>
-                                        <span class="badge bg-{{ $doc->status_original == 'Vencido' ? 'danger' : 'success' }}">
-                                            {{ $doc->status_original }}
+                                        <span class="badge bg-{{ $doc->status == 'Vencido' ? 'danger' : 'success' }}">
+                                            {{ $doc->status }}
                                         </span>
                                     </td>
+
+
+
+
+
                                     <td class="text-end">${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}</td>
                                     <td>
-                                        <a href="{{ route('cobranzas.general', array_merge(request()->only(['q','rut','estado']), ['documento_id' => $doc->id])) }}"
+                                        <a href="{{ route('cobranzas.general', array_merge(request()->only(['q','rut','status']), ['documento_id' => $doc->id])) }}"
                                            class="btn btn-sm btn-outline-primary">
                                             <i class="fa fa-eye"></i> Ver
                                         </a>
@@ -195,7 +209,8 @@
                             <tr>
                                 <td>{{ $mov->id }}</td>
                                 <td>{{ $mov->tipo_movimiento }}</td>
-                                <td>{{ $mov->user?->name ?? '-' }}</td>
+                                <td>{{ $mov->user->name ?? '— Sistema —' }}</td>
+
                                 <td>{{ $mov->created_at->format('d-m-Y H:i') }}</td>
                                 <td>{{ $mov->descripcion }}</td>
                             </tr>

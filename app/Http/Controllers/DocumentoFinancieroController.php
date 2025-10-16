@@ -15,7 +15,9 @@ class DocumentoFinancieroController extends Controller
     //
     public function index(Request $request)
     {
-        if (auth()->id() !== 405) {
+        $usuariosFinanzas = [1, 405, 374];
+
+        if (!in_array(Auth::id(), $usuariosFinanzas)) {
             abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
         }
 
@@ -128,7 +130,9 @@ class DocumentoFinancieroController extends Controller
     public function general(Request $request)
     {
         // 🚫 Restricción de acceso solo para usuario 405
-        if (auth()->id() !== 405) {
+        $usuariosFinanzas = [1, 405, 374];
+
+        if (!in_array(Auth::id(), $usuariosFinanzas)) {
             abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
         }
 
@@ -151,7 +155,7 @@ class DocumentoFinancieroController extends Controller
         if ($request->filled('estado')) {
             $estado = $request->estado;
             $query->where(function ($sub) use ($estado) {
-                $sub->where('status_original', $estado)
+                $sub->where('status', $estado)
                     ->orWhere('status', $estado);
             });
         }
