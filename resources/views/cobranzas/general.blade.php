@@ -68,15 +68,58 @@
                                 <input type="text" name="q" class="form-control form-control-sm"
                                     placeholder="Ej: 10256 o Transportes Sur Ltda" value="{{ request('q') }}">
                             </div>
+
                             <div class="col-md-3 mb-3">
                                 <label class="small text-muted">RUT Cliente</label>
                                 <input type="text" name="rut" class="form-control form-control-sm"
                                     placeholder="Ej: 76.543.210-9" value="{{ request('rut') }}">
                             </div>
 
-                            <div class="col-md-5 text-end mb-3">
-                                <button type="submit" class="btn btn-primary btn-sm">
-                                    <i class="fa fa-search"></i> Buscar
+                            {{-- 🔽 Filtro: Fecha de Documento --}}
+                            <div class="col-md-2 dropdown-fechas mb-3">
+                                <label class="form-label small text-muted">Fecha Origen</label>
+                                <div class="dropdown w-100">
+                                    <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
+                                            id="dropdownFechas" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-calendar3"></i> Fecha Dcto.
+                                    </button>
+
+                                    <div class="dropdown-menu p-3">
+                                        <label class="form-label small text-muted">Desde</label>
+                                        <input type="date" name="fecha_inicio" class="form-control form-control-sm mb-2"
+                                            value="{{ request('fecha_inicio') }}">
+
+                                        <label class="form-label small text-muted">Hasta</label>
+                                        <input type="date" name="fecha_fin" class="form-control form-control-sm mb-2"
+                                            value="{{ request('fecha_fin') }}">
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- 🔽 Filtro: Fecha de Vencimiento --}}
+                            <div class="col-md-2 dropdown-fechas mb-3">
+                                <label class="form-label small text-muted">Fecha Vencimiento</label>
+                                <div class="dropdown w-100">
+                                    <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
+                                            id="dropdownVencimiento" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-calendar-event"></i> Fecha Venc.
+                                    </button>
+
+                                    <div class="dropdown-menu p-3">
+                                        <label class="form-label small text-muted">Desde</label>
+                                        <input type="date" name="vencimiento_inicio" class="form-control form-control-sm mb-2"
+                                            value="{{ request('vencimiento_inicio') }}">
+
+                                        <label class="form-label small text-muted">Hasta</label>
+                                        <input type="date" name="vencimiento_fin" class="form-control form-control-sm mb-2"
+                                            value="{{ request('vencimiento_fin') }}">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-1 text-end mb-3">
+                                <button type="submit" class="btn btn-primary btn-sm w-100">
+                                    <i class="fa fa-search"></i>
                                 </button>
                             </div>
                         </div>

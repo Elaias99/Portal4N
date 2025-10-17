@@ -178,9 +178,28 @@ class DocumentoFinancieroController extends Controller
             });
         }
 
+
+        if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
+            $query->whereBetween('fecha_docto', [$request->fecha_inicio, $request->fecha_fin]);
+        } elseif ($request->filled('fecha_inicio')) {
+            $query->whereDate('fecha_docto', '>=', $request->fecha_inicio);
+        } elseif ($request->filled('fecha_fin')) {
+            $query->whereDate('fecha_docto', '<=', $request->fecha_fin);
+        }
+
+        // === FILTRO FECHA DE VENCIMIENTO ===
+        if ($request->filled('vencimiento_inicio') && $request->filled('vencimiento_fin')) {
+            $query->whereBetween('fecha_vencimiento', [$request->vencimiento_inicio, $request->vencimiento_fin]);
+        } elseif ($request->filled('vencimiento_inicio')) {
+            $query->whereDate('fecha_vencimiento', '>=', $request->vencimiento_inicio);
+        } elseif ($request->filled('vencimiento_fin')) {
+            $query->whereDate('fecha_vencimiento', '<=', $request->vencimiento_fin);
+        }
+
+
         // 🔹 Si hay filtros, traer los resultados; si no, solo mostrar vista vacía
         $documentos = null;
-        if ($request->hasAny(['q', 'rut', 'estado'])) {
+        if ($request->hasAny(['q', 'rut', 'estado', 'fecha_inicio', 'fecha_fin', 'vencimiento_inicio', 'vencimiento_fin'])) {
             $documentos = $query->orderByDesc('fecha_docto')->limit(30)->get();
         }
 
