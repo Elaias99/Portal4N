@@ -62,8 +62,26 @@ class DocumentoFinancieroController extends Controller
         $totalAlDia = DocumentoFinanciero::where('status_original', 'Al día')->count();
         $totalVencido = DocumentoFinanciero::where('status_original', 'Vencido')->count();
 
+
         // === OBTENER DATOS BASE ===
         $documentoFinancieros = $query->orderBy('fecha_docto', 'desc')->get();
+
+
+        $hoy = \Carbon\Carbon::today();
+
+        foreach ($documentoFinancieros as $doc) {
+            if ($doc->fecha_vencimiento && $doc->saldo_pendiente > 0) {
+                $fechaVenc = \Carbon\Carbon::parse($doc->fecha_vencimiento);
+
+                if ($fechaVenc->lt($hoy) && $doc->status_original !== 'Vencido') {
+                    $doc->status_original = 'Vencido';
+                    $doc->save();
+                } elseif ($fechaVenc->gte($hoy) && $doc->status_original !== 'Al día') {
+                    $doc->status_original = 'Al día';
+                    $doc->save();
+                }
+            }
+        }
 
         // === FILTRO POR ESTADO DE PAGO (Pagado / Pendiente) ===
         if ($request->filled('estado_pago')) {

@@ -73,22 +73,7 @@
                                 <input type="text" name="rut" class="form-control form-control-sm"
                                     placeholder="Ej: 76.543.210-9" value="{{ request('rut') }}">
                             </div>
-                            {{-- <div class="col-md-3 mb-3">
-                                <label class="small text-muted">Estado</label>
 
-
-
-                                <select name="status" class="form-control form-control-sm">
-                                    <option value="">Todos</option>
-                                    <option value="Al día" {{ request('status')=='Al día'?'selected':'' }}>Al día</option>
-                                    <option value="Vencido" {{ request('status')=='Vencido'?'selected':'' }}>Vencido</option>
-                                    <option value="Pagado" {{ request('status')=='Pagado'?'selected':'' }}>Pagado</option>
-                                </select>
-
-
-
-
-                            </div> --}}
                             <div class="col-md-5 text-end mb-3">
                                 <button type="submit" class="btn btn-primary btn-sm">
                                     <i class="fa fa-search"></i> Buscar

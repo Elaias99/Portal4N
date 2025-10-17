@@ -496,8 +496,15 @@
                             {{-- 🔹 Estado visible según status_original (solo 2 colores) --}}
                             <td>
                                 @php
+                                    // El color siempre depende del estado automático
                                     $color = $doc->status_original === 'Vencido' ? 'bg-danger' : 'bg-success';
-                                    $estadoMostrar = $doc->status ?? $doc->status_original;
+
+                                    // Solo usamos el status manual si es uno de los estados válidos
+                                    $estadosManuales = ['Abono', 'Cruce', 'Pago', 'Cobranza judicial'];
+
+                                    $estadoMostrar = in_array($doc->status, $estadosManuales)
+                                        ? $doc->status
+                                        : $doc->status_original;
                                 @endphp
 
                                 <span class="badge {{ $color }}">
@@ -554,7 +561,11 @@
 
                             {{-- 🔹 Fecha Documento --}}
                             <td><span style="white-space: nowrap;">{{ $doc->fecha_docto ? \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') : '-' }}</span></td>
+
+
                             <td><span style="white-space: nowrap;">{{ $doc->fecha_vencimiento ? \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') : '-' }}</span></td>
+
+
                             <td><span style="white-space: nowrap;">{{ $doc->fecha_estado_manual ? \Carbon\Carbon::parse($doc->fecha_estado_manual)->format('d-m-Y') : '-' }}</span></td>
 
 
