@@ -21,7 +21,7 @@
                 <div class="col-md-6">
                     <p><strong>Monto Total:</strong> ${{ number_format($documento->monto_total, 0, ',', '.') }}</p>
                     <p><strong>Saldo Pendiente:</strong> ${{ number_format($documento->saldo_pendiente, 0, ',', '.') }}</p>
-                    <p><strong>Estado Actual:</strong> {{ $documento->status ?? $documento->status_original }}</p>
+                    <p><strong>Estado Actual:</strong> {{ $documento->status_original }}</p>
                     <p><strong>Fecha Documento:</strong> {{ $documento->fecha_docto ? \Carbon\Carbon::parse($documento->fecha_docto)->format('d-m-Y') : '-' }}</p>
                     <p><strong>Fecha Vencimiento:</strong> {{ $documento->fecha_vencimiento ? \Carbon\Carbon::parse($documento->fecha_vencimiento)->format('d-m-Y') : '-' }}</p>
                 </div>
