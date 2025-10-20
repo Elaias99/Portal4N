@@ -2,8 +2,139 @@
     <tr>
         {{-- 🔹 Columnas fijas sin dropdown --}}
         <th>Estado</th>
-        <th>Empresa</th>
-        <th>Tipo Doc</th>
+        {{-- 🔹 EMPRESA --}}
+        <th>
+            <div class="dropdown d-inline">
+                <button class="btn btn-light btn-sm dropdown-toggle px-2 py-1" type="button"
+                        data-bs-toggle="dropdown" aria-expanded="false"
+                        style="font-weight:600; color:#495057; background:#f9fafb; border:none;">
+                    Empresa
+                    @if(isset($sortBy) && $sortBy === 'empresa_id')
+                        <i class="bi {{ $sortOrder === 'asc' ? 'bi-sort-alpha-down' : 'bi-sort-alpha-up' }} ms-1 text-primary"></i>
+                    @endif
+                </button>
+
+                <ul class="dropdown-menu shadow-sm small p-2" style="min-width: 230px;">
+                    {{-- 🔹 Ordenamiento --}}
+                    <li>
+                        <a class="dropdown-item mb-1"
+                            href="{{ route('cobranzas.column_filter', array_merge(request()->query(), ['sort_by' => 'empresa_id', 'sort_order' => 'asc'])) }}">
+                            <i class="bi bi-sort-alpha-down"></i> Ordenar A → Z
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item mb-2"
+                            href="{{ route('cobranzas.column_filter', array_merge(request()->query(), ['sort_by' => 'empresa_id', 'sort_order' => 'desc'])) }}">
+                            <i class="bi bi-sort-alpha-up"></i> Ordenar Z → A
+                        </a>
+                    </li>
+
+                    <li><hr class="dropdown-divider"></li>
+
+                    {{-- 🔹 Filtro por Empresa --}}
+                    <li class="px-2">
+                        <form method="GET" action="{{ route('cobranzas.column_filter') }}">
+                            @foreach(request()->query() as $key => $value)
+                                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                            @endforeach
+                            <input type="hidden" name="columna" value="empresa_id">
+
+                            <div class="mb-2">
+                                <select name="valor" class="form-select form-select-sm">
+                                    <option value="">-- Seleccionar empresa --</option>
+                                    @foreach($empresas as $empresa)
+                                        <option value="{{ $empresa->id }}" {{ request('valor') == $empresa->id ? 'selected' : '' }}>
+                                            {{ $empresa->Nombre }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 me-1">
+                                    <i class="bi bi-filter"></i> Filtrar
+                                </button>
+
+                                @if(request('columna') === 'empresa_id' && request('valor'))
+                                    <a href="{{ route('cobranzas.documentos', array_diff_key(request()->query(), ['columna'=>1,'valor'=>1])) }}"
+                                    class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-x-circle"></i>
+                                    </a>
+                                @endif
+                            </div>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </th>
+
+
+        {{-- 🔹 TIPO DOCUMENTO --}}
+        <th>
+            <div class="dropdown d-inline">
+                <button class="btn btn-light btn-sm dropdown-toggle px-2 py-1" type="button"
+                        data-bs-toggle="dropdown" aria-expanded="false"
+                        style="font-weight:600; color:#495057; background:#f9fafb; border:none;">
+                    Tipo Doc
+                    @if(isset($sortBy) && $sortBy === 'tipo_doc_id')
+                        <i class="bi {{ $sortOrder === 'asc' ? 'bi-sort-alpha-down' : 'bi-sort-alpha-up' }} ms-1 text-primary"></i>
+                    @endif
+                </button>
+
+                <ul class="dropdown-menu shadow-sm small p-2" style="min-width: 230px;">
+                    {{-- 🔹 Ordenamiento --}}
+                    <li>
+                        <a class="dropdown-item mb-1"
+                            href="{{ route('cobranzas.column_filter', array_merge(request()->query(), ['sort_by' => 'tipo_doc_id', 'sort_order' => 'asc'])) }}">
+                            <i class="bi bi-sort-alpha-down"></i> Ordenar A → Z
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item mb-2"
+                            href="{{ route('cobranzas.column_filter', array_merge(request()->query(), ['sort_by' => 'tipo_doc_id', 'sort_order' => 'desc'])) }}">
+                            <i class="bi bi-sort-alpha-up"></i> Ordenar Z → A
+                        </a>
+                    </li>
+
+                    <li><hr class="dropdown-divider"></li>
+
+                    {{-- 🔹 Filtro por Tipo Doc --}}
+                    <li class="px-2">
+                        <form method="GET" action="{{ route('cobranzas.column_filter') }}">
+                            @foreach(request()->query() as $key => $value)
+                                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                            @endforeach
+                            <input type="hidden" name="columna" value="tipo_doc_id">
+
+                            <div class="mb-2">
+                                <select name="valor" class="form-select form-select-sm">
+                                    <option value="">-- Seleccionar tipo --</option>
+                                    @foreach($tiposDocumento as $tipo)
+                                        <option value="{{ $tipo->id }}" {{ request('valor') == $tipo->id ? 'selected' : '' }}>
+                                            {{ $tipo->nombre }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 me-1">
+                                    <i class="bi bi-filter"></i> Filtrar
+                                </button>
+
+                                @if(request('columna') === 'tipo_doc_id' && request('valor'))
+                                    <a href="{{ route('cobranzas.documentos', array_diff_key(request()->query(), ['columna'=>1,'valor'=>1])) }}"
+                                    class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-x-circle"></i>
+                                    </a>
+                                @endif
+                            </div>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </th>
+
 
         {{-- 🔹 RUT CLIENTE --}}
         <th>

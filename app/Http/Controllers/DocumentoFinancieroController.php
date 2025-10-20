@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\DocumentoFinanciero;
+use App\Models\Empresa;
+use App\Models\TipoDocumento;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\DocumentosImport;
 use App\Models\MovimientoDocumento;
@@ -133,6 +135,9 @@ class DocumentoFinancieroController extends Controller
         $totalPagados = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente <= 0)->count();
         $totalPendientes = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente > 0)->count();
 
+        $empresas = Empresa::orderBy('Nombre')->get(['id', 'Nombre']);
+        $tiposDocumento = TipoDocumento::orderBy('nombre')->get(['id', 'nombre']);
+
 
         return view('cobranzas.documentos', compact(
             'documentoFinancieros',
@@ -140,7 +145,9 @@ class DocumentoFinancieroController extends Controller
             'totalVencido',
             'totalSaldoPendiente',
             'totalPagados',
-            'totalPendientes'
+            'totalPendientes',
+            'empresas',
+            'tiposDocumento'
         ));
 
     }
@@ -148,25 +155,48 @@ class DocumentoFinancieroController extends Controller
 
     public function filtrarColumnas(Request $request)
     {
-        // ✅ Control de acceso igual que index()
+        // 🔒 Control de acceso
         $usuariosFinanzas = [1, 405, 374];
         if (!in_array(Auth::id(), $usuariosFinanzas)) {
             abort(403, 'Acceso denegado.');
         }
 
-        // === QUERY BASE ===
+        // === BASE QUERY ===
         $query = DocumentoFinanciero::with(['empresa', 'tipoDocumento']);
 
-        // === 🧩 Detectar si viene un filtro específico desde el dropdown
-        $columna = $request->get('columna'); // por ejemplo 'razon_social'
-        $valor = $request->get('valor');     // el texto buscado
+        // === PARAMETROS DE FILTRO DIRECTO (desde el dropdown) ===
+        $columna = $request->get('columna'); // ej: 'razon_social', 'empresa_id', etc.
+        $valor = $request->get('valor');
 
-        // === 🧩 Si viene filtro directo de dropdown
+        // === APLICAR FILTRO DIRECTO SEGÚN EL TIPO DE COLUMNA ===
         if ($columna && $valor) {
-            $query->where($columna, 'like', "%{$valor}%");
+            switch ($columna) {
+                case 'razon_social':
+                case 'rut_cliente':
+                case 'folio':
+                    $query->where($columna, 'like', "%{$valor}%");
+                    break;
+
+                case 'fecha_docto':
+                case 'fecha_vencimiento':
+                    $query->whereDate($columna, '=', $valor);
+                    break;
+
+                case 'monto_total':
+                    $query->where($columna, '=', $valor);
+                    break;
+
+                case 'empresa_id':
+                    $query->where('empresa_id', $valor);
+                    break;
+
+                case 'tipo_doc_id':
+                    $query->where('tipo_doc_id', $valor);
+                    break;
+            }
         }
 
-        // === 🧩 APLICAR FILTROS GENERALES (si también vienen del formulario principal)
+        // === FILTROS GENERALES (si también vienen del formulario global) ===
         if ($request->filled('razon_social')) {
             $query->where('razon_social', 'like', "%{$request->razon_social}%");
         }
@@ -177,6 +207,14 @@ class DocumentoFinancieroController extends Controller
 
         if ($request->filled('folio')) {
             $query->where('folio', 'like', "%{$request->folio}%");
+        }
+
+        if ($request->filled('empresa_id')) {
+            $query->where('empresa_id', $request->empresa_id);
+        }
+
+        if ($request->filled('tipo_doc_id')) {
+            $query->where('tipo_doc_id', $request->tipo_doc_id);
         }
 
         if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
@@ -199,12 +237,19 @@ class DocumentoFinancieroController extends Controller
             $query->where('status_original', $request->status);
         }
 
-        // === 🧩 ORDENAMIENTO POR COLUMNA ===
+        // === ORDENAMIENTO POR COLUMNA ===
         $sortBy = $request->get('sort_by', 'razon_social');
         $sortOrder = $request->get('sort_order', 'asc');
 
         $columnasPermitidas = [
-            'razon_social', 'rut_cliente', 'folio', 'fecha_docto', 'fecha_vencimiento', 'monto_total'
+            'razon_social',
+            'rut_cliente',
+            'folio',
+            'fecha_docto',
+            'fecha_vencimiento',
+            'monto_total',
+            'empresa_id',
+            'tipo_doc_id',
         ];
 
         if (!in_array($sortBy, $columnasPermitidas)) {
@@ -215,13 +260,17 @@ class DocumentoFinancieroController extends Controller
             $sortOrder = 'asc';
         }
 
-        // === 🧩 CONSULTA FINAL ===
+        // === CONSULTA FINAL ===
         $documentoFinancieros = $query->orderBy($sortBy, $sortOrder)->paginate(10);
 
         // === CALCULOS AUXILIARES ===
         $totalSaldoPendiente = $documentoFinancieros->sum(fn($d) => $d->saldo_pendiente);
         $totalPagados = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente <= 0)->count();
         $totalPendientes = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente > 0)->count();
+
+        // === CARGAR DATOS PARA LOS SELECTS ===
+        $empresas = Empresa::orderBy('Nombre')->get(['id', 'Nombre']);
+        $tiposDocumento = TipoDocumento::orderBy('nombre')->get(['id', 'nombre']);
 
         // === RENDERIZAR VISTA ===
         return view('cobranzas.documentos', compact(
@@ -230,9 +279,12 @@ class DocumentoFinancieroController extends Controller
             'totalPagados',
             'totalPendientes',
             'sortBy',
-            'sortOrder'
+            'sortOrder',
+            'empresas',
+            'tiposDocumento'
         ));
     }
+
 
 
 

@@ -11,27 +11,21 @@
 
     <form method="GET" action="{{ route('panelfinanza.show') }}" class="mb-4">
         <div class="row align-items-end">
-            {{-- Filtro de rango de fechas --}}
-            <div class="col-md-2 dropdown-fechas mb-3">
-                <label class="form-label small text-muted">Filtrar por Fecha</label>
-                <div class="dropdown w-100">
-                    <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
-                            id="dropdownFechas" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-calendar3"></i> Rango de Fechas
-                    </button>
-
-                    <div class="dropdown-menu p-3">
-                        <label class="form-label small text-muted">Desde</label>
-                        <input type="date" name="fecha_inicio" class="form-control form-control-sm mb-2"
-                            value="{{ request('fecha_inicio') }}">
-
-                        <label class="form-label small text-muted">Hasta</label>
-                        <input type="date" name="fecha_fin" class="form-control form-control-sm mb-2"
-                            value="{{ request('fecha_fin') }}">
-                    </div>
-                </div>
+            {{-- Campo Desde --}}
+            <div class="col-md-2 mb-3">
+                <label class="form-label small text-muted">Desde</label>
+                <input type="date" name="fecha_inicio" class="form-control form-control-sm"
+                    value="{{ request('fecha_inicio') }}">
             </div>
 
+            {{-- Campo Hasta --}}
+            <div class="col-md-2 mb-3">
+                <label class="form-label small text-muted">Hasta</label>
+                <input type="date" name="fecha_fin" class="form-control form-control-sm"
+                    value="{{ request('fecha_fin') }}">
+            </div>
+
+            {{-- Botón Buscar --}}
             <div class="col-md-1 mb-3">
                 <button type="submit" class="btn btn-primary btn-sm w-100">
                     <i class="fa fa-search"></i>
@@ -39,6 +33,7 @@
             </div>
         </div>
     </form>
+
 
 
     <div class="card shadow-sm border-0">
