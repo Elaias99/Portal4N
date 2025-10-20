@@ -145,6 +145,99 @@ class DocumentoFinancieroController extends Controller
 
     }
 
+
+    public function filtrarColumnas(Request $request)
+    {
+        // ✅ Control de acceso igual que index()
+        $usuariosFinanzas = [1, 405, 374];
+        if (!in_array(Auth::id(), $usuariosFinanzas)) {
+            abort(403, 'Acceso denegado.');
+        }
+
+        // === QUERY BASE ===
+        $query = DocumentoFinanciero::with(['empresa', 'tipoDocumento']);
+
+        // === 🧩 Detectar si viene un filtro específico desde el dropdown
+        $columna = $request->get('columna'); // por ejemplo 'razon_social'
+        $valor = $request->get('valor');     // el texto buscado
+
+        // === 🧩 Si viene filtro directo de dropdown
+        if ($columna && $valor) {
+            $query->where($columna, 'like', "%{$valor}%");
+        }
+
+        // === 🧩 APLICAR FILTROS GENERALES (si también vienen del formulario principal)
+        if ($request->filled('razon_social')) {
+            $query->where('razon_social', 'like', "%{$request->razon_social}%");
+        }
+
+        if ($request->filled('rut_cliente')) {
+            $query->where('rut_cliente', 'like', "%{$request->rut_cliente}%");
+        }
+
+        if ($request->filled('folio')) {
+            $query->where('folio', 'like', "%{$request->folio}%");
+        }
+
+        if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
+            $query->whereBetween('fecha_docto', [$request->fecha_inicio, $request->fecha_fin]);
+        } elseif ($request->filled('fecha_inicio')) {
+            $query->whereDate('fecha_docto', '>=', $request->fecha_inicio);
+        } elseif ($request->filled('fecha_fin')) {
+            $query->whereDate('fecha_docto', '<=', $request->fecha_fin);
+        }
+
+        if ($request->filled('vencimiento_inicio') && $request->filled('vencimiento_fin')) {
+            $query->whereBetween('fecha_vencimiento', [$request->vencimiento_inicio, $request->vencimiento_fin]);
+        } elseif ($request->filled('vencimiento_inicio')) {
+            $query->whereDate('fecha_vencimiento', '>=', $request->vencimiento_inicio);
+        } elseif ($request->filled('vencimiento_fin')) {
+            $query->whereDate('fecha_vencimiento', '<=', $request->vencimiento_fin);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status_original', $request->status);
+        }
+
+        // === 🧩 ORDENAMIENTO POR COLUMNA ===
+        $sortBy = $request->get('sort_by', 'razon_social');
+        $sortOrder = $request->get('sort_order', 'asc');
+
+        $columnasPermitidas = [
+            'razon_social', 'rut_cliente', 'folio', 'fecha_docto', 'fecha_vencimiento', 'monto_total'
+        ];
+
+        if (!in_array($sortBy, $columnasPermitidas)) {
+            $sortBy = 'razon_social';
+        }
+
+        if (!in_array(strtolower($sortOrder), ['asc', 'desc'])) {
+            $sortOrder = 'asc';
+        }
+
+        // === 🧩 CONSULTA FINAL ===
+        $documentoFinancieros = $query->orderBy($sortBy, $sortOrder)->paginate(10);
+
+        // === CALCULOS AUXILIARES ===
+        $totalSaldoPendiente = $documentoFinancieros->sum(fn($d) => $d->saldo_pendiente);
+        $totalPagados = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente <= 0)->count();
+        $totalPendientes = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente > 0)->count();
+
+        // === RENDERIZAR VISTA ===
+        return view('cobranzas.documentos', compact(
+            'documentoFinancieros',
+            'totalSaldoPendiente',
+            'totalPagados',
+            'totalPendientes',
+            'sortBy',
+            'sortOrder'
+        ));
+    }
+
+
+
+
+
     public function general(Request $request)
     {
         // 🚫 Restricción de acceso solo para usuario 405
@@ -212,16 +305,6 @@ class DocumentoFinancieroController extends Controller
 
         return view('cobranzas.general', compact('documentos', 'documentoSeleccionado'));
     }
-
-
-
-
-
-
-
-
-
-
 
     public function import(Request $request)
     {

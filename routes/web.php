@@ -286,6 +286,12 @@ Route::post('/documentos/{documento}/cruces', [DocumentoFinancieroController::cl
 Route::get('/cobranzas/general', [App\Http\Controllers\DocumentoFinancieroController::class, 'general'])
         ->name('cobranzas.general');
 
+
+
+Route::get('/cobranzas/documentos/column-filter', [DocumentoFinancieroController::class, 'filtrarColumnas'])
+    ->name('cobranzas.column_filter');
+
+
 Route::resource('cobranzas', CobranzaController::class);
 
 

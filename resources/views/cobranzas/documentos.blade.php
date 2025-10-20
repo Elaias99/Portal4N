@@ -470,25 +470,15 @@
         {{-- === TABLA DE REGISTROS === --}}
         <div class="table-responsive rounded shadow-sm">
             <table class="table table-hover align-middle custom-table">
-                <thead>
-                    <tr>
-                        <th>Estado</th>
-                        <th>Empresa</th>
-                        <th>Tipo Doc</th>
-                        <th>Rut Cliente</th>
-                        <th>Razón Social</th>
-                        <th>Folio</th>
-                        <th>Fecha Docto</th>
-                        <th>Fecha Vencimiento</th>
-                        <th>Fecha Estado Manual</th>
-                        <th class="text-right">Monto Exento</th>
-                        <th class="text-right">Monto Neto</th>
-                        <th class="text-right">Monto IVA</th>
-                        <th class="text-right">Monto Total</th>
-                        <th class="text-right">Saldo Pendiente</th>
-                        <th class="text-center">Acción</th>
-                    </tr>
-                </thead>
+
+
+                @include('cobranzas.partials.filtros')
+
+
+
+
+
+                
 
                 <tbody>
                     @foreach ($documentoFinancieros as $doc)
