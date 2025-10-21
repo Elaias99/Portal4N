@@ -14,7 +14,7 @@ class PanelFinanzaController extends Controller
      */
     public function show(Request $request)
     {
-        // 🚫 Acceso
+        // 🚫 Control de acceso
         $usuariosFinanzas = [1, 405, 374];
         if (!in_array(Auth::id(), $usuariosFinanzas)) {
             abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
@@ -24,48 +24,65 @@ class PanelFinanzaController extends Controller
         $fechaInicio = $request->input('fecha_inicio');
         $fechaFin    = $request->input('fecha_fin');
 
-        // Queries base
+        // === Queries base ===
         $abonosQuery = \App\Models\Abono::with('documento');
         $crucesQuery = \App\Models\Cruce::with('documento');
+        $pagosQuery  = \App\Models\DocumentoFinanciero::where('status', 'Pago');
 
-        // Filtro por rango de fechas usando los campos reales
+        // === Filtros por fecha ===
         if ($fechaInicio && $fechaFin) {
             $abonosQuery->whereBetween('fecha_abono', [$fechaInicio, $fechaFin]);
-            $crucesQuery->whereBetween('fecha_cruce', [$fechaFin ? $fechaInicio : $fechaInicio, $fechaFin]);
+            $crucesQuery->whereBetween('fecha_cruce', [$fechaInicio, $fechaFin]);
+            $pagosQuery->whereBetween('fecha_estado_manual', [$fechaInicio, $fechaFin]);
         } elseif ($fechaInicio) {
             $abonosQuery->whereDate('fecha_abono', '>=', $fechaInicio);
             $crucesQuery->whereDate('fecha_cruce', '>=', $fechaInicio);
+            $pagosQuery->whereDate('fecha_estado_manual', '>=', $fechaInicio);
         } elseif ($fechaFin) {
             $abonosQuery->whereDate('fecha_abono', '<=', $fechaFin);
             $crucesQuery->whereDate('fecha_cruce', '<=', $fechaFin);
+            $pagosQuery->whereDate('fecha_estado_manual', '<=', $fechaFin);
         }
 
-        // Traer datos filtrados
+        // === Obtener datos ===
         $abonos = $abonosQuery->orderByDesc('fecha_abono')->get();
         $cruces = $crucesQuery->orderByDesc('fecha_cruce')->get();
+        $pagos  = $pagosQuery->orderByDesc('fecha_estado_manual')->get();
 
-        // Unificar en memoria: creo clave "fecha" SOLO para ordenar/mostrar
-        $movimientos = $abonos->map(function ($a) {
-            return [
-                'tipo'       => 'Abono',
-                'fecha'      => $a->fecha_abono, // <-- campo real
-                'monto'      => $a->monto,
-                'documento'  => $a->documento,
-                'raw'        => $a,              // por si necesitas el modelo original
-            ];
-        })->merge(
-            $cruces->map(function ($c) {
+        // === Unificar ===
+        $movimientos = collect()
+            ->merge($abonos->map(function ($a) {
                 return [
-                    'tipo'       => 'Cruce',
-                    'fecha'      => $c->fecha_cruce, // <-- campo real
-                    'monto'      => $c->monto,
-                    'documento'  => $c->documento,
-                    'raw'        => $c,
+                    'tipo' => 'Abono',
+                    'fecha' => $a->fecha_abono,
+                    'monto' => $a->monto,
+                    'documento' => $a->documento,
+                    'raw' => $a,
                 ];
-            })
-        )->sortByDesc('fecha')->values();
+            }))
+            ->merge($cruces->map(function ($c) {
+                return [
+                    'tipo' => 'Cruce',
+                    'fecha' => $c->fecha_cruce,
+                    'monto' => $c->monto,
+                    'documento' => $c->documento,
+                    'raw' => $c,
+                ];
+            }))
+            ->merge($pagos->map(function ($p) {
+                return [
+                    'tipo' => 'Pago',
+                    'fecha' => $p->fecha_estado_manual,
+                    'monto' => $p->monto_total ?? 0,
+                    'documento' => $p,
+                    'raw' => $p,
+                ];
+            }))
+            ->sortByDesc('fecha')
+            ->values();
 
         return view('panelfinanza.show', compact('movimientos'));
     }
+
 
 }

@@ -52,10 +52,13 @@
                     @forelse($movimientos as $mov)
                         <tr>
                             <td>
-                                <span class="badge {{ $mov['tipo'] === 'Abono' ? 'bg-warning' : 'bg-info' }}">
+                                <span class="badge 
+                                    {{ $mov['tipo'] === 'Abono' ? 'bg-warning' : 
+                                    ($mov['tipo'] === 'Cruce' ? 'bg-info' : 'bg-success') }}">
                                     {{ $mov['tipo'] }}
                                 </span>
                             </td>
+
                             <td>{{ \Carbon\Carbon::parse($mov['fecha'])->format('d-m-Y') }}</td>
                             <td>${{ number_format($mov['monto'], 0, ',', '.') }}</td>
                             <td>{{ $mov['documento']->folio ?? '-' }}</td>
