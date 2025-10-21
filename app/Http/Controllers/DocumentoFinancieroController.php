@@ -617,6 +617,11 @@ class DocumentoFinancieroController extends Controller
         // Cargar relaciones relevantes
         $documento->load(['empresa', 'abonos', 'cruces', 'referencia', 'referenciados']);
 
+        // 🔹 Guardar la URL anterior solo si viene del listado y no de otra acción (como updateStatus)
+        if (url()->previous() && !str_contains(url()->previous(), '/documentos/')) {
+            session(['return_to_listado' => url()->previous()]);
+        }
+
         // Si está referenciado por una nota de crédito o hace referencia a una
         $referencias = [
             'referencia' => $documento->referencia,
@@ -625,6 +630,7 @@ class DocumentoFinancieroController extends Controller
 
         return view('cobranzas.detalles', compact('documento', 'referencias'));
     }
+
 
 
 

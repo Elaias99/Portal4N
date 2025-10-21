@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Cobranza;
 use Illuminate\Http\Request;
+use App\Exports\CobranzasExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class CobranzaController extends Controller
 {
@@ -115,5 +117,10 @@ class CobranzaController extends Controller
 
         return redirect()->route('cobranzas.index')->with('success', 'Cobranza eliminado correctamente.');
 
+    }
+
+    public function export()
+    {
+        return Excel::download(new CobranzasExport, 'cobranzas.xlsx');
     }
 }

@@ -26,6 +26,13 @@
             <a href="{{ route('cobranzas.create') }}" class="btn btn-primary px-4">
                 Nueva Cobranza
             </a>
+
+            <a href="{{ route('cobranzas.export') }}" class="btn btn-success px-4">
+                Exportar a Excel
+            </a>
+
+
+
         </div>
     </div>
 

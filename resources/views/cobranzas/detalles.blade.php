@@ -21,13 +21,21 @@
                 <div class="col-md-6">
                     <p><strong>Monto Total:</strong> ${{ number_format($documento->monto_total, 0, ',', '.') }}</p>
                     <p><strong>Saldo Pendiente:</strong> ${{ number_format($documento->saldo_pendiente, 0, ',', '.') }}</p>
+
+                    
                     <p><strong>Estado Actual:</strong> {{ $documento->status_original }}</p>
+
+
+                    
+
+
                     <p><strong>Fecha Documento:</strong> {{ $documento->fecha_docto ? \Carbon\Carbon::parse($documento->fecha_docto)->format('d-m-Y') : '-' }}</p>
                     <p><strong>Fecha Vencimiento:</strong> {{ $documento->fecha_vencimiento ? \Carbon\Carbon::parse($documento->fecha_vencimiento)->format('d-m-Y') : '-' }}</p>
                 </div>
             </div>
         </div>
     </div>
+
 
     {{-- 🔹 Nuevo: Resumen del cálculo del saldo pendiente --}}
     <div class="card mb-4 shadow-sm">
@@ -36,6 +44,33 @@
 
             {{-- Paso 1: Monto base --}}
             <p class="mb-1"><strong>1️⃣ Monto total inicial:</strong> ${{ number_format($documento->monto_total, 0, ',', '.') }}</p>
+
+
+            {{-- 🔹 Pago registrado --}}
+            @if($documento->status === 'Pago')
+            <div class="card mb-4 shadow-sm border-success">
+                <div class="card-header bg-light fw-bold text-success">
+                    Documento marcado como Pago
+                </div>
+                <div class="card-body d-flex justify-content-between align-items-center flex-wrap">
+                    <p class="mb-2 mb-md-0">
+                        Este documento fue marcado como <strong>Pago</strong>
+                        {{ $documento->fecha_estado_manual ? 'el ' . \Carbon\Carbon::parse($documento->fecha_estado_manual)->format('d-m-Y') : '' }}.
+                    </p>
+
+                    <form action="{{ route('documentos.updateStatus', $documento->id) }}" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar el estado de Pago y restaurar el estado original?')">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="status" value="">
+                        <input type="hidden" name="fecha_estado_manual" value="">
+                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-x-circle"></i> Eliminar Pago
+                        </button>
+                    </form>
+                </div>
+            </div>
+            @endif
+
 
             {{-- Paso 2: Descuento por nota de crédito --}}
             @if($referencias['referenciadoPor']->isNotEmpty())
@@ -210,10 +245,11 @@
 
     {{-- 🔹 Botón para volver --}}
     <div class="text-center mt-4">
-        <a href="{{ url()->previous() }}" class="btn btn-secondary">
+        <a href="{{ session('return_to_listado', url('/cobranzas/documentos')) }}" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> Volver al listado
         </a>
     </div>
+
 
 </div>
 @endsection

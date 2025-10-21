@@ -291,7 +291,8 @@ Route::get('/cobranzas/general', [App\Http\Controllers\DocumentoFinancieroContro
 Route::get('/cobranzas/documentos/column-filter', [DocumentoFinancieroController::class, 'filtrarColumnas'])
     ->name('cobranzas.column_filter');
 
-
+    
+Route::get('/cobranzas/export', [CobranzaController::class, 'export'])->name('cobranzas.export');
 Route::resource('cobranzas', CobranzaController::class);
 
 
