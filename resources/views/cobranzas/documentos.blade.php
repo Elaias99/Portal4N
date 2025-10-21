@@ -518,7 +518,7 @@
 
 
                             {{-- 🔹 Empresa --}}
-                            <td>{{ $doc->empresa?->Nombre ?? 'Sin empresa' }}</td>
+                            <td class="text-nowrap">{{ $doc->empresa?->Nombre ?? 'Sin empresa' }}</td>
 
                             {{-- 🔹 Tipo Documento --}}
                             {{-- 🔹 Tipo Documento --}}
