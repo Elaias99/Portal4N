@@ -204,6 +204,8 @@ Route::resource('clasificacion-operativa', \App\Http\Controllers\ClasificacionOp
 Route::get('/panelfinanza/show', [App\Http\Controllers\PanelFinanzaController::class, 'show'])
     ->name('panelfinanza.show');
 
+Route::get('/panelfinanza/export', [App\Http\Controllers\PanelFinanzaController::class, 'export'])
+    ->name('panelfinanza.export');
 
 
 

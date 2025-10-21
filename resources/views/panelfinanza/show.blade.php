@@ -31,6 +31,15 @@
                     <i class="fa fa-search"></i>
                 </button>
             </div>
+
+            <div class="col-md-1 mb-3">
+                <a href="{{ route('panelfinanza.export', request()->query()) }}" class="btn btn-success btn-sm w-100">
+                    Exportar
+                </a>
+            </div>
+
+
+
         </div>
     </form>
 

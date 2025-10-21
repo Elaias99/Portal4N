@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 use App\Models\Abono;
 use App\Models\Cruce;
+use App\Models\DocumentoFinanciero;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Exports\MovimientoExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PanelFinanzaController extends Controller
 {
@@ -25,9 +28,9 @@ class PanelFinanzaController extends Controller
         $fechaFin    = $request->input('fecha_fin');
 
         // === Queries base ===
-        $abonosQuery = \App\Models\Abono::with('documento');
-        $crucesQuery = \App\Models\Cruce::with('documento');
-        $pagosQuery  = \App\Models\DocumentoFinanciero::where('status', 'Pago');
+        $abonosQuery = Abono::with('documento');
+        $crucesQuery = Cruce::with('documento');
+        $pagosQuery  = DocumentoFinanciero::where('status', 'Pago');
 
         // === Filtros por fecha ===
         if ($fechaInicio && $fechaFin) {
@@ -82,6 +85,18 @@ class PanelFinanzaController extends Controller
             ->values();
 
         return view('panelfinanza.show', compact('movimientos'));
+    }
+
+
+    public function export(Request $request)
+    {
+        $fechaInicio = $request->input('fecha_inicio');
+        $fechaFin    = $request->input('fecha_fin');
+
+        return Excel::download(
+            new MovimientoExport($fechaInicio, $fechaFin),
+            'Historial_Movimientos_' . now()->format('Ymd_His') . '.xlsx'
+        );
     }
 
 
