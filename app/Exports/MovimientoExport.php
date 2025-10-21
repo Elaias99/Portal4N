@@ -103,13 +103,22 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
 
     public function map($movimiento): array
     {
+        // Normalizar el monto para asegurar que sea numérico
+        $montoLimpio = floatval(
+            str_replace(['.', ','], ['', '.'], $movimiento['monto'])
+        );
+
+        // Formatear como pesos chilenos (CLP)
+        $montoFormateado = '$' . number_format($montoLimpio, 0, ',', '.');
+
         return [
             $movimiento['tipo'],
             \Carbon\Carbon::parse($movimiento['fecha'])->format('d-m-Y'),
-            number_format($movimiento['monto'], 0, ',', '.'),
+            $montoFormateado,
             $movimiento['folio'],
             $movimiento['cliente'],
             $movimiento['estado'],
         ];
     }
+
 }
