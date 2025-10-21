@@ -52,12 +52,20 @@
                     @forelse($movimientos as $mov)
                         <tr>
                             <td>
-                                <span class="badge 
-                                    {{ $mov['tipo'] === 'Abono' ? 'bg-warning' : 
-                                    ($mov['tipo'] === 'Cruce' ? 'bg-info' : 'bg-success') }}">
+                                @php
+                                    $estado = strtolower($mov['documento']->status_original ?? '');
+                                    $color = match ($estado) {
+                                        'al día'   => 'bg-success',
+                                        'vencido'  => 'bg-danger',
+                                        default    => 'bg-secondary',
+                                    };
+                                @endphp
+
+                                <span class="badge {{ $color }}">
                                     {{ $mov['tipo'] }}
                                 </span>
                             </td>
+
 
                             <td>{{ \Carbon\Carbon::parse($mov['fecha'])->format('d-m-Y') }}</td>
                             <td>${{ number_format($mov['monto'], 0, ',', '.') }}</td>
