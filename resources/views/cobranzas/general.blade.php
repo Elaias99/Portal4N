@@ -24,6 +24,20 @@
             </a>
         </div>
 
+
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body text-center">
+                    <h6 class="fw-bold mb-3">Exportar documentos</h6>
+                    <p class="small text-muted">Utiliza esta opción para importar nuevos documentos o exportar los existentes.</p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ route('cobranzas.export') }}" class="btn btn-sm btn-outline-primary">Exportar</a>
+                        {{-- <button class="btn btn-sm btn-outline-success" disabled>Importar</button> --}}
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="col-md-3 mb-3">
             <a href="{{ route('panelfinanza.show') }}" class="text-decoration-none text-dark">
                 <div class="card shadow-sm border-0 h-100">
@@ -35,221 +49,199 @@
                 </div>
             </a>
         </div>
-
-
         
     </div>
 
     {{-- ====== SECCIÓN PRINCIPAL ====== --}}
     <div class="row">
-        {{-- === COLUMNA IZQUIERDA === --}}
-        <div class="col-md-2 mb-3">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body text-center">
-                    <h6 class="fw-bold mb-3">Importar / Exportar documentos</h6>
-                    <p class="small text-muted">Utiliza esta opción para importar nuevos documentos o exportar los existentes.</p>
-                    <div class="d-grid gap-2">
-                        <a href="{{ route('cobranzas.export') }}" class="btn btn-sm btn-outline-primary">Exportar</a>
-                        {{-- <button class="btn btn-sm btn-outline-success" disabled>Importar</button> --}}
+        <div class="row justify-content-center">
+            {{-- === COLUMNA CENTRAL (BUSCADOR + TABLA) === --}}
+            <div class="col-md-10 col-lg-8">
+                {{-- ====== BUSCADOR ====== --}}
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <form method="GET" action="{{ route('cobranzas.general') }}">
+                            <div class="row align-items-end">
+                                <div class="col-md-4 mb-3">
+                                    <label class="small text-muted">Buscar por Folio o Cliente</label>
+                                    <input type="text" name="q" class="form-control form-control-sm"
+                                        placeholder="Ej: 10256 o Transportes Sur Ltda" value="{{ request('q') }}">
+                                </div>
+
+                                <div class="col-md-3 mb-3">
+                                    <label class="small text-muted">RUT Cliente</label>
+                                    <input type="text" name="rut" class="form-control form-control-sm"
+                                        placeholder="Ej: 76.543.210-9" value="{{ request('rut') }}">
+                                </div>
+
+                                {{-- 🔽 Filtro: Fecha de Documento --}}
+                                <div class="col-md-2 dropdown-fechas mb-3">
+                                    <label class="form-label small text-muted">Fecha Origen</label>
+                                    <div class="dropdown w-100">
+                                        <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
+                                                id="dropdownFechas" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-calendar3"></i> Fecha Dcto.
+                                        </button>
+
+                                        <div class="dropdown-menu p-3">
+                                            <label class="form-label small text-muted">Desde</label>
+                                            <input type="date" name="fecha_inicio" class="form-control form-control-sm mb-2"
+                                                value="{{ request('fecha_inicio') }}">
+
+                                            <label class="form-label small text-muted">Hasta</label>
+                                            <input type="date" name="fecha_fin" class="form-control form-control-sm mb-2"
+                                                value="{{ request('fecha_fin') }}">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- 🔽 Filtro: Fecha de Vencimiento --}}
+                                <div class="col-md-2 dropdown-fechas mb-3">
+                                    <label class="form-label small text-muted">Fecha Vencimiento</label>
+                                    <div class="dropdown w-100">
+                                        <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
+                                                id="dropdownVencimiento" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-calendar-event"></i> Fecha Venc.
+                                        </button>
+
+                                        <div class="dropdown-menu p-3">
+                                            <label class="form-label small text-muted">Desde</label>
+                                            <input type="date" name="vencimiento_inicio" class="form-control form-control-sm mb-2"
+                                                value="{{ request('vencimiento_inicio') }}">
+
+                                            <label class="form-label small text-muted">Hasta</label>
+                                            <input type="date" name="vencimiento_fin" class="form-control form-control-sm mb-2"
+                                                value="{{ request('vencimiento_fin') }}">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-1 text-end mb-3 d-flex gap-2 justify-content-end">
+                                    {{-- Botón Buscar --}}
+                                    <button type="submit" class="btn btn-primary btn-sm px-3">
+                                        <i class="fa fa-search"></i>
+                                    </button>
+
+                                    {{-- Botón Limpiar --}}
+                                    <a href="{{ route('cobranzas.general') }}" class="btn btn-outline-secondary btn-sm px-3">
+                                        <i class="fa fa-eraser"></i>
+                                    </a>
+                                </div>
+
+                            </div>
+                        </form>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        {{-- === COLUMNA CENTRAL (BUSCADOR + TABLA) === --}}
-        <div class="col-md-8">
-            {{-- ====== BUSCADOR ====== --}}
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-body">
-                    <form method="GET" action="{{ route('cobranzas.general') }}">
-                        <div class="row align-items-end">
-                            <div class="col-md-4 mb-3">
-                                <label class="small text-muted">Buscar por Folio o Cliente</label>
-                                <input type="text" name="q" class="form-control form-control-sm"
-                                    placeholder="Ej: 10256 o Transportes Sur Ltda" value="{{ request('q') }}">
-                            </div>
+                {{-- ====== RESULTADOS ====== --}}
+                @if(isset($documentos) && $documentos->count())
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm align-middle text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Folio</th>
+                                    <th>Cliente</th>
+                                    <th>RUT</th>
+                                    <th>Fecha Docto</th>
+                                    <th>Fecha Venc.</th>
+                                    <th>Estado</th>
+                                    <th class="text-end">Saldo Pendiente</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($documentos as $doc)
+                                    <tr>
+                                        <td>{{ $doc->folio }}</td>
+                                        <td>{{ $doc->razon_social }}</td>
+                                        <td>{{ $doc->rut_cliente }}</td>
+                                        <td>{{ $doc->fecha_docto }}</td>
+                                        <td>{{ $doc->fecha_vencimiento }}</td>
 
-                            <div class="col-md-3 mb-3">
-                                <label class="small text-muted">RUT Cliente</label>
-                                <input type="text" name="rut" class="form-control form-control-sm"
-                                    placeholder="Ej: 76.543.210-9" value="{{ request('rut') }}">
-                            </div>
 
-                            {{-- 🔽 Filtro: Fecha de Documento --}}
-                            <div class="col-md-2 dropdown-fechas mb-3">
-                                <label class="form-label small text-muted">Fecha Origen</label>
-                                <div class="dropdown w-100">
-                                    <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
-                                            id="dropdownFechas" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="bi bi-calendar3"></i> Fecha Dcto.
-                                    </button>
+                                        <td>
+                                            <span class="badge bg-{{ $doc->status == 'Vencido' ? 'danger' : 'success' }}">
+                                                {{ $doc->status }}
+                                            </span>
+                                        </td>
 
-                                    <div class="dropdown-menu p-3">
-                                        <label class="form-label small text-muted">Desde</label>
-                                        <input type="date" name="fecha_inicio" class="form-control form-control-sm mb-2"
-                                            value="{{ request('fecha_inicio') }}">
 
-                                        <label class="form-label small text-muted">Hasta</label>
-                                        <input type="date" name="fecha_fin" class="form-control form-control-sm mb-2"
-                                            value="{{ request('fecha_fin') }}">
-                                    </div>
-                                </div>
-                            </div>
 
-                            {{-- 🔽 Filtro: Fecha de Vencimiento --}}
-                            <div class="col-md-2 dropdown-fechas mb-3">
-                                <label class="form-label small text-muted">Fecha Vencimiento</label>
-                                <div class="dropdown w-100">
-                                    <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
-                                            id="dropdownVencimiento" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="bi bi-calendar-event"></i> Fecha Venc.
-                                    </button>
 
-                                    <div class="dropdown-menu p-3">
-                                        <label class="form-label small text-muted">Desde</label>
-                                        <input type="date" name="vencimiento_inicio" class="form-control form-control-sm mb-2"
-                                            value="{{ request('vencimiento_inicio') }}">
 
-                                        <label class="form-label small text-muted">Hasta</label>
-                                        <input type="date" name="vencimiento_fin" class="form-control form-control-sm mb-2"
-                                            value="{{ request('vencimiento_fin') }}">
-                                    </div>
-                                </div>
-                            </div>
+                                        <td class="text-end">${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}</td>
+                                        <td>
+                                            <a href="{{ route('cobranzas.general', array_merge(request()->only(['q','rut','status']), ['documento_id' => $doc->id])) }}"
+                                            class="btn btn-sm btn-outline-primary">
+                                                <i class="fa fa-eye"></i> Ver
+                                            </a>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @elseif(request()->has('q') || request()->has('rut'))
+                    <div class="alert alert-warning text-center">
+                        <i class="fa fa-info-circle"></i> No se encontraron documentos con los criterios ingresados.
+                    </div>
+                @endif
 
-                            <div class="col-md-1 text-end mb-3">
-                                <button type="submit" class="btn btn-primary btn-sm w-100">
-                                    <i class="fa fa-search"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
+                {{-- ====== DETALLE DE DOCUMENTO ====== --}}
+                @isset($documentoSeleccionado)
+                    <hr class="my-4">
+                    <h6 class="fw-bold">Detalle del Documento — Folio {{ $documentoSeleccionado->folio }}</h6>
+                    <table class="table table-bordered table-sm mb-4">
+                        <tbody>
+                            <tr>
+                                <th>Empresa</th><td>{{ $documentoSeleccionado->empresa?->Nombre ?? '-' }}</td>
+                                <th>Tipo Documento</th><td>{{ $documentoSeleccionado->tipoDocumento?->nombre ?? '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Cliente</th><td>{{ $documentoSeleccionado->razon_social }}</td>
+                                <th>RUT</th><td>{{ $documentoSeleccionado->rut_cliente }}</td>
+                            </tr>
+                            <tr>
+                                <th>Fecha Documento</th><td>{{ $documentoSeleccionado->fecha_docto }}</td>
+                                <th>Fecha Vencimiento</th><td>{{ $documentoSeleccionado->fecha_vencimiento }}</td>
+                            </tr>
+                            <tr>
+                                <th>Monto Total</th><td>${{ number_format($documentoSeleccionado->monto_total,0,',','.') }}</td>
+                                <th>Saldo Pendiente</th><td>${{ number_format($documentoSeleccionado->saldo_pendiente,0,',','.') }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
 
-            {{-- ====== RESULTADOS ====== --}}
-            @if(isset($documentos) && $documentos->count())
-                <div class="table-responsive">
-                    <table class="table table-hover table-sm align-middle text-center">
+                    <h6 class="fw-bold mb-3">Movimientos Anteriores</h6>
+                    <table class="table table-striped table-sm">
                         <thead class="table-light">
                             <tr>
-                                <th>Folio</th>
-                                <th>Cliente</th>
-                                <th>RUT</th>
-                                <th>Fecha Docto</th>
-                                <th>Fecha Venc.</th>
-                                <th>Estado</th>
-                                <th class="text-end">Saldo Pendiente</th>
-                                <th></th>
+                                <th>#</th>
+                                <th>Tipo Movimiento</th>
+                                <th>Usuario</th>
+                                <th>Fecha</th>
+                                <th>Descripción</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($documentos as $doc)
+                            @forelse($documentoSeleccionado->movimientos as $mov)
                                 <tr>
-                                    <td>{{ $doc->folio }}</td>
-                                    <td>{{ $doc->razon_social }}</td>
-                                    <td>{{ $doc->rut_cliente }}</td>
-                                    <td>{{ $doc->fecha_docto }}</td>
-                                    <td>{{ $doc->fecha_vencimiento }}</td>
+                                    <td>{{ $mov->id }}</td>
+                                    <td>{{ $mov->tipo_movimiento }}</td>
+                                    <td>{{ $mov->user->name ?? '— Sistema —' }}</td>
 
-
-                                    <td>
-                                        <span class="badge bg-{{ $doc->status == 'Vencido' ? 'danger' : 'success' }}">
-                                            {{ $doc->status }}
-                                        </span>
-                                    </td>
-
-
-
-
-
-                                    <td class="text-end">${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}</td>
-                                    <td>
-                                        <a href="{{ route('cobranzas.general', array_merge(request()->only(['q','rut','status']), ['documento_id' => $doc->id])) }}"
-                                           class="btn btn-sm btn-outline-primary">
-                                            <i class="fa fa-eye"></i> Ver
-                                        </a>
-                                    </td>
+                                    <td>{{ $mov->created_at->format('d-m-Y H:i') }}</td>
+                                    <td>{{ $mov->descripcion }}</td>
                                 </tr>
-                            @endforeach
+                            @empty
+                                <tr><td colspan="5" class="text-center text-muted">Sin movimientos registrados</td></tr>
+                            @endforelse
                         </tbody>
                     </table>
-                </div>
-            @elseif(request()->has('q') || request()->has('rut'))
-                <div class="alert alert-warning text-center">
-                    <i class="fa fa-info-circle"></i> No se encontraron documentos con los criterios ingresados.
-                </div>
-            @endif
-
-            {{-- ====== DETALLE DE DOCUMENTO ====== --}}
-            @isset($documentoSeleccionado)
-                <hr class="my-4">
-                <h6 class="fw-bold">Detalle del Documento — Folio {{ $documentoSeleccionado->folio }}</h6>
-                <table class="table table-bordered table-sm mb-4">
-                    <tbody>
-                        <tr>
-                            <th>Empresa</th><td>{{ $documentoSeleccionado->empresa?->Nombre ?? '-' }}</td>
-                            <th>Tipo Documento</th><td>{{ $documentoSeleccionado->tipoDocumento?->nombre ?? '-' }}</td>
-                        </tr>
-                        <tr>
-                            <th>Cliente</th><td>{{ $documentoSeleccionado->razon_social }}</td>
-                            <th>RUT</th><td>{{ $documentoSeleccionado->rut_cliente }}</td>
-                        </tr>
-                        <tr>
-                            <th>Fecha Documento</th><td>{{ $documentoSeleccionado->fecha_docto }}</td>
-                            <th>Fecha Vencimiento</th><td>{{ $documentoSeleccionado->fecha_vencimiento }}</td>
-                        </tr>
-                        <tr>
-                            <th>Monto Total</th><td>${{ number_format($documentoSeleccionado->monto_total,0,',','.') }}</td>
-                            <th>Saldo Pendiente</th><td>${{ number_format($documentoSeleccionado->saldo_pendiente,0,',','.') }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <h6 class="fw-bold mb-3">Movimientos Anteriores</h6>
-                <table class="table table-striped table-sm">
-                    <thead class="table-light">
-                        <tr>
-                            <th>#</th>
-                            <th>Tipo Movimiento</th>
-                            <th>Usuario</th>
-                            <th>Fecha</th>
-                            <th>Descripción</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($documentoSeleccionado->movimientos as $mov)
-                            <tr>
-                                <td>{{ $mov->id }}</td>
-                                <td>{{ $mov->tipo_movimiento }}</td>
-                                <td>{{ $mov->user->name ?? '— Sistema —' }}</td>
-
-                                <td>{{ $mov->created_at->format('d-m-Y H:i') }}</td>
-                                <td>{{ $mov->descripcion }}</td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="5" class="text-center text-muted">Sin movimientos registrados</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            @endisset
-        </div>
-
-        {{-- === COLUMNA DERECHA === --}}
-        <div class="col-md-2 mb-3">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body text-center">
-                    <h6 class="fw-bold mb-3">Ayuda al usuario</h6>
-                    <p class="small text-muted mb-2">
-                        En esta sección puedes buscar facturas, abonos y cruces.  
-                        Utiliza el buscador central para encontrar rápidamente por folio o razón social.
-                    </p>
-                    <p class="small text-muted">
-                        Los resultados se mostrarán al centro y podrás revisar los movimientos anteriores.
-                    </p>
-                </div>
+                @endisset
             </div>
         </div>
+
     </div>
 
     <footer class="text-center mt-5">
