@@ -34,6 +34,7 @@ use App\Http\Controllers\DocumentoFinancieroController;
 use App\Http\Controllers\AbonoController;
 use App\Http\Controllers\TrackingProductoController;
 use App\Http\Controllers\CruceController;
+use App\Http\Controllers\ProntoPagoController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -341,12 +342,22 @@ Route::get('/cruces/show', [App\Http\Controllers\CruceController::class, 'show']
 // PAGOS
 
 // Registrar un pago directamente desde PagoDocumentoController
-Route::post('/pagos/{documento}', [App\Http\Controllers\PagoDocumentoController::class, 'store'])
-    ->name('pagos.store');
-
+Route::post('/documentos/{documento}/pagos', [App\Http\Controllers\PagoDocumentoController::class, 'store'])
+    ->name('documentos.pagos.store');
 // Eliminar un pago
 Route::delete('/pagos/{id}', [App\Http\Controllers\PagoDocumentoController::class, 'destroy'])
     ->name('pagos.destroy');
+
+
+
+//ProntoPAGO///////////////////////////////////////// 
+// Registrar un pronto pago
+Route::post('/prontopagos/{documento}', [App\Http\Controllers\ProntoPagoController::class, 'store'])
+    ->name('prontopagos.store');
+
+// Eliminar un pronto pago
+Route::delete('/prontopagos/{id}', [App\Http\Controllers\ProntoPagoController::class, 'destroy'])
+    ->name('prontopagos.destroy');
 
 
 // Ruta para desvincular un empleado

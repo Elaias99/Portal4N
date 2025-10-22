@@ -121,6 +121,11 @@ class DocumentoFinanciero extends Model
         return $this->hasMany(Pago::class, 'documento_financiero_id');
     }
 
+    public function prontoPagos()
+    {
+        return $this->hasMany(ProntoPago::class, 'documento_financiero_id');
+    }
+
 
 
 

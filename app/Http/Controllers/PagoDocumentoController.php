@@ -31,17 +31,25 @@ class PagoDocumentoController extends Controller
             'user_id' => Auth::id(),
         ]);
 
+        // ✅ Actualizar estado del documento
+        $documento->update([
+            'status' => 'Pago',
+            'fecha_estado_manual' => $request->fecha_pago,
+            'saldo_pendiente' => 0, // El saldo se cierra
+        ]);
+
         // Registrar movimiento
         MovimientoDocumento::create([
             'documento_financiero_id' => $documento->id,
             'user_id' => Auth::id(),
             'tipo_movimiento' => 'Pago registrado',
-            'descripcion' => "Se registró un pago el {$request->fecha_pago}.",
+            'descripcion' => "Se registró un pago el {$request->fecha_pago}. El documento fue marcado como 'Pago'.",
             'datos_nuevos' => ['fecha_pago' => $request->fecha_pago],
         ]);
 
-        return back()->with('success', 'Pago registrado correctamente.');
+        return back()->with('success', 'Pago registrado correctamente y estado actualizado.');
     }
+
 
     /**
      * Eliminar un pago (revertir estado de pago).

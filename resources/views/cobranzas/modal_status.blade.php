@@ -31,6 +31,7 @@
             <div class="modal-body">
 
                 {{-- FORMULARIO PRINCIPAL --}}
+                {{-- FORMULARIO PRINCIPAL --}}
                 <form action="{{ route('documentos.updateStatus', $doc->id) }}" method="POST" id="form-status-{{ $doc->id }}">
                     @csrf
                     @method('PATCH')
@@ -39,9 +40,9 @@
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Estado actual</label>
                         <input type="text"
-                               class="form-control form-control-sm"
-                               value="{{ $doc->status_original }}"
-                               readonly>
+                            class="form-control form-control-sm"
+                            value="{{ $doc->status_original }}"
+                            readonly>
                     </div>
 
                     {{-- Nuevo estado manual --}}
@@ -55,20 +56,23 @@
                             <option value="Abono" {{ $doc->status == 'Abono' ? 'selected' : '' }}>Abono</option>
                             <option value="Cruce" {{ $doc->status == 'Cruce' ? 'selected' : '' }}>Cruce</option>
                             <option value="Pago" {{ $doc->status == 'Pago' ? 'selected' : '' }}>Pago</option>
+                            <option value="Pronto pago" {{ $doc->status == 'Pronto pago' ? 'selected' : '' }}>Pronto pago</option>
                             <option value="Cobranza judicial" {{ $doc->status == 'Cobranza judicial' ? 'selected' : '' }}>Cobranza judicial</option>
                         </select>
                     </div>
 
                     {{-- Fecha Estado Manual --}}
-                    <div class="form-group mb-3 fecha-estado-{{ $doc->id }}" style="display: {{ in_array($doc->status, ['Abono','Cruce','Pago','Cobranza judicial']) ? 'block' : 'none' }};">
+                    <div class="form-group mb-3 fecha-estado-{{ $doc->id }}"
+                        style="display: {{ in_array($doc->status, ['Abono','Cruce','Pago','Pronto pago','Cobranza judicial']) ? 'block' : 'none' }};">
                         <label for="fecha_estado_manual-{{ $doc->id }}" class="form-label small text-muted">Fecha Estado Manual</label>
                         <input type="date"
-                               name="fecha_estado_manual"
-                               id="fecha_estado_manual-{{ $doc->id }}"
-                               class="form-control form-control-sm"
-                               value="{{ $doc->fecha_estado_manual ? \Carbon\Carbon::parse($doc->fecha_estado_manual)->format('Y-m-d') : now()->format('Y-m-d') }}">
+                            name="fecha_estado_manual"
+                            id="fecha_estado_manual-{{ $doc->id }}"
+                            class="form-control form-control-sm"
+                            value="{{ $doc->fecha_estado_manual ? \Carbon\Carbon::parse($doc->fecha_estado_manual)->format('Y-m-d') : now()->format('Y-m-d') }}">
                     </div>
                 </form>
+
 
                 {{-- FORMULARIO DE ABONO --}}
                 <form action="{{ route('documentos.abonos.store', $doc->id) }}" method="POST" id="form-abono-{{ $doc->id }}" style="display: {{ $doc->status == 'Abono' ? 'block' : 'none' }};">
@@ -133,22 +137,53 @@
                 </form>
 
 
-                {{-- Campo visible solo si el estado es "Pago" --}}
-                <div class="form-group mb-3 fecha-estado-{{ $doc->id }}" 
-                    style="display: {{ $doc->status == 'Pago' ? 'block' : 'none' }};">
-                    <label for="fecha_estado_manual-{{ $doc->id }}" class="form-label small text-muted">
-                        Fecha del pago
-                    </label>
-                    <input type="date"
-                        name="fecha_estado_manual"
-                        id="fecha_estado_manual-{{ $doc->id }}"
-                        class="form-control form-control-sm"
-                        value="{{ now()->format('Y-m-d') }}"
-                        required>
-                    <div class="alert alert-info py-1 px-2 small mt-2">
+                {{-- FORMULARIO DE PAGO --}}
+                <form action="{{ route('documentos.pagos.store', $doc->id) }}" method="POST" id="form-pago-{{ $doc->id }}" style="display: {{ $doc->status == 'Pago' ? 'block' : 'none' }};">
+                    @csrf
+                    <div class="form-group mb-3">
+                        <label for="fecha-pago-{{ $doc->id }}" class="form-label small text-muted">Fecha del pago</label>
+                        <input type="date"
+                            name="fecha_pago"
+                            id="fecha-pago-{{ $doc->id }}"
+                            class="form-control form-control-sm @error('fecha_pago') is-invalid @enderror"
+                            value="{{ now()->format('Y-m-d') }}"
+                            required>
+                        @error('fecha_pago')
+                            <span class="invalid-feedback d-block text-danger">
+                                <strong>{{ $message }}</strong>
+                            </span>
+                        @enderror
+                    </div>
+
+                    <div class="alert alert-info py-1 px-2 small">
                         Al registrar un pago, el saldo pendiente quedará automáticamente en <strong>0</strong>.
                     </div>
-                </div>
+                </form>
+
+
+                {{-- FORMULARIO DE PRONTO PAGO (nuevo) --}}
+                <form action="{{ route('prontopagos.store', $doc->id) }}" method="POST" id="form-prontopago-{{ $doc->id }}" style="display: {{ $doc->status == 'Pronto pago' ? 'block' : 'none' }};">
+                    @csrf
+
+                    {{-- Fecha del pronto pago --}}
+                    <div class="form-group mb-3">
+                        <label for="fecha-prontopago-{{ $doc->id }}" class="form-label small text-muted">Fecha del pronto pago</label>
+                        <input type="date"
+                            name="fecha_pronto_pago"
+                            id="fecha-prontopago-{{ $doc->id }}"
+                            class="form-control form-control-sm @error('fecha_pronto_pago') is-invalid @enderror"
+                            value="{{ now()->format('Y-m-d') }}"
+                            required>
+                        @error('fecha_pronto_pago')
+                            <span class="invalid-feedback d-block text-danger">
+                                <strong>{{ $message }}</strong>
+                            </span>
+                        @enderror
+                    </div>
+
+
+                </form>
+
 
 
 
@@ -167,42 +202,53 @@
 
 {{-- === SCRIPT === --}}
 <script>
-function toggleEstadoFields(id) {
-    const estado = document.getElementById('status-' + id).value;
-    const formAbono = document.getElementById('form-abono-' + id);
-    const formCruce = document.getElementById('form-cruce-' + id);
-    const formEstado = document.getElementById('form-status-' + id);
+    function toggleEstadoFields(id) {
+        const estado = document.getElementById('status-' + id).value;
+        const formAbono = document.getElementById('form-abono-' + id);
+        const formCruce = document.getElementById('form-cruce-' + id);
+        const formPago = document.getElementById('form-pago-' + id);
+        const formProntoPago = document.getElementById('form-prontopago-' + id);
+        const formEstado = document.getElementById('form-status-' + id);
 
-    // Ocultar formularios secundarios
-    formAbono.style.display = 'none';
-    formCruce.style.display = 'none';
+        // Ocultar todos
+        formAbono.style.display = 'none';
+        formCruce.style.display = 'none';
+        formPago.style.display = 'none';
+        formProntoPago.style.display = 'none';
 
-    // Mostrar el formulario correspondiente
-    if (estado === 'Abono') {
-        formAbono.style.display = 'block';
-    } else if (estado === 'Cruce') {
-        formCruce.style.display = 'block';
+        // Mostrar el que corresponda
+        if (estado === 'Abono') {
+            formAbono.style.display = 'block';
+        } else if (estado === 'Cruce') {
+            formCruce.style.display = 'block';
+        } else if (estado === 'Pago') {
+            formPago.style.display = 'block';
+        } else if (estado === 'Pronto pago') {
+            formProntoPago.style.display = 'block';
+        }
+
+        // Mostrar u ocultar campo de fecha manual
+        formEstado.querySelector('.fecha-estado-' + id).style.display =
+            ['Abono', 'Cruce', 'Pago', 'Pronto pago', 'Cobranza judicial'].includes(estado)
+                ? 'block'
+                : 'none';
     }
 
-    // Mostrar u ocultar el campo de fecha manual
-    formEstado.querySelector('.fecha-estado-' + id).style.display =
-        ['Abono', 'Cruce', 'Pago', 'Cobranza judicial'].includes(estado)
-            ? 'block'
-            : 'none';
-}
-
-function submitModalForm(id) {
-    const estado = document.getElementById('status-' + id).value;
-
-    if (estado === 'Abono') {
-        document.getElementById('form-abono-' + id).submit();
-    } else if (estado === 'Cruce') {
-        document.getElementById('form-cruce-' + id).submit();
-    } else {
-        // “Pago” y “Cobranza judicial” van por updateStatus
-        document.getElementById('form-status-' + id).submit();
+    function submitModalForm(id) {
+        const estado = document.getElementById('status-' + id).value;
+        if (estado === 'Abono') {
+            document.getElementById('form-abono-' + id).submit();
+        } else if (estado === 'Cruce') {
+            document.getElementById('form-cruce-' + id).submit();
+        } else if (estado === 'Pago') {
+            document.getElementById('form-pago-' + id).submit();
+        } else if (estado === 'Pronto pago') {
+            document.getElementById('form-prontopago-' + id).submit();
+        } else {
+            document.getElementById('form-status-' + id).submit();
+        }
     }
-}
 </script>
+
 
 

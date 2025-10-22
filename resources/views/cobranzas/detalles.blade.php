@@ -75,6 +75,36 @@
             @endif
 
 
+            {{-- 🔹 Pronto Pago registrado --}}
+            @if($documento->prontoPagos()->exists())
+                @php
+                    $prontoPago = $documento->prontoPagos()->latest('fecha_pronto_pago')->first();
+                @endphp
+
+                <div class="card mb-4 shadow-sm border-warning">
+                    <div class="card-header bg-light fw-bold text-warning">
+                        Documento marcado como Pronto Pago
+                    </div>
+
+                    <div class="card-body d-flex justify-content-between align-items-center flex-wrap">
+                        <p class="mb-2 mb-md-0">
+                            Este documento fue marcado como <strong>Pronto Pago</strong>
+                            {{ $prontoPago->fecha_pronto_pago ? 'el ' . \Carbon\Carbon::parse($prontoPago->fecha_pronto_pago)->format('d-m-Y') : '' }}.
+                        </p>
+
+                        <form action="{{ route('prontopagos.destroy', $prontoPago->id) }}" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar el registro de Pronto Pago y restaurar el estado original del documento?')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                <i class="bi bi-x-circle"></i> Eliminar Pronto Pago
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            @endif
+
+
+
             {{-- Paso 2: Descuento por nota de crédito --}}
             @if($referencias['referenciadoPor']->isNotEmpty())
                 @foreach ($referencias['referenciadoPor'] as $ref)
@@ -205,7 +235,7 @@
                         </tr>
                     @endforeach
                 </tbody>
-</table>
+            </table>
 
 
 

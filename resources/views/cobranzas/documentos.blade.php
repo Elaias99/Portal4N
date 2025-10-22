@@ -295,7 +295,7 @@
                                     $color = $doc->status_original === 'Vencido' ? 'bg-danger' : 'bg-success';
 
                                     // Solo usamos el status manual si es uno de los estados válidos
-                                    $estadosManuales = ['Abono', 'Cruce', 'Pago', 'Cobranza judicial'];
+                                    $estadosManuales = ['Abono', 'Cruce', 'Pago', 'Pronto pago', 'Cobranza judicial'];
 
                                     $estadoMostrar = in_array($doc->status, $estadosManuales)
                                         ? $doc->status
@@ -415,7 +415,7 @@
             const hiddenFecha = document.getElementById('fecha-hidden-' + id);
 
             // Mostrar el campo de fecha solo para estados manuales
-            if (['Abono', 'Pago', 'Cobranza judicial'].includes(select.value)) {
+            if (['Abono', 'Pago', 'Pronto pago', 'Cobranza judicial'].includes(select.value)) {
                 if (inputFecha) inputFecha.style.display = 'block';
             } else {
                 if (inputFecha) {

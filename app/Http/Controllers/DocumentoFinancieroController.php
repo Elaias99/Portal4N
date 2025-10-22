@@ -23,7 +23,7 @@ class DocumentoFinancieroController extends Controller
             abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
         }
 
-        $query = DocumentoFinanciero::with(['cobranza', 'empresa', 'abonos', 'cruces', 'referenciados', 'pagos']);
+        $query = DocumentoFinanciero::with(['cobranza', 'empresa', 'abonos', 'cruces', 'referenciados', 'pagos', 'prontoPagos', ]);
 
         // === FILTROS GENERALES ===
         if ($request->filled('razon_social')) {
@@ -490,7 +490,7 @@ class DocumentoFinancieroController extends Controller
         $documento->status = $nuevoStatus;
 
         // Si el estado requiere fecha manual
-        if (in_array($nuevoStatus, ['Abono', 'Cruce', 'Pago', 'Cobranza judicial'])) {
+        if (in_array($nuevoStatus, ['Abono', 'Cruce', 'Pago', 'Pronto pago', 'Cobranza judicial'])) {
             $documento->fecha_estado_manual = $request->fecha_estado_manual ?? now();
         } else {
             $documento->fecha_estado_manual = null;
@@ -498,10 +498,19 @@ class DocumentoFinancieroController extends Controller
 
         // Si el estado es Pago → guardar también en la tabla `pagos`
         if ($nuevoStatus === 'Pago') {
-            // Evitar duplicados
             if ($documento->pagos()->count() === 0) {
                 $documento->pagos()->create([
                     'fecha_pago' => $documento->fecha_estado_manual,
+                    'user_id' => Auth::id(),
+                ]);
+            }
+        }
+
+        // 🟢 Si el estado es Pronto pago → guardar en la tabla `pronto_pagos`
+        if ($nuevoStatus === 'Pronto pago') {
+            if ($documento->prontoPagos()->count() === 0) {
+                $documento->prontoPagos()->create([
+                    'fecha_pronto_pago' => $documento->fecha_estado_manual,
                     'user_id' => Auth::id(),
                 ]);
             }
@@ -525,16 +534,41 @@ class DocumentoFinancieroController extends Controller
     }
 
 
-
-
-
-
-
     public function export()
     {
         $fecha = now()->format('Y-m-d_H-i-s');
         return Excel::download(new DocumentosExport, "documentos_financieros_{$fecha}.xlsx");
     }
+
+
+    public function show(DocumentoFinanciero $documento)
+    {
+        // Cargar relaciones relevantes
+        $documento->load(['empresa', 'abonos', 'cruces', 'referencia', 'referenciados']);
+
+        // 🔹 Guardar la URL anterior solo si viene del listado y no de otra acción (como updateStatus)
+        if (url()->previous() && !str_contains(url()->previous(), '/documentos/')) {
+            session(['return_to_listado' => url()->previous()]);
+        }
+
+        // Si está referenciado por una nota de crédito o hace referencia a una
+        $referencias = [
+            'referencia' => $documento->referencia,
+            'referenciadoPor' => $documento->referenciados,
+        ];
+
+        return view('cobranzas.detalles', compact('documento', 'referencias'));
+    }
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -665,25 +699,6 @@ class DocumentoFinancieroController extends Controller
     }
 
 
-
-    public function show(DocumentoFinanciero $documento)
-    {
-        // Cargar relaciones relevantes
-        $documento->load(['empresa', 'abonos', 'cruces', 'referencia', 'referenciados']);
-
-        // 🔹 Guardar la URL anterior solo si viene del listado y no de otra acción (como updateStatus)
-        if (url()->previous() && !str_contains(url()->previous(), '/documentos/')) {
-            session(['return_to_listado' => url()->previous()]);
-        }
-
-        // Si está referenciado por una nota de crédito o hace referencia a una
-        $referencias = [
-            'referencia' => $documento->referencia,
-            'referenciadoPor' => $documento->referenciados,
-        ];
-
-        return view('cobranzas.detalles', compact('documento', 'referencias'));
-    }
 
 
 
