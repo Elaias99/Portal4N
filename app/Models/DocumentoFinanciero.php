@@ -116,6 +116,12 @@ class DocumentoFinanciero extends Model
         return $this->hasMany(Cruce::class, 'documento_financiero_id');
     }
 
+    public function pagos()
+    {
+        return $this->hasMany(Pago::class, 'documento_financiero_id');
+    }
+
+
 
 
 
@@ -168,13 +174,14 @@ class DocumentoFinanciero extends Model
 
     public function getSaldoPendienteAttribute()
     {
-        // 🟢 Si el documento está marcado como Pago → saldo = 0
-        if (isset($this->status) && strtolower($this->status) === 'pago') {
+        // 🟢 Si tiene pagos registrados → saldo = 0
+        $pagos = $this->relationLoaded('pagos') ? $this->pagos : $this->pagos()->get();
+        if ($pagos->count() > 0) {
             return 0;
         }
 
-        // 🟣 Si es una Nota de Crédito Electrónica → mostrar saldo 0 (pero seguirá afectando internamente la factura)
-        if ($this->tipo_documento_id == 61 || 
+        // 🟣 Si es una Nota de Crédito Electrónica → saldo = 0
+        if ($this->tipo_documento_id == 61 ||
             (isset($this->tipoDocumento) && str_contains(strtolower($this->tipoDocumento->nombre), 'nota de crédito'))) {
             return 0;
         }
@@ -182,7 +189,7 @@ class DocumentoFinanciero extends Model
         // 🔹 Monto base del documento
         $saldo = $this->monto_total ?? 0;
 
-        // 🔹 Asegurar que las relaciones estén cargadas
+        // 🔹 Relaciones
         $referenciados = $this->relationLoaded('referenciados')
             ? $this->referenciados
             : $this->referenciados()->get();
@@ -195,7 +202,7 @@ class DocumentoFinanciero extends Model
             ? $this->cruces
             : $this->cruces()->get();
 
-        // ✅ Restar notas de crédito (que referencian a este documento)
+        // ✅ Restar notas de crédito
         $totalNotasCredito = $referenciados
             ->where('tipo_documento_id', 61)
             ->sum('monto_total');
@@ -213,6 +220,7 @@ class DocumentoFinanciero extends Model
 
         return max($saldo, 0);
     }
+
 
     public function actualizarFechaVencimiento()
     {

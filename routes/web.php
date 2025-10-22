@@ -285,6 +285,9 @@ Route::post('/documentos/{documento}/abonos', [DocumentoFinancieroController::cl
 Route::post('/documentos/{documento}/cruces', [DocumentoFinancieroController::class, 'storeCruce'])
     ->name('documentos.cruces.store');
 
+Route::post('/documentos/{documento}/pago', [App\Http\Controllers\DocumentoFinancieroController::class, 'storePago'])
+    ->name('documentos.pagos.store');
+
 Route::get('/cobranzas/general', [App\Http\Controllers\DocumentoFinancieroController::class, 'general'])
         ->name('cobranzas.general');
 
@@ -335,7 +338,15 @@ Route::delete('/cruces/{id}', [CruceController::class, 'destroy'])->name('cruces
 Route::get('/cruces/show', [App\Http\Controllers\CruceController::class, 'show'])
     ->name('cruces.show');
 
+// PAGOS
 
+// Registrar un pago directamente desde PagoDocumentoController
+Route::post('/pagos/{documento}', [App\Http\Controllers\PagoDocumentoController::class, 'store'])
+    ->name('pagos.store');
+
+// Eliminar un pago
+Route::delete('/pagos/{id}', [App\Http\Controllers\PagoDocumentoController::class, 'destroy'])
+    ->name('pagos.destroy');
 
 
 // Ruta para desvincular un empleado

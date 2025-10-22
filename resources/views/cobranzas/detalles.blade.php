@@ -47,28 +47,31 @@
 
 
             {{-- 🔹 Pago registrado --}}
-            @if($documento->status === 'Pago')
-            <div class="card mb-4 shadow-sm border-success">
-                <div class="card-header bg-light fw-bold text-success">
-                    Documento marcado como Pago
-                </div>
-                <div class="card-body d-flex justify-content-between align-items-center flex-wrap">
-                    <p class="mb-2 mb-md-0">
-                        Este documento fue marcado como <strong>Pago</strong>
-                        {{ $documento->fecha_estado_manual ? 'el ' . \Carbon\Carbon::parse($documento->fecha_estado_manual)->format('d-m-Y') : '' }}.
-                    </p>
+            @if($documento->pagos()->exists())
+                @php
+                    $pago = $documento->pagos()->latest('fecha_pago')->first();
+                @endphp
 
-                    <form action="{{ route('documentos.updateStatus', $documento->id) }}" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar el estado de Pago y restaurar el estado original?')">
-                        @csrf
-                        @method('PATCH')
-                        <input type="hidden" name="status" value="">
-                        <input type="hidden" name="fecha_estado_manual" value="">
-                        <button type="submit" class="btn btn-outline-danger btn-sm">
-                            <i class="bi bi-x-circle"></i> Eliminar Pago
-                        </button>
-                    </form>
+                <div class="card mb-4 shadow-sm border-success">
+                    <div class="card-header bg-light fw-bold text-success">
+                        Documento marcado como Pago
+                    </div>
+
+                    <div class="card-body d-flex justify-content-between align-items-center flex-wrap">
+                        <p class="mb-2 mb-md-0">
+                            Este documento fue marcado como <strong>Pago</strong>
+                            {{ $pago->fecha_pago ? 'el ' . \Carbon\Carbon::parse($pago->fecha_pago)->format('d-m-Y') : '' }}.
+                        </p>
+
+                        <form action="{{ route('pagos.destroy', $pago->id) }}" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar el registro de Pago y restaurar el estado original del documento?')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                <i class="bi bi-x-circle"></i> Eliminar Pago
+                            </button>
+                        </form>
+                    </div>
                 </div>
-            </div>
             @endif
 
 

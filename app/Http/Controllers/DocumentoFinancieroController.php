@@ -23,7 +23,7 @@ class DocumentoFinancieroController extends Controller
             abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
         }
 
-        $query = DocumentoFinanciero::with(['cobranza', 'empresa', 'abonos', 'referenciados']);
+        $query = DocumentoFinanciero::with(['cobranza', 'empresa', 'abonos', 'cruces', 'referenciados', 'pagos']);
 
         // === FILTROS GENERALES ===
         if ($request->filled('razon_social')) {
@@ -101,15 +101,17 @@ class DocumentoFinancieroController extends Controller
         // === CÁLCULO CORREGIDO DEL SALDO PENDIENTE TOTAL ===
         $totalSaldoPendiente = $documentoFinancieros
             ->filter(function ($doc) {
-                // ❌ Excluir notas de crédito o débito
+                // Excluir notas de crédito o débito
                 if (in_array($doc->tipo_documento_id, [61, 56])) {
                     return false;
                 }
 
-                // ❌ Excluir documentos pagados
-                if (isset($doc->status) && strtolower($doc->status) === 'pago') {
+                
+                // Excluir documentos con pagos registrados
+                if ($doc->pagos->count() > 0) {
                     return false;
                 }
+
 
                 // ✅ Incluir todo lo demás
                 return true;
@@ -132,8 +134,9 @@ class DocumentoFinancieroController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        $totalPagados = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente <= 0)->count();
-        $totalPendientes = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente > 0)->count();
+        $totalPagados = $documentoFinancieros->filter(fn($d) => $d->pagos->count() > 0)->count();
+        $totalPendientes = $documentoFinancieros->filter(fn($d) => $d->pagos->count() === 0)->count();
+
 
         $empresas = Empresa::orderBy('Nombre')->get(['id', 'Nombre']);
         $tiposDocumento = TipoDocumento::orderBy('nombre')->get(['id', 'nombre']);
@@ -481,18 +484,28 @@ class DocumentoFinancieroController extends Controller
         ]);
 
         $nuevoStatus = $request->status;
+        $original = $documento->getOriginal();
 
-        // 🔹 Guardamos cambios en estado manual
+        // Guardar estado manual
         $documento->status = $nuevoStatus;
 
-        // 🔹 Si el estado es manual (Abono, Pago, Cobranza judicial) → guarda la fecha enviada o actual
-        if (in_array($nuevoStatus, ['Abono', 'Pago', 'Cobranza judicial'])) {
+        // Si el estado requiere fecha manual
+        if (in_array($nuevoStatus, ['Abono', 'Cruce', 'Pago', 'Cobranza judicial'])) {
             $documento->fecha_estado_manual = $request->fecha_estado_manual ?? now();
         } else {
             $documento->fecha_estado_manual = null;
         }
 
-        $original = $documento->getOriginal();
+        // Si el estado es Pago → guardar también en la tabla `pagos`
+        if ($nuevoStatus === 'Pago') {
+            // Evitar duplicados
+            if ($documento->pagos()->count() === 0) {
+                $documento->pagos()->create([
+                    'fecha_pago' => $documento->fecha_estado_manual,
+                    'user_id' => Auth::id(),
+                ]);
+            }
+        }
 
         // Guardar solo si hay cambios
         if ($documento->isDirty(['status', 'fecha_estado_manual'])) {
@@ -510,6 +523,8 @@ class DocumentoFinancieroController extends Controller
 
         return redirect()->back()->with('success', 'Estado manual actualizado correctamente.');
     }
+
+
 
 
 
@@ -610,6 +625,45 @@ class DocumentoFinancieroController extends Controller
 
         return back()->with('success', 'Cruce registrado correctamente.');
     }
+
+    public function storePago(Request $request, DocumentoFinanciero $documento)
+    {
+        $request->validate([
+            'fecha_pago' => 'required|date|before_or_equal:today',
+        ], [
+            'fecha_pago.before_or_equal' => 'La fecha del pago no debe sobrepasar la fecha actual.',
+            'fecha_pago.required' => 'La fecha del pago es obligatoria.',
+        ]);
+
+        // Verificar si ya existe un pago registrado
+        if ($documento->pagos()->exists()) {
+            return back()->withErrors(['fecha_pago' => 'Este documento ya tiene un pago registrado.']);
+        }
+
+        // Crear el registro del pago
+        $documento->pagos()->create([
+            'fecha_pago' => $request->fecha_pago,
+            'user_id' => Auth::id(),
+        ]);
+
+        // Limpiar el status manual (ya no se usa "Pago" directamente)
+        $documento->update([
+            'status' => null,
+            'fecha_estado_manual' => $request->fecha_pago,
+        ]);
+
+        // Registrar el movimiento
+        MovimientoDocumento::create([
+            'documento_financiero_id' => $documento->id,
+            'user_id' => Auth::id(),
+            'tipo_movimiento' => 'Pago registrado',
+            'descripcion' => "El documento fue marcado como Pago el {$request->fecha_pago}.",
+            'datos_nuevos' => ['fecha_pago' => $request->fecha_pago],
+        ]);
+
+        return back()->with('success', 'Pago registrado correctamente.');
+    }
+
 
 
     public function show(DocumentoFinanciero $documento)

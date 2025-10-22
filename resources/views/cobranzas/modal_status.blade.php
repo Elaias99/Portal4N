@@ -131,6 +131,27 @@
                         @enderror
                     </div>
                 </form>
+
+
+                {{-- Campo visible solo si el estado es "Pago" --}}
+                <div class="form-group mb-3 fecha-estado-{{ $doc->id }}" 
+                    style="display: {{ $doc->status == 'Pago' ? 'block' : 'none' }};">
+                    <label for="fecha_estado_manual-{{ $doc->id }}" class="form-label small text-muted">
+                        Fecha del pago
+                    </label>
+                    <input type="date"
+                        name="fecha_estado_manual"
+                        id="fecha_estado_manual-{{ $doc->id }}"
+                        class="form-control form-control-sm"
+                        value="{{ now()->format('Y-m-d') }}"
+                        required>
+                    <div class="alert alert-info py-1 px-2 small mt-2">
+                        Al registrar un pago, el saldo pendiente quedará automáticamente en <strong>0</strong>.
+                    </div>
+                </div>
+
+
+
             </div>
 
             {{-- === FOOTER === --}}
@@ -146,37 +167,42 @@
 
 {{-- === SCRIPT === --}}
 <script>
-    function toggleEstadoFields(id) {
-        const estado = document.getElementById('status-' + id).value;
-        const formAbono = document.getElementById('form-abono-' + id);
-        const formCruce = document.getElementById('form-cruce-' + id);
-        const formEstado = document.getElementById('form-status-' + id);
+function toggleEstadoFields(id) {
+    const estado = document.getElementById('status-' + id).value;
+    const formAbono = document.getElementById('form-abono-' + id);
+    const formCruce = document.getElementById('form-cruce-' + id);
+    const formEstado = document.getElementById('form-status-' + id);
 
-        // Ocultar ambos formularios
-        formAbono.style.display = 'none';
-        formCruce.style.display = 'none';
+    // Ocultar formularios secundarios
+    formAbono.style.display = 'none';
+    formCruce.style.display = 'none';
 
-        // Mostrar el que corresponda
-        if (estado === 'Abono') {
-            formAbono.style.display = 'block';
-            formEstado.querySelector('.fecha-estado-' + id).style.display = 'block';
-        } else if (estado === 'Cruce') {
-            formCruce.style.display = 'block';
-            formEstado.querySelector('.fecha-estado-' + id).style.display = 'block';
-        } else {
-            formEstado.querySelector('.fecha-estado-' + id).style.display =
-                ['Pago', 'Cobranza judicial'].includes(estado) ? 'block' : 'none';
-        }
+    // Mostrar el formulario correspondiente
+    if (estado === 'Abono') {
+        formAbono.style.display = 'block';
+    } else if (estado === 'Cruce') {
+        formCruce.style.display = 'block';
     }
 
-    function submitModalForm(id) {
-        const estado = document.getElementById('status-' + id).value;
-        if (estado === 'Abono') {
-            document.getElementById('form-abono-' + id).submit();
-        } else if (estado === 'Cruce') {
-            document.getElementById('form-cruce-' + id).submit();
-        } else {
-            document.getElementById('form-status-' + id).submit();
-        }
+    // Mostrar u ocultar el campo de fecha manual
+    formEstado.querySelector('.fecha-estado-' + id).style.display =
+        ['Abono', 'Cruce', 'Pago', 'Cobranza judicial'].includes(estado)
+            ? 'block'
+            : 'none';
+}
+
+function submitModalForm(id) {
+    const estado = document.getElementById('status-' + id).value;
+
+    if (estado === 'Abono') {
+        document.getElementById('form-abono-' + id).submit();
+    } else if (estado === 'Cruce') {
+        document.getElementById('form-cruce-' + id).submit();
+    } else {
+        // “Pago” y “Cobranza judicial” van por updateStatus
+        document.getElementById('form-status-' + id).submit();
     }
+}
 </script>
+
+
