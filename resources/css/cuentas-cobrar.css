@@ -1,0 +1,192 @@
+    body {
+        font-family: 'Inter', 'Segoe UI', Tahoma, sans-serif;
+        background-color: #f5f7fa;
+        color: #2b2b2b;
+        line-height: 1.5;
+    }
+
+    /* ===== TITULO ===== */
+    h1 {
+        font-weight: 600;
+        color: #222;
+        font-size: 1.9rem;
+        text-align: center;
+        margin-bottom: 1.8rem;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+
+    /* ===== CONTENEDOR TABLA ===== */
+    .table-responsive {
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+
+    /* ===== TABLA PERSONALIZADA ===== */
+    .custom-table th {
+        background-color: #f9fafb;
+        color: #495057;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-align: center;
+        padding: 14px;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    .custom-table td {
+        padding: 12px;
+        font-size: 0.9rem;
+        vertical-align: middle;
+        border-top: 1px solid #f1f3f5;
+        transition: background-color 0.2s ease-in-out;
+    }
+
+    .custom-table tr:nth-child(odd) {
+        background-color: #fcfcfc;
+    }
+
+    .custom-table tr:hover td {
+        background-color: #f4f8ff;
+    }
+
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .fw-bold { font-weight: 600; color: #0b4da1; }
+
+    /* ===== STATUS BADGES ===== */
+    .status-badge {
+        display: inline-block;
+        padding: 5px 12px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        border-radius: 20px;
+        min-width: 90px;
+        text-align: center;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .status-badge:hover {
+        transform: translateY(-1px);
+    }
+
+    .status-pagado {
+        background-color: #eaf8ee;
+        color: #198754;
+        border: 1px solid #cfe7d5;
+    }
+    .status-rechazado {
+        background-color: #fde8e8;
+        color: #b02a37;
+        border: 1px solid #f5c2c7;
+    }
+    .status-pendiente {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+    }
+
+    /* ===== BOTONES ===== */
+    .btn {
+        font-size: 0.8rem;
+        border-radius: 8px;
+        padding: 5px 10px;
+        transition: all 0.2s ease;
+    }
+
+    .btn-outline-secondary {
+        border: 1px solid #ced4da;
+        color: #495057;
+    }
+    .btn-outline-secondary:hover {
+        background-color: #f1f3f5;
+    }
+
+    .btn-outline-primary {
+        border: 1px solid #0d6efd;
+        color: #0d6efd;
+    }
+    .btn-outline-primary:hover {
+        background-color: #e7f0ff;
+    }
+
+    /* ===== ALERTAS ===== */
+    .custom-alert {
+        border-left: 6px solid;
+        border-radius: 10px;
+        padding: 14px 18px;
+        background-color: #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        margin-bottom: 18px;
+        font-size: 0.92rem;
+    }
+
+    .alert-success {
+        border-left-color: #28a745 !important;
+        background-color: #f6fbf7;
+    }
+
+    .alert-warning {
+        border-left-color: #ffc107 !important;
+        background-color: #fffaf0;
+    }
+
+    /* ===== SCROLL ===== */
+    .table-responsive::-webkit-scrollbar {
+        height: 8px;
+    }
+    .table-responsive::-webkit-scrollbar-thumb {
+        background-color: #ced4da;
+        border-radius: 10px;
+    }
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background-color: #adb5bd;
+    }
+    /* .container {
+        max-width: 95% !important;
+    } */
+
+    /* === Estilos para el dropdown de fechas === */
+    .dropdown-fechas .dropdown-toggle {
+        background-color: #f8f9fa;
+        border: 1px solid #ced4da;
+        color: #495057;
+        font-weight: 500;
+    }
+
+    .dropdown-fechas .dropdown-toggle:hover {
+        background-color: #e9ecef;
+    }
+
+    .dropdown-fechas .dropdown-menu {
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border: none;
+        min-width: 320px;
+    }
+
+    .dropdown-fechas label {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+
+    .dropdown-fechas input[type="date"] {
+        font-size: 0.9rem;
+    }
+
+    .dropdown-fechas .preset-btn {
+        width: 100%;
+        border: 1px solid #dee2e6;
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 6px 8px;
+        margin-top: 4px;
+        text-align: center;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .dropdown-fechas .preset-btn:hover {
+        background-color: #f1f3f5;
+    }

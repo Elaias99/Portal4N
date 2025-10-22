@@ -14,6 +14,7 @@ export default defineConfig({
                 'resources/css/dashboard.css',
                 'resources/css/appcustom.css',
                 'resources/css/panel-finanzas.css',
+                'resources/css/cuentas-cobrar.css',
                 'resources/sass/app.scss',
                 'resources/js/app.js',  // Mantén el archivo JS si lo usas
             ],
