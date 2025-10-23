@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Exports\MovimientoExport;
 use Maatwebsite\Excel\Facades\Excel;
-
+use Illuminate\Support\Facades\DB;
 class PanelFinanzaController extends Controller
 {
     //
@@ -20,72 +20,118 @@ class PanelFinanzaController extends Controller
         // 🚫 Control de acceso
         $usuariosFinanzas = [1, 405, 374];
         if (!in_array(Auth::id(), $usuariosFinanzas)) {
-            abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
+            abort(403, 'Acceso denegado.');
         }
 
-        // Rango de fechas (opcional)
+        // === Filtros ===
         $fechaInicio = $request->input('fecha_inicio');
         $fechaFin    = $request->input('fecha_fin');
+        $empresaId   = $request->input('empresa_id');
+        $razonSocial = $request->input('razon_social'); // 👈 nuevo filtro
+        $perPage     = 15;
 
-        // === Queries base ===
-        $abonosQuery = Abono::with('documento');
-        $crucesQuery = Cruce::with('documento');
-        $pagosQuery  = DocumentoFinanciero::where('status', 'Pago');
+        // === Subconsulta ABONOS ===
+        $abonosQuery = DB::table('abonos')
+            ->selectRaw("
+                'Abono' AS tipo,
+                fecha_abono AS fecha,
+                monto,
+                documento_financiero_id
+            ")
+            ->when($fechaInicio, fn($q) => $q->whereDate('fecha_abono', '>=', $fechaInicio))
+            ->when($fechaFin, fn($q) => $q->whereDate('fecha_abono', '<=', $fechaFin))
+            ->when($empresaId, function ($q) use ($empresaId) {
+                $q->whereIn('documento_financiero_id', function ($sub) use ($empresaId) {
+                    $sub->select('id')->from('documentos_financieros')->where('empresa_id', $empresaId);
+                });
+            })
+            ->when($razonSocial, function ($q) use ($razonSocial) {
+                $q->whereIn('documento_financiero_id', function ($sub) use ($razonSocial) {
+                    $sub->select('id')
+                        ->from('documentos_financieros')
+                        ->where('razon_social', 'like', "%{$razonSocial}%");
+                });
+            });
 
-        // === Filtros por fecha ===
-        if ($fechaInicio && $fechaFin) {
-            $abonosQuery->whereBetween('fecha_abono', [$fechaInicio, $fechaFin]);
-            $crucesQuery->whereBetween('fecha_cruce', [$fechaInicio, $fechaFin]);
-            $pagosQuery->whereBetween('fecha_estado_manual', [$fechaInicio, $fechaFin]);
-        } elseif ($fechaInicio) {
-            $abonosQuery->whereDate('fecha_abono', '>=', $fechaInicio);
-            $crucesQuery->whereDate('fecha_cruce', '>=', $fechaInicio);
-            $pagosQuery->whereDate('fecha_estado_manual', '>=', $fechaInicio);
-        } elseif ($fechaFin) {
-            $abonosQuery->whereDate('fecha_abono', '<=', $fechaFin);
-            $crucesQuery->whereDate('fecha_cruce', '<=', $fechaFin);
-            $pagosQuery->whereDate('fecha_estado_manual', '<=', $fechaFin);
-        }
+        // === Subconsulta CRUCES ===
+        $crucesQuery = DB::table('cruces')
+            ->selectRaw("
+                'Cruce' AS tipo,
+                fecha_cruce AS fecha,
+                monto,
+                documento_financiero_id
+            ")
+            ->when($fechaInicio, fn($q) => $q->whereDate('fecha_cruce', '>=', $fechaInicio))
+            ->when($fechaFin, fn($q) => $q->whereDate('fecha_cruce', '<=', $fechaFin))
+            ->when($empresaId, function ($q) use ($empresaId) {
+                $q->whereIn('documento_financiero_id', function ($sub) use ($empresaId) {
+                    $sub->select('id')->from('documentos_financieros')->where('empresa_id', $empresaId);
+                });
+            })
+            ->when($razonSocial, function ($q) use ($razonSocial) {
+                $q->whereIn('documento_financiero_id', function ($sub) use ($razonSocial) {
+                    $sub->select('id')
+                        ->from('documentos_financieros')
+                        ->where('razon_social', 'like', "%{$razonSocial}%");
+                });
+            });
 
-        // === Obtener datos ===
-        $abonos = $abonosQuery->orderByDesc('fecha_abono')->get();
-        $cruces = $crucesQuery->orderByDesc('fecha_cruce')->get();
-        $pagos  = $pagosQuery->orderByDesc('fecha_estado_manual')->get();
+        // === Subconsulta PAGOS ===
+        $pagosQuery = DB::table('documentos_financieros')
+            ->selectRaw("
+                'Pago' AS tipo,
+                fecha_estado_manual AS fecha,
+                monto_total AS monto,
+                id AS documento_financiero_id
+            ")
+            ->where('status', 'Pago')
+            ->when($fechaInicio, fn($q) => $q->whereDate('fecha_estado_manual', '>=', $fechaInicio))
+            ->when($fechaFin, fn($q) => $q->whereDate('fecha_estado_manual', '<=', $fechaFin))
+            ->when($empresaId, fn($q) => $q->where('empresa_id', $empresaId))
+            ->when($razonSocial, fn($q) => $q->where('razon_social', 'like', "%{$razonSocial}%"));
 
-        // === Unificar ===
-        $movimientos = collect()
-            ->merge($abonos->map(function ($a) {
-                return [
-                    'tipo' => 'Abono',
-                    'fecha' => $a->fecha_abono,
-                    'monto' => $a->monto,
-                    'documento' => $a->documento,
-                    'raw' => $a,
-                ];
-            }))
-            ->merge($cruces->map(function ($c) {
-                return [
-                    'tipo' => 'Cruce',
-                    'fecha' => $c->fecha_cruce,
-                    'monto' => $c->monto,
-                    'documento' => $c->documento,
-                    'raw' => $c,
-                ];
-            }))
-            ->merge($pagos->map(function ($p) {
-                return [
-                    'tipo' => 'Pago',
-                    'fecha' => $p->fecha_estado_manual,
-                    'monto' => $p->monto_total ?? 0,
-                    'documento' => $p,
-                    'raw' => $p,
-                ];
-            }))
-            ->sortByDesc('fecha')
-            ->values();
+        // === UNION ===
+        $union = $abonosQuery->unionAll($crucesQuery)->unionAll($pagosQuery);
 
-        return view('panelfinanza.show', compact('movimientos'));
+        // === TOTAL FILTRADO ===
+        $totalMontos = DB::table(DB::raw("({$union->toSql()}) as movimientos"))
+            ->mergeBindings($union)
+            ->sum('monto');
+
+
+        $movimientos = DB::table(DB::raw("({$union->toSql()}) as movimientos"))
+            ->mergeBindings($union)
+            ->orderByDesc('fecha')
+            ->paginate($perPage);
+
+        // === Cargar documentos y usuarios ===
+        $documentos = \App\Models\DocumentoFinanciero::with('empresa')
+            ->whereIn('id', $movimientos->pluck('documento_financiero_id'))
+            ->get()
+            ->keyBy('id');
+
+        $ultimoMovimientoPorDoc = \App\Models\MovimientoDocumento::with('user')
+            ->whereIn('documento_financiero_id', $movimientos->pluck('documento_financiero_id'))
+            ->orderBy('id', 'desc')
+            ->get()
+            ->groupBy('documento_financiero_id')
+            ->map(fn($items) => $items->first());
+
+        $movimientos->getCollection()->transform(function ($m) use ($documentos, $ultimoMovimientoPorDoc) {
+            $m->documento = $documentos->get($m->documento_financiero_id);
+            $m->usuario   = optional($ultimoMovimientoPorDoc->get($m->documento_financiero_id)?->user);
+            return $m;
+        });
+
+        
+
+        $empresas = \App\Models\Empresa::orderBy('Nombre')->get();
+
+        return view('panelfinanza.show', compact('movimientos', 'empresas', 'totalMontos'));
     }
+
+
+
 
 
     public function export(Request $request)
