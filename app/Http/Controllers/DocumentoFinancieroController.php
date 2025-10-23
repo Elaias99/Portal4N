@@ -66,7 +66,10 @@ class DocumentoFinancieroController extends Controller
 
 
         // === OBTENER DATOS BASE ===
-        $documentoFinancieros = $query->orderBy('fecha_docto', 'desc')->get();
+        $documentoFinancieros = $query
+            ->orderByRaw('ISNULL(fecha_vencimiento), fecha_vencimiento DESC')
+            ->orderBy('fecha_docto', 'desc')
+            ->get();
 
 
         $hoy = \Carbon\Carbon::today();
