@@ -3,32 +3,42 @@
 use Illuminate\Support\Facades\Auth;
 use App\Models\Reclamos;
 
+/* ============================================================
+ | 🧩 1. CORRESPONDENCIAS ENTRE CORREOS
+ * ============================================================*/
+
+if (!function_exists('getAdminPerfilMappings')) {
+    /**
+     * Devuelve el listado completo de correspondencias
+     * entre correos administrativos y correos de perfil interno.
+     *
+     * @return array
+     */
+    function getAdminPerfilMappings()
+    {
+        return [
+            'luisdelabarra@4nlogistica.cl' => 'l.delabarra.b@4nlogistica.cl',
+            'raul.suazo@4nlogistica.cl' => 'r.suazo.m@4nlogistica.cl',
+            'jp.soza@4nlogistica.cl' => 'j.soza.b@4nlogistica.cl',
+            'hansdelabarra@4nlogistica.cl' => 'h.delabarra.b@4nlogistica.cl',
+            'Marcelo@4nlogistica.cl'       => 'o.godoy.s@4nlogistica.cl',
+            'eliascorreap@gmail.com'       => 'e.correa.p@4nlogistica.cl',
+        ];
+    }
+}
+
+
 if (!function_exists('resolvePerfilEmail')) {
     /**
-     * Resuelve el correo corporativo asociado a un correo administrativo.
+     * Devuelve el correo del perfil interno asociado a un correo administrativo.
      *
      * @param string $adminEmail
      * @return string
      */
     function resolvePerfilEmail($adminEmail)
     {
-        $mapping = [
-
-
-            'luisdelabarra@4nlogistica.cl' => 'l.delabarra.b@4nlogistica.cl',
-            'raul.suazo@4nlogistica.cl' => 'r.suazo.m@4nlogistica.cl',
-            'jp.soza@4nlogistica.cl' => 'j.soza.b@4nlogistica.cl',
-            // 'benjaminrojas@4nlogistica.cl' => 'b.rojas.s@4nlogistica.cl', //Desvinculado
-            'hansdelabarra@4nlogistica.cl' => 'h.delabarra.b@4nlogistica.cl',
-            'Marcelo@4nlogistica.cl' => 'o.godoy.s@4nlogistica.cl',
-            'eliascorreap@gmail.com' => 'e.correa.p@4nlogistica.cl'
-
-
-
-            // Agrega más relaciones aquí...
-        ];
-
-        return $mapping[$adminEmail] ?? $adminEmail; // Devuelve el mismo correo si no hay mapeo
+        $mapping = getAdminPerfilMappings();
+        return $mapping[$adminEmail] ?? $adminEmail;
     }
 }
 
@@ -42,67 +52,35 @@ if (!function_exists('resolveAdminEmail')) {
      */
     function resolveAdminEmail($empleadoEmail)
     {
-        $mapping = [
-            'luisdelabarra@4nlogistica.cl' => 'l.delabarra.b@4nlogistica.cl',
-            'raul.suazo@4nlogistica.cl' => 'r.suazo.m@4nlogistica.cl',
-            'jp.soza@4nlogistica.cl' => 'j.soza.b@4nlogistica.cl',
-            // 'benjaminrojas@4nlogistica.cl' => 'b.rojas.s@4nlogistica.cl',//Desvinculado
-            'hansdelabarra@4nlogistica.cl' => 'h.delabarra.b@4nlogistica.cl',
-            'Marcelo@4nlogistica.cl' => 'o.godoy.s@4nlogistica.cl',
-            'eliascorreap@gmail.com' => 'e.correa.p@4nlogistica.cl'
-
-        ];
-
-        // Invertimos el arreglo
-        $reverse = array_flip($mapping);
-
+        $reverse = array_flip(getAdminPerfilMappings());
         return $reverse[$empleadoEmail] ?? null;
     }
 }
 
 
-
-if (! function_exists('calcularSiguienteViernes')) {
-    /**
-     * Calcula el siguiente viernes a partir de una fecha dada.
-     *
-     * @param string $fecha (formato 'Y-m-d')
-     * @return string Fecha del siguiente viernes en formato 'Y-m-d'
-     */
-    function calcularSiguienteViernes(string $fecha): string {
-        $timestamp = strtotime($fecha);
-        $diaSemana = date('w', $timestamp); // Domingo=0, Lunes=1, ..., Sábado=6
-        // Viernes es 5.
-        $diasAAgregar = (5 - $diaSemana + 7) % 7;
-        // Si ya es viernes y queremos mantener esa fecha, dejamos 0; 
-        // si se requiere el siguiente viernes siempre, entonces:
-        // if($diasAAgregar === 0) $diasAAgregar = 7;
-        return date('Y-m-d', strtotime("+$diasAAgregar days", $timestamp));
-    }
-}
-
-
+/* ============================================================
+ | 📨 2. CORREO DE NOTIFICACIÓN REAL (OUTLOOK)
+ * ============================================================*/
 
 if (!function_exists('resolveCorreoNotificacion')) {
+    /**
+     * Determina a qué correo real (Outlook) se debe enviar una notificación.
+     */
     function resolveCorreoNotificacion($user)
     {
-        // Mapeo entre correos internos del sistema y los correos reales de Outlook
         $mapeoCorreosReales = [
-            'e.correa.p@4nlogistica.cl' => 'eliascorrea@4nlogistica.cl', //
-            'j.guerrero.g@4nlogistica.cl' => 'jocelynguerrero@4nlogistica.cl', //
-            'd.medina.p@4nlogistica.cl' => 'daniela.medina@4nlogistica.cl', //
-            'e.obreque.f@4nlogistica.cl'=>'elizabeth.obreque@4nlogistica.cl', //
-            'r.suazo.m@4nlogistica.cl'=>'raul.suazo@4nlogistica.cl', //
-            'l.delabarra.b@4nlogistica.cl'=>'luisdelabarra@4nlogistica.cl', //
-            'j.soza.b@4nlogistica.cl'=>'jp.soza@4nlogistica.cl', //
-          
-            'h.delabarra.b@4nlogistica.cl'=>'hansdelabarra@4nlogistica.cl', //
-            'o.godoy.s@4nlogistica.cl'=>'Marcelo@4nlogistica.cl',
-            'm.salas.a@4nlogistica.cl'=>'francisca.salas@4nlogistica.cl', //
-            'm.diaz.s@4nlogistica.cl'=>'marieladiaz@4nlogistica.cl', //
-            'n.cuadros.m@4nlogistica.cl'=>'maritzacuadros@4nlogistica.cl', //
-
-            // Agrega aquí más relaciones reales según tu empresa
+            'e.correa.p@4nlogistica.cl'   => 'eliascorrea@4nlogistica.cl',
+            'j.guerrero.g@4nlogistica.cl' => 'jocelynguerrero@4nlogistica.cl',
+            'd.medina.p@4nlogistica.cl'   => 'daniela.medina@4nlogistica.cl',
+            'e.obreque.f@4nlogistica.cl'  => 'elizabeth.obreque@4nlogistica.cl',
+            'r.suazo.m@4nlogistica.cl'    => 'raul.suazo@4nlogistica.cl',
+            'l.delabarra.b@4nlogistica.cl'=> 'luisdelabarra@4nlogistica.cl',
+            'j.soza.b@4nlogistica.cl'     => 'jp.soza@4nlogistica.cl',
+            'h.delabarra.b@4nlogistica.cl'=> 'hansdelabarra@4nlogistica.cl',
+            'o.godoy.s@4nlogistica.cl'    => 'Marcelo@4nlogistica.cl',
+            'm.salas.a@4nlogistica.cl'    => 'francisca.salas@4nlogistica.cl',
+            'm.diaz.s@4nlogistica.cl'     => 'marieladiaz@4nlogistica.cl',
+            'n.cuadros.m@4nlogistica.cl'  => 'maritzacuadros@4nlogistica.cl',
         ];
 
         // Si el correo interno está mapeado, usar el real
@@ -110,12 +88,38 @@ if (!function_exists('resolveCorreoNotificacion')) {
             return $mapeoCorreosReales[$user->email];
         }
 
-        // Si no, usar el correo personal como respaldo
+        // Si no, usar el correo personal o el mismo del usuario
         return $user->trabajador->CorreoPersonal ?? $user->email;
     }
 }
 
+
+/* ============================================================
+ | 🧮 3. UTILIDADES VARIAS
+ * ============================================================*/
+
+if (!function_exists('calcularSiguienteViernes')) {
+    /**
+     * Calcula el siguiente viernes a partir de una fecha dada.
+     */
+    function calcularSiguienteViernes(string $fecha): string
+    {
+        $timestamp = strtotime($fecha);
+        $diaSemana = date('w', $timestamp); // Domingo=0, Lunes=1, ..., Sábado=6
+        $diasAAgregar = (5 - $diaSemana + 7) % 7;
+        return date('Y-m-d', strtotime("+$diasAAgregar days", $timestamp));
+    }
+}
+
+
+/* ============================================================
+ | 🔔 4. NOTIFICACIONES INTERNAS (Reclamos y Áreas)
+ * ============================================================*/
+
 if (!function_exists('usuariosInvolucradosEnReclamo')) {
+    /**
+     * Devuelve los usuarios involucrados en un reclamo (autor, área destino, y origen si aplica).
+     */
     function usuariosInvolucradosEnReclamo(Reclamos $reclamo, $areaOrigenId = null)
     {
         $usuarios = collect();
@@ -130,7 +134,7 @@ if (!function_exists('usuariosInvolucradosEnReclamo')) {
             $q->where('area_id', $reclamo->area_id);
         })->get();
 
-        // Área de origen (pasada manualmente)
+        // Área de origen (opcional)
         $usuariosOrigen = collect();
         if ($areaOrigenId) {
             $usuariosOrigen = \App\Models\User::whereHas('trabajador', function ($q) use ($areaOrigenId) {
@@ -144,8 +148,6 @@ if (!function_exists('usuariosInvolucradosEnReclamo')) {
             ->unique('id');
     }
 }
-
-
 
 
 if (!function_exists('notificarUsuarioYAdmin')) {
@@ -167,7 +169,3 @@ if (!function_exists('notificarUsuarioYAdmin')) {
         }
     }
 }
-
-
-
-

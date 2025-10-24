@@ -55,7 +55,8 @@
                   <tr><th>Tipo de Cuenta</th><td>{{ $empleado->tipo_cuenta }}</td></tr>
                   <tr><th>Correo Corporativo</th><td class="text-break">{{ $empleado->user->email }}</td></tr>
                   <tr><th>Empresa</th><td>{{ $empleado->empresa->Nombre }}</td></tr>
-                  <tr><th>Jefe Área</th><td>{{ $empleado->jefe->nombre }}</td></tr>
+                  <tr><th>Jefe Área</th><td>{{ $empleado->jefe?->nombre ?? 'Sin jefe asignado' }}</td></tr>
+
                   <tr><th>Rut Empresa</th><td class="text-break">{{ $empleado->empresa->rut ?? '' }}</td></tr>
                   <tr><th>Fecha Contratación</th><td>{{ \Carbon\Carbon::parse($empleado->fecha_inicio_trabajo)->format('d/m/Y') }}</td></tr>
                   <tr><th>Cargo</th><td>{{ $empleado->cargo->Nombre }}</td></tr>

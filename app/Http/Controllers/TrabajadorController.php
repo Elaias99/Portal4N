@@ -51,6 +51,8 @@ class TrabajadorController extends Controller
 
     public function index(Request $request)
     {
+
+        
         $mostrarDesvinculados = $request->has('mostrar_desvinculados');
 
         $query = $request->input('search');
