@@ -12,7 +12,7 @@ use App\Http\Controllers\FacturaController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\ProveedorImportController;
 use App\Http\Controllers\CompraController;
-use App\Http\Controllers\PanelFinanzaController;
+use App\Http\Controllers\BancoController;
 use App\Http\Controllers\AsistenciaController;
 use App\Models\User;
 use App\Http\Controllers\SolicitudManualController;
@@ -34,7 +34,7 @@ use App\Http\Controllers\DocumentoFinancieroController;
 use App\Http\Controllers\AbonoController;
 use App\Http\Controllers\TrackingProductoController;
 use App\Http\Controllers\CruceController;
-use App\Http\Controllers\ProntoPagoController;
+use App\Http\Controllers\Admin\RoleManagerController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -201,13 +201,6 @@ Route::resource('clasificacion-operativa', \App\Http\Controllers\ClasificacionOp
 
 
 
-///PanelFinanza//////
-Route::get('/panelfinanza/show', [App\Http\Controllers\PanelFinanzaController::class, 'show'])
-    ->name('panelfinanza.show');
-
-Route::get('/panelfinanza/export', [App\Http\Controllers\PanelFinanzaController::class, 'export'])
-    ->name('panelfinanza.export');
-
 
 
 // 7. Rutas para otros modelos
@@ -286,19 +279,6 @@ Route::post('/documentos/{documento}/abonos', [DocumentoFinancieroController::cl
 Route::post('/documentos/{documento}/cruces', [DocumentoFinancieroController::class, 'storeCruce'])
     ->name('documentos.cruces.store');
 
-Route::post('/documentos/{documento}/pago', [App\Http\Controllers\DocumentoFinancieroController::class, 'storePago'])
-    ->name('documentos.pagos.store');
-
-Route::get('/cobranzas/general', [App\Http\Controllers\DocumentoFinancieroController::class, 'general'])
-        ->name('cobranzas.general');
-
-
-
-Route::get('/cobranzas/documentos/column-filter', [DocumentoFinancieroController::class, 'filtrarColumnas'])
-    ->name('cobranzas.column_filter');
-
-    
-Route::get('/cobranzas/export', [CobranzaController::class, 'export'])->name('cobranzas.export');
 Route::resource('cobranzas', CobranzaController::class);
 
 
@@ -326,9 +306,6 @@ Route::put('/abonos/{id}', [AbonoController::class, 'update'])
 Route::delete('/abonos/{id}', [AbonoController::class, 'destroy'])
     ->name('abonos.destroy');
 
-Route::get('/abonos/show', [AbonoController::class, 'show'])->name('abonos.show');
-
-
 
 /////CRUCES
 // CRUD de cruces
@@ -336,45 +313,24 @@ Route::get('/documentos/{documento}/cruces', [CruceController::class, 'index'])-
 Route::get('/cruces/{id}/edit', [CruceController::class, 'edit'])->name('cruces.edit');
 Route::put('/cruces/{id}', [CruceController::class, 'update'])->name('cruces.update');
 Route::delete('/cruces/{id}', [CruceController::class, 'destroy'])->name('cruces.destroy');
-Route::get('/cruces/show', [App\Http\Controllers\CruceController::class, 'show'])
-    ->name('cruces.show');
 
-// PAGOS
-
-// Registrar un pago directamente desde PagoDocumentoController
-Route::post('/documentos/{documento}/pagos', [App\Http\Controllers\PagoDocumentoController::class, 'store'])
-    ->name('documentos.pagos.store');
-// Eliminar un pago
-Route::delete('/pagos/{id}', [App\Http\Controllers\PagoDocumentoController::class, 'destroy'])
-    ->name('pagos.destroy');
-
-
-
-//ProntoPAGO///////////////////////////////////////// 
-// Registrar un pronto pago
-Route::post('/prontopagos/{documento}', [App\Http\Controllers\ProntoPagoController::class, 'store'])
-    ->name('prontopagos.store');
-
-// Eliminar un pronto pago
-Route::delete('/prontopagos/{id}', [App\Http\Controllers\ProntoPagoController::class, 'destroy'])
-    ->name('prontopagos.destroy');
 
 
 // Ruta para desvincular un empleado
 Route::post('/empleados/{id}/desvincular', [App\Http\Controllers\TrabajadorController::class, 'desvincular'])->name('empleados.desvincular');
 
 
-// Descargar archivo PDF del contrato
+// 📄 Descargar archivo PDF del contrato
 Route::get('contratos/{id}/download', [ContratoController::class, 'download'])
     ->name('contratos.download')
     ->middleware('auth');
 
-// Mostrar formulario para registrar contrato (recibe ID del trabajador)
+// 📝 Mostrar formulario para registrar contrato (recibe ID del trabajador)
 Route::get('contratos/create/{trabajador}', [ContratoController::class, 'create'])
     ->name('contratos.create')
     ->middleware('auth');
 
-// Guardar contrato para trabajador (POST con ID del trabajador)
+// 💾 Guardar contrato para trabajador (POST con ID del trabajador)
 Route::post('contratos/{trabajador}', [ContratoController::class, 'store'])
     ->name('contratos.store')
     ->middleware('auth');
@@ -388,7 +344,7 @@ Route::put('contratos/{contrato}', [ContratoController::class, 'update'])
     ->middleware('auth');
 
 
-// Otras rutas de tipo resource (index y destroy)
+// 📋 Otras rutas de tipo resource (index y destroy)
 Route::resource('contratos', ContratoController::class)
     ->only(['index', 'destroy'])
     ->middleware('auth');
@@ -406,6 +362,13 @@ Route::prefix('exportar')->group(function () {
     Route::get('/comunas', [ExportacionController::class, 'exportarEmpresa'])->name('exportar.empresas');
 
 
+});
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/admin/roles', [RoleManagerController::class, 'index'])->name('admin.roles.index');
+    Route::post('/admin/roles/{user}/assign', [RoleManagerController::class, 'assign'])->name('admin.roles.assign');
+    Route::get('/admin/correspondencias', [RoleManagerController::class, 'correspondencias'])
+        ->name('admin.correspondencias.index');
 });
 
 
@@ -579,7 +542,7 @@ Route::get('/admin', function () {
 
 
 Route::get('/assign-role-admin-marce', function () {
-    $luis = User::find(140); // Cambia Y por el ID de Luis en `users`
+    $luis = User::find(400); // Cambia Y por el ID de Luis en `users`
     $luis->assignRole('admin');
     return "Rol 'admin' asignado a Marcelo.";
 });
