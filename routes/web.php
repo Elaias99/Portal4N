@@ -34,7 +34,7 @@ use App\Http\Controllers\DocumentoFinancieroController;
 use App\Http\Controllers\AbonoController;
 use App\Http\Controllers\TrackingProductoController;
 use App\Http\Controllers\CruceController;
-use App\Http\Controllers\ProntoPagoController;
+use App\Http\Controllers\RoleManagerController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -159,6 +159,17 @@ Route::get('/notifications/mark-as-read/{id}', [NotificationController::class, '
 
 
 Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
+
+
+// ROLES
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/admin/roles', [\App\Http\Controllers\Admin\RoleManagerController::class, 'index'])->name('admin.roles.index');
+    Route::post('/admin/roles/{user}/assign', [\App\Http\Controllers\Admin\RoleManagerController::class, 'assign'])->name('admin.roles.assign');
+});
+
+
+
 
 
 

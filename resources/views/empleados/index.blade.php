@@ -37,6 +37,8 @@ $notificaciones = Auth::user()->unreadNotifications
             ])
                 @slot('acciones')
                     <div class="d-grid gap-2 mt-2">
+
+
                         {{-- 🔹 Nuevo acceso al Reporte de Documentos Financieros --}}
                         @if (in_array(Auth::id(), [1, 405, 374]))
                             <a href="{{ route('cobranzas.documentos') }}" 
@@ -46,6 +48,17 @@ $notificaciones = Auth::user()->unreadNotifications
                                 <i class="fa-solid fa-file-invoice-dollar me-2"></i> Cobranzas
                             </a>
                         @endif
+
+                        {{-- 🔹 Acceso exclusivo para el usuario con ID = 1 --}}
+                        @if (Auth::check() && Auth::id() === 1)
+                            <a href="{{ route('admin.roles.index') }}" 
+                            class="btn btn-outline-secondary text-start"
+                            data-bs-toggle="tooltip"
+                            title="Gestión de Roles del Sistema">
+                                <i class="fa-solid fa-user-shield me-2"></i> Administración de Roles
+                            </a>
+                        @endif
+
 
 
 
