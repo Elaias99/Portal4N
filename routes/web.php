@@ -34,6 +34,7 @@ use App\Http\Controllers\DocumentoFinancieroController;
 use App\Http\Controllers\AbonoController;
 use App\Http\Controllers\TrackingProductoController;
 use App\Http\Controllers\CruceController;
+use App\Http\Controllers\Admin\RoleManagerController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -363,6 +364,13 @@ Route::prefix('exportar')->group(function () {
 
 });
 
+Route::middleware(['auth'])->group(function () {
+    Route::get('/admin/roles', [RoleManagerController::class, 'index'])->name('admin.roles.index');
+    Route::post('/admin/roles/{user}/assign', [RoleManagerController::class, 'assign'])->name('admin.roles.assign');
+    Route::get('/admin/correspondencias', [RoleManagerController::class, 'correspondencias'])
+        ->name('admin.correspondencias.index');
+});
+
 
 
 
@@ -534,7 +542,7 @@ Route::get('/admin', function () {
 
 
 Route::get('/assign-role-admin-marce', function () {
-    $luis = User::find(140); // Cambia Y por el ID de Luis en `users`
+    $luis = User::find(400); // Cambia Y por el ID de Luis en `users`
     $luis->assignRole('admin');
     return "Rol 'admin' asignado a Marcelo.";
 });
