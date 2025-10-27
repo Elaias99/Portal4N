@@ -190,20 +190,19 @@
     </div>
 
     {{-- 🔹 Sección de cruces --}}
+    {{-- 🔹 Sección de cruces --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Cruces registrados</div>
         <div class="card-body">
             @if($documento->cruces->isEmpty())
                 <p class="text-muted">Sin cruces registrados.</p>
             @else
-
-
-
             <table class="table table-sm table-striped align-middle">
                 <thead>
                     <tr>
                         <th>Fecha Cruce</th>
                         <th>Monto</th>
+                        <th>Proveedor</th>
                         <th class="text-center" style="width: 150px;">Acciones</th>
                     </tr>
                 </thead>
@@ -212,13 +211,15 @@
                         <tr>
                             <td>{{ \Carbon\Carbon::parse($cruce->fecha_cruce)->format('d-m-Y') }}</td>
                             <td>${{ number_format($cruce->monto, 0, ',', '.') }}</td>
+                            <td>
+                                @if($cruce->proveedor)
+                                    <span class="fw-semibold">{{ $cruce->proveedor->razon_social }}</span><br>
+                                    <small class="text-muted">RUT: {{ $cruce->proveedor->rut }}</small>
+                                @else
+                                    <span class="text-muted">— Sin proveedor —</span>
+                                @endif
+                            </td>
                             <td class="text-center">
-                                {{-- Botón Editar --}}
-                                {{-- <a href="{{ route('cruces.edit', $cruce->id) }}" 
-                                class="btn btn-sm btn-primary">
-                                    Editar
-                                </a> --}}
-
                                 {{-- Botón Eliminar --}}
                                 <form action="{{ route('cruces.destroy', $cruce->id) }}" 
                                     method="POST" 
@@ -231,20 +232,14 @@
                                     </button>
                                 </form>
                             </td>
-
                         </tr>
                     @endforeach
                 </tbody>
             </table>
-
-
-
-
-
-
             @endif
         </div>
     </div>
+
 
     {{-- 🔹 Referencias (Notas de crédito u otros documentos) --}}
     <div class="card mb-4 shadow-sm">

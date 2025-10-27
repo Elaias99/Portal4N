@@ -68,37 +68,43 @@ class CruceController extends Controller
         $cruce = \App\Models\Cruce::findOrFail($id);
         $documento = $cruce->documento;
 
-        // Eliminar el cruce
+        // 🔹 Eliminar el cruce
         $cruce->delete();
 
-        // Recalcular totales
+        // 🔹 Recalcular totales
         $totalCruces = $documento->cruces()->sum('monto');
         $totalAbonos = $documento->abonos()->sum('monto');
 
-        // Lógica de actualización de estado
+        // 🔹 Determinar nuevo estado del documento
         if ($totalCruces > 0) {
-            // Aún quedan cruces → mantener estado Cruce
             $nuevoEstado = 'Cruce';
         } elseif ($totalAbonos > 0) {
-            // No hay cruces, pero sí abonos → mantener Abono
             $nuevoEstado = 'Abono';
         } else {
-            // No hay ni cruces ni abonos → volver a estado automático
             $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
                 ? 'Vencido'
                 : 'Al día';
         }
 
-        // Actualizar documento
+        // 🔹 Actualizar el documento
         $documento->update([
             'status' => $nuevoEstado,
-            'fecha_estado_manual' => ($nuevoEstado === 'Vencido' || $nuevoEstado === 'Al día') ? null : now(),
+            'fecha_estado_manual' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
         ]);
 
+        // 🔹 Redirección inteligente: vuelve al detalle si el usuario venía de ahí
+        if (str_contains(url()->previous(), '/documentos/') && str_contains(url()->previous(), '/detalles')) {
+            return redirect()
+                ->route('documentos.detalles', $documento->id)
+                ->with('success', 'Cruce eliminado y estado actualizado correctamente.');
+        }
+
+        // 🔹 Si no, volver al listado
         return redirect()
-            ->route('cobranzas.documentos', $documento->id)
+            ->route('cobranzas.documentos')
             ->with('success', 'Cruce eliminado y estado actualizado correctamente.');
     }
+
 
     public function show()
     {

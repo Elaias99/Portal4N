@@ -106,21 +106,30 @@
                 </form>
 
                 {{-- FORMULARIO DE CRUCE (nuevo) --}}
-                <form action="{{ route('documentos.cruces.store', $doc->id) }}" method="POST" id="form-cruce-{{ $doc->id }}" style="display: {{ $doc->status == 'Cruce' ? 'block' : 'none' }};">
+                <form action="{{ route('documentos.cruces.store', $doc->id) }}" 
+                    method="POST" 
+                    id="form-cruce-{{ $doc->id }}" 
+                    style="display: {{ $doc->status == 'Cruce' ? 'block' : 'none' }};">
                     @csrf
 
                     {{-- Saldo pendiente --}}
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Saldo pendiente</label>
-                        <input type="text" class="form-control form-control-sm"
-                               value="${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}"
-                               readonly>
+                        <input type="text" 
+                            class="form-control form-control-sm"
+                            value="${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}"
+                            readonly>
                     </div>
 
                     {{-- Monto del cruce --}}
                     <div class="form-group mb-3">
                         <label for="monto-cruce-{{ $doc->id }}" class="form-label small text-muted">Monto del cruce</label>
-                        <input type="number" name="monto" id="monto-cruce-{{ $doc->id }}" class="form-control form-control-sm @error('monto') is-invalid @enderror" min="1" required>
+                        <input type="number" 
+                            name="monto" 
+                            id="monto-cruce-{{ $doc->id }}" 
+                            class="form-control form-control-sm @error('monto') is-invalid @enderror" 
+                            min="1" 
+                            required>
                         @error('monto')
                             <span class="invalid-feedback d-block text-danger"><strong>{{ $message }}</strong></span>
                         @enderror
@@ -129,12 +138,51 @@
                     {{-- Fecha del cruce --}}
                     <div class="form-group mb-3">
                         <label for="fecha-cruce-{{ $doc->id }}" class="form-label small text-muted">Fecha del cruce</label>
-                        <input type="date" name="fecha_cruce" id="fecha-cruce-{{ $doc->id }}" class="form-control form-control-sm @error('fecha_cruce') is-invalid @enderror" required>
+                        <input type="date" 
+                            name="fecha_cruce" 
+                            id="fecha-cruce-{{ $doc->id }}" 
+                            class="form-control form-control-sm @error('fecha_cruce') is-invalid @enderror" 
+                            required>
                         @error('fecha_cruce')
                             <span class="invalid-feedback d-block text-danger"><strong>{{ $message }}</strong></span>
                         @enderror
                     </div>
+
+                    {{-- Seleccionar proveedor --}}
+                    {{-- Seleccionar proveedor --}}
+                    <div class="form-group mb-3">
+                        <label for="proveedor_id-{{ $doc->id }}" class="form-label small text-muted">
+                            Seleccionar proveedor
+                        </label>
+
+                        <select name="proveedor_id" 
+                                id="proveedor_id-{{ $doc->id }}" 
+                                class="form-select form-select-sm @error('proveedor_id') is-invalid @enderror" 
+                                required>
+                            <option value="">-- Seleccionar proveedor --</option>
+                            @foreach($proveedores as $proveedor)
+                                <option value="{{ $proveedor->id }}">
+                                    {{ $proveedor->razon_social }} — RUT: {{ $proveedor->rut }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        @error('proveedor_id')
+                            <span class="invalid-feedback d-block text-danger">
+                                <strong>{{ $message }}</strong>
+                            </span>
+                        @enderror
+
+                        {{-- 🔹 Enlace rápido para crear nuevo proveedor --}}
+                        <div class="mt-1">
+                            <a href="{{ route('proveedores.create') }}" target="_blank" class="small text-primary text-decoration-none">
+                                <i class="bi bi-plus-circle"></i> Agregar nuevo proveedor
+                            </a>
+                        </div>
+                    </div>
+
                 </form>
+
 
 
                 {{-- FORMULARIO DE PAGO --}}

@@ -83,6 +83,12 @@ class Proveedor extends Model
         return $this->hasMany(\App\Models\ComunaClasificacionOperativa::class);
     }
 
+    public function cruces()
+    {
+        return $this->hasMany(Cruce::class, 'proveedor_id');
+    }
+
+
 
 
 

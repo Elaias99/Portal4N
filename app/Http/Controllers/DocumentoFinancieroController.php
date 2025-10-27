@@ -143,6 +143,8 @@ class DocumentoFinancieroController extends Controller
 
         $empresas = Empresa::orderBy('Nombre')->get(['id', 'Nombre']);
         $tiposDocumento = TipoDocumento::orderBy('nombre')->get(['id', 'nombre']);
+        $proveedores = \App\Models\Proveedor::orderBy('razon_social')->get(['id', 'razon_social', 'rut']);
+
 
 
         return view('cobranzas.documentos', compact(
@@ -153,7 +155,9 @@ class DocumentoFinancieroController extends Controller
             'totalPagados',
             'totalPendientes',
             'empresas',
-            'tiposDocumento'
+            'tiposDocumento',
+            'proveedores'
+
         ));
 
     }
@@ -546,8 +550,14 @@ class DocumentoFinancieroController extends Controller
 
     public function show(DocumentoFinanciero $documento)
     {
-        // Cargar relaciones relevantes
-        $documento->load(['empresa', 'abonos', 'cruces', 'referencia', 'referenciados']);
+        // Cargar relaciones relevantes, incluyendo proveedor dentro de cruces
+        $documento->load([
+            'empresa',
+            'abonos',
+            'cruces.proveedor', // ✅ relación anidada
+            'referencia',
+            'referenciados'
+        ]);
 
         // 🔹 Guardar la URL anterior solo si viene del listado y no de otra acción (como updateStatus)
         if (url()->previous() && !str_contains(url()->previous(), '/documentos/')) {
@@ -560,7 +570,10 @@ class DocumentoFinancieroController extends Controller
             'referenciadoPor' => $documento->referenciados,
         ];
 
-        return view('cobranzas.detalles', compact('documento', 'referencias'));
+        // Cargar proveedores disponibles (para poder mostrar o editar cruces)
+        $proveedores = \App\Models\Proveedor::orderBy('razon_social')->get(['id', 'razon_social', 'rut']);
+
+        return view('cobranzas.detalles', compact('documento', 'referencias', 'proveedores'));
     }
 
 
@@ -625,9 +638,12 @@ class DocumentoFinancieroController extends Controller
         $request->validate([
             'monto' => 'required|integer|min:1',
             'fecha_cruce' => 'required|date|before_or_equal:today',
+            'proveedor_id' => 'required|exists:proveedores,id',
         ], [
             'fecha_cruce.before_or_equal' => 'La fecha del cruce no debe sobrepasar la fecha actual.',
             'fecha_cruce.required' => 'La fecha del cruce es obligatoria.',
+            'proveedor_id.required' => 'Debe seleccionar un proveedor.',
+            'proveedor_id.exists' => 'El proveedor seleccionado no es válido.',
         ]);
 
         // Validar que el cruce no supere el saldo pendiente
@@ -639,13 +655,14 @@ class DocumentoFinancieroController extends Controller
                 ->withInput();
         }
 
-        // Guardar el cruce
-        $documento->cruces()->create([
+        // Crear el registro del cruce
+        $cruce = $documento->cruces()->create([
             'monto' => $request->monto,
             'fecha_cruce' => $request->fecha_cruce,
+            'proveedor_id' => $request->proveedor_id,
         ]);
 
-        // Actualizar estado del documento
+        // Actualizar el estado del documento
         $documento->update([
             'status' => 'Cruce',
             'fecha_estado_manual' => now(),
@@ -656,12 +673,18 @@ class DocumentoFinancieroController extends Controller
             'documento_financiero_id' => $documento->id,
             'user_id' => Auth::id(),
             'tipo_movimiento' => 'Cruce registrado',
-            'descripcion' => "Se registró un cruce de {$request->monto} el {$request->fecha_cruce}",
-            'datos_nuevos' => ['monto' => $request->monto, 'fecha_cruce' => $request->fecha_cruce],
+            'descripcion' => "Se registró un cruce de {$request->monto} el {$request->fecha_cruce} con el proveedor ID {$request->proveedor_id}.",
+            'datos_nuevos' => [
+                'monto' => $request->monto,
+                'fecha_cruce' => $request->fecha_cruce,
+                'proveedor_id' => $request->proveedor_id,
+            ],
         ]);
 
         return back()->with('success', 'Cruce registrado correctamente.');
     }
+
+
 
     public function storePago(Request $request, DocumentoFinanciero $documento)
     {

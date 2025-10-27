@@ -13,6 +13,7 @@ class Cruce extends Model
         'documento_financiero_id',
         'monto',
         'fecha_cruce',
+        'proveedor_id',
     ];
 
     /**
@@ -21,6 +22,11 @@ class Cruce extends Model
     public function documento()
     {
         return $this->belongsTo(DocumentoFinanciero::class, 'documento_financiero_id');
+    }
+
+    public function proveedor()
+    {
+        return $this->belongsTo(Proveedor::class, 'proveedor_id');
     }
 
 
