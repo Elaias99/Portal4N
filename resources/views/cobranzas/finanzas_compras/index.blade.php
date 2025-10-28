@@ -128,6 +128,7 @@
                                 <th>Monto Neto</th>
                                 <th>Monto IVA Rec.</th>
                                 <th>Monto Total</th>
+                                <th>Saldo Pendiente</th>
                                 <th>Empresa</th>
                             </tr>
                         </thead>
@@ -154,6 +155,8 @@
                                     <td class="text-end">${{ number_format($doc->monto_neto, 0, ',', '.') }}</td>
                                     <td class="text-end">${{ number_format($doc->monto_iva_recuperable, 0, ',', '.') }}</td>
                                     <td class="text-end fw-bold">${{ number_format($doc->monto_total, 0, ',', '.') }}</td>
+                                    <td>{{ number_format($doc->saldo_pendiente, 0, ',', '.') }}</td>
+
                                     <td>{{ $doc->empresa?->Nombre ?? '—' }}</td>
                                 </tr>
                             @endforeach

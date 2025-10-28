@@ -51,9 +51,9 @@ class DocumentoCompra extends Model
                 ->addDays((int) $this->cobranza->creditos)
                 ->format('Y-m-d');
 
-            // 🟢 Calcular automáticamente el estado original
-            $fechaVenc = Carbon::parse($this->fecha_vencimiento);
-            $this->status_original = $fechaVenc->isPast() ? 'Vencido' : 'Al día';
+            $this->status_original = Carbon::parse($this->fecha_vencimiento)->isPast()
+                ? 'Vencido'
+                : 'Al día';
 
             $this->save();
         }
@@ -61,16 +61,30 @@ class DocumentoCompra extends Model
 
     public function getStatusOriginalAttribute($value)
     {
-        // 🔄 Si ya tiene guardado un valor, usarlo
         if ($value) return $value;
 
-        // Si no, calcular dinámicamente
         if ($this->fecha_vencimiento) {
             $fechaVenc = Carbon::parse($this->fecha_vencimiento);
             return $fechaVenc->isPast() ? 'Vencido' : 'Al día';
         }
 
         return 'Sin cálculo';
+    }
+
+    // ======================================================
+    // 💰 Cálculo de saldo pendiente (mismo patrón que CxC)
+    // ======================================================
+
+    public function getSaldoPendienteAttribute()
+    {
+        // En compras, normalmente no se registran abonos, así que
+        // el saldo pendiente se asume igual al monto total
+        // (más adelante podrías conectar pagos si los integras)
+        $saldo = $this->monto_total ?? 0;
+
+        // Si existe un campo o relación de pagos futuros, podrías restarlo aquí.
+        // Por ahora mantenemos la lógica simple y coherente:
+        return max($saldo, 0);
     }
 
 
