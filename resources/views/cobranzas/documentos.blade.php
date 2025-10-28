@@ -309,12 +309,14 @@
 
                                 {{-- Botón Editar (solo si NO es Nota de Crédito) --}}
                                 @if($doc->tipo_documento_id != 61)
-                                    <button type="button"
-                                            class="btn btn-sm btn-outline-secondary mt-2"
-                                            data-toggle="modal"
-                                            data-target="#modalStatus-{{ $doc->id }}">
-                                        Editar
-                                    </button>
+                                    @if (Auth::id() != 375)
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary mt-2"
+                                                data-toggle="modal"
+                                                data-target="#modalStatus-{{ $doc->id }}">
+                                            Editar
+                                        </button>
+                                    @endif
 
                                     @include('cobranzas.modal_status', ['doc' => $doc])
                                 @else

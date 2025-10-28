@@ -40,7 +40,7 @@ $notificaciones = Auth::user()->unreadNotifications
 
 
                         {{-- 🔹 Nuevo acceso al Reporte de Documentos Financieros --}}
-                        @if (in_array(Auth::id(), [1, 405, 374]))
+                        @if (in_array(Auth::id(), [1, 405, 374, 375]))
                             <a href="{{ route('cobranzas.documentos') }}" 
                             class="btn btn-outline-secondary text-start" 
                             data-bs-toggle="tooltip" 

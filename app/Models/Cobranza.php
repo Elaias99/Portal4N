@@ -19,6 +19,11 @@ class Cobranza extends Model
         return $this->hasMany(DocumentoFinanciero::class, 'cobranza_id');
     }
 
+    public function documentoscompra()
+    {
+        return $this->hasMany(DocumentoCompra::class, 'cobranza_id');
+    }
+
     // ⚙️ Evento automático: si cambian los créditos, recalcula vencimientos
     protected static function booted()
     {

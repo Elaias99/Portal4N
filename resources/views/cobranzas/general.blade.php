@@ -28,8 +28,28 @@
             </a>
         </div>
 
-        {{-- === Exportar Documentos === --}}
+
+
+
+        {{-- === Cuentas por Pagar === --}}
         <div class="col-md-3">
+            <a href="{{ route('finanzas_compras.index') }}" class="text-decoration-none text-dark">
+                <div class="card border-0 shadow-sm rounded-4 h-100 card-hover">
+                    <div class="card-body d-flex flex-column align-items-center justify-content-center py-4">
+                        <h6 class="fw-semibold mb-1">Cuentas por Pagar</h6>
+                        <p class="text-muted small mb-0">Gestión de facturas de compras y proveedores</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+
+
+
+
+
+        {{-- === Exportar Documentos === --}}
+        {{-- <div class="col-md-3">
             <div class="card border-0 shadow-sm rounded-4 h-100 card-hover">
                 <div class="card-body d-flex flex-column align-items-center justify-content-center py-4">
                     <h6 class="fw-semibold mb-2">Exportar documentos</h6>
@@ -37,19 +57,21 @@
                     <a href="{{ route('cobranzas.export') }}" class="btn btn-sm btn-outline-primary px-4">Exportar</a>
                 </div>
             </div>
-        </div>
-
-        {{-- === Historial de Movimientos === --}}
-        <div class="col-md-3">
-            <a href="{{ route('panelfinanza.show') }}" class="text-decoration-none text-dark">
-                <div class="card border-0 shadow-sm rounded-4 h-100 card-hover">
-                    <div class="card-body d-flex flex-column align-items-center justify-content-center py-4">
-                        <h6 class="fw-semibold mb-1">Historial de Movimientos</h6>
-                        <p class="text-muted small mb-0">Ver abonos y cruces en un solo listado</p>
+        </div> --}}
+        
+            {{-- === Historial de Movimientos === --}}
+        @if (Auth::id() != 375)
+            <div class="col-md-3">
+                <a href="{{ route('panelfinanza.show') }}" class="text-decoration-none text-dark">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 card-hover">
+                        <div class="card-body d-flex flex-column align-items-center justify-content-center py-4">
+                            <h6 class="fw-semibold mb-1">Historial de Movimientos</h6>
+                            <p class="text-muted small mb-0">Ver abonos y cruces en un solo listado</p>
+                        </div>
                     </div>
-                </div>
-            </a>
-        </div>
+                </a>
+            </div>
+        @endif
 
     </div>
 

@@ -34,7 +34,7 @@ use App\Http\Controllers\DocumentoFinancieroController;
 use App\Http\Controllers\AbonoController;
 use App\Http\Controllers\TrackingProductoController;
 use App\Http\Controllers\CruceController;
-use App\Http\Controllers\RoleManagerController;
+use App\Http\Controllers\DocumentoCompraController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -314,6 +314,8 @@ Route::resource('cobranzas', CobranzaController::class);
 
 
 
+
+
 // Cotizadores
 Route::resource('cotizadores', CotizadorController::class);
 
@@ -369,6 +371,16 @@ Route::post('/prontopagos/{documento}', [App\Http\Controllers\ProntoPagoControll
 // Eliminar un pronto pago
 Route::delete('/prontopagos/{id}', [App\Http\Controllers\ProntoPagoController::class, 'destroy'])
     ->name('prontopagos.destroy');
+
+
+
+
+//////////////////////////////// 
+// cobranzas/finanzas_compras
+Route::get('/finanzas/compras', [DocumentoCompraController::class, 'index'])->name('finanzas_compras.index');
+Route::post('/finanzas/compras/import', [DocumentoCompraController::class, 'import'])->name('finanzas_compras.import');
+Route::get('/finanzas_compras/export', [DocumentoCompraController::class, 'export'])->name('finanzas_compras.export');
+
 
 
 // Ruta para desvincular un empleado

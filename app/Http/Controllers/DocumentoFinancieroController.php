@@ -17,7 +17,7 @@ class DocumentoFinancieroController extends Controller
     //
     public function index(Request $request)
     {
-        $usuariosFinanzas = [1, 405, 374];
+        $usuariosFinanzas = [1, 405, 374, 375];
 
         if (!in_array(Auth::id(), $usuariosFinanzas)) {
             abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
@@ -166,7 +166,7 @@ class DocumentoFinancieroController extends Controller
     public function filtrarColumnas(Request $request)
     {
         // 🔒 Control de acceso
-        $usuariosFinanzas = [1, 405, 374];
+        $usuariosFinanzas = [1, 405, 374, 375];
         if (!in_array(Auth::id(), $usuariosFinanzas)) {
             abort(403, 'Acceso denegado.');
         }
@@ -303,7 +303,7 @@ class DocumentoFinancieroController extends Controller
     public function general(Request $request)
     {
         // 🚫 Restricción de acceso solo para usuario 405
-        $usuariosFinanzas = [1, 405, 374];
+        $usuariosFinanzas = [1, 405, 374, 375];
 
         if (!in_array(Auth::id(), $usuariosFinanzas)) {
             abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
