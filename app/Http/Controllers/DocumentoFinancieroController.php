@@ -11,6 +11,8 @@ use App\Imports\DocumentosImport;
 use App\Models\MovimientoDocumento;
 use App\Exports\DocumentosExport;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+
 
 class DocumentoFinancieroController extends Controller
 {
@@ -686,43 +688,51 @@ class DocumentoFinancieroController extends Controller
 
 
 
-    public function storePago(Request $request, DocumentoFinanciero $documento)
-    {
-        $request->validate([
-            'fecha_pago' => 'required|date|before_or_equal:today',
-        ], [
-            'fecha_pago.before_or_equal' => 'La fecha del pago no debe sobrepasar la fecha actual.',
-            'fecha_pago.required' => 'La fecha del pago es obligatoria.',
-        ]);
+    // public function storePago(Request $request, DocumentoFinanciero $documento)
+    // {
 
-        // Verificar si ya existe un pago registrado
-        if ($documento->pagos()->exists()) {
-            return back()->withErrors(['fecha_pago' => 'Este documento ya tiene un pago registrado.']);
-        }
+    //     Log::info('📦 storePago request', $request->all());
 
-        // Crear el registro del pago
-        $documento->pagos()->create([
-            'fecha_pago' => $request->fecha_pago,
-            'user_id' => Auth::id(),
-        ]);
 
-        // Limpiar el status manual (ya no se usa "Pago" directamente)
-        $documento->update([
-            'status' => null,
-            'fecha_estado_manual' => $request->fecha_pago,
-        ]);
+    //     $request->validate([
+    //         'fecha_pago' => 'required|date|before_or_equal:today',
+    //     ], [
+    //         'fecha_pago.before_or_equal' => 'La fecha del pago no debe sobrepasar la fecha actual.',
+    //         'fecha_pago.required' => 'La fecha del pago es obligatoria.',
+    //     ]);
 
-        // Registrar el movimiento
-        MovimientoDocumento::create([
-            'documento_financiero_id' => $documento->id,
-            'user_id' => Auth::id(),
-            'tipo_movimiento' => 'Pago registrado',
-            'descripcion' => "El documento fue marcado como Pago el {$request->fecha_pago}.",
-            'datos_nuevos' => ['fecha_pago' => $request->fecha_pago],
-        ]);
 
-        return back()->with('success', 'Pago registrado correctamente.');
-    }
+
+
+    //     // Verificar si ya existe un pago registrado
+    //     if ($documento->pagos()->exists()) {
+    //         return back()->withErrors(['fecha_pago' => 'Este documento ya tiene un pago registrado.']);
+    //     }
+
+    //     // Crear el registro del pago
+    //     $documento->pagos()->create([
+    //         'fecha_pago' => $request->fecha_pago,
+    //         'user_id' => Auth::id(),
+    //     ]);
+
+    //     // Limpiar el status manual (ya no se usa "Pago" directamente)
+    //     $documento->update([
+    //         'status' => 'Pago',
+    //         'fecha_estado_manual' => $request->fecha_estado_manual,
+    //     ]);
+
+
+    //     // Registrar el movimiento
+    //     MovimientoDocumento::create([
+    //         'documento_financiero_id' => $documento->id,
+    //         'user_id' => Auth::id(),
+    //         'tipo_movimiento' => 'Pago registrado',
+    //         'descripcion' => "El documento fue marcado como Pago el {$request->fecha_pago}.",
+    //         'datos_nuevos' => ['fecha_pago' => $request->fecha_pago],
+    //     ]);
+
+    //     return back()->with('success', 'Pago registrado correctamente.');
+    // }
 
 
 

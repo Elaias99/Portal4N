@@ -20,6 +20,8 @@ class PagoDocumentoController extends Controller
             'fecha_pago.required' => 'La fecha del pago es obligatoria.',
         ]);
 
+        // dd($request->all());
+
         // Evitar pagos duplicados
         if ($documento->pagos()->exists()) {
             return back()->withErrors(['fecha_pago' => 'Este documento ya tiene un pago registrado.']);
@@ -34,9 +36,10 @@ class PagoDocumentoController extends Controller
         // ✅ Actualizar estado del documento
         $documento->update([
             'status' => 'Pago',
-            'fecha_estado_manual' => $request->fecha_pago,
+            'fecha_estado_manual' => now(),
             'saldo_pendiente' => 0, // El saldo se cierra
         ]);
+
 
         // Registrar movimiento
         MovimientoDocumento::create([

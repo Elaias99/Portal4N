@@ -265,7 +265,7 @@
                             </button>
                         </form>
 
-                        <a href="{{ route('cobranzas.export') }}" class="btn btn-outline-success btn-sm w-100">
+                        <a href="{{ route('documentos.export') }}" class="btn btn-outline-success btn-sm w-100">
                             <i class="bi bi-file-earmark-arrow-down"></i> Exportar Excel
                         </a>
                     </div>

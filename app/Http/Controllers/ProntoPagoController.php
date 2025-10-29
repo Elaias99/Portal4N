@@ -31,8 +31,9 @@ class ProntoPagoController extends Controller
             // Actualizar estado manual del documento
             $documento->update([
                 'status' => 'Pronto pago',
-                'fecha_estado_manual' => $request->fecha_pronto_pago,
+                'fecha_estado_manual' => now(),
             ]);
+
 
             // Registrar movimiento
             MovimientoDocumento::create([

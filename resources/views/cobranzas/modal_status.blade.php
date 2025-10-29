@@ -62,7 +62,7 @@
                     </div>
 
                     {{-- Fecha Estado Manual --}}
-                    <div class="form-group mb-3 fecha-estado-{{ $doc->id }}"
+                    {{-- <div class="form-group mb-3 fecha-estado-{{ $doc->id }}"
                         style="display: {{ in_array($doc->status, ['Abono','Cruce','Pago','Pronto pago','Cobranza judicial']) ? 'block' : 'none' }};">
                         <label for="fecha_estado_manual-{{ $doc->id }}" class="form-label small text-muted">Fecha Estado Manual</label>
                         <input type="date"
@@ -70,7 +70,7 @@
                             id="fecha_estado_manual-{{ $doc->id }}"
                             class="form-control form-control-sm"
                             value="{{ $doc->fecha_estado_manual ? \Carbon\Carbon::parse($doc->fecha_estado_manual)->format('Y-m-d') : now()->format('Y-m-d') }}">
-                    </div>
+                    </div> --}}
                 </form>
 
 
@@ -202,6 +202,9 @@
                             </span>
                         @enderror
                     </div>
+
+                    {{-- ✅ Campo oculto para mantener coherencia con "Fecha Estado Manual" --}}
+                    <input type="hidden" name="fecha_estado_manual" value="{{ old('fecha_estado_manual', now()->format('Y-m-d')) }}">
 
                     <div class="alert alert-info py-1 px-2 small">
                         Al registrar un pago, el saldo pendiente quedará automáticamente en <strong>0</strong>.

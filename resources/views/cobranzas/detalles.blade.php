@@ -66,9 +66,15 @@
                         <form action="{{ route('pagos.destroy', $pago->id) }}" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar el registro de Pago y restaurar el estado original del documento?')">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn btn-outline-danger btn-sm">
-                                <i class="bi bi-x-circle"></i> Eliminar Pago
-                            </button>
+
+                            @if (Auth::id() != 375)
+                                <button type="submit" class="btn btn-outline-danger btn-sm">
+                                    <i class="bi bi-x-circle"></i> Eliminar Pago
+                                </button>
+                            @endif
+
+
+
                         </form>
                     </div>
                 </div>
@@ -95,9 +101,14 @@
                         <form action="{{ route('prontopagos.destroy', $prontoPago->id) }}" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar el registro de Pronto Pago y restaurar el estado original del documento?')">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn btn-outline-danger btn-sm">
-                                <i class="bi bi-x-circle"></i> Eliminar Pronto Pago
-                            </button>
+
+                            @if (Auth::id() != 375)
+                                <button type="submit" class="btn btn-outline-danger btn-sm">
+                                    <i class="bi bi-x-circle"></i> Eliminar Pronto Pago
+                                </button>
+                            @endif
+
+
                         </form>
                     </div>
                 </div>
@@ -175,9 +186,16 @@
                                     onsubmit="return confirm('¿Seguro que deseas eliminar este abono?')">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger">
-                                        Eliminar
-                                    </button>
+
+                                    @if (Auth::id() != 375)
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            Eliminar
+                                        </button>
+                                    @endif
+                                    
+
+
+
                                 </form>
                             </td>
                         </tr>
@@ -227,9 +245,14 @@
                                     onsubmit="return confirm('¿Seguro que deseas eliminar este cruce?')">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger">
-                                        Eliminar
-                                    </button>
+
+                                    @if (Auth::id() != 375)
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            Eliminar
+                                        </button>
+                                    @endif
+
+
                                 </form>
                             </td>
                         </tr>

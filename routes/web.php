@@ -272,8 +272,8 @@ Route::get('/cobranzas/documentos', [DocumentoFinancieroController::class, 'inde
 Route::patch('/documentos/{documento}/status', [DocumentoFinancieroController::class, 'updateStatus'])
     ->name('documentos.updateStatus');
 
-Route::get('cobranzas/export', [App\Http\Controllers\DocumentoFinancieroController::class, 'export'])
-    ->name('cobranzas.export');
+Route::get('documentos/export', [App\Http\Controllers\DocumentoFinancieroController::class, 'export'])
+    ->name('documentos.export');
 
 // Mostrar formulario de edición de un documento financiero
 Route::get('/cobranzas/documentos/{documento}/edit', [DocumentoFinancieroController::class, 'edit'])
@@ -297,8 +297,8 @@ Route::post('/documentos/{documento}/abonos', [DocumentoFinancieroController::cl
 Route::post('/documentos/{documento}/cruces', [DocumentoFinancieroController::class, 'storeCruce'])
     ->name('documentos.cruces.store');
 
-Route::post('/documentos/{documento}/pago', [App\Http\Controllers\DocumentoFinancieroController::class, 'storePago'])
-    ->name('documentos.pagos.store');
+// Route::post('/documentos/{documento}/pago', [App\Http\Controllers\DocumentoFinancieroController::class, 'storePago'])
+//     ->name('documentos.pagos.store');
 
 Route::get('/cobranzas/general', [App\Http\Controllers\DocumentoFinancieroController::class, 'general'])
         ->name('cobranzas.general');
