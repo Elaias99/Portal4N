@@ -61,16 +61,6 @@
                         </select>
                     </div>
 
-                    {{-- Fecha Estado Manual --}}
-                    {{-- <div class="form-group mb-3 fecha-estado-{{ $doc->id }}"
-                        style="display: {{ in_array($doc->status, ['Abono','Cruce','Pago','Pronto pago','Cobranza judicial']) ? 'block' : 'none' }};">
-                        <label for="fecha_estado_manual-{{ $doc->id }}" class="form-label small text-muted">Fecha Estado Manual</label>
-                        <input type="date"
-                            name="fecha_estado_manual"
-                            id="fecha_estado_manual-{{ $doc->id }}"
-                            class="form-control form-control-sm"
-                            value="{{ $doc->fecha_estado_manual ? \Carbon\Carbon::parse($doc->fecha_estado_manual)->format('Y-m-d') : now()->format('Y-m-d') }}">
-                    </div> --}}
                 </form>
 
 

@@ -380,6 +380,21 @@ Route::delete('/prontopagos/{id}', [App\Http\Controllers\ProntoPagoController::c
 Route::get('/finanzas/compras', [DocumentoCompraController::class, 'index'])->name('finanzas_compras.index');
 Route::post('/finanzas/compras/import', [DocumentoCompraController::class, 'import'])->name('finanzas_compras.import');
 Route::get('/finanzas_compras/export', [DocumentoCompraController::class, 'export'])->name('finanzas_compras.export');
+// 🔹 Actualizar estado de un documento de compra
+Route::patch('/finanzas/compras/{id}/estado', [DocumentoCompraController::class, 'updateEstado'])
+    ->name('finanzas_compras.updateEstado');
+
+// 🔹 Registrar Abono manual
+Route::post('/finanzas/compras/{documento}/abono', [DocumentoCompraController::class, 'storeAbono'])
+    ->name('finanzas_compras.abonos.store');
+
+// 🔹 Registrar Cruce manual
+Route::post('/finanzas/compras/{documento}/cruce', [DocumentoCompraController::class, 'storeCruce'])
+    ->name('finanzas_compras.cruces.store');
+
+Route::get('/finanzas/compras/{documento}', [DocumentoCompraController::class, 'show'])
+    ->name('finanzas_compras.show');
+
 
 
 

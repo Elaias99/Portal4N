@@ -13,6 +13,7 @@ class Pago extends Model
 
     protected $fillable = [
         'documento_financiero_id',
+        'documento_compra_id',
         'fecha_pago',
         'user_id',
 
@@ -26,6 +27,11 @@ class Pago extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function documentoCompra()
+    {
+        return $this->belongsTo(DocumentoCompra::class, 'documento_compra_id');
     }
 
 

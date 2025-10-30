@@ -34,6 +34,33 @@ class DocumentoCompra extends Model
         return $this->belongsTo(Cobranza::class, 'cobranza_id');
     }
 
+    public function movimientos()
+    {
+        return $this->hasMany(MovimientoCompra::class, 'documento_compra_id');
+    }
+
+
+    public function abonos()
+    {
+        return $this->hasMany(Abono::class, 'documento_compra_id');
+    }
+
+    public function cruces()
+    {
+        return $this->hasMany(Cruce::class, 'documento_compra_id');
+    }
+
+    public function pagos()
+    {
+        return $this->hasMany(Pago::class, 'documento_compra_id');
+    }
+
+    public function prontoPagos()
+    {
+        return $this->hasMany(ProntoPago::class, 'documento_compra_id');
+    }
+
+
 
 
 
@@ -75,17 +102,30 @@ class DocumentoCompra extends Model
     // 💰 Cálculo de saldo pendiente (mismo patrón que CxC)
     // ======================================================
 
+
+
     public function getSaldoPendienteAttribute()
     {
-        // En compras, normalmente no se registran abonos, así que
-        // el saldo pendiente se asume igual al monto total
-        // (más adelante podrías conectar pagos si los integras)
+        // 🟢 Si tiene pagos registrados → saldo = 0
+        $pagos = $this->relationLoaded('pagos') ? $this->pagos : $this->pagos()->get();
+        if ($pagos->count() > 0) {
+            return 0;
+        }
+
+        // 🔹 Monto base del documento
         $saldo = $this->monto_total ?? 0;
 
-        // Si existe un campo o relación de pagos futuros, podrías restarlo aquí.
-        // Por ahora mantenemos la lógica simple y coherente:
+        // 🔹 Cargar relaciones necesarias
+        $abonos = $this->relationLoaded('abonos') ? $this->abonos : $this->abonos()->get();
+        $cruces = $this->relationLoaded('cruces') ? $this->cruces : $this->cruces()->get();
+
+        // ✅ Restar abonos y cruces
+        $saldo -= $abonos->sum('monto');
+        $saldo -= $cruces->sum('monto');
+
         return max($saldo, 0);
     }
+
 
 
 }

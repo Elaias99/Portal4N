@@ -130,20 +130,32 @@
                                 <th>Monto Total</th>
                                 <th>Saldo Pendiente</th>
                                 <th>Empresa</th>
+                                <th>Acción</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach ($documentosCompras as $doc)
                                 <tr>
                                     <td>
-                                        @if ($doc->status_original === 'Vencido')
-                                            <span class="badge bg-danger">Vencido</span>
-                                        @elseif ($doc->status_original === 'Al día')
-                                            <span class="badge bg-success">Al día</span>
-                                        @else
-                                            <span class="badge bg-secondary">Sin definir</span>
-                                        @endif
+                                        @php
+                                            $color = $doc->status_original === 'Vencido' ? 'bg-danger' : 'bg-success';
+                                            $estadoMostrar = $doc->estado ?: $doc->status_original;
+                                        @endphp
+
+                                        <span class="badge {{ $color }}">{{ $estadoMostrar }}</span>
+
+                                        {{-- Botón para abrir el modal de cambio de estado --}}
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary mt-2"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#modalEstadoCompra-{{ $doc->id }}">
+                                            Editar
+                                        </button>
+
+                                        {{-- Modal --}}
+                                        @include('cobranzas.finanzas_compras.modal_estado', ['doc' => $doc])
                                     </td>
+
 
                                     <td>{{ $doc->tipoDocumento?->nombre ?? '-' }}</td>
                                     <td>{{ $doc->tipo_compra ?? '-' }}</td>
@@ -154,10 +166,36 @@
                                     <td>{{ $doc->fecha_vencimiento }}</td>
                                     <td class="text-end">${{ number_format($doc->monto_neto, 0, ',', '.') }}</td>
                                     <td class="text-end">${{ number_format($doc->monto_iva_recuperable, 0, ',', '.') }}</td>
+
+
+
                                     <td class="text-end fw-bold">${{ number_format($doc->monto_total, 0, ',', '.') }}</td>
-                                    <td>{{ number_format($doc->saldo_pendiente, 0, ',', '.') }}</td>
+
+
+
+                                    
+                                    <td class="text-end fw-bold {{ $doc->saldo_pendiente == 0 ? 'text-success' : 'text-danger' }}">
+                                        ${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}
+                                    </td>
+
 
                                     <td>{{ $doc->empresa?->Nombre ?? '—' }}</td>
+
+                                    {{-- 🔹 Acciones / Detalles --}}
+                                    <td class="text-center">
+
+                                        {{-- 🚫 Si es una Nota de Crédito --}}
+
+                                            {{-- 🔹 Un solo botón para ver todos los detalles --}}
+                                            <a href="{{ route('finanzas_compras.show', $doc->id) }}?{{ http_build_query(request()->query()) }}" 
+                                            class="btn btn-sm btn-outline-primary w-100">
+                                                <i class="bi bi-eye"></i> Ver Detalles
+                                            </a>
+
+
+                                    </td>
+
+
                                 </tr>
                             @endforeach
                         </tbody>
@@ -175,4 +213,36 @@
     </div>
 
 </div>
+
+
+<script>
+    function toggleFechaEstado(select, id) {
+        const inputFecha = document.getElementById('fecha-input-' + id);
+        const hiddenFecha = document.getElementById('fecha-hidden-' + id);
+
+        // Mostrar el campo de fecha solo para estados manuales
+        if (['Abono', 'Pago', 'Pronto pago', 'Cobranza judicial'].includes(select.value)) {
+            if (inputFecha) inputFecha.style.display = 'block';
+        } else {
+            if (inputFecha) {
+                inputFecha.style.display = 'none';
+                inputFecha.value = '';
+            }
+            if (hiddenFecha) hiddenFecha.value = '';
+        }
+    }
+
+    // 👇 Este bloque asegura que Bootstrap Modal esté correctamente inicializado
+    document.addEventListener('DOMContentLoaded', function () {
+        const modalElements = document.querySelectorAll('.modal');
+        modalElements.forEach(function (modalEl) {
+            modalEl.addEventListener('show.bs.modal', function () {
+                // Reposicionar o limpiar formularios si hace falta
+            });
+        });
+    });
+</script>
+
+
+
 @endsection

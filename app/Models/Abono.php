@@ -9,12 +9,18 @@ class Abono extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['documento_financiero_id', 'monto' , 'fecha_abono'];
+    protected $fillable = ['documento_financiero_id', 'documento_compra_id' ,'monto' , 'fecha_abono'];
 
     public function documento()
     {
         return $this->belongsTo(DocumentoFinanciero::class, 'documento_financiero_id');
     }
+
+    public function documentoCompra()
+    {
+        return $this->belongsTo(DocumentoCompra::class, 'documento_compra_id');
+    }
+
 
 
 

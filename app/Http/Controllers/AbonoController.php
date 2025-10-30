@@ -63,39 +63,56 @@ class AbonoController extends Controller
     public function destroy($id)
     {
         $abono = \App\Models\Abono::findOrFail($id);
-        $documento = $abono->documento;
+        $documento = $abono->documento ?? $abono->documentoCompra;
 
-        // Eliminar el abono
+        // 🧩 Detectar tipo de documento
+        $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
+
+        // 🔹 Eliminar el abono
         $abono->delete();
 
-        // Recalcular totales
+        // 🔹 Recalcular totales
         $totalAbonos = $documento->abonos()->sum('monto');
         $totalCruces = $documento->cruces()->sum('monto');
 
-        // Lógica de actualización de estado
+        // 🔹 Determinar nuevo estado
         if ($totalAbonos > 0) {
-            // Aún quedan abonos → mantener estado Abono
             $nuevoEstado = 'Abono';
         } elseif ($totalCruces > 0) {
-            // No hay abonos, pero sí cruces → mantener Cruce
             $nuevoEstado = 'Cruce';
         } else {
-            // No hay ni abonos ni cruces → volver a estado automático
             $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
                 ? 'Vencido'
                 : 'Al día';
         }
 
-        // Actualizar documento
-        $documento->update([
-            'status' => $nuevoEstado,
-            'fecha_estado_manual' => ($nuevoEstado === 'Vencido' || $nuevoEstado === 'Al día') ? null : now(),
-        ]);
+        // 🔹 Actualizar el documento según su tipo
+        if ($tipoDocumento === 'compra') {
+            $documento->update([
+                'estado' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
+                'status_original' => $nuevoEstado,
+                'fecha_estado_manual' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
+            ]);
+        } else {
+            $documento->update([
+                'status' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
+                'status_original' => $nuevoEstado,
+                'fecha_estado_manual' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
+            ]);
+        }
+
+        // 🔹 Redirección inteligente
+        if ($tipoDocumento === 'compra') {
+            return redirect()
+                ->route('finanzas_compras.show', $documento->id)
+                ->with('success', 'Abono eliminado y estado actualizado correctamente.');
+        }
 
         return redirect()
-            ->route('cobranzas.documentos', $documento->id)
+            ->route('documentos.detalles', $documento->id)
             ->with('success', 'Abono eliminado y estado actualizado correctamente.');
     }
+
 
     public function show()
     {

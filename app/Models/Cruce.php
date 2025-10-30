@@ -11,6 +11,7 @@ class Cruce extends Model
 
     protected $fillable = [
         'documento_financiero_id',
+        'documento_compra_id',
         'monto',
         'fecha_cruce',
         'proveedor_id',
@@ -27,6 +28,11 @@ class Cruce extends Model
     public function proveedor()
     {
         return $this->belongsTo(Proveedor::class, 'proveedor_id');
+    }
+
+    public function documentoCompra()
+    {
+        return $this->belongsTo(DocumentoCompra::class, 'documento_compra_id');
     }
 
 

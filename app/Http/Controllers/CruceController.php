@@ -66,7 +66,10 @@ class CruceController extends Controller
     public function destroy($id)
     {
         $cruce = \App\Models\Cruce::findOrFail($id);
-        $documento = $cruce->documento;
+        $documento = $cruce->documentoFinanciero ?? $cruce->documentoCompra;
+
+        // 🧩 Detectar tipo de documento
+        $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
 
         // 🔹 Eliminar el cruce
         $cruce->delete();
@@ -75,7 +78,7 @@ class CruceController extends Controller
         $totalCruces = $documento->cruces()->sum('monto');
         $totalAbonos = $documento->abonos()->sum('monto');
 
-        // 🔹 Determinar nuevo estado del documento
+        // 🔹 Determinar nuevo estado
         if ($totalCruces > 0) {
             $nuevoEstado = 'Cruce';
         } elseif ($totalAbonos > 0) {
@@ -86,24 +89,34 @@ class CruceController extends Controller
                 : 'Al día';
         }
 
-        // 🔹 Actualizar el documento
-        $documento->update([
-            'status' => $nuevoEstado,
-            'fecha_estado_manual' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
-        ]);
+        // 🔹 Actualizar el documento según tipo
+        if ($tipoDocumento === 'compra') {
+            $documento->update([
+                'estado' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
+                'status_original' => $nuevoEstado,
+                'fecha_estado_manual' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
+            ]);
+        } else {
+            $documento->update([
+                'status' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
+                'status_original' => $nuevoEstado,
+                'fecha_estado_manual' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
+            ]);
+        }
 
-        // 🔹 Redirección inteligente: vuelve al detalle si el usuario venía de ahí
-        if (str_contains(url()->previous(), '/documentos/') && str_contains(url()->previous(), '/detalles')) {
+        // 🔹 Redirección inteligente
+        if ($tipoDocumento === 'compra') {
             return redirect()
-                ->route('documentos.detalles', $documento->id)
+                ->route('finanzas_compras.show', $documento->id)
                 ->with('success', 'Cruce eliminado y estado actualizado correctamente.');
         }
 
-        // 🔹 Si no, volver al listado
         return redirect()
-            ->route('cobranzas.documentos')
+            ->route('documentos.detalles', $documento->id)
             ->with('success', 'Cruce eliminado y estado actualizado correctamente.');
     }
+
+
 
 
     public function show()
