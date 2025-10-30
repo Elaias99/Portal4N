@@ -24,14 +24,16 @@ class ProntoPagoController extends Controller
             'fecha_pronto_pago.required' => 'La fecha del pronto pago es obligatoria.',
         ]);
 
-        // 🔍 Detectar si el ID pertenece a DocumentoFinanciero o DocumentoCompra
-        $documento = DocumentoFinanciero::find($documentoId);
-        $tipo = 'ventas';
+        // 🔍 Detectar tipo de documento por el campo enviado en el formulario
+        $tipo = $request->input('tipo', 'ventas');
+        $esCompra = $tipo === 'compra';
 
-        if (!$documento) {
+        if ($esCompra) {
             $documento = DocumentoCompra::findOrFail($documentoId);
-            $tipo = 'compras';
+        } else {
+            $documento = DocumentoFinanciero::findOrFail($documentoId);
         }
+
 
         // Evitar duplicar registros
         if ($documento->prontoPagos()->exists()) {

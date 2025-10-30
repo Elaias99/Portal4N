@@ -18,6 +18,8 @@ class ComprasImport implements ToModel, WithHeadingRow
     public $duplicados = [];
     public $importados = [];
 
+    public $nuevos = 0;
+
     public function __construct($empresaId = null)
     {
         $this->empresaId = $empresaId;
@@ -25,6 +27,7 @@ class ComprasImport implements ToModel, WithHeadingRow
         // Inicialización explícita
         $this->duplicados = [];
         $this->importados = [];
+        
     }
 
     public function model(array $row)
@@ -71,6 +74,7 @@ class ComprasImport implements ToModel, WithHeadingRow
 
         // ✅ Crear registro si no está duplicado
         $this->importados[] = $folio;
+        $this->nuevos++;
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

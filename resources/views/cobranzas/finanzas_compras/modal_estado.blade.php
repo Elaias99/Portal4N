@@ -88,6 +88,7 @@
                 {{-- === FORMULARIO DE PAGO === --}}
                 <form action="{{ route('documentos.pagos.store', $doc->id) }}" method="POST" id="form-pago-{{ $doc->id }}" style="display:{{ $doc->estado == 'Pago' ? 'block' : 'none' }};">
                     @csrf
+                    <input type="hidden" name="tipo" value="compra">
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Fecha del pago</label>
                         <input type="date" name="fecha_pago" class="form-control form-control-sm" value="{{ now()->format('Y-m-d') }}" required>
@@ -97,9 +98,12 @@
                     </div>
                 </form>
 
+
                 {{-- === FORMULARIO DE PRONTO PAGO === --}}
                 <form action="{{ route('prontopagos.store', $doc->id) }}" method="POST" id="form-prontopago-{{ $doc->id }}" style="display:{{ $doc->estado == 'Pronto pago' ? 'block' : 'none' }};">
                     @csrf
+                    <input type="hidden" name="tipo" value="compra">
+
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Fecha del pronto pago</label>
                         <input type="date" name="fecha_pronto_pago" class="form-control form-control-sm" value="{{ now()->format('Y-m-d') }}" required>

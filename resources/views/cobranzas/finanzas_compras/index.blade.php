@@ -68,7 +68,7 @@
         </a>
     </div>
 
-    <h1 class="text-center mb-4">📊 Registro RCV COMPRAS</h1>
+    <h1 class="text-center mb-4">Reporte Cuentas por Pagar</h1>
 
     {{-- 🔹 Sección de Importación --}}
     <div class="card mb-4 shadow-sm border-0">
@@ -116,7 +116,7 @@
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
                             <tr>
-
+                                <th>Fecha Estado Manual</th>
                                 <th>status</th>
                                 <th>Tipo Doc</th>
                                 <th>Tipo Compra</th>
@@ -136,6 +136,7 @@
                         <tbody>
                             @foreach ($documentosCompras as $doc)
                                 <tr>
+                                    <td>{{ $doc->fecha_estado_manual ?? '-' }}</td>
                                     <td>
                                         @php
                                             $color = $doc->status_original === 'Vencido' ? 'bg-danger' : 'bg-success';

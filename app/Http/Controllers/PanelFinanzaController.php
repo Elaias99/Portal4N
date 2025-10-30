@@ -77,18 +77,20 @@ class PanelFinanzaController extends Controller
             });
 
         // === Subconsulta PAGOS ===
-        $pagosQuery = DB::table('documentos_financieros')
+        $pagosQuery = DB::table('pagos as p')
+            ->join('documentos_financieros as df', 'p.documento_financiero_id', '=', 'df.id')
             ->selectRaw("
                 'Pago' AS tipo,
-                fecha_estado_manual AS fecha,
-                monto_total AS monto,
-                id AS documento_financiero_id
+                p.fecha_pago AS fecha,
+                df.monto_total AS monto,
+                p.documento_financiero_id
             ")
-            ->where('status', 'Pago')
-            ->when($fechaInicio, fn($q) => $q->whereDate('fecha_estado_manual', '>=', $fechaInicio))
-            ->when($fechaFin, fn($q) => $q->whereDate('fecha_estado_manual', '<=', $fechaFin))
-            ->when($empresaId, fn($q) => $q->where('empresa_id', $empresaId))
-            ->when($razonSocial, fn($q) => $q->where('razon_social', 'like', "%{$razonSocial}%"));
+            ->when($fechaInicio, fn($q) => $q->whereDate('p.fecha_pago', '>=', $fechaInicio))
+            ->when($fechaFin, fn($q) => $q->whereDate('p.fecha_pago', '<=', $fechaFin))
+            ->when($empresaId, fn($q) => $q->where('df.empresa_id', $empresaId))
+            ->when($razonSocial, fn($q) => $q->where('df.razon_social', 'like', "%{$razonSocial}%"));
+
+
 
         // === UNION ===
         $union = $abonosQuery->unionAll($crucesQuery)->unionAll($pagosQuery);

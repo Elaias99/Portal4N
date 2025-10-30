@@ -17,7 +17,7 @@ class DocumentoCompra extends Model
         'monto_neto', 'monto_iva_recuperable', 'monto_iva_no_recuperable', 'codigo_iva_no_rec', 'monto_total', 
         'monto_neto_activo_fijo', 'iva_activo_fijo', 'iva_uso_comun', 'impto_sin_derecho_credito','iva_no_retenido',
         'tabacos_puros', 'tabacos_cigarrillos', 'tabacos_elaborados', 'nce_nde_sobre_fact_compra', 'codigo_otro_impuesto', 'valor_otro_impuesto', 'tasa_otro_impuesto', 
-        'estado', 'fecha_vencimiento','cobranza_id','status_original' ];
+        'estado', 'fecha_vencimiento','cobranza_id','status_original','fecha_estado_manual', ];
 
     public function empresa()
     {

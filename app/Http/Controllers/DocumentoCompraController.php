@@ -81,11 +81,9 @@ class DocumentoCompraController extends Controller
         $import = new ComprasImport($empresa->id);
         Excel::import($import, $request->file('file'));
         
-        $totalImportados = \App\Models\DocumentoCompra::where('empresa_id', $empresa->id)
-            ->whereDate('created_at', today())
-            ->count();
-
+        $totalImportados = $import->nuevos;
         $totalDuplicados = count($import->duplicados);
+
 
         // 🟢 Caso 1: Importación exitosa, sin duplicados
         if ($totalImportados > 0 && $totalDuplicados === 0) {
@@ -123,7 +121,7 @@ class DocumentoCompraController extends Controller
 
     public function updateEstado(Request $request, $id)
     {
-        // 🧾 Validación básica
+        // Validación básica
         $request->validate([
             'estado' => 'nullable|string|max:50',
         ]);
@@ -131,15 +129,16 @@ class DocumentoCompraController extends Controller
         // 🔍 Buscar el documento
         $documento = DocumentoCompra::findOrFail($id);
 
-        // 📌 Guardar estado anterior
+        // Guardar estado anterior
         $estadoAnterior = $documento->estado;
 
-        // ⚙️ Actualizar el estado manual
+        // ⚙️ Actualizar el estado manual y fecha
         $documento->update([
             'estado' => $request->estado,
+            'fecha_estado_manual' => now(), // ⬅️ aquí agregamos la fecha
         ]);
 
-        // 🧠 Registrar movimiento con trazabilidad
+        //  Registrar movimiento con trazabilidad
         MovimientoCompra::create([
             'documento_compra_id' => $documento->id,
             'usuario_id' => Auth::id(),
@@ -148,11 +147,12 @@ class DocumentoCompraController extends Controller
             'fecha_cambio' => now(),
         ]);
 
-        // 🔁 Redirigir con mensaje
+        //  Redirigir con mensaje
         return redirect()
             ->route('finanzas_compras.index')
             ->with('success', 'Estado actualizado correctamente.');
     }
+
 
 
 

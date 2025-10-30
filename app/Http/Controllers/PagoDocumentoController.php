@@ -9,6 +9,8 @@ use App\Models\MovimientoDocumento;
 use App\Models\MovimientoCompra;
 use App\Models\DocumentoCompra;
 use App\Models\Pago;
+use Illuminate\Support\Facades\Log;
+
 
 class PagoDocumentoController extends Controller
 {
@@ -23,35 +25,57 @@ class PagoDocumentoController extends Controller
             'fecha_pago.required' => 'La fecha del pago es obligatoria.',
         ]);
 
-        // 🔍 Detectar el tipo de documento (ventas o compras)
-        $documento = DocumentoFinanciero::find($id);
-        $tipo = 'ventas';
+        Log::info('🟢 Iniciando registro de pago', [
+            'id' => $id,
+            'route_name' => $request->route()->getName(),
+            'previous_url' => url()->previous(),
+        ]);
 
-        if (!$documento) {
-            $documento = DocumentoCompra::findOrFail($id);
-            $tipo = 'compras';
+
+        // 🔍 Detectar tipo de documento
+        $tipo = $request->input('tipo', 'ventas'); // Por defecto: ventas
+        $esCompra = $tipo === 'compra';
+
+        if ($esCompra) {
+            $documento = \App\Models\DocumentoCompra::findOrFail($id);
+        } else {
+            $documento = \App\Models\DocumentoFinanciero::findOrFail($id);
         }
 
-        // Evitar pagos duplicados
+
+        // 🚫 Evitar pagos duplicados
         if ($documento->pagos()->exists()) {
             return back()->withErrors(['fecha_pago' => 'Este documento ya tiene un pago registrado.']);
         }
 
-        // ✅ Crear el pago (campo FK dinámico)
-        $fkCampo = $tipo === 'ventas' ? 'documento_financiero_id' : 'documento_compra_id';
-
+        // ✅ Crear el pago
         $documento->pagos()->create([
-            $fkCampo => $documento->id,
             'fecha_pago' => $request->fecha_pago,
             'user_id' => Auth::id(),
         ]);
 
-        // ✅ Actualizar estado
-        $documento->update([
-            $tipo === 'ventas' ? 'status' : 'estado' => 'Pago',
-            'fecha_estado_manual' => now(),
-            'saldo_pendiente' => 0,
+        // ✅ Actualizar estado y saldo
+        if ($tipo === 'ventas') {
+            $documento->update([
+                'status' => 'Pago',
+                'fecha_estado_manual' => now(),
+                'saldo_pendiente' => 0,
+            ]);
+        } else {
+            $documento->update([
+                'estado' => 'Pago',
+                'fecha_estado_manual' => now(),
+                'saldo_pendiente' => 0,
+            ]);
+        }
+
+
+        Log::info('🧩 Tipo de documento detectado', [
+            'esCompra' => $esCompra,
+            'tipo' => $tipo ?? 'sin definir',
+            'modelo' => get_class($documento),
         ]);
+
 
         // ✅ Registrar movimiento
         if ($tipo === 'ventas') {
@@ -66,14 +90,23 @@ class PagoDocumentoController extends Controller
             MovimientoCompra::create([
                 'documento_compra_id' => $documento->id,
                 'usuario_id' => Auth::id(),
-                'estado_anterior' => $documento->estado,
+                'estado_anterior' => $documento->estado ?? 'Pendiente',
                 'nuevo_estado' => 'Pago',
                 'fecha_cambio' => now(),
             ]);
         }
 
+        Log::info('✅ Pago registrado correctamente', [
+            'documento_id' => $documento->id,
+            'tipo' => $tipo,
+            'saldo_pendiente' => $documento->saldo_pendiente ?? null,
+        ]);
+
+
         return back()->with('success', 'Pago registrado correctamente y estado actualizado.');
     }
+
+
 
 
     /**

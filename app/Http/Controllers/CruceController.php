@@ -66,7 +66,7 @@ class CruceController extends Controller
     public function destroy($id)
     {
         $cruce = \App\Models\Cruce::findOrFail($id);
-        $documento = $cruce->documentoFinanciero ?? $cruce->documentoCompra;
+        $documento = $cruce->documento ?? $cruce->documentoCompra;
 
         // 🧩 Detectar tipo de documento
         $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
