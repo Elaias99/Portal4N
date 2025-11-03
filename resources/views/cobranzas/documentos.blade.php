@@ -120,6 +120,7 @@
                     <div class="card-body">
                         <form method="GET" action="{{ route('cobranzas.documentos') }}">
                             <div class="row g-3 align-items-end">
+                                
                                 <div class="col-md-2">
                                     <label class="form-label small text-muted">Razón Social</label>
                                     <input type="text" name="razon_social" class="form-control form-control-sm"

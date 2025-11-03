@@ -19,8 +19,8 @@
         <p class="text-muted mb-3">Visualiza y administra la información de las cobranzas registradas en el sistema.</p>
 
         <div class="d-flex justify-content-center gap-3 flex-wrap">
-            <a href="{{ route('cobranzas.documentos') }}" class="btn btn-outline-secondary px-4">
-                Volver a Reporte
+            <a href="{{ route('cobranzas.general') }}" class="btn btn-outline-secondary px-4">
+                Volver a Panel
             </a>
 
             <a href="{{ route('cobranzas.create') }}" class="btn btn-primary px-4">

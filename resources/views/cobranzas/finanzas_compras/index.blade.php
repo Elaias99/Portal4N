@@ -1,8 +1,7 @@
 @extends('layouts.app')
 
-@section('content')
 
-<div class="container" style="max-width: 1150px;">
+@section('content')
 
     {{-- 🔹 Mensajes de estado --}}
     {{-- 🟢 ÉXITO --}}
@@ -62,6 +61,12 @@
     @endif
 
 
+    {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
+    {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
+    {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
+    {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
+<div class="container" style="max-width: 100%;">
+    {{-- Volver --}}
     <div class="mb-3">
         <a href="{{ route('cobranzas.general') }}" class="btn btn-outline-secondary btn-sm">
             <i class="fa fa-arrow-left"></i> Volver al Panel Principal
@@ -70,54 +75,185 @@
 
     <h1 class="text-center mb-4">Reporte Cuentas por Pagar</h1>
 
-    {{-- 🔹 Sección de Importación --}}
-    <div class="card mb-4 shadow-sm border-0">
-        <div class="card-body">
-            <h5 class="card-title mb-3">Importar archivo Excel</h5>
+    {{-- === FILTROS + GESTIÓN MASIVA === --}}
+    <div class="d-flex justify-content-between align-items-start gap-3 mb-4" style="align-items: stretch;">
 
-            <form action="{{ route('finanzas_compras.import') }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                <div class="row align-items-end">
-                    <div class="col-md-6">
-                        <input type="file" name="file" class="form-control" required>
-                    </div>
-                    <div class="col-md-3">
-                        <button type="submit" class="btn btn-success w-100">
-                            <i class="bi bi-file-earmark-arrow-up"></i> Importar
-                        </button>
-                    </div>
+        {{-- TARJETA DE FILTROS --}}
+        <div class="flex-grow-1">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <form method="GET" action="{{ route('finanzas_compras.index') }}">
+                        <div class="row g-3 align-items-end">
+
+                            <div class="col-md-2">
+                                <label class="form-label small text-muted">Razón Social</label>
+                                <input type="text" name="razon_social" class="form-control form-control-sm"
+                                    placeholder="Buscar proveedor" value="{{ request('razon_social') }}">
+                            </div>
+
+                            <div class="col-md-1">
+                                <label class="form-label small text-muted">RUT Cliente</label>
+                                <input type="text" name="rut_proveedor" class="form-control form-control-sm"
+                                    placeholder="Ej: 76432100-5" value="{{ request('rut_proveedor') }}">
+                            </div>
+
+
+                            <div class="col-md-1">
+                                <label class="form-label small text-muted">Folio</label>
+                                <input type="text" name="folio" class="form-control form-control-sm"
+                                    placeholder="N° Folio" value="{{ request('folio') }}">
+                            </div>
+
+
+
+
+
+                            <div class="col-md-2">
+                                <label class="form-label small text-muted">Estado Original</label>
+                                <select name="estado" class="form-select form-select-sm">
+                                    <option value="">Todos</option>
+                                    <option value="Al día" {{ request('estado') == 'Al día' ? 'selected' : '' }}>
+                                        Al día ({{ $totalAlDia ?? 0 }})
+                                    </option>
+                                    <option value="Vencido" {{ request('estado') == 'Vencido' ? 'selected' : '' }}>
+                                        Vencido ({{ $totalVencido ?? 0 }})
+                                    </option>
+                                </select>
+                            </div>
+
+
+                            <div class="col-md-2">
+                                <label class="form-label small text-muted">Estado de Pago</label>
+                                <select name="estado_pago" class="form-select form-select-sm">
+                                    <option value="">Todos</option>
+                                    <option value="Pagado" {{ request('estado_pago') == 'Pagado' ? 'selected' : '' }}>
+                                        Pagado ({{ $totalPagados ?? 0 }})
+                                    </option>
+                                    <option value="Pendiente" {{ request('estado_pago') == 'Pendiente' ? 'selected' : '' }}>
+                                        Pendiente ({{ $totalPendientes ?? 0 }})
+                                    </option>
+                                </select>
+                            </div>
+
+
+                            {{-- 🔹 Fecha de Documento --}}
+                            <div class="col-md-2 dropdown-fechas">
+                                <label class="form-label small text-muted">Fecha Documento</label>
+                                <div class="dropdown w-100">
+                                    <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
+                                            id="dropdownFechasDocto" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-calendar3"></i> Fecha Dcto.
+                                    </button>
+                                    <div class="dropdown-menu p-3">
+                                        <label class="form-label small text-muted">Desde</label>
+                                        <input type="date" name="fecha_docto_inicio" class="form-control form-control-sm mb-2"
+                                            value="{{ request('fecha_docto_inicio') }}">
+                                        <label class="form-label small text-muted">Hasta</label>
+                                        <input type="date" name="fecha_docto_fin" class="form-control form-control-sm"
+                                            value="{{ request('fecha_docto_fin') }}">
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- 🔹 Fecha de Vencimiento --}}
+                            <div class="col-md-2 dropdown-fechas">
+                                <label class="form-label small text-muted">Fecha Vencimiento</label>
+                                <div class="dropdown w-100">
+                                    <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
+                                            id="dropdownFechasVenc" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-calendar-event"></i> Fecha Venc.
+                                    </button>
+                                    <div class="dropdown-menu p-3">
+                                        <label class="form-label small text-muted">Desde</label>
+                                        <input type="date" name="fecha_venc_inicio" class="form-control form-control-sm mb-2"
+                                            value="{{ request('fecha_venc_inicio') }}">
+                                        <label class="form-label small text-muted">Hasta</label>
+                                        <input type="date" name="fecha_venc_fin" class="form-control form-control-sm"
+                                            value="{{ request('fecha_venc_fin') }}">
+                                    </div>
+                                </div>
+                            </div>
+
+
+                        </div>
+
+                        {{-- Botones de acción --}}
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <a href="{{ route('finanzas_compras.index') }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-x-circle"></i> Limpiar
+                            </a>
+                            <button type="submit" class="btn btn-success btn-sm">
+                                <i class="bi bi-search"></i> Filtrar
+                            </button>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            {{-- 🔹 Texto alineado a la izquierda --}}
+                            <div>
+                                <strong>Saldo pendiente total:</strong> 
+                                <span class="text-success fw-semibold">
+                                    ${{ number_format($totalSaldoPendiente, 0, ',', '.') }}
+                                </span>
+                            </div>
+
+                            <a href="{{ route('cobranzas.index') }}" class="btn btn-outline-secondary btn-sm">
+                                Detalle Cliente
+                            </a>
+
+
+                        </div>
+
+
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
 
+        {{-- TARJETA DE GESTIÓN MASIVA --}}
+        <div style="width: 260px;">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body text-center d-flex flex-column justify-content-center">
+                    <h6 class="fw-bold mb-3">Gestión Masiva</h6>
 
-        <a href="{{ route('finanzas_compras.export') }}" class="btn btn-outline-success btn-sm w-100">
-            <i class="bi bi-file-earmark-arrow-down"></i> Exportar Excel
-        </a>
+                    <form action="{{ route('finanzas_compras.import') }}" method="POST" enctype="multipart/form-data" class="mb-3">
+                        @csrf
+                        <input type="file" name="file" class="form-control form-control-sm mb-2" required>
+                        <button type="submit" class="btn btn-success btn-sm w-100">
+                            <i class="bi bi-file-earmark-arrow-up"></i> Importar Excel
+                        </button>
+                    </form>
+
+                    <a href="{{ route('finanzas_compras.export') }}" class="btn btn-outline-success btn-sm w-100">
+                        <i class="bi bi-file-earmark-arrow-down"></i> Exportar Excel
+                    </a>
+                </div>
+            </div>
+        </div>
+
     </div>
 
 
 
 
-
-
-
-
-
-
-
-    {{-- 🔹 Tabla de registros --}}
+    {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
+    {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
+    {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
+    {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
+    {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
+    {{-- 🔹 Tabla de registros limpia y responsiva sin scroll --}}
     <div class="card shadow-sm border-0">
         <div class="card-body">
             <h5 class="card-title mb-3">Documentos Importados</h5>
 
             @if($documentosCompras->count() > 0)
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
-                            <tr>
+                <div class="table-responsive-sm">
+                    <table class="table table-striped table-hover table-sm align-middle text-center">
+
+                        
+                        <thead class="table-light text-uppercase">
+                            <tr class="small">
                                 <th>Fecha Estado Manual</th>
-                                <th>status</th>
+                                <th>Status</th>
                                 <th>Tipo Doc</th>
                                 <th>Tipo Compra</th>
                                 <th>RUT Proveedor</th>
@@ -126,77 +262,53 @@
                                 <th>Fecha Docto</th>
                                 <th>Fecha Vencimiento</th>
                                 <th>Monto Neto</th>
-                                <th>Monto IVA Rec.</th>
-                                <th>Monto Total</th>
+                                <th>IVA Rec.</th>
+                                <th>Total</th>
                                 <th>Saldo Pendiente</th>
                                 <th>Empresa</th>
                                 <th>Acción</th>
                             </tr>
                         </thead>
+
                         <tbody>
                             @foreach ($documentosCompras as $doc)
-                                <tr>
+                                @php
+                                    $color = $doc->status_original === 'Vencido' ? 'bg-danger' : 'bg-success';
+                                    $estadoMostrar = $doc->estado ?: $doc->status_original;
+                                @endphp
+
+                                <tr class="small">
                                     <td>{{ $doc->fecha_estado_manual ?? '-' }}</td>
                                     <td>
-                                        @php
-                                            $color = $doc->status_original === 'Vencido' ? 'bg-danger' : 'bg-success';
-                                            $estadoMostrar = $doc->estado ?: $doc->status_original;
-                                        @endphp
-
-                                        <span class="badge {{ $color }}">{{ $estadoMostrar }}</span>
-
-                                        {{-- Botón para abrir el modal de cambio de estado --}}
+                                        <span class="badge {{ $color }}">{{ $estadoMostrar }}</span><br>
                                         <button type="button"
-                                                class="btn btn-sm btn-outline-secondary mt-2"
+                                                class="btn btn-outline-secondary btn-sm mt-1 px-2 py-0"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#modalEstadoCompra-{{ $doc->id }}">
                                             Editar
                                         </button>
-
-                                        {{-- Modal --}}
                                         @include('cobranzas.finanzas_compras.modal_estado', ['doc' => $doc])
                                     </td>
-
-
                                     <td>{{ $doc->tipoDocumento?->nombre ?? '-' }}</td>
                                     <td>{{ $doc->tipo_compra ?? '-' }}</td>
                                     <td>{{ $doc->rut_proveedor }}</td>
-                                    <td>{{ $doc->razon_social }}</td>
+                                    <td class="text-start">{{ $doc->razon_social }}</td>
                                     <td>{{ $doc->folio }}</td>
                                     <td>{{ $doc->fecha_docto ? \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') : '-' }}</td>
                                     <td>{{ $doc->fecha_vencimiento }}</td>
                                     <td class="text-end">${{ number_format($doc->monto_neto, 0, ',', '.') }}</td>
                                     <td class="text-end">${{ number_format($doc->monto_iva_recuperable, 0, ',', '.') }}</td>
-
-
-
-                                    <td class="text-end fw-bold">${{ number_format($doc->monto_total, 0, ',', '.') }}</td>
-
-
-
-                                    
-                                    <td class="text-end fw-bold {{ $doc->saldo_pendiente == 0 ? 'text-success' : 'text-danger' }}">
+                                    <td class="text-end fw-semibold">${{ number_format($doc->monto_total, 0, ',', '.') }}</td>
+                                    <td class="text-end fw-semibold {{ $doc->saldo_pendiente == 0 ? 'text-success' : 'text-danger' }}">
                                         ${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}
                                     </td>
-
-
                                     <td>{{ $doc->empresa?->Nombre ?? '—' }}</td>
-
-                                    {{-- 🔹 Acciones / Detalles --}}
-                                    <td class="text-center">
-
-                                        {{-- 🚫 Si es una Nota de Crédito --}}
-
-                                            {{-- 🔹 Un solo botón para ver todos los detalles --}}
-                                            <a href="{{ route('finanzas_compras.show', $doc->id) }}?{{ http_build_query(request()->query()) }}" 
-                                            class="btn btn-sm btn-outline-primary w-100">
-                                                <i class="bi bi-eye"></i> Ver Detalles
-                                            </a>
-
-
+                                    <td>
+                                        <a href="{{ route('finanzas_compras.show', $doc->id) }}?{{ http_build_query(request()->query()) }}" 
+                                        class="btn btn-outline-primary btn-sm w-100">
+                                            <i class="bi bi-eye"></i> Ver
+                                        </a>
                                     </td>
-
-
                                 </tr>
                             @endforeach
                         </tbody>
@@ -205,13 +317,14 @@
 
                 {{-- 🔹 Paginación --}}
                 <div class="mt-3 d-flex justify-content-center">
-                    {{ $documentosCompras->links('pagination::bootstrap-4') }}
+                    {{ $documentosCompras->appends(request()->query())->links('pagination::bootstrap-4') }}
                 </div>
             @else
                 <p class="text-muted text-center mb-0">Aún no hay registros importados.</p>
             @endif
         </div>
     </div>
+
 
 </div>
 
@@ -243,6 +356,8 @@
         });
     });
 </script>
+
+@include('cobranzas._modal_create_cobranza')
 
 
 

@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\DocumentoCompra;
 use App\Imports\ComprasImport;
+use App\Models\Empresa;
+use App\Models\TipoDocumento;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Auth;
 use App\Exports\DocumentoCompraExport;
@@ -14,12 +16,12 @@ use App\Models\MovimientoCompra;
 class DocumentoCompraController extends Controller
 {
     /**
-     * 📄 Muestra todos los registros de compras
+     * Muestra todos los registros de compras
      */
-    public function index()
+    public function index(Request $request)
     {
-        // 🔹 Cargamos los documentos con todas sus relaciones relevantes
-        $documentosCompras = \App\Models\DocumentoCompra::with([
+        // 🔹 Base query con relaciones relevantes
+        $query = \App\Models\DocumentoCompra::with([
             'empresa',
             'tipoDocumento',
             'movimientos',
@@ -27,14 +29,209 @@ class DocumentoCompraController extends Controller
             'cruces',
             'pagos',
             'prontoPagos'
-        ])->latest()->paginate(10);
+        ]);
 
-        // 🔹 Cargamos la lista de proveedores para los modales (formulario de Cruce)
+        // 🔹 Filtros dinámicos
+        if ($request->filled('rut_proveedor')) {
+            $query->where('rut_proveedor', 'like', '%' . $request->rut_proveedor . '%');
+        }
+
+        if ($request->filled('razon_social')) {
+            $query->where('razon_social', 'like', '%' . $request->razon_social . '%');
+        }
+
+        if ($request->filled('folio')) {
+            $query->where('folio', 'like', '%' . $request->folio . '%');
+        }
+
+        if ($request->filled('estado')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('status_original', $request->estado)
+                ->orWhere('estado', $request->estado);
+            });
+        }
+
+        // 🔹 Filtro por rango de fecha del documento
+        if ($request->filled('fecha_docto_inicio') && $request->filled('fecha_docto_fin')) {
+            $query->whereBetween('fecha_docto', [
+                $request->fecha_docto_inicio,
+                $request->fecha_docto_fin
+            ]);
+        } elseif ($request->filled('fecha_docto_inicio')) {
+            $query->whereDate('fecha_docto', '>=', $request->fecha_docto_inicio);
+        } elseif ($request->filled('fecha_docto_fin')) {
+            $query->whereDate('fecha_docto', '<=', $request->fecha_docto_fin);
+        }
+
+        // 🔹 Filtro por rango de fecha de vencimiento
+        if ($request->filled('fecha_venc_inicio') && $request->filled('fecha_venc_fin')) {
+            $query->whereBetween('fecha_vencimiento', [
+                $request->fecha_venc_inicio,
+                $request->fecha_venc_fin
+            ]);
+        } elseif ($request->filled('fecha_venc_inicio')) {
+            $query->whereDate('fecha_vencimiento', '>=', $request->fecha_venc_inicio);
+        } elseif ($request->filled('fecha_venc_fin')) {
+            $query->whereDate('fecha_vencimiento', '<=', $request->fecha_venc_fin);
+        }
+
+        // 🔹 Obtenemos resultados
+        $documentosCompras = $query->latest()->get();
+
+        $hoy = \Carbon\Carbon::today();
+
+        // 🔹 Actualizamos estado original (Al día / Vencido)
+        foreach ($documentosCompras as $doc) {
+            if ($doc->fecha_vencimiento && $doc->saldo_pendiente > 0) {
+                $fechaVenc = \Carbon\Carbon::parse($doc->fecha_vencimiento);
+
+                if ($fechaVenc->lt($hoy) && $doc->status_original !== 'Vencido') {
+                    $doc->status_original = 'Vencido';
+                    $doc->save();
+                } elseif ($fechaVenc->gte($hoy) && $doc->status_original !== 'Al día') {
+                    $doc->status_original = 'Al día';
+                    $doc->save();
+                }
+            }
+        }
+
+        // 🔹 Totales por estado original
+        $totalAlDia = \App\Models\DocumentoCompra::where('status_original', 'Al día')->count();
+        $totalVencido = \App\Models\DocumentoCompra::where('status_original', 'Vencido')->count();
+
+        // 🔹 Filtro por estado de pago
+        if ($request->filled('estado_pago')) {
+            $documentosCompras = $documentosCompras->filter(function ($doc) use ($request) {
+                if ($request->estado_pago === 'Pagado') {
+                    return $doc->saldo_pendiente <= 0;
+                }
+                if ($request->estado_pago === 'Pendiente') {
+                    return $doc->saldo_pendiente > 0;
+                }
+                return true;
+            });
+        }
+
+        // 🔹 Totales por estado de pago
+        $totalPagados = $documentosCompras->filter(fn($d) => $d->saldo_pendiente <= 0)->count();
+        $totalPendientes = $documentosCompras->filter(fn($d) => $d->saldo_pendiente > 0)->count();
+
+        // 🔹 Aplicar paginación después del filtrado
+        $page = $request->get('page', 1);
+        $perPage = 10;
+        $offset = ($page - 1) * $perPage;
+        $itemsPaginated = $documentosCompras->slice($offset, $perPage)->values();
+
+        // 🔹 Cálculo del total de saldo pendiente SOLO de la página actual
+        $totalSaldoPendiente = $itemsPaginated
+            ->filter(function ($doc) {
+                if (in_array($doc->tipo_documento_id, [61, 56])) return false;
+                if ($doc->pagos->count() > 0) return false;
+                return true;
+            })
+            ->sum(fn($doc) => $doc->saldo_pendiente);
+
+        // 🔹 Crear paginador
+        $documentosCompras = new \Illuminate\Pagination\LengthAwarePaginator(
+            $itemsPaginated,
+            $documentosCompras->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        // 🔹 Listas auxiliares para los filtros
         $proveedores = \App\Models\Proveedor::select('id', 'razon_social', 'rut')->orderBy('razon_social')->get();
+        $tiposDocumento = \App\Models\TipoDocumento::orderBy('nombre')->get();
+        $empresas = \App\Models\Empresa::orderBy('Nombre')->get();
 
         // 🔹 Renderizamos la vista
-        return view('cobranzas.finanzas_compras.index', compact('documentosCompras', 'proveedores'));
+        return view('cobranzas.finanzas_compras.index', compact(
+            'documentosCompras',
+            'proveedores',
+            'tiposDocumento',
+            'empresas',
+            'totalAlDia',
+            'totalVencido',
+            'totalPagados',
+            'totalPendientes',
+            'totalSaldoPendiente'
+        ));
     }
+
+    public function filtrarColumnas(Request $request)
+    {
+        // ✅ Control de acceso (ajusta si es necesario)
+        $usuariosFinanzas = [1, 405, 374, 375];
+        if (!in_array(Auth::id(), $usuariosFinanzas)) {
+            abort(403, 'Acceso denegado.');
+        }
+
+        // === BASE QUERY ===
+        $query = DocumentoCompra::with(['empresa', 'tipoDocumento']);
+
+        // === FILTRO DIRECTO POR COLUMNA ===
+        $columna = $request->get('columna');
+        $valor = $request->get('valor');
+
+        if ($columna && $valor) {
+            $query->where($columna, 'like', "%{$valor}%");
+        }
+
+        // === ORDENAMIENTO POR COLUMNA ===
+        $sortBy = $request->get('sort_by', 'razon_social');
+        $sortOrder = $request->get('sort_order', 'asc');
+
+        $columnasPermitidas = [
+            'fecha_estado_manual',
+            'status',
+            'tipo_doc_id',
+            'tipo_compra',
+            'rut_proveedor',
+            'razon_social',
+            'folio',
+            'fecha_docto',
+            'fecha_vencimiento',
+            'monto_neto',
+            'iva_rec',
+            'monto_total',
+            'saldo_pendiente',
+            'empresa_id'
+        ];
+
+        if (!in_array($sortBy, $columnasPermitidas)) {
+            $sortBy = 'razon_social';
+        }
+
+        $documentosCompras = $query->orderBy($sortBy, $sortOrder)->paginate(10);
+
+        // === CÁLCULOS ===
+        $totalSaldoPendiente = $documentosCompras->sum('saldo_pendiente');
+        $totalPagados = $documentosCompras->where('saldo_pendiente', '<=', 0)->count();
+        $totalPendientes = $documentosCompras->where('saldo_pendiente', '>', 0)->count();
+
+        // === SELECTS ===
+        $empresas = Empresa::orderBy('Nombre')->get(['id', 'Nombre']);
+        $tiposDocumento = TipoDocumento::orderBy('nombre')->get(['id', 'nombre']);
+
+        // 🚨 DEBUG TEMPORAL
+        dd('LLEGÓ AL MÉTODO filtrarColumnas', $sortBy, $sortOrder);
+
+        // === RENDER ===
+        return view('cobranzas.finanzas_compras.index', compact(
+            'documentosCompras',
+            'totalSaldoPendiente',
+            'totalPagados',
+            'totalPendientes',
+            'sortBy',
+            'sortOrder',
+            'empresas',
+            'tiposDocumento'
+        ));
+    }
+
+
+
 
     /**
      * 📤 Importa el archivo Excel RCV_COMPRAS
@@ -83,6 +280,24 @@ class DocumentoCompraController extends Controller
         
         $totalImportados = $import->nuevos;
         $totalDuplicados = count($import->duplicados);
+
+        
+        // ⚡️ Cobranzas faltantes
+        if (count($import->sinCobranza) > 0) {
+
+            foreach ($import->sinCobranza as $item) {
+                $mensajes[] = "No existe cobranza para la razón social '{$item['razon_social']}' (RUT: {$item['rut_proveedor']}), 
+                folio {$item['folio']}. <a href='#' 
+                class='btn-link text-primary crear-cobranza-link' 
+                data-rut='{$item['rut_proveedor']}' 
+                data-razon='{$item['razon_social']}'>Cree la cobranza aquí</a>";
+            }
+
+            session(['sin_cobranza' => $import->sinCobranza]);
+
+        } else {
+            session()->forget('sin_cobranza');
+        }
 
 
         // 🟢 Caso 1: Importación exitosa, sin duplicados

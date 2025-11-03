@@ -288,8 +288,6 @@ Route::get('/documentos/{documento}/detalles', [App\Http\Controllers\DocumentoFi
     ->name('documentos.detalles');
 
 
-
-
 Route::post('/documentos/{documento}/abonos', [DocumentoFinancieroController::class, 'storeAbono'])
     ->name('documentos.abonos.store');    
 
@@ -394,6 +392,12 @@ Route::post('/finanzas/compras/{documento}/cruce', [DocumentoCompraController::c
 
 Route::get('/finanzas/compras/{documento}', [DocumentoCompraController::class, 'show'])
     ->name('finanzas_compras.show');
+
+
+
+
+
+
 
 
 

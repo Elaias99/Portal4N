@@ -17,6 +17,7 @@ class ComprasImport implements ToModel, WithHeadingRow
     // 🔹 Arrays auxiliares para trazabilidad
     public $duplicados = [];
     public $importados = [];
+    public $sinCobranza = [];
 
     public $nuevos = 0;
 
@@ -27,6 +28,7 @@ class ComprasImport implements ToModel, WithHeadingRow
         // Inicialización explícita
         $this->duplicados = [];
         $this->importados = [];
+        $this->sinCobranza = [];
         
     }
 
@@ -83,15 +85,35 @@ class ComprasImport implements ToModel, WithHeadingRow
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-        // 🔍 Buscar cobranza asociada (por RUT o razón social)
-        $cobranza = \App\Models\Cobranza::where('rut_cliente', $row['rut_proveedor'] ?? null)
-            ->orWhere('razon_social', 'LIKE', "%{$row['razon_social']}%")
-            ->first();
+        //  Buscar cobranza asociada (por RUT o razón social)
+        $cobranza = \App\Models\Cobranza::where('rut_cliente', $row['rut_proveedor'] ?? null)->first();
+
+        if (!$cobranza) {
+            // Evitar duplicados por RUT
+            $yaRegistrado = collect($this->sinCobranza)
+                ->contains(fn($item) => $item['rut_proveedor'] === ($row['rut_proveedor'] ?? null));
+
+            if (!$yaRegistrado) {
+                $this->sinCobranza[] = [
+                    'razon_social' => $row['razon_social'],
+                    'rut_proveedor' => $row['rut_proveedor'],
+                    'folio' => $row['folio'],
+                ];
+            }
+
+            return null; // No crear el documento
+        }
+
+
+
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         
-        if (!$cobranza) {
-        return null;
-    }
 
 
         // 📅 Calcular fecha de vencimiento (si hay cobranza)
@@ -161,11 +183,6 @@ class ComprasImport implements ToModel, WithHeadingRow
         $this->importados[] = $row['folio'] ?? 'sin folio'; // ✅ Solo aquí cuenta el guardado
 
         return $documento;
-
-
-
-
-
 
     }
 

@@ -39,7 +39,6 @@ class DocumentoCompra extends Model
         return $this->hasMany(MovimientoCompra::class, 'documento_compra_id');
     }
 
-
     public function abonos()
     {
         return $this->hasMany(Abono::class, 'documento_compra_id');
@@ -125,6 +124,16 @@ class DocumentoCompra extends Model
 
         return max($saldo, 0);
     }
+
+    protected static function booted()
+    {
+        static::updating(function ($model) {
+            if ($model->isDirty('estado')) {
+                $model->fecha_estado_manual = now();
+            }
+        });
+    }
+
 
 
 
