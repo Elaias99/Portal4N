@@ -250,25 +250,117 @@
                     <table class="table table-striped table-hover table-sm align-middle text-center">
 
                         
-                        <thead class="table-light text-uppercase">
+                        <thead class="table-light text-uppercase align-middle">
                             <tr class="small">
-                                <th>Fecha Estado Manual</th>
-                                <th>Status</th>
-                                <th>Tipo Doc</th>
+
+                                {{-- 📅 Fecha Estado Manual --}}
+                                @include('cobranzas.partials.filtros_compras', [
+                                    'label' => 'Fecha Estado Manual',
+                                    'columna' => 'fecha_estado_manual',
+                                    'sortBy' => $sortBy ?? null,
+                                    'sortOrder' => $sortOrder ?? 'asc',
+                                    'placeholder' => 'AAAA-MM-DD'
+                                ])
+
+                                {{-- ⚙️ Status (status_original) --}}
+                                @include('cobranzas.partials.filtros_compras', [
+                                    'label' => 'Status',
+                                    'columna' => 'status_original',
+                                    'sortBy' => $sortBy ?? null,
+                                    'sortOrder' => $sortOrder ?? 'asc',
+                                    'placeholder' => 'Al día / Vencido...'
+                                ])
+
+                                {{-- 🧾 Tipo Doc --}}
+                                @include('cobranzas.partials.filtros_compras', [
+                                    'label' => 'Tipo Doc',
+                                    'columna' => 'tipo_documento_id',
+                                    'sortBy' => $sortBy ?? null,
+                                    'sortOrder' => $sortOrder ?? 'asc',
+                                    'placeholder' => 'Buscar tipo doc...'
+                                ])
+
+                                {{-- 🛒 Tipo Compra (sin filtro directo) --}}
                                 <th>Tipo Compra</th>
-                                <th>RUT Proveedor</th>
-                                <th>Razón Social</th>
-                                <th>Folio</th>
-                                <th>Fecha Docto</th>
-                                <th>Fecha Vencimiento</th>
+
+                                {{-- 🆔 RUT Proveedor --}}
+                                @include('cobranzas.partials.filtros_compras', [
+                                    'label' => 'RUT Proveedor',
+                                    'columna' => 'rut_proveedor',
+                                    'sortBy' => $sortBy ?? null,
+                                    'sortOrder' => $sortOrder ?? 'asc',
+                                    'placeholder' => 'Ej: 76123456-7'
+                                ])
+
+                                {{-- 🏢 Razón Social --}}
+                                @include('cobranzas.partials.filtros_compras', [
+                                    'label' => 'Razón Social',
+                                    'columna' => 'razon_social',
+                                    'sortBy' => $sortBy ?? null,
+                                    'sortOrder' => $sortOrder ?? 'asc',
+                                    'placeholder' => 'Buscar razón social...'
+                                ])
+
+                                {{-- 📄 Folio --}}
+                                @include('cobranzas.partials.filtros_compras', [
+                                    'label' => 'Folio',
+                                    'columna' => 'folio',
+                                    'sortBy' => $sortBy ?? null,
+                                    'sortOrder' => $sortOrder ?? 'asc',
+                                    'placeholder' => 'N° folio...'
+                                ])
+
+                                {{-- 📅 Fecha Docto --}}
+                                @include('cobranzas.partials.filtros_compras', [
+                                    'label' => 'Fecha Docto',
+                                    'columna' => 'fecha_docto',
+                                    'sortBy' => $sortBy ?? null,
+                                    'sortOrder' => $sortOrder ?? 'asc',
+                                    'placeholder' => 'AAAA-MM-DD'
+                                ])
+
+                                {{-- 📅 Fecha Vencimiento --}}
+                                @include('cobranzas.partials.filtros_compras', [
+                                    'label' => 'Fecha Vencimiento',
+                                    'columna' => 'fecha_vencimiento',
+                                    'sortBy' => $sortBy ?? null,
+                                    'sortOrder' => $sortOrder ?? 'asc',
+                                    'placeholder' => 'AAAA-MM-DD'
+                                ])
+
+                                {{-- 💰 Monto Neto --}}
                                 <th>Monto Neto</th>
+
+                                {{-- 💵 IVA Rec --}}
                                 <th>IVA Rec.</th>
-                                <th>Total</th>
+
+                                {{-- 💰 Total --}}
+                                @include('cobranzas.partials.filtros_compras', [
+                                    'label' => 'Total',
+                                    'columna' => 'monto_total',
+                                    'sortBy' => $sortBy ?? null,
+                                    'sortOrder' => $sortOrder ?? 'asc',
+                                    'placeholder' => '≥ monto...'
+                                ])
+
+                                {{-- 💸 Saldo Pendiente (sin filtro directo) --}}
                                 <th>Saldo Pendiente</th>
-                                <th>Empresa</th>
+
+                                {{-- 🏢 Empresa --}}
+                                @include('cobranzas.partials.filtros_compras', [
+                                    'label' => 'Empresa',
+                                    'columna' => 'empresa_id',
+                                    'sortBy' => $sortBy ?? null,
+                                    'sortOrder' => $sortOrder ?? 'asc',
+                                    'placeholder' => 'Buscar empresa...'
+                                ])
+
+                                {{-- ⚡ Acción --}}
                                 <th>Acción</th>
+
                             </tr>
                         </thead>
+
 
                         <tbody>
                             @foreach ($documentosCompras as $doc)

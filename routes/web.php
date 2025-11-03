@@ -375,6 +375,9 @@ Route::delete('/prontopagos/{id}', [App\Http\Controllers\ProntoPagoController::c
 
 //////////////////////////////// 
 // cobranzas/finanzas_compras
+Route::get('/finanzas/compras/filtrar-columnas', [App\Http\Controllers\DocumentoCompraController::class, 'filtrar'])
+    ->name('finanzas_compras.column_filter');
+    
 Route::get('/finanzas/compras', [DocumentoCompraController::class, 'index'])->name('finanzas_compras.index');
 Route::post('/finanzas/compras/import', [DocumentoCompraController::class, 'import'])->name('finanzas_compras.import');
 Route::get('/finanzas_compras/export', [DocumentoCompraController::class, 'export'])->name('finanzas_compras.export');
@@ -392,8 +395,6 @@ Route::post('/finanzas/compras/{documento}/cruce', [DocumentoCompraController::c
 
 Route::get('/finanzas/compras/{documento}', [DocumentoCompraController::class, 'show'])
     ->name('finanzas_compras.show');
-
-
 
 
 
