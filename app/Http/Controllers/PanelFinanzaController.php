@@ -13,7 +13,7 @@ class PanelFinanzaController extends Controller
 {
     //
         /**
-     * Mostrar historial combinado de Abonos y Cruces.
+     * Mostrar historial combinado de Abonos y Cruces para RCV_VENTAS.
      */
     public function show(Request $request)
     {
@@ -136,6 +136,7 @@ class PanelFinanzaController extends Controller
 
 
 
+    //Exportar información de las ventas
     public function export(Request $request)
     {
         $fechaInicio = $request->input('fecha_inicio');
@@ -146,6 +147,137 @@ class PanelFinanzaController extends Controller
             'Historial_Movimientos_' . now()->format('Ymd_His') . '.xlsx'
         );
     }
+
+
+
+
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////  
+
+    /**
+ * Mostrar historial combinado de Abonos, Cruces y Pagos para RCV_COMPRAS.
+ */
+    public function showCompras(Request $request)
+    {
+        // 🚫 Control de acceso
+        $usuariosFinanzas = [1, 405, 374];
+        if (!in_array(Auth::id(), $usuariosFinanzas)) {
+            abort(403, 'Acceso denegado.');
+        }
+
+        // === Filtros ===
+        $fechaInicio = $request->input('fecha_inicio');
+        $fechaFin    = $request->input('fecha_fin');
+        $empresaId   = $request->input('empresa_id');
+        $razonSocial = $request->input('razon_social'); // proveedor
+        $perPage     = 15;
+
+        // === Subconsulta ABONOS ===
+        $abonosQuery = DB::table('abonos')
+            ->selectRaw("
+                'Abono' AS tipo,
+                fecha_abono AS fecha,
+                monto,
+                documento_compra_id
+            ")
+            ->when($fechaInicio, fn($q) => $q->whereDate('fecha_abono', '>=', $fechaInicio))
+            ->when($fechaFin, fn($q) => $q->whereDate('fecha_abono', '<=', $fechaFin))
+            ->when($empresaId, function ($q) use ($empresaId) {
+                $q->whereIn('documento_compra_id', function ($sub) use ($empresaId) {
+                    $sub->select('id')->from('documentos_compras')->where('empresa_id', $empresaId);
+                });
+            })
+            ->when($razonSocial, function ($q) use ($razonSocial) {
+                $q->whereIn('documento_compra_id', function ($sub) use ($razonSocial) {
+                    $sub->select('id')
+                        ->from('documentos_compras')
+                        ->where('razon_social', 'like', "%{$razonSocial}%");
+                });
+            });
+
+        // === Subconsulta CRUCES ===
+        $crucesQuery = DB::table('cruces')
+            ->selectRaw("
+                'Cruce' AS tipo,
+                fecha_cruce AS fecha,
+                monto,
+                documento_compra_id
+            ")
+            ->when($fechaInicio, fn($q) => $q->whereDate('fecha_cruce', '>=', $fechaInicio))
+            ->when($fechaFin, fn($q) => $q->whereDate('fecha_cruce', '<=', $fechaFin))
+            ->when($empresaId, function ($q) use ($empresaId) {
+                $q->whereIn('documento_compra_id', function ($sub) use ($empresaId) {
+                    $sub->select('id')->from('documentos_compras')->where('empresa_id', $empresaId);
+                });
+            })
+            ->when($razonSocial, function ($q) use ($razonSocial) {
+                $q->whereIn('documento_compra_id', function ($sub) use ($razonSocial) {
+                    $sub->select('id')
+                        ->from('documentos_compras')
+                        ->where('razon_social', 'like', "%{$razonSocial}%");
+                });
+            });
+
+        // === Subconsulta PAGOS ===
+        $pagosQuery = DB::table('pagos as p')
+            ->join('documentos_compras as dc', 'p.documento_compra_id', '=', 'dc.id')
+            ->selectRaw("
+                'Pago' AS tipo,
+                p.fecha_pago AS fecha,
+                dc.monto_total AS monto,
+                p.documento_compra_id
+            ")
+            ->when($fechaInicio, fn($q) => $q->whereDate('p.fecha_pago', '>=', $fechaInicio))
+            ->when($fechaFin, fn($q) => $q->whereDate('p.fecha_pago', '<=', $fechaFin))
+            ->when($empresaId, fn($q) => $q->where('dc.empresa_id', $empresaId))
+            ->when($razonSocial, fn($q) => $q->where('dc.razon_social', 'like', "%{$razonSocial}%"));
+
+        // === UNION ===
+        $union = $abonosQuery->unionAll($crucesQuery)->unionAll($pagosQuery);
+
+        // === TOTAL FILTRADO ===
+        $totalMontos = DB::table(DB::raw("({$union->toSql()}) as movimientos"))
+            ->mergeBindings($union)
+            ->sum('monto');
+
+        // === RESULTADOS PAGINADOS ===
+        $movimientos = DB::table(DB::raw("({$union->toSql()}) as movimientos"))
+            ->mergeBindings($union)
+            ->orderByDesc('fecha')
+            ->paginate($perPage);
+
+        // === Cargar documentos y usuarios ===
+        $documentos = \App\Models\DocumentoCompra::with('empresa')
+            ->whereIn('id', $movimientos->pluck('documento_compra_id'))
+            ->get()
+            ->keyBy('id');
+
+        $ultimoMovimientoPorDoc = \App\Models\MovimientoCompra::with('user')
+            ->whereIn('documento_compra_id', $movimientos->pluck('documento_compra_id'))
+            ->orderBy('id', 'desc')
+            ->get()
+            ->groupBy('documento_compra_id')
+            ->map(fn($items) => $items->first());
+
+        // === Enriquecer colección ===
+        $movimientos->getCollection()->transform(function ($m) use ($documentos, $ultimoMovimientoPorDoc) {
+            $m->documento = $documentos->get($m->documento_compra_id);
+            $m->usuario   = optional($ultimoMovimientoPorDoc->get($m->documento_compra_id)?->user);
+            return $m;
+        });
+
+        $empresas = \App\Models\Empresa::orderBy('Nombre')->get();
+
+        return view('panelfinanza.show_compra', compact('movimientos', 'empresas', 'totalMontos'));
+    }
+
 
 
 }

@@ -297,11 +297,6 @@ class DocumentoFinancieroController extends Controller
         ));
     }
 
-
-
-
-
-
     public function general(Request $request)
     {
         // 🚫 Restricción de acceso solo para usuario 405
@@ -685,60 +680,5 @@ class DocumentoFinancieroController extends Controller
 
         return back()->with('success', 'Cruce registrado correctamente.');
     }
-
-
-
-    // public function storePago(Request $request, DocumentoFinanciero $documento)
-    // {
-
-    //     Log::info('📦 storePago request', $request->all());
-
-
-    //     $request->validate([
-    //         'fecha_pago' => 'required|date|before_or_equal:today',
-    //     ], [
-    //         'fecha_pago.before_or_equal' => 'La fecha del pago no debe sobrepasar la fecha actual.',
-    //         'fecha_pago.required' => 'La fecha del pago es obligatoria.',
-    //     ]);
-
-
-
-
-    //     // Verificar si ya existe un pago registrado
-    //     if ($documento->pagos()->exists()) {
-    //         return back()->withErrors(['fecha_pago' => 'Este documento ya tiene un pago registrado.']);
-    //     }
-
-    //     // Crear el registro del pago
-    //     $documento->pagos()->create([
-    //         'fecha_pago' => $request->fecha_pago,
-    //         'user_id' => Auth::id(),
-    //     ]);
-
-    //     // Limpiar el status manual (ya no se usa "Pago" directamente)
-    //     $documento->update([
-    //         'status' => 'Pago',
-    //         'fecha_estado_manual' => $request->fecha_estado_manual,
-    //     ]);
-
-
-    //     // Registrar el movimiento
-    //     MovimientoDocumento::create([
-    //         'documento_financiero_id' => $documento->id,
-    //         'user_id' => Auth::id(),
-    //         'tipo_movimiento' => 'Pago registrado',
-    //         'descripcion' => "El documento fue marcado como Pago el {$request->fecha_pago}.",
-    //         'datos_nuevos' => ['fecha_pago' => $request->fecha_pago],
-    //     ]);
-
-    //     return back()->with('success', 'Pago registrado correctamente.');
-    // }
-
-
-
-
-
-
-
 
 }

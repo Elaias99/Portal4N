@@ -212,9 +212,14 @@ Route::resource('clasificacion-operativa', \App\Http\Controllers\ClasificacionOp
 
 
 
-///PanelFinanza//////
+///PanelFinanza//////Historial de Movimientos Ventas
 Route::get('/panelfinanza/show', [App\Http\Controllers\PanelFinanzaController::class, 'show'])
     ->name('panelfinanza.show');
+
+/// PanelFinanza /// Historial de Movimientos Compras
+Route::get('/panelfinanza/show-compras', [App\Http\Controllers\PanelFinanzaController::class, 'showCompras'])
+    ->name('panelfinanza.show_compras');
+
 
 Route::get('/panelfinanza/export', [App\Http\Controllers\PanelFinanzaController::class, 'export'])
     ->name('panelfinanza.export');
