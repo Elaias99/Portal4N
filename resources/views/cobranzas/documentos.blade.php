@@ -253,11 +253,21 @@
             </div>
 
             {{-- TARJETA DE GESTIÓN MASIVA --}}
-            <div style="width: 260px;">
+        
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body text-center d-flex flex-column justify-content-center">
                         <h6 class="fw-bold mb-3">Gestión Masiva</h6>
 
+                        {{-- 🔹 Nuevo botón de Historial de Movimientos --}}
+                        @if (Auth::id() != 375)
+                            <a href="{{ route('panelfinanza.show') }}" 
+                            class="btn btn-outline-secondary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
+                                <i class="fa-solid fa-clock-rotate-left"></i> 
+                                <span>Historial de Movimientos</span>
+                            </a>
+                        @endif
+
+                        {{-- 🔹 Importación de Excel --}}
                         @if (Auth::id() != 375)
                             <form action="{{ route('cobranzas.import') }}" method="POST" enctype="multipart/form-data" class="mb-3">
                                 @csrf
@@ -268,12 +278,14 @@
                             </form>
                         @endif
 
+                        {{-- 🔹 Exportación de Excel --}}
                         <a href="{{ route('documentos.export') }}" class="btn btn-outline-success btn-sm w-100">
                             <i class="bi bi-file-earmark-arrow-down"></i> Exportar Excel
                         </a>
                     </div>
                 </div>
-            </div>
+          
+
         </div>
 
         {{-- === TABLA DE REGISTROS === --}}

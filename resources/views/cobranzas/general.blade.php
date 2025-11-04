@@ -43,40 +43,6 @@
             </a>
         </div>
 
-
-
-        {{-- === Historial de Movimientos === --}}
-        @if (Auth::id() != 375)
-            <div class="col-md-3">
-                <a href="{{ route('panelfinanza.show') }}" class="text-decoration-none text-dark">
-                    <div class="card border-0 shadow-sm rounded-4 h-100 card-hover">
-                        <div class="card-body d-flex flex-column align-items-center justify-content-center py-4">
-                            <h6 class="fw-semibold mb-1">Historial de Movimientos</h6>
-                            <p class="text-muted small mb-0">Ver abonos y cruces en un solo listado</p>
-                        </div>
-                    </div>
-                </a>
-            </div>
-        @endif
-
-        <div class="col-md-3">
-            <a href="{{ route('panelfinanza.show_compras') }}" class="text-decoration-none text-dark">
-                <div class="card border-0 shadow-sm rounded-4 h-100 card-hover">
-                    <div class="card-body d-flex flex-column align-items-center justify-content-center py-4">
-                        <h6 class="fw-semibold mb-1">Historial de Compras</h6>
-                        <p class="text-muted small mb-0">Ver abonos, cruces y pagos de proveedores</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-
-
-
-
-
-
-
     </div>
 
 

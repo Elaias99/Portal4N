@@ -210,10 +210,19 @@
         </div>
 
         {{-- TARJETA DE GESTIÓN MASIVA --}}
-        <div style="width: 260px;">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <h6 class="fw-bold mb-3">Gestión Masiva</h6>
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                <h6 class="fw-bold mb-3">Gestión Masiva</h6>
+
+
+
+                @if (Auth::id() != 375)
+                    {{-- Nuevo botón Historial --}}
+                    <a href="{{ route('panelfinanza.show_compras') }}" 
+                    class="btn btn-outline-secondary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left"></i> 
+                        <span>Historial de Compras</span>
+                    </a>
 
                     <form action="{{ route('finanzas_compras.import') }}" method="POST" enctype="multipart/form-data" class="mb-3">
                         @csrf
@@ -222,13 +231,17 @@
                             <i class="bi bi-file-earmark-arrow-up"></i> Importar Excel
                         </button>
                     </form>
+                @endif
 
-                    <a href="{{ route('finanzas_compras.export') }}" class="btn btn-outline-success btn-sm w-100">
-                        <i class="bi bi-file-earmark-arrow-down"></i> Exportar Excel
-                    </a>
-                </div>
+
+
+
+                <a href="{{ route('finanzas_compras.export') }}" class="btn btn-outline-success btn-sm w-100">
+                    <i class="bi bi-file-earmark-arrow-down"></i> Exportar Excel
+                </a>
             </div>
         </div>
+
 
     </div>
 
@@ -373,12 +386,20 @@
                                     <td>{{ $doc->fecha_estado_manual ?? '-' }}</td>
                                     <td>
                                         <span class="badge {{ $color }}">{{ $estadoMostrar }}</span><br>
-                                        <button type="button"
-                                                class="btn btn-outline-secondary btn-sm mt-1 px-2 py-0"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#modalEstadoCompra-{{ $doc->id }}">
-                                            Editar
-                                        </button>
+
+
+                                        @if (Auth::id() != 375)
+                                            <button type="button"
+                                                    class="btn btn-outline-secondary btn-sm mt-1 px-2 py-0"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#modalEstadoCompra-{{ $doc->id }}">
+                                                Editar
+                                            </button>
+                                        @endif
+
+
+
+
                                         @include('cobranzas.finanzas_compras.modal_estado', ['doc' => $doc])
                                     </td>
                                     <td>{{ $doc->tipoDocumento?->nombre ?? '-' }}</td>

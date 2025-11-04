@@ -6,8 +6,8 @@
     {{-- ====== ENCABEZADO ====== --}}
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 class="fw-semibold text-dark mb-0">Historial de Movimientos</h4>
-        <a href="{{ route('cobranzas.general') }}" class="btn btn-outline-secondary btn-sm">
-            Volver al Panel Principal
+        <a href="{{ route('cobranzas.documentos') }}" class="btn btn-outline-secondary btn-sm">
+            Volver 
         </a>
     </div>
 
