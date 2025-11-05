@@ -282,6 +282,33 @@
                         <a href="{{ route('documentos.export') }}" class="btn btn-outline-success btn-sm w-100">
                             <i class="bi bi-file-earmark-arrow-down"></i> Exportar Excel
                         </a>
+
+
+
+
+
+                        {{-- PAGO MASIVO --}}
+
+
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalPagosMasivos">
+                            <i class="bi bi-cash-stack"></i>
+                            <span>Pagos Masivos</span>
+                        </button>
+
+
+
+
+
+
+
+
+
+
+
+
                     </div>
                 </div>
           
@@ -446,6 +473,7 @@
     </script>
 
 @include('cobranzas._modal_create_cobranza')
+@include('cobranzas.modal_pagos_masivos')
 
 
 

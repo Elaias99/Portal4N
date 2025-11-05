@@ -159,4 +159,98 @@ class PagoDocumentoController extends Controller
     }
 
 
+
+
+
+
+
+    public function storeMasivo(Request $request)
+    {
+        $request->validate([
+            'fecha_pago' => 'required|date|before_or_equal:today',
+            'documentos' => 'required|array|min:1',
+            'documentos.*' => 'integer|exists:documentos_financieros,id',
+        ], [
+            'fecha_pago.before_or_equal' => 'La fecha del pago no debe sobrepasar la fecha actual.',
+            'fecha_pago.required' => 'La fecha del pago es obligatoria.',
+            'documentos.required' => 'Debes seleccionar al menos un documento.',
+        ]);
+
+        $ids = $request->input('documentos');
+        $fechaPago = $request->input('fecha_pago');
+
+        $procesados = 0;
+        $duplicados = 0;
+
+        foreach ($ids as $id) {
+            $documento = DocumentoFinanciero::find($id);
+
+            // 🚫 Saltar si ya tiene un pago registrado
+            if ($documento->pagos()->exists()) {
+                $duplicados++;
+                continue;
+            }
+
+            // ✅ Crear el pago
+            $documento->pagos()->create([
+                'fecha_pago' => $fechaPago,
+                'user_id' => Auth::id(),
+            ]);
+
+            // ✅ Actualizar estado y saldo
+            $documento->update([
+                'status' => 'Pago',
+                'fecha_estado_manual' => $fechaPago,
+                'saldo_pendiente' => 0,
+            ]);
+
+            // ✅ Registrar movimiento
+            MovimientoDocumento::create([
+                'documento_financiero_id' => $documento->id,
+                'user_id' => Auth::id(),
+                'tipo_movimiento' => 'Pago registrado (masivo)',
+                'descripcion' => "Pago masivo registrado el {$fechaPago}.",
+                'datos_nuevos' => ['fecha_pago' => $fechaPago],
+            ]);
+
+            $procesados++;
+        }
+
+        $mensaje = "Pagos registrados correctamente: {$procesados}.";
+        if ($duplicados > 0) {
+            $mensaje .= " {$duplicados} documentos ya tenían pago registrado y fueron omitidos.";
+        }
+
+        return back()->with('success', $mensaje);
+    }
+
+
+
+
+    public function buscarDocumentos(Request $request)
+    {
+        $filtro = $request->get('filtro');
+
+        $documentos = DocumentoFinanciero::where(function ($query) use ($filtro) {
+                $query->where('folio', 'like', "%{$filtro}%")
+                    ->orWhere('razon_social', 'like', "%{$filtro}%");
+            })
+            ->get(); // 👈 sin limit()
+
+        return response()->json($documentos);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
