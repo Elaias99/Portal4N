@@ -14,12 +14,18 @@ class DocumentoCompraExport implements FromCollection, WithHeadings, WithMapping
 {
     use Exportable;
 
+    protected $documentos;
+
+    public function __construct($documentos)
+    {
+        $this->documentos = $documentos;
+    }
     /**
      * 🔹 Colección de registros a exportar
      */
     public function collection()
     {
-        return DocumentoCompra::with(['empresa', 'tipoDocumento'])->get();
+        return $this->documentos;
     }
 
     /**

@@ -268,6 +268,13 @@ Route::resource('tallas', 'App\Http\Controllers\TallaController')->middleware('a
 Route::resource('hijos', 'App\Http\Controllers\HijoController')->middleware('auth');
 Route::resource('equipos', EquipoController::class);
 
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////RCV VENTAS////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Importar archivo Excel
 Route::post('/cobranzas/documentos/import', [DocumentoFinancieroController::class, 'import'])
     ->name('cobranzas.import');
@@ -301,8 +308,6 @@ Route::post('/documentos/{documento}/abonos', [DocumentoFinancieroController::cl
 Route::post('/documentos/{documento}/cruces', [DocumentoFinancieroController::class, 'storeCruce'])
     ->name('documentos.cruces.store');
 
-// Route::post('/documentos/{documento}/pago', [App\Http\Controllers\DocumentoFinancieroController::class, 'storePago'])
-//     ->name('documentos.pagos.store');
 
 Route::get('/cobranzas/general', [App\Http\Controllers\DocumentoFinancieroController::class, 'general'])
         ->name('cobranzas.general');
@@ -312,11 +317,16 @@ Route::get('/cobranzas/general', [App\Http\Controllers\DocumentoFinancieroContro
 Route::get('/cobranzas/documentos/column-filter', [DocumentoFinancieroController::class, 'filtrarColumnas'])
     ->name('cobranzas.column_filter');
 
-    
+
+///////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////// Cobranzas ////////////////////////////////////////////// 
+///////////////////////////////////////////////////////////////////////////////////////////    
+
 Route::get('/cobranzas/export', [CobranzaController::class, 'export'])->name('cobranzas.export');
 Route::resource('cobranzas', CobranzaController::class);
 
-
+///////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////
 
 
 

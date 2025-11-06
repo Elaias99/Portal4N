@@ -70,7 +70,6 @@ class DocumentoFinancieroController extends Controller
         // === OBTENER DATOS BASE ===
         $documentoFinancieros = $query
             ->orderByRaw('ISNULL(fecha_vencimiento), fecha_vencimiento DESC')
-            ->orderBy('fecha_docto', 'desc')
             ->get();
 
 
@@ -538,11 +537,62 @@ class DocumentoFinancieroController extends Controller
     }
 
 
-    public function export()
+    public function export(Request $request)
     {
+        $perPage = 10; // igual que el index()
+        $page = $request->get('page', 1);
+        $offset = ($page - 1) * $perPage;
+
+        // === Reutilizar la query base del index ===
+        $query = DocumentoFinanciero::with(['empresa', 'abonos', 'cruces', 'tipoDocumento', 'referencia', 'referenciados', 'cobranza']);
+
+        // Aplicar mismos filtros dinámicamente
+        if ($request->filled('razon_social')) {
+            $query->where('razon_social', 'like', "%{$request->razon_social}%");
+        }
+
+        if ($request->filled('rut_cliente')) {
+            $query->where('rut_cliente', 'like', "%{$request->rut_cliente}%");
+        }
+
+        if ($request->filled('folio')) {
+            $query->where('folio', 'like', "%{$request->folio}%");
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status_original', $request->status);
+        }
+
+        if ($request->filled('estado_pago')) {
+            if ($request->estado_pago === 'Pagado') {
+                $query->whereHas('pagos');
+            } elseif ($request->estado_pago === 'Pendiente') {
+                $query->whereDoesntHave('pagos');
+            }
+        }
+
+        // === Fechas ===
+        if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
+            $query->whereBetween('fecha_docto', [$request->fecha_inicio, $request->fecha_fin]);
+        }
+
+        if ($request->filled('vencimiento_inicio') && $request->filled('vencimiento_fin')) {
+            $query->whereBetween('fecha_vencimiento', [$request->vencimiento_inicio, $request->vencimiento_fin]);
+        }
+
+        // === Orden idéntico al index() ===
+        $query->orderByRaw('ISNULL(fecha_vencimiento), fecha_vencimiento DESC');
+
+        // === Paginación manual (solo los registros de la página actual) ===
+        $documentos = $query->skip($offset)->take($perPage)->get();
+
+        
+
+        // === Exportación ===
         $fecha = now()->format('Y-m-d_H-i-s');
-        return Excel::download(new DocumentosExport, "documentos_financieros_{$fecha}.xlsx");
+        return Excel::download(new DocumentosExport($documentos), "documentos_financieros_pagina_{$page}_{$fecha}.xlsx");
     }
+
 
 
     public function show(DocumentoFinanciero $documento)

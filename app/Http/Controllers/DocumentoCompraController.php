@@ -403,10 +403,73 @@ class DocumentoCompraController extends Controller
 
 
 
-    public function export()
+    public function export(Request $request)
     {
-        return Excel::download(new DocumentoCompraExport, 'documentos_compras.xlsx');
+        $perPage = 10; // igual que el index()
+        $page = $request->get('page', 1);
+        $offset = ($page - 1) * $perPage;
+
+        // === Reutilizar la query base del index ===
+        $query = DocumentoCompra::with([
+            'empresa',
+            'tipoDocumento',
+            'movimientos',
+            'abonos',
+            'cruces',
+            'pagos',
+            'prontoPagos'
+        ]);
+
+        // === Aplicar mismos filtros ===
+        if ($request->filled('rut_proveedor')) {
+            $query->where('rut_proveedor', 'like', "%{$request->rut_proveedor}%");
+        }
+
+        if ($request->filled('razon_social')) {
+            $query->where('razon_social', 'like', "%{$request->razon_social}%");
+        }
+
+        if ($request->filled('folio')) {
+            $query->where('folio', 'like', "%{$request->folio}%");
+        }
+
+        if ($request->filled('estado')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('status_original', $request->estado)
+                ->orWhere('estado', $request->estado);
+            });
+        }
+
+        if ($request->filled('fecha_docto_inicio') && $request->filled('fecha_docto_fin')) {
+            $query->whereBetween('fecha_docto', [$request->fecha_docto_inicio, $request->fecha_docto_fin]);
+        }
+
+        if ($request->filled('fecha_venc_inicio') && $request->filled('fecha_venc_fin')) {
+            $query->whereBetween('fecha_vencimiento', [$request->fecha_venc_inicio, $request->fecha_venc_fin]);
+        }
+
+        if ($request->filled('estado_pago')) {
+            if ($request->estado_pago === 'Pagado') {
+                $query->whereHas('pagos');
+            } elseif ($request->estado_pago === 'Pendiente') {
+                $query->whereDoesntHave('pagos');
+            }
+        }
+
+        // === Aplicar orden ===
+        $query->orderBy('fecha_vencimiento', 'desc');
+
+        // === Obtener solo la página actual ===
+        $documentos = $query->skip($offset)->take($perPage)->get();
+
+        // === Exportar a Excel ===
+        $fecha = now()->format('Y-m-d_H-i-s');
+        return Excel::download(
+            new DocumentoCompraExport($documentos),
+            "documentos_compras_pagina_{$page}_{$fecha}.xlsx"
+        );
     }
+
 
 
     public function updateEstado(Request $request, $id)

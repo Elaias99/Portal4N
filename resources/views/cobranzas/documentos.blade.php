@@ -279,24 +279,27 @@
                         @endif
 
                         {{-- 🔹 Exportación de Excel --}}
-                        <a href="{{ route('documentos.export') }}" class="btn btn-outline-success btn-sm w-100">
+                        <a href="{{ route('documentos.export', request()->query()) }}" 
+                        class="btn btn-outline-success btn-sm w-100">
                             <i class="bi bi-file-earmark-arrow-down"></i> Exportar Excel
                         </a>
 
 
 
+                        <br>
 
 
                         {{-- PAGO MASIVO --}}
 
-
-                        <button type="button"
-                                class="btn btn-outline-primary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
-                                data-bs-toggle="modal"
-                                data-bs-target="#modalPagosMasivos">
-                            <i class="bi bi-cash-stack"></i>
-                            <span>Pagos Masivos</span>
-                        </button>
+                        @if (Auth::id() == 1)
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalPagosMasivos">
+                                <i class="bi bi-cash-stack"></i>
+                                <span>Pagos Masivos</span>
+                            </button>
+                        @endif
 
 
 

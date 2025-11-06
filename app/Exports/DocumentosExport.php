@@ -10,21 +10,19 @@ use Carbon\Carbon;
 
 class DocumentosExport implements FromCollection, WithHeadings, WithMapping
 {
+
+    protected $documentos;
+
+    public function __construct($documentos)
+    {
+        $this->documentos = $documentos;
+    }
     /**
      * 🔹 Retorna la colección de registros a exportar
      */
     public function collection()
     {
-        // ✅ Cargamos todas las relaciones necesarias
-        return DocumentoFinanciero::with([
-            'empresa',
-            'abonos',
-            'cruces',
-            'tipoDocumento',
-            'referencia',      // Documento referenciado (ej: factura)
-            'referenciados',   // Documentos que lo referencian (ej: notas de crédito)
-            'cobranza'
-        ])->get();
+        return $this->documentos;
     }
 
     /**

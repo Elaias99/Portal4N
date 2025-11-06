@@ -236,9 +236,11 @@
 
 
 
-                <a href="{{ route('finanzas_compras.export') }}" class="btn btn-outline-success btn-sm w-100">
+                <a href="{{ route('finanzas_compras.export', request()->query()) }}" 
+                class="btn btn-outline-success btn-sm w-100">
                     <i class="bi bi-file-earmark-arrow-down"></i> Exportar Excel
                 </a>
+
             </div>
         </div>
 

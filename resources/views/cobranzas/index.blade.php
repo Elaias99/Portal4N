@@ -84,9 +84,12 @@
                                 <td class="text-center">{{ $cobranza->creditos }}</td>
 
                                 <td>
-                                    <a href="{{ route('cobranzas.edit', $cobranza->id) }}" class="btn btn-sm btn-warning">
-                                        Editar
-                                    </a>
+                                    @if (Auth::id() != 375)
+
+                                        <a href="{{ route('cobranzas.edit', $cobranza->id) }}" class="btn btn-sm btn-warning">
+                                            Editar
+                                        </a>
+                                    @endif
 
                                     <form action="{{ route('cobranzas.destroy', $cobranza->id) }}" method="POST" style="display:inline;">
                                         @csrf
