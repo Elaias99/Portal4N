@@ -169,6 +169,10 @@ class DocumentoFinanciero extends Model
             return 0;
         }
 
+        if ($this->status === 'Pronto pago') {
+            return 0;
+        }
+
         // 🟣 Si es una Nota de Crédito Electrónica → saldo = 0
         if ($this->tipo_documento_id == 61 ||
             (isset($this->tipoDocumento) && str_contains(strtolower($this->tipoDocumento->nombre), 'nota de crédito'))) {

@@ -111,6 +111,10 @@ class DocumentoCompra extends Model
             return 0;
         }
 
+        if ($this->estado === 'Pronto pago') {
+            return 0;
+        }
+
         // 🔹 Monto base del documento
         $saldo = $this->monto_total ?? 0;
 

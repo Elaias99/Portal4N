@@ -34,35 +34,38 @@ class ProntoPagoController extends Controller
             $documento = DocumentoFinanciero::findOrFail($documentoId);
         }
 
-
-        // Evitar duplicar registros
+        // 🚫 Evitar duplicar registros
         if ($documento->prontoPagos()->exists()) {
             return back()->withErrors(['fecha_pronto_pago' => 'Ya existe un registro de pronto pago para este documento.']);
         }
 
         // ✅ Crear el pronto pago
         $fkCampo = $tipo === 'ventas' ? 'documento_financiero_id' : 'documento_compra_id';
-
         $documento->prontoPagos()->create([
             $fkCampo => $documento->id,
             'fecha_pronto_pago' => $request->fecha_pronto_pago,
             'user_id' => Auth::id(),
         ]);
 
-        // ✅ Actualizar el estado del documento
+        // ✅ Guardar estado manual y saldo pendiente en 0 (igual que en PagoDocumentoController)
+        $campoEstado = $tipo === 'ventas' ? 'status' : 'estado';
         $documento->update([
-            $tipo === 'ventas' ? 'status' : 'estado' => 'Pronto pago',
+            $campoEstado => 'Pronto pago',
             'fecha_estado_manual' => now(),
+            'saldo_pendiente' => 0,
         ]);
 
-        // ✅ Registrar el movimiento según el tipo de documento
+        // ✅ Registrar movimiento según el tipo de documento
         if ($tipo === 'ventas') {
             MovimientoDocumento::create([
                 'documento_financiero_id' => $documento->id,
                 'user_id' => Auth::id(),
                 'tipo_movimiento' => 'Registro de Pronto pago',
                 'descripcion' => "El documento fue marcado como 'Pronto pago' el {$request->fecha_pronto_pago}.",
-                'datos_nuevos' => ['fecha_pronto_pago' => $request->fecha_pronto_pago],
+                'datos_nuevos' => [
+                    'fecha_pronto_pago' => $request->fecha_pronto_pago,
+                    'saldo_pendiente' => 0,
+                ],
             ]);
         } else {
             MovimientoCompra::create([
@@ -74,8 +77,9 @@ class ProntoPagoController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Pronto pago registrado correctamente.');
+        return back()->with('success', 'Pronto pago registrado correctamente y saldo pendiente actualizado a 0.');
     }
+
 
     /**
      * Eliminar un registro de Pronto Pago
