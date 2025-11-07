@@ -358,21 +358,33 @@ class DocumentoCompraController extends Controller
 
         
         // ⚡️ Cobranzas faltantes
+        // ⚡️ Cobranzas faltantes (flujo COMPRAS)
         if (count($import->sinCobranza) > 0) {
+
+            $mensajes = [];
 
             foreach ($import->sinCobranza as $item) {
                 $mensajes[] = "No existe cobranza para la razón social '{$item['razon_social']}' (RUT: {$item['rut_proveedor']}), 
                 folio {$item['folio']}. <a href='#' 
-                class='btn-link text-primary crear-cobranza-link' 
+                class='btn-link text-primary crear-compra-link' 
                 data-rut='{$item['rut_proveedor']}' 
-                data-razon='{$item['razon_social']}'>Cree la cobranza aquí</a>";
+                data-razon='{$item['razon_social']}'>
+                Cree la cobranza aquí</a>";
             }
 
-            session(['sin_cobranza' => $import->sinCobranza]);
+            // 🧠 Guardamos los pendientes para el flujo guiado
+            session([
+                'sin_compra_pendientes' => $import->sinCobranza
+            ]);
+
+            // Opcional: limpiar las sesiones del otro flujo
+            session()->forget('sin_cobranza');
+            session()->forget('sin_cobranza_pendientes');
 
         } else {
-            session()->forget('sin_cobranza');
+            session()->forget('sin_compra_pendientes');
         }
+
 
 
         // 🟢 Caso 1: Importación exitosa, sin duplicados

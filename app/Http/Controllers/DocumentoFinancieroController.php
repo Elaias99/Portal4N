@@ -364,6 +364,7 @@ class DocumentoFinancieroController extends Controller
         return view('cobranzas.general', compact('documentos', 'documentoSeleccionado'));
     }
 
+
     public function import(Request $request)
     {
         $request->validate([
@@ -390,7 +391,6 @@ class DocumentoFinancieroController extends Controller
 
         $import->afterImport();
 
-
         $mensajes = [];
 
         // 🛑 1️⃣ Errores estructurales
@@ -415,22 +415,23 @@ class DocumentoFinancieroController extends Controller
                         . implode(', ', $import->duplicados);
         }
 
-        // ⚡️ 3️⃣ Cobranzas faltantes
+        // ⚡️ 3️⃣ Cobranzas faltantes (flujo guiado sin mostrar alerta)
         if (count($import->sinCobranza) > 0) {
 
-            foreach ($import->sinCobranza as $item) {
-                $mensajes[] = "No existe cobranza para la razón social '{$item['razon_social']}' (RUT: {$item['rut_cliente']}), 
-                folio {$item['folio']}. <a href='#' 
-                class='btn-link text-primary crear-cobranza-link' 
-                data-rut='{$item['rut_cliente']}' 
-                data-razon='{$item['razon_social']}'>Cree la cobranza aquí</a>";
-            }
+            // 💾 Guardar listas en sesión, pero sin mostrar mensajes duplicados
+            session([
+                'sin_cobranza_guiada' => $import->sinCobranza,
+                'sin_cobranza_pendientes' => $import->sinCobranza,
+            ]);
 
-            // 💾 Guardar en sesión para flujo guiado
-            session(['sin_cobranza' => $import->sinCobranza]);
+            // Limpia alertas previas
+            session()->forget(['sin_cobranza', 'detalles_errores']);
+
+            return redirect()->route('cobranzas.documentos')
+                ->with('info', 'Se detectaron nuevos clientes sin cobranza. El sistema abrirá el formulario para crearlos.');
         } else {
-            // Si no hay pendientes, limpiar sesión anterior
-            session()->forget('sin_cobranza');
+            // Si no hay pendientes, limpiar sesiones previas
+            session()->forget(['sin_cobranza', 'sin_cobranza_guiada', 'sin_cobranza_pendientes']);
         }
 
         // 🧾 4️⃣ Notas de crédito
@@ -462,9 +463,6 @@ class DocumentoFinancieroController extends Controller
         return redirect()->route('cobranzas.documentos')
             ->with('success', 'Archivo importado correctamente.');
     }
-
-
-
 
 
     private function normalizarRut($rut)

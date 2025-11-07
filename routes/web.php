@@ -323,6 +323,12 @@ Route::get('/cobranzas/documentos/column-filter', [DocumentoFinancieroController
 ///////////////////////////////////////////////////////////////////////////////////////////    
 
 Route::get('/cobranzas/export', [CobranzaController::class, 'export'])->name('cobranzas.export');
+Route::post('/cobranzas/reprocesar-pendientes', [CobranzaController::class, 'reprocesarPendientes'])
+     ->name('cobranzas.reprocesar-pendientes');
+     
+Route::post('cobranzas/reprocesar-pendientes-compras', [CobranzaController::class, 'reprocesarPendientesCompras'])
+    ->name('cobranzas.reprocesar-pendientes-compras');
+
 Route::resource('cobranzas', CobranzaController::class);
 
 ///////////////////////////////////////////////////////////////////////////////////////////

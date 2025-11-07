@@ -3,6 +3,7 @@
 namespace App\Imports;
 
 use App\Models\DocumentoCompra;
+use App\Models\Cobranza;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Carbon\Carbon;
@@ -86,23 +87,89 @@ class ComprasImport implements ToModel, WithHeadingRow
 
 
         //  Buscar cobranza asociada (por RUT o razón social)
-        $cobranza = \App\Models\Cobranza::where('rut_cliente', $row['rut_proveedor'] ?? null)->first();
 
-        if (!$cobranza) {
-            // Evitar duplicados por RUT
-            $yaRegistrado = collect($this->sinCobranza)
-                ->contains(fn($item) => $item['rut_proveedor'] === ($row['rut_proveedor'] ?? null));
 
-            if (!$yaRegistrado) {
-                $this->sinCobranza[] = [
-                    'razon_social' => $row['razon_social'],
-                    'rut_proveedor' => $row['rut_proveedor'],
-                    'folio' => $row['folio'],
-                ];
-            }
+// ...
 
-            return null; // No crear el documento
+    // 🔍 Buscar cobranza asociada (por RUT del proveedor)
+    $cobranza = Cobranza::where('rut_cliente', $row['rut_proveedor'] ?? null)->first();
+
+    // 🔍 Determinar tipo de documento
+    $tipoDocumento = \App\Models\TipoDocumento::find((int) $row['tipo_doc']);
+
+    if (!$cobranza) {
+        // Evitar duplicados por RUT
+        $yaRegistrado = collect($this->sinCobranza)
+            ->contains(fn($item) => $item['rut_proveedor'] === ($row['rut_proveedor'] ?? null));
+
+        if (!$yaRegistrado) {
+            $this->sinCobranza[] = [
+                'razon_social'   => $row['razon_social'] ?? '(Sin nombre)',
+                'rut_proveedor'  => $row['rut_proveedor'] ?? '(Sin RUT)',
+                'folio'          => $row['folio'] ?? null,
+                'fecha_docto'    => $row['fecha_docto'] ?? now(),
+                'monto'          => $row['monto_total'] ?? 0,
+            ];
         }
+
+        // 🧩 Crear el documento con cobranza_id = null (para ser reprocesado luego)
+        \App\Models\DocumentoCompra::updateOrCreate(
+            ['folio' => $row['folio']],
+            [
+                'empresa_id'        => $this->empresaId ?? null,
+                'tipo_documento_id' => $tipoDocumento?->id,
+                'nro'               => $row['nro'] ?? null,
+                'tipo_doc'          => $row['tipo_doc'] ?? null,
+                'tipo_compra'       => $row['tipo_compra'] ?? null,
+                'rut_proveedor'     => $row['rut_proveedor'],
+                'razon_social'      => $row['razon_social'],
+                'fecha_docto'       => $this->transformDate($row['fecha_docto']),
+                'fecha_recepcion'   => $this->transformDate($row['fecha_recepcion']),
+                'fecha_acuse'       => $this->transformDate($row['fecha_acuse']),
+                'monto_exento'      => $row['monto_exento'] ?? 0,
+                'monto_neto'        => $row['monto_neto'] ?? 0,
+                'monto_iva_recuperable' => $row['monto_iva_recuperable'] ?? 0,
+                'monto_iva_no_recuperable' => $row['monto_iva_no_recuperable'] ?? 0,
+                'codigo_iva_no_rec' => $row['codigo_iva_no_rec'] ?? null,
+                'monto_total'       => $row['monto_total'] ?? 0,
+                'monto_neto_activo_fijo' => $row['monto_neto_activo_fijo'] ?? 0,
+                'iva_activo_fijo'   => $row['iva_activo_fijo'] ?? 0,
+                'iva_uso_comun'     => $row['iva_uso_comun'] ?? 0,
+                'impto_sin_derecho_credito' => $row['impto_sin_derecho_credito'] ?? 0,
+                'iva_no_retenido'   => $row['iva_no_retenido'] ?? 0,
+                'tabacos_puros'     => $row['tabacos_puros'] ?? 0,
+                'tabacos_cigarrillos' => $row['tabacos_cigarrillos'] ?? 0,
+                'tabacos_elaborados' => $row['tabacos_elaborados'] ?? 0,
+                'nce_nde_sobre_fact_compra' => $row['nce_nde_sobre_fact_compra'] ?? null,
+                'codigo_otro_impuesto' => $row['codigo_otro_impuesto'] ?? null,
+                'valor_otro_impuesto'  => $row['valor_otro_impuesto'] ?? 0,
+                'tasa_otro_impuesto'   => $row['tasa_otro_impuesto'] ?? 0,
+                'estado'            => 'Pendiente',
+                'fecha_vencimiento' => isset($cobranza)
+                    ? Carbon::parse($this->transformDate($row['fecha_docto']))
+                        ->addDays((int) ($cobranza->creditos ?? 30))
+                        ->format('Y-m-d')
+                    : Carbon::parse($this->transformDate($row['fecha_docto']))
+                        ->addDays(30)
+                        ->format('Y-m-d'),
+
+                'status_original'   => 'Pendiente',
+                'cobranza_id'       => null,
+            ]
+        );
+
+
+        Log::info('🟡 [ComprasImport] DocumentoCompra sin cobranza creado', [
+            'folio' => $row['folio'],
+            'rut_proveedor' => $row['rut_proveedor'],
+            'razon_social' => $row['razon_social'],
+            'tipo_documento_id' => $tipoDocumento?->id,
+        ]);
+
+        return null;
+    }
+
+
 
 
 

@@ -49,7 +49,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
     public function model(array $row)
     {
-        $tipoDocumento = \App\Models\TipoDocumento::find((int) $row['tipo_doc']);
+        
 
         // 🔹 Evitar procesar filas completamente vacías
         if (empty(array_filter($row))) {
@@ -87,6 +87,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
         // Buscar cobranza asociada
         $cobranza = Cobranza::where('rut_cliente', $row['rut_cliente'] ?? null)->first();
 
+        $tipoDocumento = \App\Models\TipoDocumento::find((int) $row['tipo_doc']);
 
         if (!$cobranza) {
             // Evitar duplicados por RUT
@@ -98,11 +99,79 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                     'razon_social' => $row['razon_social'],
                     'rut_cliente' => $row['rut_cliente'],
                     'folio' => $folioExcel,
+                    'fecha_docto' => $row['fecha_docto'] ?? now(),
+                    'monto' => $row['monto_total'] ?? 0,
                 ];
             }
 
+            // 🧩 Crear el documento con cobranza_id = null (para ser reprocesado luego)
+            \App\Models\DocumentoFinanciero::updateOrCreate(
+                ['folio' => $folioExcel],
+                [
+                    'empresa_id'              => $this->empresaId ?? null,
+                    'tipo_documento_id'       => $tipoDocumento?->id ?? null,
+                    'nro'                     => $row['nro'] ?? null,
+                  
+                    'tipo_venta'              => $row['tipo_venta'] ?? null,
+                    'rut_cliente'             => $row['rut_cliente'] ?? null,
+                    'razon_social'            => $row['razon_social'] ?? null,
+                    'fecha_docto'             => $this->transformDate($row['fecha_docto']),
+                    'fecha_recepcion'         => $this->transformDate($row['fecha_recepcion']),
+                    'fecha_acuse_recibo'      => $this->transformDate($row['fecha_acuse_recibo']),
+                    'fecha_reclamo'           => $this->transformDate($row['fecha_reclamo']),
+                    'monto_exento'            => $this->cleanNumber($row['monto_exento']),
+                    'monto_neto'              => $this->cleanNumber($row['monto_neto']),
+                    'monto_iva'               => $this->cleanNumber($row['monto_iva']),
+                    'monto_total'             => $this->cleanNumber($row['monto_total']),
+                    'iva_retenido_total'      => $this->cleanNumber($row['iva_retenido_total']),
+                    'iva_retenido_parcial'    => $this->cleanNumber($row['iva_retenido_parcial']),
+                    'iva_no_retenido'         => $this->cleanNumber($row['iva_no_retenido']),
+                    'iva_propio'              => $this->cleanNumber($row['iva_propio']),
+                    'iva_terceros'            => $this->cleanNumber($row['iva_terceros']),
+                    'rut_emisor_liquid_factura'      => $row['rut_emisor_liquid_factura'] ?? null,
+                    'neto_comision_liquid_factura'   => $this->cleanNumber($row['neto_comision_liquid_factura']),
+                    'exento_comision_liquid_factura' => $this->cleanNumber($row['exento_comision_liquid_factura']),
+                    'iva_comision_liquid_factura'    => $this->cleanNumber($row['iva_comision_liquid_factura']),
+                    'iva_fuera_de_plazo'             => $this->cleanNumber($row['iva_fuera_de_plazo']),
+                    'tipo_docto_referencia'          => $row['tipo_docto_referencia'] ?? null,
+                    'folio_docto_referencia'         => $row['folio_docto_referencia'] ?? null,
+                    'num_ident_receptor_extranjero'  => $row['num_ident_receptor_extranjero'] ?? null,
+                    'nacionalidad_receptor_extranjero' => $row['nacionalidad_receptor_extranjero'] ?? null,
+                    'credito_empresa_constructora'   => $this->cleanNumber($row['credito_empresa_constructora']),
+                    'impto_zona_franca_ley_18211'    => $this->cleanNumber($row['impto_zona_franca_ley_18211']),
+                    'garantia_dep_envases'           => $this->cleanNumber($row['garantia_dep_envases']),
+                    'indicador_venta_sin_costo'      => $row['indicador_venta_sin_costo'] ?? null,
+                    'indicador_servicio_periodico'   => $row['indicador_servicio_periodico'] ?? null,
+                    'monto_no_facturable'            => $this->cleanNumber($row['monto_no_facturable']),
+                    'total_monto_periodo'            => $this->cleanNumber($row['total_monto_periodo']),
+                    'venta_pasajes_transporte_nacional'      => $this->cleanNumber($row['venta_pasajes_transporte_nacional']),
+                    'venta_pasajes_transporte_internacional' => $this->cleanNumber($row['venta_pasajes_transporte_internacional']),
+                    'numero_interno'                 => $row['numero_interno'] ?? null,
+                    'codigo_sucursal'                => $row['codigo_sucursal'] ?? null,
+                    'nce_nde_sobre_fact_compra'      => $row['nce_o_nde_sobre_fact_de_compra'] ?? null,
+                    'codigo_otro_imp'                => $row['codigo_otro_imp'] ?? null,
+                    'valor_otro_imp'                 => $this->cleanNumber($row['valor_otro_imp']),
+                    'tasa_otro_imp'                  => $this->cleanNumber($row['tasa_otro_imp']),
+                    'estado'                         => 'Pendiente',
+                    'status'                         => 'Pendiente',
+                    'status_original'                => 'Pendiente',
+                    'cobranza_id'                    => null,
+                    
+                    'fecha_vencimiento' => $cobranza
+                        ? $this->calcularFechaVencimiento(
+                            Carbon::parse($this->transformDate($row['fecha_docto']))->toDateString(),
+                            $cobranza->creditos
+                        )
+                        : null,
+
+
+                ]
+            );
+
+
             return null;
         }
+
 
 
         $fechaDocto = $this->transformDate($row['fecha_docto']);
