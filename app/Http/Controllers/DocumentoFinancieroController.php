@@ -540,14 +540,22 @@ class DocumentoFinancieroController extends Controller
     ///////////////////////////////////////////////////// 
     public function export(Request $request)
     {
-        $perPage = 10; // igual que el index()
+        $perPage = 10; // igual que en el index()
         $page = $request->get('page', 1);
         $offset = ($page - 1) * $perPage;
 
-        // === Reutilizar la query base del index ===
-        $query = DocumentoFinanciero::with(['empresa', 'abonos', 'cruces', 'tipoDocumento', 'referencia', 'referenciados', 'cobranza']);
+        // === 1️⃣ Construcción de la query base ===
+        $query = DocumentoFinanciero::with([
+            'empresa',
+            'abonos',
+            'cruces',
+            'tipoDocumento',
+            'referencia',
+            'referenciados',
+            'cobranza'
+        ]);
 
-        // Aplicar mismos filtros dinámicamente
+        // === 2️⃣ Filtros base (iguales al index) ===
         if ($request->filled('razon_social')) {
             $query->where('razon_social', 'like', "%{$request->razon_social}%");
         }
@@ -564,15 +572,7 @@ class DocumentoFinancieroController extends Controller
             $query->where('status_original', $request->status);
         }
 
-        if ($request->filled('estado_pago')) {
-            if ($request->estado_pago === 'Pagado') {
-                $query->whereHas('pagos');
-            } elseif ($request->estado_pago === 'Pendiente') {
-                $query->whereDoesntHave('pagos');
-            }
-        }
-
-        // === Filtros desde filtrarColumnas (si existen) ===
+        // === 3️⃣ Filtros adicionales (desde filtrarColumnas) ===
         if ($request->filled('columna') && $request->filled('valor')) {
             switch ($request->columna) {
                 case 'razon_social':
@@ -600,29 +600,24 @@ class DocumentoFinancieroController extends Controller
             }
         }
 
-
-
-
-
-
-
-
-
-        // === Fechas ===
+        // === 4️⃣ Filtros de fechas ===
         if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
             $query->whereBetween('fecha_docto', [$request->fecha_inicio, $request->fecha_fin]);
+        } elseif ($request->filled('fecha_inicio')) {
+            $query->whereDate('fecha_docto', '>=', $request->fecha_inicio);
+        } elseif ($request->filled('fecha_fin')) {
+            $query->whereDate('fecha_docto', '<=', $request->fecha_fin);
         }
 
         if ($request->filled('vencimiento_inicio') && $request->filled('vencimiento_fin')) {
             $query->whereBetween('fecha_vencimiento', [$request->vencimiento_inicio, $request->vencimiento_fin]);
+        } elseif ($request->filled('vencimiento_inicio')) {
+            $query->whereDate('fecha_vencimiento', '>=', $request->vencimiento_inicio);
+        } elseif ($request->filled('vencimiento_fin')) {
+            $query->whereDate('fecha_vencimiento', '<=', $request->vencimiento_fin);
         }
 
-        // === Orden idéntico al index() ===
-        // $query->orderByRaw('ISNULL(fecha_vencimiento), fecha_vencimiento DESC');
-
-
-
-        // === Ordenamiento desde filtrarColumnas (si existe) ===
+        // === 5️⃣ Ordenamiento ===
         if ($request->filled('sort_by')) {
             $sortBy = $request->get('sort_by', 'razon_social');
             $sortOrder = $request->get('sort_order', 'asc');
@@ -631,23 +626,45 @@ class DocumentoFinancieroController extends Controller
             $query->orderByRaw('ISNULL(fecha_vencimiento), fecha_vencimiento DESC');
         }
 
+        // === 6️⃣ Ejecutar la query una sola vez ===
+        $documentos = $query->get();
 
-        // === Paginación manual (solo los registros de la página actual) ===
-        $documentos = $query->skip($offset)->take($perPage)->get();
+        // === 7️⃣ Filtro de Estado de Pago (en memoria, con accessor saldo_pendiente) ===
+        if ($request->filled('estado_pago')) {
+            $documentos = $documentos->filter(function ($doc) use ($request) {
+                if ($request->estado_pago === 'Pagado') {
+                    return $doc->saldo_pendiente <= 0;
+                }
+                if ($request->estado_pago === 'Pendiente') {
+                    return $doc->saldo_pendiente > 0;
+                }
+                return true;
+            });
+        }
 
-        
+        // === 8️⃣ Paginación manual (solo registros visibles en la página actual) ===
+        $documentos = $documentos->slice($offset, $perPage)->values();
 
-        // === Exportación ===
+        // === 9️⃣ Exportación final ===
         $fecha = now()->format('Y-m-d_H-i-s');
         return Excel::download(new DocumentosExport($documentos), "documentos_financieros_pagina_{$page}_{$fecha}.xlsx");
     }
 
+
     public function exportAll(Request $request)
     {
-        // === Reutilizar la query base del index ===
-        $query = DocumentoFinanciero::with(['empresa', 'abonos', 'cruces', 'tipoDocumento', 'referencia', 'referenciados', 'cobranza']);
+        // === 1️⃣ Construcción de la query base ===
+        $query = DocumentoFinanciero::with([
+            'empresa',
+            'abonos',
+            'cruces',
+            'tipoDocumento',
+            'referencia',
+            'referenciados',
+            'cobranza'
+        ]);
 
-        // === Aplicar mismos filtros ===
+        // === 2️⃣ Filtros base (iguales al index) ===
         if ($request->filled('razon_social')) {
             $query->where('razon_social', 'like', "%{$request->razon_social}%");
         }
@@ -664,15 +681,7 @@ class DocumentoFinancieroController extends Controller
             $query->where('status_original', $request->status);
         }
 
-        if ($request->filled('estado_pago')) {
-            if ($request->estado_pago === 'Pagado') {
-                $query->whereHas('pagos');
-            } elseif ($request->estado_pago === 'Pendiente') {
-                $query->whereDoesntHave('pagos');
-            }
-        }
-
-        // === Filtros desde filtrarColumnas (si existen) ===
+        // === 3️⃣ Filtros desde filtrarColumnas (si existen) ===
         if ($request->filled('columna') && $request->filled('valor')) {
             switch ($request->columna) {
                 case 'razon_social':
@@ -700,21 +709,24 @@ class DocumentoFinancieroController extends Controller
             }
         }
 
-
-
-
-
-        // === Fechas ===
+        // === 4️⃣ Filtros de fechas ===
         if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
             $query->whereBetween('fecha_docto', [$request->fecha_inicio, $request->fecha_fin]);
+        } elseif ($request->filled('fecha_inicio')) {
+            $query->whereDate('fecha_docto', '>=', $request->fecha_inicio);
+        } elseif ($request->filled('fecha_fin')) {
+            $query->whereDate('fecha_docto', '<=', $request->fecha_fin);
         }
 
         if ($request->filled('vencimiento_inicio') && $request->filled('vencimiento_fin')) {
             $query->whereBetween('fecha_vencimiento', [$request->vencimiento_inicio, $request->vencimiento_fin]);
+        } elseif ($request->filled('vencimiento_inicio')) {
+            $query->whereDate('fecha_vencimiento', '>=', $request->vencimiento_inicio);
+        } elseif ($request->filled('vencimiento_fin')) {
+            $query->whereDate('fecha_vencimiento', '<=', $request->vencimiento_fin);
         }
 
-        // === Orden idéntico al index() ===
-        // === Ordenamiento desde filtrarColumnas (si existe) ===
+        // === 5️⃣ Ordenamiento ===
         if ($request->filled('sort_by')) {
             $sortBy = $request->get('sort_by', 'razon_social');
             $sortOrder = $request->get('sort_order', 'asc');
@@ -723,14 +735,27 @@ class DocumentoFinancieroController extends Controller
             $query->orderByRaw('ISNULL(fecha_vencimiento), fecha_vencimiento DESC');
         }
 
-
-        // 🚀 Sin paginación: obtenemos todos los resultados filtrados
+        // === 6️⃣ Ejecutar la query una sola vez ===
         $documentos = $query->get();
 
-        // === Exportación ===
+        // === 7️⃣ Filtro de Estado de Pago (en memoria, con accessor saldo_pendiente) ===
+        if ($request->filled('estado_pago')) {
+            $documentos = $documentos->filter(function ($doc) use ($request) {
+                if ($request->estado_pago === 'Pagado') {
+                    return $doc->saldo_pendiente <= 0;
+                }
+                if ($request->estado_pago === 'Pendiente') {
+                    return $doc->saldo_pendiente > 0;
+                }
+                return true;
+            });
+        }
+
+        // === 8️⃣ Exportación final (sin paginación) ===
         $fecha = now()->format('Y-m-d_H-i-s');
         return Excel::download(new DocumentosExport($documentos), "documentos_financieros_todos_{$fecha}.xlsx");
     }
+
 
     ////////////////////////////////////////////////////
     ////////////////////////////////////////////////////
