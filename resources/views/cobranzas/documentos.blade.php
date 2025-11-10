@@ -284,6 +284,11 @@
                             <i class="bi bi-file-earmark-arrow-down"></i> Exportar Excel
                         </a>
 
+                        <a href="{{ route('finanzas.exportAll', request()->query()) }}" class="btn btn-success btn-sm w-100 mt-2">
+                            <i class="bi bi-file-earmark-spreadsheet"></i> Exportar Todo
+                        </a>
+
+
 
 
                         <br>

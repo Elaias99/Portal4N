@@ -285,8 +285,11 @@ Route::get('/cobranzas/documentos', [DocumentoFinancieroController::class, 'inde
 Route::patch('/documentos/{documento}/status', [DocumentoFinancieroController::class, 'updateStatus'])
     ->name('documentos.updateStatus');
 
-Route::get('documentos/export', [App\Http\Controllers\DocumentoFinancieroController::class, 'export'])
+Route::get('documentos/export', [DocumentoFinancieroController::class, 'export'])
     ->name('documentos.export');
+
+Route::get('/finanzas/export-all', [DocumentoFinancieroController::class, 'exportAll'])->name('finanzas.exportAll');
+
 
 // Mostrar formulario de edición de un documento financiero
 Route::get('/cobranzas/documentos/{documento}/edit', [DocumentoFinancieroController::class, 'edit'])
@@ -432,6 +435,9 @@ Route::get('/finanzas/compras/filtrar-columnas', [App\Http\Controllers\Documento
 Route::get('/finanzas/compras', [DocumentoCompraController::class, 'index'])->name('finanzas_compras.index');
 Route::post('/finanzas/compras/import', [DocumentoCompraController::class, 'import'])->name('finanzas_compras.import');
 Route::get('/finanzas_compras/export', [DocumentoCompraController::class, 'export'])->name('finanzas_compras.export');
+Route::get('/finanzas-compras/export-all', [DocumentoCompraController::class, 'exportAll'])
+    ->name('finanzas_compras.exportAll');
+
 // 🔹 Actualizar estado de un documento de compra
 Route::patch('/finanzas/compras/{id}/estado', [DocumentoCompraController::class, 'updateEstado'])
     ->name('finanzas_compras.updateEstado');

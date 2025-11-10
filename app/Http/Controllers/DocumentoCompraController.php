@@ -452,6 +452,34 @@ class DocumentoCompraController extends Controller
             });
         }
 
+        if ($request->filled('columna') && $request->filled('valor')) {
+            switch ($request->columna) {
+                case 'razon_social':
+                case 'rut_proveedor':
+                case 'folio':
+                    $query->where($request->columna, 'like', "%{$request->valor}%");
+                    break;
+
+                case 'fecha_docto':
+                case 'fecha_vencimiento':
+                    $query->whereDate($request->columna, '=', $request->valor);
+                    break;
+
+                case 'monto_total':
+                    $query->where($request->columna, '=', $request->valor);
+                    break;
+
+                case 'empresa_id':
+                    $query->where('empresa_id', $request->valor);
+                    break;
+
+                case 'tipo_doc_id':
+                    $query->where('tipo_doc_id', $request->valor);
+                    break;
+            }
+        }
+
+
         if ($request->filled('fecha_docto_inicio') && $request->filled('fecha_docto_fin')) {
             $query->whereBetween('fecha_docto', [$request->fecha_docto_inicio, $request->fecha_docto_fin]);
         }
@@ -469,7 +497,14 @@ class DocumentoCompraController extends Controller
         }
 
         // === Aplicar orden ===
-        $query->orderBy('fecha_vencimiento', 'desc');
+        if ($request->filled('sort_by')) {
+            $sortBy = $request->get('sort_by', 'razon_social');
+            $sortOrder = $request->get('sort_order', 'asc');
+            $query->orderBy($sortBy, $sortOrder);
+        } else {
+            $query->orderBy('fecha_vencimiento', 'desc');
+        }
+
 
         // === Obtener solo la página actual ===
         $documentos = $query->skip($offset)->take($perPage)->get();
@@ -481,6 +516,114 @@ class DocumentoCompraController extends Controller
             "documentos_compras_pagina_{$page}_{$fecha}.xlsx"
         );
     }
+
+
+    public function exportAll(Request $request)
+    {
+        // === Reutilizar la query base del index ===
+        $query = DocumentoCompra::with([
+            'empresa',
+            'tipoDocumento',
+            'movimientos',
+            'abonos',
+            'cruces',
+            'pagos',
+            'prontoPagos'
+        ]);
+
+        // === Filtros generales ===
+        if ($request->filled('rut_proveedor')) {
+            $query->where('rut_proveedor', 'like', "%{$request->rut_proveedor}%");
+        }
+
+        if ($request->filled('razon_social')) {
+            $query->where('razon_social', 'like', "%{$request->razon_social}%");
+        }
+
+        if ($request->filled('folio')) {
+            $query->where('folio', 'like', "%{$request->folio}%");
+        }
+
+        if ($request->filled('estado')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('status_original', $request->estado)
+                ->orWhere('estado', $request->estado);
+            });
+        }
+
+        if ($request->filled('estado_pago')) {
+            if ($request->estado_pago === 'Pagado') {
+                $query->whereHas('pagos');
+            } elseif ($request->estado_pago === 'Pendiente') {
+                $query->whereDoesntHave('pagos');
+            }
+        }
+
+        // === Filtros de fechas ===
+        if ($request->filled('fecha_docto_inicio') && $request->filled('fecha_docto_fin')) {
+            $query->whereBetween('fecha_docto', [$request->fecha_docto_inicio, $request->fecha_docto_fin]);
+        } elseif ($request->filled('fecha_docto_inicio')) {
+            $query->whereDate('fecha_docto', '>=', $request->fecha_docto_inicio);
+        } elseif ($request->filled('fecha_docto_fin')) {
+            $query->whereDate('fecha_docto', '<=', $request->fecha_docto_fin);
+        }
+
+        if ($request->filled('fecha_venc_inicio') && $request->filled('fecha_venc_fin')) {
+            $query->whereBetween('fecha_vencimiento', [$request->fecha_venc_inicio, $request->fecha_venc_fin]);
+        } elseif ($request->filled('fecha_venc_inicio')) {
+            $query->whereDate('fecha_vencimiento', '>=', $request->fecha_venc_inicio);
+        } elseif ($request->filled('fecha_venc_fin')) {
+            $query->whereDate('fecha_vencimiento', '<=', $request->fecha_venc_fin);
+        }
+
+        // === Filtros desde filtrarColumnas (si existen) ===
+        if ($request->filled('columna') && $request->filled('valor')) {
+            switch ($request->columna) {
+                case 'razon_social':
+                case 'rut_proveedor':
+                case 'folio':
+                    $query->where($request->columna, 'like', "%{$request->valor}%");
+                    break;
+
+                case 'fecha_docto':
+                case 'fecha_vencimiento':
+                    $query->whereDate($request->columna, '=', $request->valor);
+                    break;
+
+                case 'monto_total':
+                    $query->where($request->columna, '=', $request->valor);
+                    break;
+
+                case 'empresa_id':
+                    $query->where('empresa_id', $request->valor);
+                    break;
+
+                case 'tipo_doc_id':
+                    $query->where('tipo_doc_id', $request->valor);
+                    break;
+            }
+        }
+
+        // === Ordenamiento ===
+        if ($request->filled('sort_by')) {
+            $sortBy = $request->get('sort_by', 'razon_social');
+            $sortOrder = $request->get('sort_order', 'asc');
+            $query->orderBy($sortBy, $sortOrder);
+        } else {
+            $query->orderBy('fecha_vencimiento', 'desc');
+        }
+
+        // 🚀 Obtener todos los registros filtrados (sin paginación)
+        $documentos = $query->get();
+
+        // === Exportar a Excel ===
+        $fecha = now()->format('Y-m-d_H-i-s');
+        return Excel::download(
+            new DocumentoCompraExport($documentos),
+            "documentos_compras_todos_{$fecha}.xlsx"
+        );
+    }
+
 
 
 

@@ -238,7 +238,12 @@
 
                 <a href="{{ route('finanzas_compras.export', request()->query()) }}" 
                 class="btn btn-outline-success btn-sm w-100">
-                    <i class="bi bi-file-earmark-arrow-down"></i> Exportar Excel
+                    <i class="bi bi-file-earmark-arrow-down"></i> Exportar x hoja
+                </a>
+
+                <a href="{{ route('finanzas_compras.exportAll', request()->query()) }}" 
+                class="btn btn-success btn-sm w-100 mt-2">
+                    <i class="bi bi-file-earmark-arrow-down-fill"></i> Exportar Todo
                 </a>
 
             </div>
