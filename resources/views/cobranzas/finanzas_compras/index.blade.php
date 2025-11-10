@@ -236,15 +236,13 @@
 
 
 
-                <a href="{{ route('finanzas_compras.export', request()->query()) }}" 
-                class="btn btn-outline-success btn-sm w-100">
-                    <i class="bi bi-file-earmark-arrow-down"></i> Exportar x hoja
-                </a>
-
-                <a href="{{ route('finanzas_compras.exportAll', request()->query()) }}" 
-                class="btn btn-success btn-sm w-100 mt-2">
-                    <i class="bi bi-file-earmark-arrow-down-fill"></i> Exportar Todo
-                </a>
+                <!-- Botón de Exportar que abre el modal -->
+                <button type="button"
+                        class="btn btn-outline-success btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
+                        data-bs-toggle="modal" data-bs-target="#modalExportarCompra">
+                    <i class="bi bi-file-earmark-arrow-down"></i>
+                    <span>Exportar Excel</span>
+                </button>
 
             </div>
         </div>
@@ -478,6 +476,7 @@
 </script>
 
 @include('cobranzas._modal_create_cobranza')
+@include('cobranzas.partials.modal_ExportarCompra')
 
 
 

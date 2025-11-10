@@ -278,20 +278,15 @@
                             </form>
                         @endif
 
-                        {{-- 🔹 Exportación de Excel --}}
-                        <a href="{{ route('documentos.export', request()->query()) }}" 
-                        class="btn btn-outline-success btn-sm w-100">
-                            <i class="bi bi-file-earmark-arrow-down"></i> Exportar Excel
-                        </a>
-
-                        <a href="{{ route('finanzas.exportAll', request()->query()) }}" class="btn btn-success btn-sm w-100 mt-2">
-                            <i class="bi bi-file-earmark-spreadsheet"></i> Exportar Todo
-                        </a>
+                        
+                            <button type="button"
+                                    class="btn btn-outline-success btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
+                                    data-bs-toggle="modal" data-bs-target="#modalExportarVenta">
+                                <i class="bi bi-file-earmark-arrow-down"></i>
+                                <span>Exportar Excel</span>
+                            </button>
 
 
-
-
-                        <br>
 
 
                         {{-- PAGO MASIVO --}}
@@ -482,7 +477,7 @@
 
 @include('cobranzas._modal_create_cobranza')
 @include('cobranzas.modal_pagos_masivos')
-
+@include('cobranzas.partials.modal_ExportarVenta')
 
 
 @endsection
