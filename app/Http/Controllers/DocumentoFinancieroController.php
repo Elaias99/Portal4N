@@ -25,7 +25,15 @@ class DocumentoFinancieroController extends Controller
             abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
         }
 
-        $query = DocumentoFinanciero::with(['cobranza', 'empresa', 'abonos', 'cruces', 'referenciados', 'pagos', 'prontoPagos', ]);
+        $query = DocumentoFinanciero::with([
+            'cobranza',
+            'empresa',
+            'abonos',
+            'cruces',
+            'referenciados',
+            'pagos',
+            'prontoPagos',
+        ]);
 
         // === FILTROS GENERALES ===
         if ($request->filled('razon_social')) {
@@ -62,36 +70,32 @@ class DocumentoFinancieroController extends Controller
             $query->where('status_original', $request->status);
         }
 
-        // === CONTADORES ===
+        // === CONTADORES ESTADO ORIGINAL ===
         $totalAlDia = DocumentoFinanciero::where('status_original', 'Al día')->count();
         $totalVencido = DocumentoFinanciero::where('status_original', 'Vencido')->count();
 
-
-        // === OBTENER DATOS BASE ===
-        $documentoFinancieros = $query
+        // === OBTENER DATOS BASE SIN PAGINAR ===
+        $documentosOriginal = $query
             ->orderByRaw('ISNULL(fecha_vencimiento), fecha_vencimiento DESC')
             ->get();
 
-
+        // === ACTUALIZAR ESTADO AUTOMÁTICO ===
         $hoy = \Carbon\Carbon::today();
-
-        foreach ($documentoFinancieros as $doc) {
+        foreach ($documentosOriginal as $doc) {
             if ($doc->fecha_vencimiento && $doc->saldo_pendiente > 0) {
                 $fechaVenc = \Carbon\Carbon::parse($doc->fecha_vencimiento);
-
-                if ($fechaVenc->lt($hoy) && $doc->status_original !== 'Vencido') {
-                    $doc->status_original = 'Vencido';
-                    $doc->save();
-                } elseif ($fechaVenc->gte($hoy) && $doc->status_original !== 'Al día') {
-                    $doc->status_original = 'Al día';
+                $nuevoEstado = $fechaVenc->lt($hoy) ? 'Vencido' : 'Al día';
+                if ($doc->status_original !== $nuevoEstado) {
+                    $doc->status_original = $nuevoEstado;
                     $doc->save();
                 }
             }
         }
 
-        // === FILTRO POR ESTADO DE PAGO (Pagado / Pendiente) ===
+        // === FILTRO POR ESTADO DE PAGO ===
+        $documentoFinancieros = $documentosOriginal; // por defecto todos
         if ($request->filled('estado_pago')) {
-            $documentoFinancieros = $documentoFinancieros->filter(function ($doc) use ($request) {
+            $documentoFinancieros = $documentosOriginal->filter(function ($doc) use ($request) {
                 if ($request->estado_pago === 'Pagado') {
                     return $doc->saldo_pendiente <= 0;
                 }
@@ -102,27 +106,18 @@ class DocumentoFinancieroController extends Controller
             });
         }
 
-        // === CÁLCULO CORREGIDO DEL SALDO PENDIENTE TOTAL ===
+        // === TOTALES GLOBALES ===
+        $totalPagados = $documentoFinancieros->filter(fn($d) => $d->pagos->count() > 0)->count();
+        $totalPendientes = $documentoFinancieros->filter(fn($d) => $d->pagos->count() === 0)->count();
+
+        // === SALDO PENDIENTE GLOBAL ===
         $totalSaldoPendiente = $documentoFinancieros
             ->filter(function ($doc) {
-                // Excluir notas de crédito o débito
-                if (in_array($doc->tipo_documento_id, [61, 56])) {
-                    return false;
-                }
-
-                
-                // Excluir documentos con pagos registrados
-                if ($doc->pagos->count() > 0) {
-                    return false;
-                }
-
-
-                // ✅ Incluir todo lo demás
+                if (in_array($doc->tipo_documento_id, [61, 56])) return false;
+                if ($doc->pagos->count() > 0) return false;
                 return true;
             })
-            ->sum(function ($doc) {
-                return $doc->saldo_pendiente;
-            });
+            ->sum('saldo_pendiente');
 
         // === PAGINACIÓN MANUAL ===
         $page = $request->get('page', 1);
@@ -138,15 +133,10 @@ class DocumentoFinancieroController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        $totalPagados = $documentoFinancieros->filter(fn($d) => $d->pagos->count() > 0)->count();
-        $totalPendientes = $documentoFinancieros->filter(fn($d) => $d->pagos->count() === 0)->count();
-
-
+        // === DATOS DE APOYO ===
         $empresas = Empresa::orderBy('Nombre')->get(['id', 'Nombre']);
         $tiposDocumento = TipoDocumento::orderBy('nombre')->get(['id', 'nombre']);
         $proveedores = \App\Models\Proveedor::orderBy('razon_social')->get(['id', 'razon_social', 'rut']);
-
-
 
         return view('cobranzas.documentos', compact(
             'documentoFinancieros',
@@ -158,10 +148,9 @@ class DocumentoFinancieroController extends Controller
             'empresas',
             'tiposDocumento',
             'proveedores'
-
         ));
-
     }
+
 
 
 
