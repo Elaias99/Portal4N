@@ -13,9 +13,10 @@
 
       <!-- === BODY === -->
       <div class="modal-body">
-        <form id="formCrearCobranza" action="{{ route('cobranzas.store') }}" method="POST">
-          @include('cobranzas.form', ['btnText' => 'Guardar'])
+        <form id="formCrearCobranza" method="POST">
+            @include('cobranzas.form', ['btnText' => 'Guardar'])
         </form>
+
       </div>
 
     </div>
@@ -36,14 +37,22 @@ $(function () {
         const razon = $(this).data('razon') || '';
         const tipo = $(this).hasClass('crear-compra-link') ? 'compra' : 'cobranza';
 
-        // Guardamos el tipo actual en el modal
+        // Guardamos el tipo actual
         $('#modalCrearCobranza').data('tipo', tipo);
+
+        // Asignamos la acción correcta del formulario
+        const formAction = tipo === 'compra'
+            ? "{{ route('cobranzas-compras.store') }}"
+            : "{{ route('cobranzas.store') }}";
+
+        $('#formCrearCobranza').attr('action', formAction);
 
         $('#modalCrearCobranza #rut_cliente').val(rut);
         $('#modalCrearCobranza #razon_social').val(razon);
 
         $('#modalCrearCobranza').modal('show');
     });
+
 
     // =====================================================
     // 🟢 Enviar formulario por AJAX
@@ -52,6 +61,14 @@ $(function () {
         e.preventDefault();
 
         const form = $(this);
+
+        // 🔒 Aseguramos que use la ruta correcta según el tipo almacenado en el modal
+        const tipo = $('#modalCrearCobranza').data('tipo') || 'cobranza';
+        const formAction = tipo === 'compra'
+            ? "{{ route('cobranzas-compras.store') }}"
+            : "{{ route('cobranzas.store') }}";
+        form.attr('action', formAction);
+
         const formData = new FormData(this);
 
         $.ajax({
@@ -99,6 +116,7 @@ $(function () {
     @if($pendientes ?? false)
         let pendientes = @json($pendientes);
         let tipoFlujo = "{{ $tipoFlujo }}";
+        $('#modalCrearCobranza').data('tipo', tipoFlujo); // <-- guarda el tipo globalmente
         console.log('🧠 Pendientes cargados:', pendientes, 'Tipo:', tipoFlujo);
 
         let indiceActual = 0;
@@ -110,7 +128,7 @@ $(function () {
 
                 // Elegir endpoint según tipo
                 const url = tipoFlujo === 'compra'
-                    ? "{{ route('cobranzas.reprocesar-pendientes-compras') }}"
+                    ? "{{ route('cobranzas-compras.reprocesar-pendientes-compras') }}"
                     : "{{ route('cobranzas.reprocesar-pendientes') }}";
 
                 $.post(url, {_token: '{{ csrf_token() }}'}, function(resp) {
@@ -126,6 +144,8 @@ $(function () {
             }
 
             const actual = pendientes[indiceActual];
+            const tipo = $('#modalCrearCobranza').data('tipo') || 'cobranza';
+
             $('#modalCrearCobranza #rut_cliente').val(actual.rut_cliente || actual.rut_proveedor);
             $('#modalCrearCobranza #razon_social').val(actual.razon_social);
             $('#modalCrearCobranza').modal('show');
@@ -139,5 +159,6 @@ $(function () {
     @endif
 });
 </script>
+
 @endpush
 

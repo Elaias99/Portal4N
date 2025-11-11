@@ -25,7 +25,7 @@ export default defineConfig({
         host: '0.0.0.0',  // Escucha en todas las interfaces de red
         port: 3000,        // Vite escuchará en el puerto 3000
         hmr: {
-            host: '192.168.1.153',  // Reemplaza con la IP de tu máquina
+            host: '192.168.1.157',  // Reemplaza con la IP de tu máquina
         },
     },
 });

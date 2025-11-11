@@ -720,6 +720,7 @@ class DocumentoCompraController extends Controller
             'cruces.proveedor', // relación anidada con proveedor
             'pagos',
             'prontoPagos',
+            'cobranzaCompra',
         ]);
 
         // Guardar la URL anterior solo si viene desde el listado

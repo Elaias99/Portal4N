@@ -17,7 +17,7 @@ class DocumentoCompra extends Model
         'monto_neto', 'monto_iva_recuperable', 'monto_iva_no_recuperable', 'codigo_iva_no_rec', 'monto_total', 
         'monto_neto_activo_fijo', 'iva_activo_fijo', 'iva_uso_comun', 'impto_sin_derecho_credito','iva_no_retenido',
         'tabacos_puros', 'tabacos_cigarrillos', 'tabacos_elaborados', 'nce_nde_sobre_fact_compra', 'codigo_otro_impuesto', 'valor_otro_impuesto', 'tasa_otro_impuesto', 
-        'estado', 'fecha_vencimiento','cobranza_id','status_original','fecha_estado_manual', ];
+        'estado', 'fecha_vencimiento','status_original','fecha_estado_manual', 'cobranza_compra_id'];
 
     public function empresa()
     {
@@ -27,11 +27,6 @@ class DocumentoCompra extends Model
     public function tipoDocumento()
     {
         return $this->belongsTo(TipoDocumento::class, 'tipo_documento_id');
-    }
-
-    public function cobranza()
-    {
-        return $this->belongsTo(Cobranza::class, 'cobranza_id');
     }
 
     public function movimientos()
@@ -59,6 +54,10 @@ class DocumentoCompra extends Model
         return $this->hasMany(ProntoPago::class, 'documento_compra_id');
     }
 
+    public function cobranzaCompra()
+    {
+        return $this->belongsTo(CobranzaCompra::class, 'cobranza_compra_id');
+    }
 
 
 
@@ -70,11 +69,11 @@ class DocumentoCompra extends Model
 
     public function actualizarFechaVencimiento()
     {
-        $this->loadMissing('cobranza');
+        $this->loadMissing('cobranzaCompra');
 
-        if ($this->fecha_docto && $this->cobranza && $this->cobranza->creditos) {
+        if ($this->fecha_docto && $this->cobranzaCompra && $this->cobranzaCompra->creditos) {
             $this->fecha_vencimiento = Carbon::parse($this->fecha_docto)
-                ->addDays((int) $this->cobranza->creditos)
+                ->addDays((int) $this->cobranzaCompra->creditos)
                 ->format('Y-m-d');
 
             $this->status_original = Carbon::parse($this->fecha_vencimiento)->isPast()

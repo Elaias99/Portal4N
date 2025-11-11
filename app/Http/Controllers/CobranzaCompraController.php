@@ -1,0 +1,195 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\CobranzaCompra;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
+use Carbon\Carbon;
+use App\Models\DocumentoCompra;
+use App\Models\MovimientoCompra;
+
+class CobranzaCompraController extends Controller
+{
+    /**
+     * Mostrar listado de cobranzas de compras
+     */
+    public function index(Request $request)
+    {
+        $query = CobranzaCompra::query();
+
+        if ($request->filled('buscar')) {
+            $busqueda = $request->input('buscar');
+            $query->where('razon_social', 'like', "%{$busqueda}%")
+                  ->orWhere('rut_cliente', 'like', "%{$busqueda}%");
+        }
+
+        $cobranzasCompras  = $query->orderBy('id', 'desc')->paginate(10);
+
+        return view('cobranzas_compras.index', compact('cobranzasCompras'));
+    }
+
+    /**
+     * Mostrar formulario de creación
+     */
+    public function create()
+    {
+        return view('cobranzas_compras.create');
+    }
+
+    /**
+     * Guardar nueva cobranza
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'rut_cliente' => 'required|string|max:255',
+            'razon_social' => 'required|string|max:255',
+            'servicio' => 'required|string|max:255',
+            'creditos' => 'required|string|max:255',
+        ]);
+
+        $cobranza = CobranzaCompra::create($validated);
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'cobranza' => $cobranza
+            ]);
+        }
+
+        return redirect()->route('cobranzas-compras.index')
+                         ->with('success', 'Cobranza de compra creada correctamente.');
+    }
+
+    /**
+     * Editar una cobranza existente
+     */
+    public function edit(CobranzaCompra $cobranzaCompra)
+    {
+        return view('cobranzas_compras.edit', compact('cobranzaCompra'));
+    }
+
+    /**
+     * Actualizar una cobranza
+     */
+    public function update(Request $request, CobranzaCompra $cobranzaCompra)
+    {
+        $validated = $request->validate([
+            'rut_cliente' => 'required|string|max:255',
+            'razon_social' => 'required|string|max:255',
+            'servicio' => 'required|string|max:255',
+            'creditos' => 'required|string|max:255',
+        ]);
+
+        $cobranzaCompra->update($validated);
+
+        return redirect()->route('cobranzas-compras.index')
+                         ->with('success', 'Cobranza de compra actualizada correctamente.');
+    }
+
+    /**
+     * Eliminar una cobranza
+     */
+    public function destroy(CobranzaCompra $cobranzaCompra)
+    {
+        $cobranzaCompra->delete();
+
+        return redirect()->route('cobranzas-compras.index')
+                         ->with('success', 'Cobranza de compra eliminada correctamente.');
+    }
+
+    /**
+     * Reprocesar documentos de compras pendientes (sin cobranza_compra_id)
+     */
+    public function reprocesarPendientesCompras(Request $request)
+    {
+        Log::info('📥 [reprocesarPendientesCompras] Inicio del reprocesamiento');
+
+        $pendientes = session('sin_compra_pendientes');
+
+        if (!$pendientes || count($pendientes) === 0) {
+            Log::warning('⚠️ No hay datos en la sesión sin_compra_pendientes');
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay documentos de compras pendientes para reprocesar.'
+            ]);
+        }
+
+        $procesados = [];
+        $omitidos = [];
+
+        foreach ($pendientes as $item) {
+            $folio = $item['folio'] ?? null;
+            $rutProveedor = $item['rut_proveedor'] ?? null;
+
+            Log::info("➡️ Procesando folio {$folio} / RUT {$rutProveedor}");
+
+            $cobranzaCompra = CobranzaCompra::where('rut_cliente', $rutProveedor)->first();
+
+            if (!$cobranzaCompra) {
+                Log::warning("⚠️ No se encontró cobranza_compra para el RUT {$rutProveedor}");
+                $omitidos[] = $folio;
+                continue;
+            }
+
+            $documento = DocumentoCompra::where('folio', $folio)
+                ->whereNull('cobranza_compra_id')
+                ->first();
+
+            if ($documento) {
+                $creditos = (int) ($cobranzaCompra->creditos ?? 0);
+
+                $documento->update([
+                    'cobranza_compra_id' => $cobranzaCompra->id,
+                    'estado' => $documento->estado ?? 'Procesado',
+                    'status_original' => $documento->status_original ?? 'Pendiente',
+                    'fecha_vencimiento' => $documento->fecha_vencimiento
+                        ?? Carbon::parse($documento->fecha_docto ?? now())
+                            ->addDays($creditos)
+                            ->format('Y-m-d'),
+                ]);
+
+                Log::info("✅ DocumentoCompra actualizado correctamente", [
+                    'folio' => $folio,
+                    'cobranza_compra_id' => $cobranzaCompra->id
+                ]);
+
+                $procesados[] = $folio;
+            } else {
+                $omitidos[] = $folio;
+                Log::warning("🔍 No se encontró documento con folio {$folio} sin cobranza_compra_id");
+            }
+        }
+
+        session()->forget('sin_compra_pendientes');
+
+        Log::info('🧹 Sesión limpiada', [
+            'procesados' => $procesados,
+            'omitidos' => $omitidos
+        ]);
+
+        if (!empty($procesados)) {
+            MovimientoCompra::create([
+                'documento_compra_id' => null,
+                'usuario_id' => auth()->id(),
+                'tipo_movimiento' => 'Reprocesamiento automático',
+                'descripcion' => "Se reprocesaron " . count($procesados) . " documentos de compra tras crear nuevas cobranzas de compras.",
+            ]);
+        }
+
+        Log::info('🏁 Reprocesamiento finalizado', [
+            'success' => true,
+            'procesados' => $procesados,
+            'omitidos' => $omitidos
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'procesados' => $procesados,
+            'omitidos' => $omitidos,
+            'message' => 'Reprocesamiento de documentos de compra completado correctamente.'
+        ]);
+    }
+}

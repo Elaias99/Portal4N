@@ -4,6 +4,8 @@ namespace App\Imports;
 
 use App\Models\DocumentoCompra;
 use App\Models\Cobranza;
+use App\Models\CobranzaCompra;
+
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Carbon\Carbon;
@@ -92,7 +94,9 @@ class ComprasImport implements ToModel, WithHeadingRow
 // ...
 
     // 🔍 Buscar cobranza asociada (por RUT del proveedor)
-    $cobranza = Cobranza::where('rut_cliente', $row['rut_proveedor'] ?? null)->first();
+    $cobranza = CobranzaCompra::where('rut_cliente', $row['rut_proveedor'] ?? null)->first();
+
+
 
     // 🔍 Determinar tipo de documento
     $tipoDocumento = \App\Models\TipoDocumento::find((int) $row['tipo_doc']);
@@ -154,7 +158,7 @@ class ComprasImport implements ToModel, WithHeadingRow
                         ->format('Y-m-d'),
 
                 'status_original'   => 'Pendiente',
-                'cobranza_id'       => null,
+                'cobranza_compra_id'       => null,
             ]
         );
 
@@ -240,7 +244,7 @@ class ComprasImport implements ToModel, WithHeadingRow
             'tasa_otro_impuesto' => $row['tasa_otro_impuesto'] ?? null,
 
 
-            'cobranza_id' => $cobranzaId,
+            'cobranza_compra_id' => $cobranzaId,
 
             'fecha_vencimiento' => $fechaVencimiento,
             'status_original' => $statusOriginal,

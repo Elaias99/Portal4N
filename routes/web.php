@@ -31,6 +31,7 @@ use App\Http\Controllers\ManifiestoController;
 use App\Http\Controllers\EquipoController;
 use App\Http\Controllers\CotizadorController;
 use App\Http\Controllers\CobranzaController;
+use App\Http\Controllers\CobranzaCompraController;
 use App\Http\Controllers\DocumentoFinancieroController;
 use App\Http\Controllers\AbonoController;
 use App\Http\Controllers\TrackingProductoController;
@@ -336,8 +337,22 @@ Route::resource('cobranzas', CobranzaController::class);
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////// COBRANZA COMPRA ///////////////////////////////////////////////
 
 
+
+Route::post('/cobranzas-compras/reprocesar-pendientes-compras', [CobranzaCompraController::class, 'reprocesarPendientesCompras'])
+    ->name('cobranzas-compras.reprocesar-pendientes-compras');
+
+Route::resource('cobranzas-compras', CobranzaCompraController::class)
+    ->parameters(['cobranzas-compras' => 'cobranzaCompra']);
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Cotizadores
 Route::resource('cotizadores', CotizadorController::class);
