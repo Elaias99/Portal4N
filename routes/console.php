@@ -62,13 +62,17 @@ Schedule::call(function () {
     }
 
     // 📨 Enviar correo con ambas colecciones
-    $destino = 'eliascorrea@4nlogistica.cl';
-    Mail::to($destino)->send(new DocumentosVencimientosNotificacion($ventas, $compras));
+    $destinos = [
+        'eliascorrea@4nlogistica.cl',
+        'NataliaLeyton@4nlogistica.cl',
+    ];
 
-    Log::info('✅ [VENCIMIENTOS] Correo de vencimientos enviado (rango: ' .
-        $inicio->format('d/m/Y') . ' - ' . $fin->format('d/m/Y') . ')');
+    Mail::to($destinos)->send(new DocumentosVencimientosNotificacion($ventas, $compras));
+
+    Log::info('✅ [VENCIMIENTOS] Correo de vencimientos enviado a (' . implode(', ', $destinos) . ') - Rango: ' .
+        $inicio->format('d/m/Y') . ' - ' . $fin->format('d/m/Y'));
 })
-->weeklyOn(3, '10:30'); // miércoles a las 10:30 AM
+->weeklyOn(3, '10:40'); // miércoles a las 10:40 AM
 
 
 Artisan::command('inspire', function () {
