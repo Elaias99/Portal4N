@@ -77,6 +77,8 @@ Schedule::call(function () {
     $destinos = [
         'eliascorrea@4nlogistica.cl',
         'NataliaLeyton@4nlogistica.cl',
+        'hansdelabarra@4nlogistica.cl',
+        'marcelo@4nlogistica.cl',
     ];
 
     Mail::to($destinos)->send(new DocumentosVencimientosNotificacion($ventas, $compras));
@@ -84,7 +86,7 @@ Schedule::call(function () {
     Log::info('✅ [VENCIMIENTOS] Correo de vencimientos enviado a (' . implode(', ', $destinos) . ') - Rango: ' .
         $inicio->format('d/m/Y') . ' - ' . $fin->format('d/m/Y'));
 })
-->weeklyOn(1, '10:00'); // miércoles a las 10:40 AM
+->weeklyOn(1, '07:00'); // Lunes 07:00 de la mañana
 
 
 
@@ -118,6 +120,9 @@ Schedule::call(function () {
     $destinos = [
         'eliascorrea@4nlogistica.cl',
         'NataliaLeyton@4nlogistica.cl',
+        'hansdelabarra@4nlogistica.cl',
+        'marcelo@4nlogistica.cl',
+
     ];
 
 
@@ -125,7 +130,7 @@ Schedule::call(function () {
     Mail::to($destinos)->send(new DocumentosAtrasadosMail($ventas, $compras));
 
     Log::info('✅ [ATRASADOS] Correo de documentos vencidos enviado a ' . $destinos);
-})->weeklyOn(1, '10:00'); // ⏱️ solo para pruebas locales
+})->weeklyOn(1, '07:00');
 
 
 
