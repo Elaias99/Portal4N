@@ -9,7 +9,7 @@
     <div style="max-width: 700px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); padding: 20px;">
 
         <h2 style="color: #c82333; text-align: center; margin-bottom: 10px;">
-            ⚠️ Documentos financieros vencidos con saldo pendiente
+            Documentos financieros vencidos con saldo pendiente
         </h2>
 
         <p style="text-align: center; color: #555; margin-bottom: 20px;">
@@ -46,7 +46,7 @@
         @endif
 
         {{-- 🔸 Sección de Compras --}}
-        <h3 style="color: #b35a00;">RCV_COMPRAS</h3>
+        {{-- <h3 style="color: #b35a00;">RCV_COMPRAS</h3>
 
         @if ($compras->isEmpty())
             <p style="color: #777;">✅ No hay documentos de compra vencidos con saldo pendiente.</p>
@@ -81,7 +81,7 @@
         <hr style="margin: 25px 0; border: none; border-top: 1px solid #ddd;">
         <p style="font-size: 12px; text-align: center; color: #999;">
             © {{ date('Y') }} 4N Logística · Sistema de Gestión Financiera
-        </p>
+        </p> --}}
     </div>
 </body>
 </html>

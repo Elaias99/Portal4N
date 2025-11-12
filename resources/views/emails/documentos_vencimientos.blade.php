@@ -8,7 +8,7 @@
     <div style="max-width: 700px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); padding: 20px;">
 
         <h2 style="color: #0056b3; text-align: center;">
-            📅 Documentos con vencimiento esta semana
+            Documentos con vencimiento esta semana
         </h2>
 
         <p style="text-align: center; color: #555;">
@@ -58,7 +58,7 @@
         @endif
 
         {{-- 🔸 SECCIÓN RCV_COMPRAS --}}
-        <h3 style="color: #28a745; border-bottom: 2px solid #28a745; padding-bottom: 4px;">
+        {{-- <h3 style="color: #28a745; border-bottom: 2px solid #28a745; padding-bottom: 4px;">
             RCV_COMPRAS
         </h3>
 
@@ -95,7 +95,7 @@
                     @endforeach
                 </tbody>
             </table>
-        @endif
+        @endif --}}
 
         <p style="margin-top: 25px; color: #555;">
             🕓 <em>Reporte generado automáticamente por el módulo de Finanzas.</em><br>
