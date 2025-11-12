@@ -13,7 +13,13 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use App\Models\DocumentoFinanciero;
 use App\Mail\DocumentosVencimientosNotificacion;
+use App\Mail\DocumentosAtrasadosMail;
 use Carbon\Carbon;
+
+
+// ===========================================================
+// 1. Notificación de cumpleaños diarios
+// ===========================================================
 
 Schedule::call(function () {
     $hoy = now();
@@ -40,6 +46,10 @@ Schedule::call(function () {
 
 
 
+// ===========================================================
+// 1. Notificación fechas vencida por semana
+// ===========================================================
+
 
 Schedule::call(function () {
     // 📆 Calcular lunes y domingo de la semana actual
@@ -49,12 +59,14 @@ Schedule::call(function () {
     // 🔹 VENTAS (RCV_VENTAS)
     $ventas = DocumentoFinanciero::whereBetween('fecha_vencimiento', [$inicio, $fin])
         ->get()
-        ->filter(fn($doc) => $doc->saldo_pendiente > 0);
+        ->filter(fn($doc) => $doc->saldo_pendiente > 0)
+        ->sortBy('fecha_vencimiento');
 
     // 🔸 COMPRAS (RCV_COMPRAS)
     $compras = DocumentoCompra::whereBetween('fecha_vencimiento', [$inicio, $fin])
         ->get()
-        ->filter(fn($doc) => $doc->saldo_pendiente > 0);
+        ->filter(fn($doc) => $doc->saldo_pendiente > 0)
+        ->sortBy('fecha_vencimiento');
 
     if ($ventas->isEmpty() && $compras->isEmpty()) {
         Log::info('📭 [VENCIMIENTOS] No hay documentos (ventas ni compras) por vencer esta semana.');
@@ -72,7 +84,53 @@ Schedule::call(function () {
     Log::info('✅ [VENCIMIENTOS] Correo de vencimientos enviado a (' . implode(', ', $destinos) . ') - Rango: ' .
         $inicio->format('d/m/Y') . ' - ' . $fin->format('d/m/Y'));
 })
-->weeklyOn(3, '10:40'); // miércoles a las 10:40 AM
+->weeklyOn(1, '10:00'); // miércoles a las 10:40 AM
+
+
+
+
+// ===========================================================
+// 1. Notificación de fechas vencidas
+// ===========================================================
+
+// 📬 Notificación de documentos vencidos con saldo pendiente
+Schedule::call(function () {
+    $hoy = now()->startOfDay();
+
+    // 🔹 VENTAS
+    $ventas = \App\Models\DocumentoFinanciero::where('fecha_vencimiento', '<', $hoy)
+        ->get()
+        ->filter(fn($doc) => $doc->saldo_pendiente > 0)
+        ->sortBy('fecha_vencimiento');
+
+
+    // 🔸 COMPRAS
+    $compras = \App\Models\DocumentoCompra::where('fecha_vencimiento', '<', $hoy)
+        ->get()
+        ->filter(fn($doc) => $doc->saldo_pendiente > 0)
+        ->sortBy('fecha_vencimiento');
+
+    if ($ventas->isEmpty() && $compras->isEmpty()) {
+        Log::info('📭 [ATRASADOS] No hay documentos vencidos con saldo pendiente.');
+        return;
+    }
+
+    $destinos = [
+        'eliascorrea@4nlogistica.cl',
+        'NataliaLeyton@4nlogistica.cl',
+    ];
+
+
+
+    Mail::to($destinos)->send(new DocumentosAtrasadosMail($ventas, $compras));
+
+    Log::info('✅ [ATRASADOS] Correo de documentos vencidos enviado a ' . $destinos);
+})->weeklyOn(1, '10:00'); // ⏱️ solo para pruebas locales
+
+
+
+
+
 
 
 Artisan::command('inspire', function () {
