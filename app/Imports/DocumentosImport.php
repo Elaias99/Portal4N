@@ -123,6 +123,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                     'monto_neto'              => $this->cleanNumber($row['monto_neto']),
                     'monto_iva'               => $this->cleanNumber($row['monto_iva']),
                     'monto_total'             => $this->cleanNumber($row['monto_total']),
+                    'saldo_pendiente'         => $this->cleanNumber($row['monto_total']),
                     'iva_retenido_total'      => $this->cleanNumber($row['iva_retenido_total']),
                     'iva_retenido_parcial'    => $this->cleanNumber($row['iva_retenido_parcial']),
                     'iva_no_retenido'         => $this->cleanNumber($row['iva_no_retenido']),
@@ -228,6 +229,8 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                 'monto_neto' => $this->cleanNumber($row['monto_neto']),
                 'monto_iva' => $this->cleanNumber($row['monto_iva']),
                 'monto_total' => $this->cleanNumber($row['monto_total']),
+                'saldo_pendiente' => 0,
+
                 'empresa_id' => $this->empresaId,
                 'cobranza_id' => $cobranza?->id,
                 'status_original' => $estadoInicial,
@@ -281,6 +284,8 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
             'monto_neto' => $this->cleanNumber($row['monto_neto']),
             'monto_iva' => $this->cleanNumber($row['monto_iva']),
             'monto_total' => $this->cleanNumber($row['monto_total']),
+            'saldo_pendiente' => $this->cleanNumber($row['monto_total']),
+
 
             'iva_retenido_total' => $row['iva_retenido_total'],
             'iva_retenido_parcial' => $row['iva_retenido_parcial'],
@@ -440,14 +445,17 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
             // 2️⃣ Vincular factura -> nota (relación inversa)
             //    Esto asegura que la factura muestre "Referenciada por NC N°..."
-            if (!$factura->referenciados()->where('id', $nota->id)->exists()) {
-                $factura->referenciados()->save($nota);
-            }
+        if (!$factura->referenciados()->where('id', $nota->id)->exists()) {
+            $factura->referenciados()->save($nota);
+        }
 
-            $factura->refresh();
+        $factura->refresh();
 
-            // 3️⃣ Mensaje informativo solo si fue importada en este archivo
-            if ($esImportada) {
+        $factura->recalcularSaldoPendiente();
+        $factura->save();
+
+        // 3️⃣ Mensaje informativo solo si fue importada en este archivo
+        if ($esImportada) {
                 $this->notasCredito[] = "✅ Nota de crédito folio {$nota->folio} vinculada correctamente a la factura {$factura->folio}.";
             }
         } else {

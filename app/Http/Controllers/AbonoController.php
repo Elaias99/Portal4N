@@ -71,6 +71,12 @@ class AbonoController extends Controller
         // 🔹 Eliminar el abono
         $abono->delete();
 
+
+         // 🔹 Recalcular saldo pendiente en la BD
+        if (method_exists($documento, 'recalcularSaldoPendiente')) {
+            $documento->recalcularSaldoPendiente(); 
+        }
+
         // 🔹 Recalcular totales
         $totalAbonos = $documento->abonos()->sum('monto');
         $totalCruces = $documento->cruces()->sum('monto');

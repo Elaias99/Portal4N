@@ -55,6 +55,7 @@ class PagoDocumentoController extends Controller
         ]);
 
         // ✅ Actualizar estado y saldo
+        // ✅ Actualizar estado y saldo
         if ($tipo === 'ventas') {
             $documento->update([
                 'status' => 'Pago',
@@ -68,6 +69,7 @@ class PagoDocumentoController extends Controller
                 'saldo_pendiente' => 0,
             ]);
         }
+
 
 
         Log::info('🧩 Tipo de documento detectado', [
@@ -123,18 +125,24 @@ class PagoDocumentoController extends Controller
         // 🔹 Eliminar el pago
         $pago->delete();
 
+        // 🔹 IMPORTANTE → Recalcular saldo pendiente
+        if (method_exists($documento, 'recalcularSaldoPendiente')) {
+            $documento->recalcularSaldoPendiente();
+        }
+
         // 🔹 Verificar si quedan más pagos
         if ($documento->pagos()->count() === 0) {
-            // 🔹 Recalcular estado automático (Al día o Vencido)
+
+            // Recalcular nuevo estado automático
             $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
                 ? 'Vencido'
                 : 'Al día';
 
-            // 🔹 Actualizar el documento según su tipo
+            // 🔹 Actualizar documento según módulo
             if ($tipoDocumento === 'compra') {
                 $documento->update([
-                    'estado' => null, // limpiar estado manual
-                    'status_original' => $nuevoEstado, // mantener estado automático
+                    'estado' => null, 
+                    'status_original' => $nuevoEstado,
                     'fecha_estado_manual' => null,
                 ]);
             } else {
@@ -146,7 +154,7 @@ class PagoDocumentoController extends Controller
             }
         }
 
-        // 🔹 Redirección según módulo
+        // 🔹 Redirección
         if ($tipoDocumento === 'compra') {
             return redirect()
                 ->route('finanzas_compras.show', $documento->id)
@@ -157,6 +165,7 @@ class PagoDocumentoController extends Controller
             ->route('documentos.detalles', $documento->id)
             ->with('success', 'Pago eliminado y estado actualizado correctamente.');
     }
+
 
 
 

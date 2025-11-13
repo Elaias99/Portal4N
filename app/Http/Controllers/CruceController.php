@@ -74,6 +74,12 @@ class CruceController extends Controller
         // 🔹 Eliminar el cruce
         $cruce->delete();
 
+
+         // 🔹 Recalcular saldo pendiente en la BD
+        if (method_exists($documento, 'recalcularSaldoPendiente')) {
+            $documento->recalcularSaldoPendiente(); 
+        }
+
         // 🔹 Recalcular totales
         $totalCruces = $documento->cruces()->sum('monto');
         $totalAbonos = $documento->abonos()->sum('monto');

@@ -865,6 +865,12 @@ class DocumentoFinancieroController extends Controller
             'fecha_abono' => $request->fecha_abono,
         ]);
 
+
+
+        // Recalcular saldo pendiente en BD
+        $documento->recalcularSaldoPendiente();
+
+
         // Actualizar estado del documento
         $documento->update([
             'status' => 'Abono',
@@ -911,6 +917,10 @@ class DocumentoFinancieroController extends Controller
             'fecha_cruce' => $request->fecha_cruce,
             'proveedor_id' => $request->proveedor_id,
         ]);
+
+
+        // Recalcular saldo pendiente
+        $documento->recalcularSaldoPendiente();
 
         // Actualizar el estado del documento
         $documento->update([
