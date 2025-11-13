@@ -423,7 +423,21 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
         foreach ($notasPendientes as $nota) {
             $this->vincularNotaCredito($nota, false);
         }
+
+        // 3️⃣ Recalcular saldo pendiente de TODAS las facturas que fueron afectadas
+        $facturasAfectadas = \App\Models\DocumentoFinanciero::whereIn(
+            'id',
+            \App\Models\DocumentoFinanciero::where('tipo_documento_id', 61)
+                ->whereNotNull('referencia_id')
+                ->pluck('referencia_id')
+        )->get();
+
+        foreach ($facturasAfectadas as $factura) {
+            $factura->recalcularSaldoPendiente();
+            $factura->save();
+        }
     }
+
 
     /**
      * 🔗 Vincula una nota de crédito con su factura referenciada si existe
