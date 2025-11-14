@@ -139,8 +139,20 @@
                                         placeholder="N°" value="{{ request('folio') }}">
                                 </div>
 
+                                <div class="col-md-1">
+                                    <label class="form-label small text-muted">Saldo Pendiente</label>
+                                    <input 
+                                        type="number" 
+                                        name="saldo_pendiente" 
+                                        class="form-control form-control-sm"
+                                        placeholder="Ej: 260000" 
+                                        value="{{ request('saldo_pendiente') }}"
+                                        min="0"
+                                    >
+                                </div>
+
                                 {{-- 🔹 Filtro solo con dos opciones --}}
-                                <div class="col-md-2">
+                                <div class="col-md-1">
                                     <label class="form-label small text-muted">Estado Original</label>
 
 
@@ -174,7 +186,7 @@
 
 
 
-                                <div class="col-md-2 dropdown-fechas">
+                                <div class="col-md-1 dropdown-fechas">
                                     <label class="form-label small text-muted">Fecha Origen</label>
                                     <div class="dropdown w-100">
                                         <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
@@ -195,7 +207,7 @@
                                 </div>
 
 
-                                <div class="col-md-2 dropdown-fechas">
+                                <div class="col-md-1 dropdown-fechas">
                                     <label class="form-label small text-muted">Fecha Vencimiento</label>
                                     <div class="dropdown w-100">
                                         <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
@@ -244,6 +256,9 @@
                                     Detalle Cliente
                                 </a>
                             </div>
+
+
+
 
 
 

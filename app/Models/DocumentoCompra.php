@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class DocumentoCompra extends Model
@@ -17,7 +18,7 @@ class DocumentoCompra extends Model
         'monto_neto', 'monto_iva_recuperable', 'monto_iva_no_recuperable', 'codigo_iva_no_rec', 'monto_total', 
         'monto_neto_activo_fijo', 'iva_activo_fijo', 'iva_uso_comun', 'impto_sin_derecho_credito','iva_no_retenido',
         'tabacos_puros', 'tabacos_cigarrillos', 'tabacos_elaborados', 'nce_nde_sobre_fact_compra', 'codigo_otro_impuesto', 'valor_otro_impuesto', 'tasa_otro_impuesto', 
-        'estado', 'fecha_vencimiento','status_original','fecha_estado_manual', 'cobranza_compra_id'];
+        'estado', 'fecha_vencimiento','status_original','fecha_estado_manual', 'cobranza_compra_id','saldo_pendiente'];
 
     public function empresa()
     {
@@ -59,6 +60,19 @@ class DocumentoCompra extends Model
         return $this->belongsTo(CobranzaCompra::class, 'cobranza_compra_id');
     }
 
+    // Documento al que este documento hace referencia (por ejemplo, nota de crédito → factura)
+    public function referencia()
+    {
+        return $this->belongsTo(DocumentoCompra::class, 'referencia_id');
+    }
+
+    // Documentos que hacen referencia a este (notas aplicadas a la factura)
+    public function referenciados()
+    {
+        return $this->hasMany(DocumentoCompra::class, 'referencia_id');
+    }
+
+
 
 
 
@@ -97,36 +111,139 @@ class DocumentoCompra extends Model
     }
 
     // ======================================================
-    // 💰 Cálculo de saldo pendiente (mismo patrón que CxC)
+    // Cálculo de saldo pendiente (mismo patrón que CxC)
     // ======================================================
 
 
 
     public function getSaldoPendienteAttribute()
     {
-        // 🟢 Si tiene pagos registrados → saldo = 0
-        $pagos = $this->relationLoaded('pagos') ? $this->pagos : $this->pagos()->get();
-        if ($pagos->count() > 0) {
+        // 1) Valor en BD
+        $valorBD = $this->attributes['saldo_pendiente'] ?? null;
+
+        // 2) Detectar si debe recálculo
+        $tienePagos   = $this->pagos()->exists();
+        $tieneAbonos  = $this->abonos()->exists();
+        $tieneCruces  = $this->cruces()->exists();
+        $esProntoPago = $this->prontoPagos()->exists();
+
+        $tieneNotas = method_exists($this, 'referenciados')
+            ? $this->referenciados()->exists()
+            : false;
+
+        $requiereRecalculo =
+            $tienePagos ||
+            $tieneAbonos ||
+            $tieneCruces ||
+            $tieneNotas ||
+            $esProntoPago;
+
+        // 🧪 DEPURACIÓN
+
+
+        // 3) Si NO requiere recálculo → devolver valor BD
+        if (!$requiereRecalculo && $valorBD !== null) {
+
+
+
+            return $valorBD;
+        }
+
+ 
+
+        return $this->recalcularSaldoPendiente();
+    }
+
+
+
+
+
+
+    // ======================================================
+    // Cálculo de saldo pendiente (los recalcula)
+    // ======================================================
+
+    public function recalcularSaldoPendiente()
+    {
+        // ============================================================
+        // 1) Si tiene pagos → saldo = 0
+        // ============================================================
+        if ($this->pagos()->exists()) {
+            $this->update(['saldo_pendiente' => 0]);
             return 0;
         }
 
-        if ($this->estado === 'Pronto pago') {
+        // ============================================================
+        // 2) Si es Pronto Pago → saldo = 0
+        // ============================================================
+        if ($this->estado === 'Pronto pago' || $this->prontoPagos()->exists()) {
+            $this->update(['saldo_pendiente' => 0]);
             return 0;
         }
 
-        // 🔹 Monto base del documento
+        // ============================================================
+        // 3) Si es Nota de Crédito → saldo = 0
+        // ============================================================
+        if (
+            $this->tipo_documento_id == 61 ||
+            (isset($this->tipoDocumento) &&
+            str_contains(strtolower($this->tipoDocumento->nombre), 'nota de crédito'))
+        ) {
+            $this->update(['saldo_pendiente' => 0]);
+            return 0;
+        }
+
+        // ============================================================
+        // 4) Iniciar saldo desde monto_total
+        // ============================================================
         $saldo = $this->monto_total ?? 0;
 
-        // 🔹 Cargar relaciones necesarias
-        $abonos = $this->relationLoaded('abonos') ? $this->abonos : $this->abonos()->get();
-        $cruces = $this->relationLoaded('cruces') ? $this->cruces : $this->cruces()->get();
+        // ============================================================
+        // 5) Notas asociadas (cuando agreguemos referencias)
+        // ============================================================
+        if (method_exists($this, 'referenciados')) {
 
-        // ✅ Restar abonos y cruces
-        $saldo -= $abonos->sum('monto');
-        $saldo -= $cruces->sum('monto');
+            $referenciados = $this->referenciados()->get();
 
-        return max($saldo, 0);
+            // Notas de crédito restan
+            $saldo -= $referenciados
+                ->where('tipo_documento_id', 61)
+                ->sum('monto_total');
+
+            // Notas de débito suman
+            $saldo += $referenciados
+                ->where('tipo_documento_id', 56)
+                ->sum('monto_total');
+        }
+
+        // ============================================================
+        // 6) Abonos → restan
+        // ============================================================
+        $saldo -= $this->abonos()->sum('monto');
+
+        // ============================================================
+        // 7) Cruces → restan
+        // ============================================================
+        $saldo -= $this->cruces()->sum('monto');
+
+        // ============================================================
+        // 8) Evitar negativos
+        // ============================================================
+        $saldo = max($saldo, 0);
+
+        // ============================================================
+        // 9) Guardar en BD
+        // ============================================================
+        $this->update(['saldo_pendiente' => $saldo]);
+
+        return $saldo;
     }
+
+
+
+
+
+
 
     protected static function booted()
     {

@@ -68,6 +68,15 @@ class DocumentoCompraController extends Controller
             $baseQuery->whereDate('fecha_vencimiento', '<=', $request->fecha_venc_fin);
         }
 
+
+        if ($request->filled('saldo_pendiente')) {
+            // Normaliza número (quita puntos y comas)
+            $valor = (float) str_replace(['.', ','], '', $request->saldo_pendiente);
+
+            // Coincidencia exacta o muy cercana (± 1 peso)
+            $baseQuery->whereBetween('saldo_pendiente', [$valor - 1, $valor + 1]);
+        }
+
         // === CLONAR PARA CONTAR ESTADOS ===
         $queryAlDia = (clone $baseQuery)->where('status_original', 'Al día');
         $queryVencido = (clone $baseQuery)->where('status_original', 'Vencido');
@@ -754,37 +763,45 @@ class DocumentoCompraController extends Controller
             'fecha_abono.required' => 'La fecha del abono es obligatoria.',
         ]);
 
-        // ✅ Validar que el abono no supere el saldo pendiente
+        // 1) Validar límite del saldo
         $saldoPendiente = $documento->saldo_pendiente;
-
         if ($request->monto > $saldoPendiente) {
             return back()
                 ->withErrors(['monto' => 'El abono no puede ser mayor al saldo pendiente actual.'])
                 ->withInput();
         }
 
-        // 🧾 Guardar el abono
+        // 2) Registrar abono
         $documento->abonos()->create([
             'monto' => $request->monto,
             'fecha_abono' => $request->fecha_abono,
         ]);
 
-        // 🔁 Actualizar estado del documento
+        // 3) Recalcular saldo pendiente (nuevo patrón)
+        $documento->recalcularSaldoPendiente();
+
+        // 4) Actualizar estado manual (NO tocar status_original)
         $documento->update([
             'estado' => 'Abono',
+            'fecha_estado_manual' => now(),
         ]);
 
-        // 🧠 Registrar movimiento
+        // 5) Registrar movimiento moderno
         MovimientoCompra::create([
             'documento_compra_id' => $documento->id,
             'usuario_id' => Auth::id(),
-            'estado_anterior' => $documento->estado ?? 'Sin estado previo',
-            'nuevo_estado' => 'Abono',
+            'tipo_movimiento' => 'Abono registrado',
+            'descripcion' => "Se registró un abono de {$request->monto} el {$request->fecha_abono}.",
+            'datos_nuevos' => [
+                'monto' => $request->monto,
+                'fecha_abono' => $request->fecha_abono,
+            ],
             'fecha_cambio' => now(),
         ]);
 
         return back()->with('success', 'Abono registrado correctamente.');
     }
+
 
 
 
@@ -801,38 +818,47 @@ class DocumentoCompraController extends Controller
             'proveedor_id.exists' => 'El proveedor seleccionado no es válido.',
         ]);
 
-        // ✅ Validar que el cruce no supere el saldo pendiente
+        // 1) Validar límite del saldo
         $saldoPendiente = $documento->saldo_pendiente;
-
         if ($request->monto > $saldoPendiente) {
             return back()
                 ->withErrors(['monto' => 'El cruce no puede ser mayor al saldo pendiente actual.'])
                 ->withInput();
         }
 
-        // 🧾 Crear el registro del cruce
-        $documento->cruces()->create([
+        // 2) Registrar cruce
+        $cruce = $documento->cruces()->create([
             'monto' => $request->monto,
             'fecha_cruce' => $request->fecha_cruce,
             'proveedor_id' => $request->proveedor_id,
         ]);
 
-        // 🔁 Actualizar estado del documento
+        // 3) Recalcular saldo pendiente
+        $documento->recalcularSaldoPendiente();
+
+        // 4) Actualizar estado manual (NO tocar status_original)
         $documento->update([
             'estado' => 'Cruce',
+            'fecha_estado_manual' => now(),
         ]);
 
-        // 🧠 Registrar movimiento
+        // 5) Registrar movimiento moderno
         MovimientoCompra::create([
             'documento_compra_id' => $documento->id,
             'usuario_id' => Auth::id(),
-            'estado_anterior' => $documento->estado ?? 'Sin estado previo',
-            'nuevo_estado' => 'Cruce',
+            'tipo_movimiento' => 'Cruce registrado',
+            'descripcion' => "Se registró un cruce de {$request->monto} el {$request->fecha_cruce} con proveedor ID {$request->proveedor_id}.",
+            'datos_nuevos' => [
+                'monto' => $request->monto,
+                'fecha_cruce' => $request->fecha_cruce,
+                'proveedor_id' => $request->proveedor_id,
+            ],
             'fecha_cambio' => now(),
         ]);
 
         return back()->with('success', 'Cruce registrado correctamente.');
     }
+
 
 
 

@@ -105,10 +105,20 @@
                             </div>
 
 
+                            <div class="col-md-1">
+                                <label class="form-label small text-muted">Saldo Pendiente</label>
+                                <input 
+                                        type="number" 
+                                        name="saldo_pendiente" 
+                                        class="form-control form-control-sm"
+                                        placeholder="Ej: 260000" 
+                                        value="{{ request('saldo_pendiente') }}"
+                                        min="0"
+                                    >
+                            </div>
 
 
-
-                            <div class="col-md-2">
+                            <div class="col-md-1">
                                 <label class="form-label small text-muted">Estado Original</label>
                                 <select name="estado" class="form-select form-select-sm">
                                     <option value="">Todos</option>
@@ -122,7 +132,7 @@
                             </div>
 
 
-                            <div class="col-md-2">
+                            <div class="col-md-1">
                                 <label class="form-label small text-muted">Estado de Pago</label>
                                 <select name="estado_pago" class="form-select form-select-sm">
                                     <option value="">Todos</option>
@@ -137,7 +147,7 @@
 
 
                             {{-- 🔹 Fecha de Documento --}}
-                            <div class="col-md-2 dropdown-fechas">
+                            <div class="col-md-1 dropdown-fechas">
                                 <label class="form-label small text-muted">Fecha Documento</label>
                                 <div class="dropdown w-100">
                                     <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
@@ -156,7 +166,7 @@
                             </div>
 
                             {{-- 🔹 Fecha de Vencimiento --}}
-                            <div class="col-md-2 dropdown-fechas">
+                            <div class="col-md-1 dropdown-fechas">
                                 <label class="form-label small text-muted">Fecha Vencimiento</label>
                                 <div class="dropdown w-100">
                                     <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"

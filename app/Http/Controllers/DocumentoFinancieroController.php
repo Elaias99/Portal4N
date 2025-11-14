@@ -58,6 +58,14 @@ class DocumentoFinancieroController extends Controller
             $baseQuery->whereDate('fecha_vencimiento', '<=', $request->vencimiento_fin);
         }
 
+        if ($request->filled('saldo_pendiente')) {
+            // Normaliza número (quita puntos y comas)
+            $valor = (float) str_replace(['.', ','], '', $request->saldo_pendiente);
+
+            // Coincidencia exacta o muy cercana (± 1 peso)
+            $baseQuery->whereBetween('saldo_pendiente', [$valor - 1, $valor + 1]);
+        }
+
         // === CLONAR PARA CONTAR ESTADOS ===
         $queryAlDia = (clone $baseQuery)->where('status_original', 'Al día');
         $queryVencido = (clone $baseQuery)->where('status_original', 'Vencido');

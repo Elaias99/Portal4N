@@ -127,15 +127,18 @@ class ComprasImport implements ToModel, WithHeadingRow
                 'tipo_compra'       => $row['tipo_compra'] ?? null,
                 'rut_proveedor'     => $row['rut_proveedor'],
                 'razon_social'      => $row['razon_social'],
+
                 'fecha_docto'       => $this->transformDate($row['fecha_docto']),
                 'fecha_recepcion'   => $this->transformDate($row['fecha_recepcion']),
                 'fecha_acuse'       => $this->transformDate($row['fecha_acuse']),
+
                 'monto_exento'      => $row['monto_exento'] ?? 0,
                 'monto_neto'        => $row['monto_neto'] ?? 0,
                 'monto_iva_recuperable' => $row['monto_iva_recuperable'] ?? 0,
                 'monto_iva_no_recuperable' => $row['monto_iva_no_recuperable'] ?? 0,
                 'codigo_iva_no_rec' => $row['codigo_iva_no_rec'] ?? null,
                 'monto_total'       => $row['monto_total'] ?? 0,
+
                 'monto_neto_activo_fijo' => $row['monto_neto_activo_fijo'] ?? 0,
                 'iva_activo_fijo'   => $row['iva_activo_fijo'] ?? 0,
                 'iva_uso_comun'     => $row['iva_uso_comun'] ?? 0,
@@ -148,19 +151,29 @@ class ComprasImport implements ToModel, WithHeadingRow
                 'codigo_otro_impuesto' => $row['codigo_otro_impuesto'] ?? null,
                 'valor_otro_impuesto'  => $row['valor_otro_impuesto'] ?? 0,
                 'tasa_otro_impuesto'   => $row['tasa_otro_impuesto'] ?? 0,
-                'estado'            => 'Pendiente',
-                'fecha_vencimiento' => isset($cobranza)
-                    ? Carbon::parse($this->transformDate($row['fecha_docto']))
-                        ->addDays((int) ($cobranza->creditos ?? 30))
-                        ->format('Y-m-d')
-                    : Carbon::parse($this->transformDate($row['fecha_docto']))
-                        ->addDays(30)
-                        ->format('Y-m-d'),
 
-                'status_original'   => 'Pendiente',
-                'cobranza_compra_id'       => null,
+                // 🟢 Estado manual debe ser null
+                'estado'            => null,
+
+                // 🟢 Fecha de vencimiento usando 30 días por defecto
+                'fecha_vencimiento' => Carbon::parse($this->transformDate($row['fecha_docto']))
+                                        ->addDays((int) 30)
+                                        ->format('Y-m-d'),
+
+                // 🟢 Estado automático real
+                'status_original'   => Carbon::parse(
+                    Carbon::parse($this->transformDate($row['fecha_docto']))
+                        ->addDays(30)
+                )->isPast() ? 'Vencido' : 'Al día',
+
+                // 🟢 Saldo pendiente inicial
+                'saldo_pendiente'   => $this->cleanNumber($row['monto_total'] ?? 0),
+
+                // IMPORTANT: Sin cobranza aún
+                'cobranza_compra_id' => null,
             ]
         );
+
 
 
         Log::info('🟡 [ComprasImport] DocumentoCompra sin cobranza creado', [
@@ -248,6 +261,8 @@ class ComprasImport implements ToModel, WithHeadingRow
 
             'fecha_vencimiento' => $fechaVencimiento,
             'status_original' => $statusOriginal,
+
+            'saldo_pendiente' => $this->cleanNumber($row['monto_total'] ?? 0),
         ]);
 
 

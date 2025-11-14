@@ -95,12 +95,7 @@ class ProntoPagoController extends Controller
         // 🔹 Eliminar registro
         $prontoPago->delete();
 
-        // 🔹 Recalcular saldo pendiente (IMPORTANTE)
-        if (method_exists($documento, 'recalcularSaldoPendiente')) {
-            $documento->recalcularSaldoPendiente();
-        }
-
-        // 🔹 Si no quedan más registros, recalcular estado automático
+        // 🔹 Si ya no quedan pronto pagos → limpiar estado ANTES del recálculo
         if ($documento->prontoPagos()->count() === 0) {
 
             $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
@@ -122,13 +117,18 @@ class ProntoPagoController extends Controller
             }
         }
 
-        // 🔄 ***REFRESCAR PARA QUE EL MODELO EN MEMORIA SE ACTUALICE***
+        // 🔹 IMPORTANTE → liberar saldo_pendiente para que el accessor lo recalcule bien
+        $documento->update(['saldo_pendiente' => null]);
+
+        // 🔹 Recalcular saldo pendiente
+        if (method_exists($documento, 'recalcularSaldoPendiente')) {
+            $documento->recalcularSaldoPendiente();
+        }
+
+        // 🔄 REFRESH
         $documento->refresh();
 
-        // 🧪 (Opcional pero útil para debug) — Forzar acceso al accessor
-        // $documento->saldo_pendiente;
-
-        // 🔹 Redirección según el módulo
+        // 🔹 Redirección final
         if ($tipoDocumento === 'compra') {
             return redirect()
                 ->route('finanzas_compras.show', $documento->id)
@@ -139,6 +139,7 @@ class ProntoPagoController extends Controller
             ->route('documentos.detalles', $documento->id)
             ->with('success', 'Pronto pago eliminado y estado actualizado correctamente.');
     }
+
 
 
 }
