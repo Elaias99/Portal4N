@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 use App\Models\Abono;
 use App\Models\Cruce;
-use App\Models\DocumentoFinanciero;
+use App\Models\MovimientoDocumento;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Exports\MovimientoExport;
@@ -27,110 +27,44 @@ class PanelFinanzaController extends Controller
         $fechaInicio = $request->input('fecha_inicio');
         $fechaFin    = $request->input('fecha_fin');
         $empresaId   = $request->input('empresa_id');
-        $razonSocial = $request->input('razon_social'); // 👈 nuevo filtro
-        $perPage     = 15;
+        $razonSocial = $request->input('razon_social');
+        $perPage     = 20;
 
-        // === Subconsulta ABONOS ===
-        $abonosQuery = DB::table('abonos')
-            ->selectRaw("
-                'Abono' AS tipo,
-                fecha_abono AS fecha,
-                monto,
-                documento_financiero_id
-            ")
-            ->when($fechaInicio, fn($q) => $q->whereDate('fecha_abono', '>=', $fechaInicio))
-            ->when($fechaFin, fn($q) => $q->whereDate('fecha_abono', '<=', $fechaFin))
-            ->when($empresaId, function ($q) use ($empresaId) {
-                $q->whereIn('documento_financiero_id', function ($sub) use ($empresaId) {
-                    $sub->select('id')->from('documentos_financieros')->where('empresa_id', $empresaId);
-                });
-            })
-            ->when($razonSocial, function ($q) use ($razonSocial) {
-                $q->whereIn('documento_financiero_id', function ($sub) use ($razonSocial) {
-                    $sub->select('id')
-                        ->from('documentos_financieros')
-                        ->where('razon_social', 'like', "%{$razonSocial}%");
-                });
-            });
+        // === Consulta base ===
+        $query = \App\Models\MovimientoDocumento::with(['documento.empresa', 'user'])
+            ->when($fechaInicio, fn($q) =>
+                $q->whereDate('movimientos_documentos.created_at', '>=', $fechaInicio)
+            )
+            ->when($fechaFin, fn($q) =>
+                $q->whereDate('movimientos_documentos.created_at', '<=', $fechaFin)
+            )
+            ->when($empresaId, fn($q) =>
+                $q->whereHas('documento', fn($d) =>
+                    $d->where('empresa_id', $empresaId)
+                )
+            )
+            ->when($razonSocial, fn($q) =>
+                $q->whereHas('documento', fn($d) =>
+                    $d->where('razon_social', 'like', "%{$razonSocial}%")
+                )
+            )
+            ->orderByDesc('movimientos_documentos.created_at');
 
-        // === Subconsulta CRUCES ===
-        $crucesQuery = DB::table('cruces')
-            ->selectRaw("
-                'Cruce' AS tipo,
-                fecha_cruce AS fecha,
-                monto,
-                documento_financiero_id
-            ")
-            ->when($fechaInicio, fn($q) => $q->whereDate('fecha_cruce', '>=', $fechaInicio))
-            ->when($fechaFin, fn($q) => $q->whereDate('fecha_cruce', '<=', $fechaFin))
-            ->when($empresaId, function ($q) use ($empresaId) {
-                $q->whereIn('documento_financiero_id', function ($sub) use ($empresaId) {
-                    $sub->select('id')->from('documentos_financieros')->where('empresa_id', $empresaId);
-                });
-            })
-            ->when($razonSocial, function ($q) use ($razonSocial) {
-                $q->whereIn('documento_financiero_id', function ($sub) use ($razonSocial) {
-                    $sub->select('id')
-                        ->from('documentos_financieros')
-                        ->where('razon_social', 'like', "%{$razonSocial}%");
-                });
-            });
+        // === Paginación ===
+        $movimientos = $query->paginate($perPage);
 
-        // === Subconsulta PAGOS ===
-        $pagosQuery = DB::table('pagos as p')
-            ->join('documentos_financieros as df', 'p.documento_financiero_id', '=', 'df.id')
-            ->selectRaw("
-                'Pago' AS tipo,
-                p.fecha_pago AS fecha,
-                df.monto_total AS monto,
-                p.documento_financiero_id
-            ")
-            ->when($fechaInicio, fn($q) => $q->whereDate('p.fecha_pago', '>=', $fechaInicio))
-            ->when($fechaFin, fn($q) => $q->whereDate('p.fecha_pago', '<=', $fechaFin))
-            ->when($empresaId, fn($q) => $q->where('df.empresa_id', $empresaId))
-            ->when($razonSocial, fn($q) => $q->where('df.razon_social', 'like', "%{$razonSocial}%"));
+        // === Total montos ===
+        $totalMontos = (clone $query)
+            ->join('documentos_financieros as df', 'df.id', '=', 'movimientos_documentos.documento_financiero_id')
+            ->sum('df.monto_total');
 
-
-
-        // === UNION ===
-        $union = $abonosQuery->unionAll($crucesQuery)->unionAll($pagosQuery);
-
-        // === TOTAL FILTRADO ===
-        $totalMontos = DB::table(DB::raw("({$union->toSql()}) as movimientos"))
-            ->mergeBindings($union)
-            ->sum('monto');
-
-
-        $movimientos = DB::table(DB::raw("({$union->toSql()}) as movimientos"))
-            ->mergeBindings($union)
-            ->orderByDesc('fecha')
-            ->paginate($perPage);
-
-        // === Cargar documentos y usuarios ===
-        $documentos = \App\Models\DocumentoFinanciero::with('empresa')
-            ->whereIn('id', $movimientos->pluck('documento_financiero_id'))
-            ->get()
-            ->keyBy('id');
-
-        $ultimoMovimientoPorDoc = \App\Models\MovimientoDocumento::with('user')
-            ->whereIn('documento_financiero_id', $movimientos->pluck('documento_financiero_id'))
-            ->orderBy('id', 'desc')
-            ->get()
-            ->groupBy('documento_financiero_id')
-            ->map(fn($items) => $items->first());
-
-        $movimientos->getCollection()->transform(function ($m) use ($documentos, $ultimoMovimientoPorDoc) {
-            $m->documento = $documentos->get($m->documento_financiero_id);
-            $m->usuario   = optional($ultimoMovimientoPorDoc->get($m->documento_financiero_id)?->user);
-            return $m;
-        });
-
-        
-
+        // === Listado de empresas para filtro ===
         $empresas = \App\Models\Empresa::orderBy('Nombre')->get();
 
+        // === Vista ===
         return view('panelfinanza.show', compact('movimientos', 'empresas', 'totalMontos'));
     }
+
 
 
 

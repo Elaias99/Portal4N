@@ -274,13 +274,13 @@
                         <h6 class="fw-bold mb-3">Gestión Masiva</h6>
 
                         {{-- 🔹 Nuevo botón de Historial de Movimientos --}}
-                        {{-- @if (Auth::id() != 375)
+                        @if (Auth::id() != 375)
                             <a href="{{ route('panelfinanza.show') }}" 
                             class="btn btn-outline-secondary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
                                 <i class="fa-solid fa-clock-rotate-left"></i> 
                                 <span>Historial de Movimientos</span>
                             </a>
-                        @endif --}}
+                        @endif
 
                         {{-- 🔹 Importación de Excel --}}
                         @if (Auth::id() != 375)

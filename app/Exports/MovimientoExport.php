@@ -2,14 +2,13 @@
 
 namespace App\Exports;
 
-use App\Models\Abono;
-use App\Models\Cruce;
-use App\Models\DocumentoFinanciero;
+use App\Models\MovimientoDocumento;
 use Illuminate\Contracts\View\View;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Illuminate\Support\Carbon;
 
 class MovimientoExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize
 {
@@ -19,106 +18,65 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
     public function __construct($fechaInicio = null, $fechaFin = null)
     {
         $this->fechaInicio = $fechaInicio;
-        $this->fechaFin = $fechaFin;
+        $this->fechaFin    = $fechaFin;
     }
 
     public function collection()
     {
-        // === ABONOS ===
-        $abonosQuery = Abono::with('documento');
-        // === CRUCES ===
-        $crucesQuery = Cruce::with('documento');
-        // === PAGOS (estado manual = Pago) ===
-        $pagosQuery = DocumentoFinanciero::where('status', 'Pago');
+        $query = MovimientoDocumento::with(['documento.empresa', 'user', 'documento.tipoDocumento'])
+            ->when($this->fechaInicio, fn($q) =>
+                $q->whereDate('created_at', '>=', $this->fechaInicio)
+            )
+            ->when($this->fechaFin, fn($q) =>
+                $q->whereDate('created_at', '<=', $this->fechaFin)
+            )
+            ->orderByDesc('created_at');
 
-        // === FILTROS POR FECHA ===
-        if ($this->fechaInicio && $this->fechaFin) {
-            $abonosQuery->whereBetween('fecha_abono', [$this->fechaInicio, $this->fechaFin]);
-            $crucesQuery->whereBetween('fecha_cruce', [$this->fechaInicio, $this->fechaFin]);
-            $pagosQuery->whereBetween('fecha_estado_manual', [$this->fechaInicio, $this->fechaFin]);
-        } elseif ($this->fechaInicio) {
-            $abonosQuery->whereDate('fecha_abono', '>=', $this->fechaInicio);
-            $crucesQuery->whereDate('fecha_cruce', '>=', $this->fechaInicio);
-            $pagosQuery->whereDate('fecha_estado_manual', '>=', $this->fechaInicio);
-        } elseif ($this->fechaFin) {
-            $abonosQuery->whereDate('fecha_abono', '<=', $this->fechaFin);
-            $crucesQuery->whereDate('fecha_cruce', '<=', $this->fechaFin);
-            $pagosQuery->whereDate('fecha_estado_manual', '<=', $this->fechaFin);
-        }
+        $movimientos = $query->get();
 
-        $abonos = $abonosQuery->get();
-        $cruces = $crucesQuery->get();
-        $pagos  = $pagosQuery->get();
-
-        // === UNIFICAR DATOS ===
-        $movimientos = collect();
-
-        foreach ($abonos as $a) {
-            $movimientos->push([
-                'tipo' => 'Abono',
-                'fecha' => $a->fecha_abono,
-                'monto' => $a->monto,
-                'folio' => $a->documento->folio ?? '-',
-                'cliente' => $a->documento->razon_social ?? '-',
-                'estado' => $a->documento->status_original ?? '-',
-            ]);
-        }
-
-        foreach ($cruces as $c) {
-            $movimientos->push([
-                'tipo' => 'Cruce',
-                'fecha' => $c->fecha_cruce,
-                'monto' => $c->monto,
-                'folio' => $c->documento->folio ?? '-',
-                'cliente' => $c->documento->razon_social ?? '-',
-                'estado' => $c->documento->status_original ?? '-',
-            ]);
-        }
-
-        foreach ($pagos as $p) {
-            $movimientos->push([
-                'tipo' => 'Pago',
-                'fecha' => $p->fecha_estado_manual,
-                'monto' => $p->monto_total ?? 0,
-                'folio' => $p->folio ?? '-',
-                'cliente' => $p->razon_social ?? '-',
-                'estado' => $p->status_original ?? '-',
-            ]);
-        }
-
-        return $movimientos->sortByDesc('fecha');
+        return $movimientos;
     }
 
     public function headings(): array
     {
         return [
-            'Tipo de Movimiento',
             'Fecha',
-            'Monto ($)',
+            'Tipo Movimiento',
+            'Descripción',
             'Folio Documento',
+            'Tipo Documento',
             'Cliente / Razón Social',
-            'Estado del Documento',
+            'Empresa',
+            'Monto Total ($)',
+            'Saldo Pendiente ($)',
+            'Usuario',
         ];
     }
 
-    public function map($movimiento): array
+    public function map($mov): array
     {
-        // Normalizar el monto para asegurar que sea numérico
-        $montoLimpio = floatval(
-            str_replace(['.', ','], ['', '.'], $movimiento['monto'])
-        );
-
-        // Formatear como pesos chilenos (CLP)
-        $montoFormateado = '$' . number_format($montoLimpio, 0, ',', '.');
+        $fecha = optional($mov->created_at)->format('d-m-Y H:i');
+        $tipo = $mov->tipo_movimiento ?? '—';
+        $descripcion = $mov->descripcion ?? '—';
+        $folio = $mov->documento->folio ?? '—';
+        $tipoDoc = $mov->documento->tipoDocumento->nombre ?? '—';
+        $cliente = $mov->documento->razon_social ?? '—';
+        $empresa = $mov->documento->empresa->Nombre ?? '—';
+        $montoTotal = '$' . number_format($mov->documento->monto_total ?? 0, 0, ',', '.');
+        $saldoPendiente = '$' . number_format($mov->documento->saldo_pendiente ?? 0, 0, ',', '.');
+        $usuario = $mov->user->name ?? '—';
 
         return [
-            $movimiento['tipo'],
-            \Carbon\Carbon::parse($movimiento['fecha'])->format('d-m-Y'),
-            $montoFormateado,
-            $movimiento['folio'],
-            $movimiento['cliente'],
-            $movimiento['estado'],
+            $fecha,
+            $tipo,
+            $descripcion,
+            $folio,
+            $tipoDoc,
+            $cliente,
+            $empresa,
+            $montoTotal,
+            $saldoPendiente,
+            $usuario,
         ];
     }
-
 }
