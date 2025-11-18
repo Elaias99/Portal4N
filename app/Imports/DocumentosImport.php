@@ -153,9 +153,24 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                     'codigo_otro_imp'                => $row['codigo_otro_imp'] ?? null,
                     'valor_otro_imp'                 => $this->cleanNumber($row['valor_otro_imp']),
                     'tasa_otro_imp'                  => $this->cleanNumber($row['tasa_otro_imp']),
-                    'estado'                         => 'Pendiente',
-                    'status'                         => 'Pendiente',
-                    'status_original'                => 'Pendiente',
+
+
+                    'status'          => $this->definirEstadoInicial(
+                                            $this->calcularFechaVencimiento(
+                                                Carbon::parse($this->transformDate($row['fecha_docto']))->toDateString(),
+                                                $cobranza?->creditos ?? 30
+                                            )
+                                        ),
+                    'status_original' => $this->definirEstadoInicial(
+                                            $this->calcularFechaVencimiento(
+                                                Carbon::parse($this->transformDate($row['fecha_docto']))->toDateString(),
+                                                $cobranza?->creditos ?? 30
+                                            )
+                                        ),
+
+
+
+
                     'cobranza_id'                    => null,
                     
                     'fecha_vencimiento' => $cobranza
