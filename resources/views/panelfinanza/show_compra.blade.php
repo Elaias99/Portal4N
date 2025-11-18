@@ -7,7 +7,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 class="fw-semibold text-dark mb-0">Historial de Movimientos — Compras</h4>
         <a href="{{ route('finanzas_compras.index') }}" class="btn btn-outline-secondary btn-sm">
-            Volver 
+            Volver
         </a>
     </div>
 
@@ -72,24 +72,28 @@
                 <thead style="background-color: #f8f9fa;">
                     <tr class="text-muted small">
                         <th>Empresa</th>
-                        <th>Fecha</th>
-                        <th>Monto</th>
-                        <th>Documento Asociado</th>
+                        <th>Fecha Movimiento</th>
+                        <th>Monto Documento</th>
+                        <th>Folio</th>
                         <th>Proveedor</th>
-                        <th>Tipo</th>
+                        <th>Estado Anterior → Nuevo</th>
                         <th>Usuario</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($movimientos as $index => $mov)
                         <tr style="background-color: {{ $index % 2 == 0 ? '#ffffff' : '#f9f9f9' }};">
-                            <td>{{ $mov->documento?->empresa?->Nombre ?? 'Sin empresa' }}</td>
-                            <td>{{ \Carbon\Carbon::parse($mov->fecha)->format('d-m-Y') }}</td>
-                            <td>${{ number_format($mov->monto, 0, ',', '.') }}</td>
-                            <td>{{ $mov->documento->folio ?? '-' }}</td>
-                            <td>{{ $mov->documento->razon_social ?? '-' }}</td>
-                            <td>{{ $mov->tipo }}</td>
-                            <td>{{ $mov->usuario?->name ?? '—' }}</td>
+                            <td>{{ $mov->compra?->empresa?->Nombre ?? 'Sin empresa' }}</td>
+                            <td>{{ $mov->created_at?->format('d-m-Y H:i') ?? '-' }}</td>
+                            <td>${{ number_format($mov->compra?->monto_total ?? 0, 0, ',', '.') }}</td>
+                            <td>{{ $mov->compra?->folio ?? '-' }}</td>
+                            <td>{{ $mov->compra?->razon_social ?? '-' }}</td>
+                            <td>
+                                {{ $mov->estado_anterior ?? '—' }} 
+                                <span class="text-muted">→</span> 
+                                {{ $mov->nuevo_estado ?? '—' }}
+                            </td>
+                            <td>{{ $mov->user?->name ?? '—' }}</td>
                         </tr>
                     @empty
                         <tr>
@@ -110,7 +114,6 @@
 
 {{-- ====== ESTILOS Y ANIMACIONES ====== --}}
 <style>
-/* Animación general de entrada */
 .fade-in {
     opacity: 0;
     transform: translateY(10px);
@@ -134,7 +137,6 @@
     }
 }
 
-/* Hover suave en filas */
 .table tbody tr {
     transition: background-color 0.25s ease, transform 0.2s ease;
 }
@@ -144,7 +146,6 @@
     transform: scale(1.002);
 }
 
-/* Transición en botones */
 .btn {
     transition: background-color 0.25s ease, transform 0.2s ease;
 }
@@ -153,7 +154,6 @@
     transform: translateY(-1px);
 }
 
-/* Sombra leve en tarjetas al hover */
 .card {
     transition: box-shadow 0.3s ease;
 }
@@ -162,7 +162,6 @@
     box-shadow: 0 4px 14px rgba(0,0,0,0.08);
 }
 
-/* ====== TOTAL MOSTRADO DESTACADO ====== */
 .total-box {
     background: #f1f3f5;
     border-radius: 8px;

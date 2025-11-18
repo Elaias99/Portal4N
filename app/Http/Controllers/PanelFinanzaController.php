@@ -111,106 +111,43 @@ class PanelFinanzaController extends Controller
         $fechaFin    = $request->input('fecha_fin');
         $empresaId   = $request->input('empresa_id');
         $razonSocial = $request->input('razon_social'); // proveedor
-        $perPage     = 15;
+        $perPage     = 20;
 
-        // === Subconsulta ABONOS ===
-        $abonosQuery = DB::table('abonos')
-            ->selectRaw("
-                'Abono' AS tipo,
-                fecha_abono AS fecha,
-                monto,
-                documento_compra_id
-            ")
-            ->when($fechaInicio, fn($q) => $q->whereDate('fecha_abono', '>=', $fechaInicio))
-            ->when($fechaFin, fn($q) => $q->whereDate('fecha_abono', '<=', $fechaFin))
-            ->when($empresaId, function ($q) use ($empresaId) {
-                $q->whereIn('documento_compra_id', function ($sub) use ($empresaId) {
-                    $sub->select('id')->from('documentos_compras')->where('empresa_id', $empresaId);
-                });
-            })
-            ->when($razonSocial, function ($q) use ($razonSocial) {
-                $q->whereIn('documento_compra_id', function ($sub) use ($razonSocial) {
-                    $sub->select('id')
-                        ->from('documentos_compras')
-                        ->where('razon_social', 'like', "%{$razonSocial}%");
-                });
-            });
+        // === Consulta base ===
+        $query = \App\Models\MovimientoCompra::with(['compra.empresa', 'user'])
+            ->when($fechaInicio, fn($q) =>
+                $q->whereDate('movimientos_compras.created_at', '>=', $fechaInicio)
+            )
+            ->when($fechaFin, fn($q) =>
+                $q->whereDate('movimientos_compras.created_at', '<=', $fechaFin)
+            )
+            ->when($empresaId, fn($q) =>
+                $q->whereHas('compra', fn($d) =>
+                    $d->where('empresa_id', $empresaId)
+                )
+            )
+            ->when($razonSocial, fn($q) =>
+                $q->whereHas('compra', fn($d) =>
+                    $d->where('razon_social', 'like', "%{$razonSocial}%")
+                )
+            )
+            ->orderByDesc('movimientos_compras.created_at');
 
-        // === Subconsulta CRUCES ===
-        $crucesQuery = DB::table('cruces')
-            ->selectRaw("
-                'Cruce' AS tipo,
-                fecha_cruce AS fecha,
-                monto,
-                documento_compra_id
-            ")
-            ->when($fechaInicio, fn($q) => $q->whereDate('fecha_cruce', '>=', $fechaInicio))
-            ->when($fechaFin, fn($q) => $q->whereDate('fecha_cruce', '<=', $fechaFin))
-            ->when($empresaId, function ($q) use ($empresaId) {
-                $q->whereIn('documento_compra_id', function ($sub) use ($empresaId) {
-                    $sub->select('id')->from('documentos_compras')->where('empresa_id', $empresaId);
-                });
-            })
-            ->when($razonSocial, function ($q) use ($razonSocial) {
-                $q->whereIn('documento_compra_id', function ($sub) use ($razonSocial) {
-                    $sub->select('id')
-                        ->from('documentos_compras')
-                        ->where('razon_social', 'like', "%{$razonSocial}%");
-                });
-            });
+        // === Paginación ===
+        $movimientos = $query->paginate($perPage);
 
-        // === Subconsulta PAGOS ===
-        $pagosQuery = DB::table('pagos as p')
-            ->join('documentos_compras as dc', 'p.documento_compra_id', '=', 'dc.id')
-            ->selectRaw("
-                'Pago' AS tipo,
-                p.fecha_pago AS fecha,
-                dc.monto_total AS monto,
-                p.documento_compra_id
-            ")
-            ->when($fechaInicio, fn($q) => $q->whereDate('p.fecha_pago', '>=', $fechaInicio))
-            ->when($fechaFin, fn($q) => $q->whereDate('p.fecha_pago', '<=', $fechaFin))
-            ->when($empresaId, fn($q) => $q->where('dc.empresa_id', $empresaId))
-            ->when($razonSocial, fn($q) => $q->where('dc.razon_social', 'like', "%{$razonSocial}%"));
+        // === Total montos ===
+        $totalMontos = (clone $query)
+            ->join('documentos_compras as dc', 'dc.id', '=', 'movimientos_compras.documento_compra_id')
+            ->sum('dc.monto_total');
 
-        // === UNION ===
-        $union = $abonosQuery->unionAll($crucesQuery)->unionAll($pagosQuery);
-
-        // === TOTAL FILTRADO ===
-        $totalMontos = DB::table(DB::raw("({$union->toSql()}) as movimientos"))
-            ->mergeBindings($union)
-            ->sum('monto');
-
-        // === RESULTADOS PAGINADOS ===
-        $movimientos = DB::table(DB::raw("({$union->toSql()}) as movimientos"))
-            ->mergeBindings($union)
-            ->orderByDesc('fecha')
-            ->paginate($perPage);
-
-        // === Cargar documentos y usuarios ===
-        $documentos = \App\Models\DocumentoCompra::with('empresa')
-            ->whereIn('id', $movimientos->pluck('documento_compra_id'))
-            ->get()
-            ->keyBy('id');
-
-        $ultimoMovimientoPorDoc = \App\Models\MovimientoCompra::with('user')
-            ->whereIn('documento_compra_id', $movimientos->pluck('documento_compra_id'))
-            ->orderBy('id', 'desc')
-            ->get()
-            ->groupBy('documento_compra_id')
-            ->map(fn($items) => $items->first());
-
-        // === Enriquecer colección ===
-        $movimientos->getCollection()->transform(function ($m) use ($documentos, $ultimoMovimientoPorDoc) {
-            $m->documento = $documentos->get($m->documento_compra_id);
-            $m->usuario   = optional($ultimoMovimientoPorDoc->get($m->documento_compra_id)?->user);
-            return $m;
-        });
-
+        // === Listado de empresas para filtro ===
         $empresas = \App\Models\Empresa::orderBy('Nombre')->get();
 
+        // === Vista ===
         return view('panelfinanza.show_compra', compact('movimientos', 'empresas', 'totalMontos'));
     }
+
 
 
 

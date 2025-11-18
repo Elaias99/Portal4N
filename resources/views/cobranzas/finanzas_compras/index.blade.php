@@ -228,11 +228,11 @@
 
                 @if (Auth::id() != 375)
                     {{-- Nuevo botón Historial --}}
-                    {{-- <a href="{{ route('panelfinanza.show_compras') }}" 
+                    <a href="{{ route('panelfinanza.show_compras') }}" 
                     class="btn btn-outline-secondary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
                         <i class="fa-solid fa-clock-rotate-left"></i> 
                         <span>Historial de Compras</span>
-                    </a> --}}
+                    </a>
 
                     <form action="{{ route('finanzas_compras.import') }}" method="POST" enctype="multipart/form-data" class="mb-3">
                         @csrf
