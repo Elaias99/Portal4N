@@ -11,6 +11,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Auth;
 use App\Exports\DocumentoCompraExport;
 use App\Models\MovimientoCompra;
+use Illuminate\Support\Facades\DB;
 
 
 class DocumentoCompraController extends Controller
@@ -88,17 +89,19 @@ class DocumentoCompraController extends Controller
         $documentosOriginal = $baseQuery->orderBy('fecha_vencimiento', 'desc')->get();
 
         // === ACTUALIZAR ESTADO AUTOMÁTICO ===
-        $hoy = \Carbon\Carbon::today();
-        foreach ($documentosOriginal as $doc) {
-            if ($doc->fecha_vencimiento && $doc->saldo_pendiente > 0) {
-                $fechaVenc = \Carbon\Carbon::parse($doc->fecha_vencimiento);
-                $nuevoEstado = $fechaVenc->lt($hoy) ? 'Vencido' : 'Al día';
-                if ($doc->status_original !== $nuevoEstado) {
-                    $doc->status_original = $nuevoEstado;
-                    $doc->save();
-                }
-            }
-        }
+        // === ACTUALIZAR ESTADO AUTOMÁTICO (optimizado) ===
+        DB::table('documentos_compras')
+            ->whereDate('fecha_vencimiento', '<', now())
+            ->where('saldo_pendiente', '>', 0)
+            ->where('status_original', '!=', 'Vencido')
+            ->update(['status_original' => 'Vencido']);
+
+        DB::table('documentos_compras')
+            ->whereDate('fecha_vencimiento', '>=', now())
+            ->where('saldo_pendiente', '>', 0)
+            ->where('status_original', '!=', 'Al día')
+            ->update(['status_original' => 'Al día']);
+
 
         // === FILTRO POR ESTADO DE PAGO ===
         $documentosCompras = $documentosOriginal;
