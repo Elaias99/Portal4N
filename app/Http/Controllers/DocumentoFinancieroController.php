@@ -11,6 +11,7 @@ use App\Imports\DocumentosImport;
 use App\Models\MovimientoDocumento;
 use App\Exports\DocumentosExport;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 
@@ -67,11 +68,13 @@ class DocumentoFinancieroController extends Controller
         }
 
         // === CLONAR PARA CONTAR ESTADOS ===
-        $queryAlDia = (clone $baseQuery)->where('status_original', 'Al día');
-        $queryVencido = (clone $baseQuery)->where('status_original', 'Vencido');
+        $totales = (clone $baseQuery)
+            ->selectRaw('status_original, COUNT(*) as total')
+            ->groupBy('status_original')
+            ->pluck('total', 'status_original');
 
-        $totalAlDia = $queryAlDia->count();
-        $totalVencido = $queryVencido->count();
+        $totalAlDia = $totales['Al día'] ?? 0;
+        $totalVencido = $totales['Vencido'] ?? 0;
 
         // === QUERY PRINCIPAL (con relaciones) ===
         $query = $baseQuery->with([
@@ -91,20 +94,24 @@ class DocumentoFinancieroController extends Controller
         // === OBTENER DATOS BASE SIN PAGINAR ===
         $documentosOriginal = $query
             ->orderByRaw('ISNULL(fecha_vencimiento), fecha_vencimiento DESC')
-            ->get();
+            ->paginate(10);
 
         // === ACTUALIZAR ESTADO AUTOMÁTICO ===
         $hoy = \Carbon\Carbon::today();
-        foreach ($documentosOriginal as $doc) {
-            if ($doc->fecha_vencimiento && $doc->saldo_pendiente > 0) {
-                $fechaVenc = \Carbon\Carbon::parse($doc->fecha_vencimiento);
-                $nuevoEstado = $fechaVenc->lt($hoy) ? 'Vencido' : 'Al día';
-                if ($doc->status_original !== $nuevoEstado) {
-                    $doc->status_original = $nuevoEstado;
-                    $doc->save();
-                }
-            }
-        }
+
+        
+        DB::table('documentos_financieros')
+            ->whereDate('fecha_vencimiento', '<', now())
+            ->where('saldo_pendiente', '>', 0)
+            ->where('status_original', '!=', 'Vencido')
+            ->update(['status_original' => 'Vencido']);
+
+        // Actualiza al día
+        DB::table('documentos_financieros')
+            ->whereDate('fecha_vencimiento', '>=', now())
+            ->where('saldo_pendiente', '>', 0)
+            ->where('status_original', '!=', 'Al día')
+            ->update(['status_original' => 'Al día']);
 
         // === FILTRO POR ESTADO DE PAGO ===
         $documentoFinancieros = $documentosOriginal; // conjunto base
@@ -135,19 +142,6 @@ class DocumentoFinancieroController extends Controller
             })
             ->sum('saldo_pendiente');
 
-        // === PAGINACIÓN MANUAL ===
-        $page = $request->get('page', 1);
-        $perPage = 10;
-        $offset = ($page - 1) * $perPage;
-        $itemsPaginated = $documentoFinancieros->slice($offset, $perPage)->values();
-
-        $documentoFinancieros = new \Illuminate\Pagination\LengthAwarePaginator(
-            $itemsPaginated,
-            $documentoFinancieros->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
 
         // === DATOS DE APOYO ===
         $empresas = Empresa::orderBy('Nombre')->get(['id', 'Nombre']);
@@ -646,6 +640,15 @@ class DocumentoFinancieroController extends Controller
         // === 6️⃣ Ejecutar la query una sola vez ===
         $documentos = $query->get();
 
+        // === 🔹 Precálculos para optimizar el export ===
+        // Evita recalcular sumas y fechas dentro de DocumentosExport::map()
+        $documentos->each(function ($doc) {
+            $doc->total_abonado = $doc->abonos->sum('monto');
+            $doc->ultima_fecha_abono = $doc->abonos->max('fecha_abono');
+            $doc->total_cruzado = $doc->cruces->sum('monto');
+            $doc->ultima_fecha_cruce = $doc->cruces->max('fecha_cruce');
+        });
+
         // === 7️⃣ Filtro de Estado de Pago (en memoria, con accessor saldo_pendiente) ===
         if ($request->filled('estado_pago')) {
             $documentos = $documentos->filter(function ($doc) use ($request) {
@@ -757,6 +760,16 @@ class DocumentoFinancieroController extends Controller
 
         // === 7️⃣ Ejecutar query una sola vez ===
         $documentos = $query->get();
+
+
+        // === 🔹 Precálculos para optimizar el export ===
+        // Evita recalcular sumas y fechas dentro de DocumentosExport::map()
+        $documentos->each(function ($doc) {
+            $doc->total_abonado = $doc->abonos->sum('monto');
+            $doc->ultima_fecha_abono = $doc->abonos->max('fecha_abono');
+            $doc->total_cruzado = $doc->cruces->sum('monto');
+            $doc->ultima_fecha_cruce = $doc->cruces->max('fecha_cruce');
+        });
 
         // === 8️⃣ Filtro de Estado de Pago (en memoria, con accessor saldo_pendiente) ===
         if ($request->filled('estado_pago')) {

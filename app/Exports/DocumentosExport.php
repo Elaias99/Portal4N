@@ -31,12 +31,10 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
     public function map($doc): array
     {
         // === Cálculos de abonos ===
-        $totalAbonado = $doc->abonos->sum('monto');
-        $ultimaFechaAbono = $doc->abonos->max('fecha_abono');
-
-        // === Cálculos de cruces ===
-        $totalCruzado = $doc->cruces->sum('monto');
-        $ultimaFechaCruce = $doc->cruces->max('fecha_cruce');
+        $totalAbonado = $doc->total_abonado ?? 0;
+        $ultimaFechaAbono = $doc->ultima_fecha_abono ?? null;
+        $totalCruzado = $doc->total_cruzado ?? 0;
+        $ultimaFechaCruce = $doc->ultima_fecha_cruce ?? null;
 
         // === Saldo pendiente dinámico ===
         if ($doc->tipo_documento_id == 61) {
