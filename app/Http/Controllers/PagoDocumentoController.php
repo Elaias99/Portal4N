@@ -209,7 +209,7 @@ class PagoDocumentoController extends Controller
             // ✅ Actualizar estado y saldo
             $documento->update([
                 'status' => 'Pago',
-                'fecha_estado_manual' => $fechaPago,
+                'fecha_estado_manual' => now(),
                 'saldo_pendiente' => 0,
             ]);
 

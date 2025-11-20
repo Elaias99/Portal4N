@@ -50,14 +50,14 @@ $notificaciones = Auth::user()->unreadNotifications
                         @endif
 
                         {{-- 🔹 Acceso exclusivo para el usuario con ID = 1 --}}
-                        @if (Auth::check() && Auth::id() === 1)
+                        {{-- @if (Auth::check() && Auth::id() === 1)
                             <a href="{{ route('admin.roles.index') }}" 
                             class="btn btn-outline-secondary text-start"
                             data-bs-toggle="tooltip"
                             title="Gestión de Roles del Sistema">
                                 <i class="fa-solid fa-user-shield me-2"></i> Administración de Roles
                             </a>
-                        @endif
+                        @endif --}}
 
 
 

@@ -306,7 +306,7 @@
 
                         {{-- PAGO MASIVO --}}
 
-                        @if (Auth::id() == 1)
+                        @if (Auth::id() != 375)
                             <button type="button"
                                     class="btn btn-outline-primary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
                                     data-bs-toggle="modal"
