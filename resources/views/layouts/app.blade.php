@@ -243,6 +243,14 @@
                         </li>
                         @endrole
 
+                        @role('admin')
+                        <li class="list-group-item">
+                            <a href="{{ route('admin.backup.index') }}" class="text-decoration-none">
+                                <i class="fas fa-database me-2"></i> Respaldo de Base de Datos
+                            </a>
+                        </li>
+                        @endrole
+
                         <!-- Historial de Vacaciones -->
                         @role('admin')
                         <li class="list-group-item">

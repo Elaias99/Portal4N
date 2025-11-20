@@ -37,6 +37,7 @@ use App\Http\Controllers\AbonoController;
 use App\Http\Controllers\TrackingProductoController;
 use App\Http\Controllers\CruceController;
 use App\Http\Controllers\DocumentoCompraController;
+use App\Http\Controllers\Admin\BackupDatabaseController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -170,8 +171,14 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/admin/roles/{user}/assign', [\App\Http\Controllers\Admin\RoleManagerController::class, 'assign'])->name('admin.roles.assign');
 });
 
+// BackupDatabase
+Route::get('/admin/backup', [BackupDatabaseController::class, 'index'])
+    ->middleware(['auth'])
+    ->name('admin.backup.index');
 
-
+Route::post('/admin/backup-database', [BackupDatabaseController::class, 'export'])
+    ->middleware(['auth'])
+    ->name('admin.backup.database');
 
 
 
