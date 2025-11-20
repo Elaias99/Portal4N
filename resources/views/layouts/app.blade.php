@@ -243,13 +243,14 @@
                         </li>
                         @endrole
 
-                        @role('admin')
-                        <li class="list-group-item">
-                            <a href="{{ route('admin.backup.index') }}" class="text-decoration-none">
-                                <i class="fas fa-database me-2"></i> Respaldo de Base de Datos
-                            </a>
-                        </li>
-                        @endrole
+                        @if (Auth::check() && Auth::id() === 1)
+                            <li class="list-group-item">
+                                <a href="{{ route('admin.controlpanel.index') }}" class="text-decoration-none">
+                                    <i class="fas fa-tools me-2"></i> Panel Administrativo
+                                </a>
+                            </li>
+                        @endif
+
 
                         <!-- Historial de Vacaciones -->
                         @role('admin')

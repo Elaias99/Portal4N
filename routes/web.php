@@ -38,6 +38,7 @@ use App\Http\Controllers\TrackingProductoController;
 use App\Http\Controllers\CruceController;
 use App\Http\Controllers\DocumentoCompraController;
 use App\Http\Controllers\Admin\BackupDatabaseController;
+use App\Http\Controllers\Admin\ControlPanelAdminController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -162,6 +163,18 @@ Route::get('/notifications/mark-as-read/{id}', [NotificationController::class, '
 
 
 Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
+
+
+// PANEL ADMIN
+Route::middleware(['auth'])->group(function () {
+
+    Route::get('/admin/control-panel', 
+        [\App\Http\Controllers\Admin\ControlPanelAdminController::class, 'index']
+    )->name('admin.controlpanel.index');
+
+});
+
+
 
 
 // ROLES
