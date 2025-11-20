@@ -121,7 +121,7 @@ function buscarDocumentosMasivos(e) {
                         <td><input type="checkbox" name="documentos[]" value="${doc.id}"></td>
                         <td>${doc.folio ?? ''}</td>
                         <td>${doc.razon_social ?? ''}</td>
-                        <td>${doc.rut_cliente ?? ''}</td>
+                        <td>${doc.rut_proveedor ?? ''}</td>
                         <td>$${Number(doc.monto_total || 0).toLocaleString('es-CL')}</td>
                         <td>$${Number(doc.saldo_pendiente || 0).toLocaleString('es-CL')}</td>
                     </tr>

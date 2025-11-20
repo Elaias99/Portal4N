@@ -178,7 +178,7 @@ class PagoDocumentoController extends Controller
         $request->validate([
             'fecha_pago' => 'required|date|before_or_equal:today',
             'documentos' => 'required|array|min:1',
-            'documentos.*' => 'integer|exists:documentos_financieros,id',
+            'documentos.*' => 'integer|exists:documentos_compras,id',
         ], [
             'fecha_pago.before_or_equal' => 'La fecha del pago no debe sobrepasar la fecha actual.',
             'fecha_pago.required' => 'La fecha del pago es obligatoria.',
@@ -192,7 +192,8 @@ class PagoDocumentoController extends Controller
         $duplicados = 0;
 
         foreach ($ids as $id) {
-            $documento = DocumentoFinanciero::find($id);
+
+            $documento = DocumentoCompra::find($id);
 
             // 🚫 Saltar si ya tiene un pago registrado
             if ($documento->pagos()->exists()) {
@@ -208,14 +209,14 @@ class PagoDocumentoController extends Controller
 
             // ✅ Actualizar estado y saldo
             $documento->update([
-                'status' => 'Pago',
+                'estado' => 'Pago',
                 'fecha_estado_manual' => now(),
                 'saldo_pendiente' => 0,
             ]);
 
-            // ✅ Registrar movimiento
-            MovimientoDocumento::create([
-                'documento_financiero_id' => $documento->id,
+            // ✅ Registrar movimiento (COMPRAS)
+            MovimientoCompra::create([
+                'documento_compra_id' => $documento->id,
                 'user_id' => Auth::id(),
                 'tipo_movimiento' => 'Pago registrado (masivo)',
                 'descripcion' => "Pago masivo registrado el {$fechaPago}.",
@@ -236,18 +237,21 @@ class PagoDocumentoController extends Controller
 
 
 
+
     public function buscarDocumentos(Request $request)
     {
         $filtro = $request->get('filtro');
 
-        $documentos = DocumentoFinanciero::where(function ($query) use ($filtro) {
+        $documentos = DocumentoCompra::where(function ($query) use ($filtro) {
                 $query->where('folio', 'like', "%{$filtro}%")
-                    ->orWhere('razon_social', 'like', "%{$filtro}%");
+                    ->orWhere('razon_social', 'like', "%{$filtro}%")
+                    ->orWhere('rut_proveedor', 'like', "%{$filtro}%");
             })
-            ->get(); // 👈 sin limit()
+            ->get(); // sin limit()
 
         return response()->json($documentos);
     }
+
 
 
 

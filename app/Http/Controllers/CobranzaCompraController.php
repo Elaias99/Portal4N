@@ -143,7 +143,7 @@ class CobranzaCompraController extends Controller
 
                 $documento->update([
                     'cobranza_compra_id' => $cobranzaCompra->id,
-                    'estado' => $documento->estado ?? 'Procesado',
+                    'estado' => $documento->status_original,
                     'status_original' => $documento->status_original ?? 'Pendiente',
                     'fecha_vencimiento' => $documento->fecha_vencimiento
                         ?? Carbon::parse($documento->fecha_docto ?? now())
