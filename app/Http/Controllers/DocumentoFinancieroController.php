@@ -561,9 +561,8 @@ class DocumentoFinancieroController extends Controller
     ///////////////////////////////////////////////////// 
     public function export(Request $request)
     {
-        $perPage = 10; // igual que en el index()
+        $perPage = 10; // igual que en index()
         $page = $request->get('page', 1);
-        $offset = ($page - 1) * $perPage;
 
         // === 1️⃣ Construcción de la query base ===
         $query = DocumentoFinanciero::with([
@@ -576,7 +575,7 @@ class DocumentoFinancieroController extends Controller
             'cobranza'
         ]);
 
-        // === 2️⃣ Filtros base (iguales al index) ===
+        // === 2️⃣ Aplicar los mismos filtros que en index() ===
         if ($request->filled('razon_social')) {
             $query->where('razon_social', 'like', "%{$request->razon_social}%");
         }
@@ -593,7 +592,7 @@ class DocumentoFinancieroController extends Controller
             $query->where('status_original', $request->status);
         }
 
-        // === 3️⃣ Filtros adicionales (desde filtrarColumnas) ===
+        // === 3️⃣ Filtros adicionales (de filtrarColumnas) ===
         if ($request->filled('columna') && $request->filled('valor')) {
             switch ($request->columna) {
                 case 'razon_social':
@@ -647,51 +646,42 @@ class DocumentoFinancieroController extends Controller
             $query->orderByRaw('ISNULL(fecha_vencimiento), fecha_vencimiento DESC');
         }
 
-        // === 6️⃣ Ejecutar la query una sola vez ===
-        $documentos = $query->get();
+        // === 6️⃣ Paginar antes de cargar ===
+        $documentosPaginados = $query->paginate($perPage, ['*'], 'page', $page);
 
-        // === 🔹 Precálculos para optimizar el export ===
-        // Evita recalcular sumas y fechas dentro de DocumentosExport::map()
-        $documentos->each(function ($doc) {
-            $doc->total_abonado = $doc->abonos->sum('monto');
-            $doc->ultima_fecha_abono = $doc->abonos->max('fecha_abono');
-            $doc->total_cruzado = $doc->cruces->sum('monto');
-            $doc->ultima_fecha_cruce = $doc->cruces->max('fecha_cruce');
-        });
-
-
-        // === 7️⃣ Filtro de Estado de Pago (en memoria, con accessor saldo_pendiente) ===
-        if ($request->filled('estado_pago')) {
-            $documentos = $documentos->filter(function ($doc) use ($request) {
+        // === 7️⃣ Filtrar Estado de Pago en la colección ya paginada ===
+        $documentosFiltrados = $documentosPaginados->getCollection()->filter(function ($doc) use ($request) {
+            if ($request->filled('estado_pago')) {
                 if ($request->estado_pago === 'Pagado') {
                     return $doc->saldo_pendiente <= 0;
                 }
                 if ($request->estado_pago === 'Pendiente') {
                     return $doc->saldo_pendiente > 0;
                 }
-                return true;
-            });
-        }
+            }
+            return true;
+        });
 
-        // === 8️⃣ Paginación manual (solo registros visibles en la página actual) ===
-        $documentos = $documentos instanceof LengthAwarePaginator
-            ? $documentos
-            : new LengthAwarePaginator(
-                $documentos->forPage($page, $perPage),
-                $documentos->count(),
-                $perPage,
-                $page,
-                ['path' => request()->url(), 'query' => request()->query()]
-            );
+        // === 8️⃣ Reemplazar la colección en el paginador ===
+        $documentosPaginados->setCollection($documentosFiltrados);
 
-        // Extraer solo los documentos visibles de la página
-        $documentos = $documentos->getCollection();
+        // === 9️⃣ Registro de depuración (verificación) ===
+        Log::info('EXPORT DEBUG:', [
+            'usuario' => Auth::user()->name ?? 'Sin identificar',
+            'pagina' => $page,
+            'registros_exportados' => $documentosFiltrados->count(),
+            'estado_pago' => $request->estado_pago,
+            'razones_sociales' => $documentosFiltrados->pluck('razon_social')->toArray(),
+        ]);
 
-
-        // === 9️⃣ Exportación final ===
+        // === 🔟 Exportación final solo con los registros filtrados ===
         $fecha = now()->format('Y-m-d_H-i-s');
-        return Excel::download(new DocumentosExport($documentos), "documentos_financieros_pagina_{$page}_{$fecha}.xlsx");
+        return Excel::download(
+            new DocumentosExport($documentosFiltrados),
+            "documentos_financieros_pagina_{$page}_{$fecha}.xlsx"
+        );
     }
+
 
 
     public function exportAll(Request $request)
