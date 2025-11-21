@@ -13,7 +13,7 @@ use App\Exports\DocumentosExport;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class DocumentoFinancieroController extends Controller
 {
@@ -126,7 +126,17 @@ class DocumentoFinancieroController extends Controller
                 }
                 return true;
             });
+
+            // 🔥 Convertir colección nuevamente a paginador
+            $documentoFinancieros = new \Illuminate\Pagination\LengthAwarePaginator(
+                $documentoFinancieros->forPage($documentosOriginal->currentPage(), $documentosOriginal->perPage()),
+                $documentoFinancieros->count(),
+                $documentosOriginal->perPage(),
+                $documentosOriginal->currentPage(),
+                ['path' => request()->url(), 'query' => request()->query()]
+            );
         }
+
 
         // === RECALCULAR TOTALES TRAS FILTRO ===
         $totalPagados = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente <= 0)->count();
@@ -649,6 +659,7 @@ class DocumentoFinancieroController extends Controller
             $doc->ultima_fecha_cruce = $doc->cruces->max('fecha_cruce');
         });
 
+
         // === 7️⃣ Filtro de Estado de Pago (en memoria, con accessor saldo_pendiente) ===
         if ($request->filled('estado_pago')) {
             $documentos = $documentos->filter(function ($doc) use ($request) {
@@ -663,7 +674,19 @@ class DocumentoFinancieroController extends Controller
         }
 
         // === 8️⃣ Paginación manual (solo registros visibles en la página actual) ===
-        $documentos = $documentos->slice($offset, $perPage)->values();
+        $documentos = $documentos instanceof LengthAwarePaginator
+            ? $documentos
+            : new LengthAwarePaginator(
+                $documentos->forPage($page, $perPage),
+                $documentos->count(),
+                $perPage,
+                $page,
+                ['path' => request()->url(), 'query' => request()->query()]
+            );
+
+        // Extraer solo los documentos visibles de la página
+        $documentos = $documentos->getCollection();
+
 
         // === 9️⃣ Exportación final ===
         $fecha = now()->format('Y-m-d_H-i-s');
@@ -747,7 +770,7 @@ class DocumentoFinancieroController extends Controller
         }
 
         // === 5️⃣ Excluir notas de crédito y anulados ===
-        $query->whereNotIn('tipo_documento_id', [61, 56]);
+        // $query->whereNotIn('tipo_documento_id', [61, 56]);
 
         // === 6️⃣ Ordenamiento ===
         if ($request->filled('sort_by')) {
