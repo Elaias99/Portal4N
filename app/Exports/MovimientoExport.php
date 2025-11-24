@@ -8,7 +8,7 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class MovimientoExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize
 {
@@ -21,22 +21,25 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
         $this->fechaFin    = $fechaFin;
     }
 
+    /**
+     * Colección de movimientos con filtros aplicados
+     */
     public function collection()
     {
-        $query = MovimientoDocumento::with(['documento.empresa', 'user', 'documento.tipoDocumento'])
+        return MovimientoDocumento::with(['documento.empresa', 'user', 'documento.tipoDocumento'])
             ->when($this->fechaInicio, fn($q) =>
                 $q->whereDate('created_at', '>=', $this->fechaInicio)
             )
             ->when($this->fechaFin, fn($q) =>
                 $q->whereDate('created_at', '<=', $this->fechaFin)
             )
-            ->orderByDesc('created_at');
-
-        $movimientos = $query->get();
-
-        return $movimientos;
+            ->orderByDesc('created_at')
+            ->get();
     }
 
+    /**
+     * Encabezados del archivo Excel
+     */
     public function headings(): array
     {
         return [
@@ -47,35 +50,55 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
             'Tipo Documento',
             'Cliente / Razón Social',
             'Empresa',
-            'Monto Total ($)',
-            'Saldo Pendiente ($)',
+            'Monto Movimiento ($)',
             'Usuario',
         ];
     }
 
+    /**
+     * Mapeo de cada registro hacia las columnas del Excel
+     */
     public function map($mov): array
     {
         $fecha = optional($mov->created_at)->format('d-m-Y H:i');
-        $tipo = $mov->tipo_movimiento ?? '—';
+        $tipoOriginal = $mov->tipo_movimiento ?? '—';
+        $tipo = strtolower($tipoOriginal);
         $descripcion = $mov->descripcion ?? '—';
         $folio = $mov->documento->folio ?? '—';
         $tipoDoc = $mov->documento->tipoDocumento->nombre ?? '—';
         $cliente = $mov->documento->razon_social ?? '—';
         $empresa = $mov->documento->empresa->Nombre ?? '—';
-        $montoTotal = '$' . number_format($mov->documento->monto_total ?? 0, 0, ',', '.');
-        $saldoPendiente = '$' . number_format($mov->documento->saldo_pendiente ?? 0, 0, ',', '.');
         $usuario = $mov->user->name ?? '—';
+
+        // === Cálculo coherente del monto ===
+        $montoMovimiento = 0;
+
+        if (Str::contains($tipo, 'abono') || Str::contains($tipo, 'cruce')) {
+            $montoMovimiento = $mov->datos_nuevos['monto']
+                ?? $mov->datos_anteriores['monto']
+                ?? 0;
+        } elseif (Str::contains($tipo, 'pago') || Str::contains($tipo, 'pronto pago')) {
+            $montoMovimiento = $mov->documento->monto_total ?? 0;
+        }
+
+        // Eliminaciones → monto negativo
+        if (Str::contains($tipo, 'eliminación')) {
+            $montoMovimiento *= -1;
+        }
+
+        // Formato del monto con signo
+        $signo = $montoMovimiento < 0 ? '–' : '+';
+        $montoFormateado = $signo . '$' . number_format(abs($montoMovimiento), 0, ',', '.');
 
         return [
             $fecha,
-            $tipo,
+            ucfirst($tipoOriginal),
             $descripcion,
             $folio,
             $tipoDoc,
             $cliente,
             $empresa,
-            $montoTotal,
-            $saldoPendiente,
+            $montoFormateado,
             $usuario,
         ];
     }
