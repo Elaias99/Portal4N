@@ -3,37 +3,45 @@
 namespace App\Exports;
 
 use App\Models\Trabajador;
+use App\Services\VacacionesService;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
-use Carbon\Carbon;
+use Maatwebsite\Excel\Concerns\WithMapping;
 
-class VacacionDisponibleExport implements FromCollection, WithHeadings
+class VacacionDisponibleExport implements FromCollection, WithHeadings, WithMapping
 {
-    public function collection()
+    protected $service;
+
+    public function __construct()
     {
-        return Trabajador::with(['empresa', 'cargo', 'sistemaTrabajo', 'situacion'])
-            ->whereHas('sistemaTrabajo', function ($q) {
-                $q->where('nombre', '!=', 'Desvinculado');
-            })
-            ->whereHas('situacion', function ($q) {
-                $q->where('Nombre', '!=', 'Desvinculado');
-            })
-            ->get()
-            ->map(function ($trabajador) {
-                return [
-                    'Empresa' => $trabajador->empresa->Nombre ?? '',
-                    'Nombre' => "{$trabajador->Nombre} {$trabajador->ApellidoPaterno} {$trabajador->ApellidoMaterno}",
-                    'Rut' => $trabajador->Rut,
-                    'Fecha Ingreso' => $trabajador->fecha_inicio_trabajo ? $trabajador->fecha_inicio_trabajo->format('Y-m-d') : '',
-                    'Cargo' => $trabajador->cargo->Nombre ?? '',
-                    'Días Disponibles' => $trabajador->calcularDiasProporcionales(),
-                ];
-            });
+        $this->service = new VacacionesService();
     }
 
+    public function collection()
+    {
+        // Solo trabajadores contratados (vinculados)
+        return Trabajador::where('situacion_id', 1)
+            ->whereNull('deleted_at')
+            ->get();
+    }
+
+    public function map($t): array
+    {
+        $diasDisponibles = $this->service->calcularDiasDisponibles($t);
+
+        return [
+            $t->Rut,
+            trim("{$t->Nombre} {$t->ApellidoPaterno} {$t->ApellidoMaterno}"),
+            $diasDisponibles
+        ];
+    }
 
     public function headings(): array
     {
-        return ['Empresa', 'Nombre', 'Rut', 'Fecha Ingreso', 'Cargo', 'Días Disponibles'];
+        return [
+            'RUT',
+            'Nombre Completo',
+            'Días Disponibles'
+        ];
     }
 }

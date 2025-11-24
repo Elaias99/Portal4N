@@ -32,7 +32,16 @@ class DocumentoFinancieroController extends Controller
 
         // === APLICAR FILTROS GENERALES ANTES DE CONTAR ===
         if ($request->filled('razon_social')) {
-            $baseQuery->where('razon_social', 'like', "%{$request->razon_social}%");
+            $busqueda = $request->razon_social;
+
+            // 🔹 Normaliza quitando símbolos y exceso de espacios
+            $busquedaNormalizada = preg_replace('/[^a-zA-Z0-9\s]/u', '', $busqueda);
+
+            // 🔹 Busca ignorando puntos, comas o dobles espacios
+            $baseQuery->whereRaw("
+                REPLACE(REPLACE(REPLACE(razon_social, '.', ''), ',', ''), '  ', ' ')
+                LIKE ?
+            ", ["%{$busquedaNormalizada}%"]);
         }
 
         if ($request->filled('rut_cliente')) {
