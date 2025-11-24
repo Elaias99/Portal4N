@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\CobranzaCompraExport;
 use App\Models\CobranzaCompra;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -192,4 +193,26 @@ class CobranzaCompraController extends Controller
             'message' => 'Reprocesamiento de documentos de compra completado correctamente.'
         ]);
     }
+
+
+
+
+    public function export(Request $request)
+    {
+        $fechaInicio = $request->input('fecha_inicio');
+        $fechaFin = $request->input('fecha_fin');
+
+        $nombreArchivo = 'Cobranzas_Compras_' . now()->format('Ymd_His') . '.xlsx';
+
+        return Excel::download(
+            new CobranzaCompraExport($fechaInicio, $fechaFin),
+            $nombreArchivo
+        );
+    }
+
+
+
+
+
+
 }

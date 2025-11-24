@@ -15,7 +15,9 @@
 
     <div class="text-center mb-4">
         <h2 class="fw-bold mb-2">Gestión de Cobranzas de Compras</h2>
-        <p class="text-muted mb-3">Visualiza y administra la información de las cobranzas asociadas a documentos de compras.</p>
+        <p class="text-muted mb-3">
+            Visualiza y administra la información de las cobranzas asociadas a documentos de compras.
+        </p>
 
         <div class="d-flex justify-content-center gap-3 flex-wrap">
             <a href="{{ route('finanzas_compras.index') }}" class="btn btn-outline-secondary px-4">
@@ -26,9 +28,13 @@
                 Nueva Cobranza
             </a>
 
-
+            <a href="{{ route('cobranzasCompra.export') }}" 
+            class="btn btn-outline-success px-4">
+                <i class="bi bi-file-earmark-excel"></i> Exportar Excel
+            </a>
         </div>
     </div>
+
 
     {{-- Búsqueda --}}
     <form method="GET" action="{{ route('cobranzas-compras.index') }}" class="mb-4 d-flex justify-content-center">
