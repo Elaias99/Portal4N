@@ -84,6 +84,61 @@ class ProntoPagoController extends Controller
     /**
      * Eliminar un registro de Pronto Pago
      */
+    // public function destroy($id)
+    // {
+    //     $prontoPago = \App\Models\ProntoPago::findOrFail($id);
+    //     $documento = $prontoPago->documentoFinanciero ?? $prontoPago->documentoCompra;
+
+    //     // 🧩 Detectar tipo de documento
+    //     $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
+
+    //     // 🔹 Eliminar registro
+    //     $prontoPago->delete();
+
+    //     // 🔹 Si ya no quedan pronto pagos → limpiar estado ANTES del recálculo
+    //     if ($documento->prontoPagos()->count() === 0) {
+
+    //         $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
+    //             ? 'Vencido'
+    //             : 'Al día';
+
+    //         if ($tipoDocumento === 'compra') {
+    //             $documento->update([
+    //                 'estado' => null,
+    //                 'status_original' => $nuevoEstado,
+    //                 'fecha_estado_manual' => null,
+    //             ]);
+    //         } else {
+    //             $documento->update([
+    //                 'status' => null,
+    //                 'status_original' => $nuevoEstado,
+    //                 'fecha_estado_manual' => null,
+    //             ]);
+    //         }
+    //     }
+
+    //     // 🔹 IMPORTANTE → liberar saldo_pendiente para que el accessor lo recalcule bien
+    //     $documento->update(['saldo_pendiente' => null]);
+
+    //     // 🔹 Recalcular saldo pendiente
+    //     if (method_exists($documento, 'recalcularSaldoPendiente')) {
+    //         $documento->recalcularSaldoPendiente();
+    //     }
+
+    //     // 🔄 REFRESH
+    //     $documento->refresh();
+
+    //     // 🔹 Redirección final
+    //     if ($tipoDocumento === 'compra') {
+    //         return redirect()
+    //             ->route('finanzas_compras.show', $documento->id)
+    //             ->with('success', 'Pronto pago eliminado y estado actualizado correctamente.');
+    //     }
+
+    //     return redirect()
+    //         ->route('documentos.detalles', $documento->id)
+    //         ->with('success', 'Pronto pago eliminado y estado actualizado correctamente.');
+    // }
     public function destroy($id)
     {
         $prontoPago = \App\Models\ProntoPago::findOrFail($id);
@@ -92,12 +147,17 @@ class ProntoPagoController extends Controller
         // 🧩 Detectar tipo de documento
         $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
 
+        // 📝 Guardar datos antes de eliminar
+        $datosAnteriores = [
+            'fecha_pronto_pago' => $prontoPago->fecha_pronto_pago,
+            'user_id' => $prontoPago->user_id,
+        ];
+
         // 🔹 Eliminar registro
         $prontoPago->delete();
 
         // 🔹 Si ya no quedan pronto pagos → limpiar estado ANTES del recálculo
         if ($documento->prontoPagos()->count() === 0) {
-
             $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
                 ? 'Vencido'
                 : 'Al día';
@@ -128,17 +188,29 @@ class ProntoPagoController extends Controller
         // 🔄 REFRESH
         $documento->refresh();
 
+        // 🔹 Registrar movimiento (solo si es documento financiero)
+        if ($tipoDocumento === 'financiero') {
+            \App\Models\MovimientoDocumento::create([
+                'documento_financiero_id' => $documento->id,
+                'user_id' => Auth::id(),
+                'tipo_movimiento' => 'Eliminación de pronto pago',
+                'descripcion' => "Se eliminó un pronto pago registrado el {$datosAnteriores['fecha_pronto_pago']} correspondiente al documento folio {$documento->folio}.",
+                'datos_anteriores' => $datosAnteriores,
+            ]);
+        }
+
         // 🔹 Redirección final
         if ($tipoDocumento === 'compra') {
             return redirect()
                 ->route('finanzas_compras.show', $documento->id)
-                ->with('success', 'Pronto pago eliminado y estado actualizado correctamente.');
+                ->with('success', 'Pronto pago eliminado, movimiento registrado y estado actualizado correctamente.');
         }
 
         return redirect()
             ->route('documentos.detalles', $documento->id)
-            ->with('success', 'Pronto pago eliminado y estado actualizado correctamente.');
+            ->with('success', 'Pronto pago eliminado, movimiento registrado y estado actualizado correctamente.');
     }
+
 
 
 

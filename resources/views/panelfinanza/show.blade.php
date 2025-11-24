@@ -50,10 +50,16 @@
 
             {{-- Total mostrado destacado --}}
             @if(isset($totalMontos))
+                @php
+                    $colorTotal = $totalMontos >= 0 ? 'text-success' : 'text-danger';
+                    $signoTotal = $totalMontos >= 0 ? '+' : '–';
+                @endphp
                 <div class="mt-4 text-end fade-in-delayed">
                     <div class="total-box d-inline-block px-4 py-2">
-                        <span class="text-muted small d-block">Total mostrado</span>
-                        <span class="fw-bold total-amount">${{ number_format($totalMontos, 0, ',', '.') }}</span>
+                        <span class="text-muted small d-block">Total mostrado (flujo neto)</span>
+                        <span class="fw-bold total-amount {{ $colorTotal }}">
+                            {{ $signoTotal }}${{ number_format(abs($totalMontos), 0, ',', '.') }}
+                        </span>
                     </div>
                 </div>
             @endif
@@ -71,28 +77,55 @@
                         <th>Documento</th>
                         <th>Cliente</th>
                         <th>Empresa</th>
-                        <th>Monto Total</th>
-                        <th>Saldo Pendiente</th>
+                        <th>Monto Movimiento</th>
                         <th>Usuario</th>
                         <th>Descripción</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($movimientos as $mov)
+                        @php
+                            $tipo = strtolower($mov->tipo_movimiento ?? '');
+                            $monto = 0;
+                            $signo = '+';
+                            $color = 'text-success';
+
+                            if (Str::contains($tipo, 'abono') || Str::contains($tipo, 'cruce')) {
+                                $monto = $mov->datos_nuevos['monto']
+                                    ?? $mov->datos_anteriores['monto']
+                                    ?? 0;
+                            } elseif (Str::contains($tipo, 'pago') || Str::contains($tipo, 'pronto pago')) {
+                                $monto = $mov->documento->monto_total ?? 0;
+                            }
+
+                            if (Str::contains($tipo, 'eliminación')) {
+                                $monto *= -1;
+                                $signo = '–';
+                                $color = 'text-danger';
+                            }
+                        @endphp
+
                         <tr>
                             <td>{{ optional($mov->created_at)->format('d-m-Y H:i') }}</td>
 
-
                             <td>
-                                @php
-                                    $tipo = strtolower($mov->tipo_movimiento ?? '');
-                                @endphp
-
                                 @if(Str::contains($tipo, 'reprocesamiento'))
                                     <span class="badge bg-info text-dark" 
                                         data-bs-toggle="tooltip"
-                                        title="El sistema realizó este movimiento automáticamente para mantener la información actualizada. No fue hecho por un usuario.">
+                                        title="Movimiento automático del sistema">
                                         <i class="bi bi-gear-fill me-1"></i> Automático
+                                    </span>
+                                @elseif(Str::contains($tipo, 'estado manual'))
+                                    <span class="badge bg-light text-dark border"
+                                        data-bs-toggle="tooltip"
+                                        title="Cambio manual de estado (por ejemplo de 'Vencido' a 'Pago'). No representa flujo de dinero.">
+                                        {{ ucfirst($mov->tipo_movimiento) }}
+                                    </span>
+                                @elseif(Str::contains($tipo, 'pronto pago'))
+                                    <span class="badge bg-light text-dark border"
+                                        data-bs-toggle="tooltip"
+                                        title="Documento marcado como 'Pronto pago'. No representa un pago o abono real.">
+                                        {{ ucfirst($mov->tipo_movimiento) }}
                                     </span>
                                 @else
                                     <span class="badge bg-light text-dark border">
@@ -100,9 +133,6 @@
                                     </span>
                                 @endif
                             </td>
-
-
-
 
                             <td>
                                 @if($mov->documento)
@@ -112,22 +142,25 @@
                                     —
                                 @endif
                             </td>
+
                             <td>{{ $mov->documento->razon_social ?? '—' }}</td>
                             <td>{{ $mov->documento?->empresa?->Nombre ?? 'Sin empresa' }}</td>
-                            <td>${{ number_format($mov->documento->monto_total ?? 0, 0, ',', '.') }}</td>
-                            <td>
-                                @if(isset($mov->documento->saldo_pendiente))
-                                    ${{ number_format($mov->documento->saldo_pendiente, 0, ',', '.') }}
-                                @else
-                                    —
+
+                            <td class="fw-semibold {{ $color }}"
+                                @if($monto == 0 && (Str::contains($tipo, 'estado manual') || Str::contains($tipo, 'pronto pago')))
+                                    data-bs-toggle="tooltip"
+                                    title="Este movimiento no refleja un monto real, solo una actualización de estado."
                                 @endif
+                            >
+                                {{ $signo }}${{ number_format(abs($monto), 0, ',', '.') }}
                             </td>
+
                             <td>{{ $mov->user->name ?? '—' }}</td>
                             <td>{{ $mov->descripcion ?? '—' }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-3">Sin movimientos registrados</td>
+                            <td colspan="8" class="text-center text-muted py-3">Sin movimientos registrados</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -150,12 +183,13 @@
     background: #f1f3f5; border-radius: 8px;
     border: 1px solid #e2e3e5; box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
-.total-amount { font-size: 1.25rem; color: #212529; letter-spacing: 0.5px; }
+.total-amount { font-size: 1.25rem; letter-spacing: 0.5px; }
+.text-success { color: #198754 !important; }
+.text-danger { color: #dc3545 !important; }
 .fade-in { opacity: 0; transform: translateY(10px); animation: fadeInUp 0.5s ease-out forwards; }
 .fade-in-delayed { opacity: 0; transform: translateY(5px); animation: fadeInUp 0.8s ease-out forwards; }
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px);} to {opacity:1; transform:translateY(0);} }
 </style>
-
 
 {{-- ====== TOOLTIP INICIALIZACIÓN ====== --}}
 <script>

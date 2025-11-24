@@ -4,9 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\DocumentoFinanciero;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AbonoController extends Controller
 {
+
+
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // El método que guarda los abonos se encuentra en el controlador DocumentoFinancieroController, llamado storeAbono //
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
     //
     public function index(DocumentoFinanciero $documento)
     {
@@ -68,11 +79,16 @@ class AbonoController extends Controller
         // 🧩 Detectar tipo de documento
         $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
 
+        // 📝 Guardar datos antes de eliminar
+        $datosAnteriores = [
+            'monto' => $abono->monto,
+            'fecha_abono' => $abono->fecha_abono,
+        ];
+
         // 🔹 Eliminar el abono
         $abono->delete();
 
-
-         // 🔹 Recalcular saldo pendiente en la BD
+        // 🔹 Recalcular saldo pendiente en la BD
         if (method_exists($documento, 'recalcularSaldoPendiente')) {
             $documento->recalcularSaldoPendiente(); 
         }
@@ -107,17 +123,29 @@ class AbonoController extends Controller
             ]);
         }
 
+        // 🔹 Registrar movimiento (solo si es documento financiero)
+        if ($tipoDocumento === 'financiero') {
+            \App\Models\MovimientoDocumento::create([
+                'documento_financiero_id' => $documento->id,
+                'user_id' => Auth::id(),
+                'tipo_movimiento' => 'Eliminación de abono',
+                'descripcion' => "Se eliminó un abono de {$datosAnteriores['monto']} correspondiente al documento folio {$documento->folio}.",
+                'datos_anteriores' => $datosAnteriores,
+            ]);
+        }
+
         // 🔹 Redirección inteligente
         if ($tipoDocumento === 'compra') {
             return redirect()
                 ->route('finanzas_compras.show', $documento->id)
-                ->with('success', 'Abono eliminado y estado actualizado correctamente.');
+                ->with('success', 'Abono eliminado, movimiento registrado y estado actualizado correctamente.');
         }
 
         return redirect()
             ->route('documentos.detalles', $documento->id)
-            ->with('success', 'Abono eliminado y estado actualizado correctamente.');
+            ->with('success', 'Abono eliminado, movimiento registrado y estado actualizado correctamente.');
     }
+
 
 
     public function show()

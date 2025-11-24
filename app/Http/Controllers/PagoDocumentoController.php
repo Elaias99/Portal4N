@@ -114,6 +114,58 @@ class PagoDocumentoController extends Controller
     /**
      * Eliminar un pago (revertir estado de pago).
      */
+    // public function destroy($id)
+    // {
+    //     $pago = \App\Models\Pago::findOrFail($id);
+    //     $documento = $pago->documentoFinanciero ?? $pago->documentoCompra;
+
+    //     // 🧩 Detectar tipo de documento
+    //     $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
+
+    //     // 🔹 Eliminar el pago
+    //     $pago->delete();
+
+    //     // 🔹 IMPORTANTE → Recalcular saldo pendiente
+    //     if (method_exists($documento, 'recalcularSaldoPendiente')) {
+    //         $documento->recalcularSaldoPendiente();
+    //     }
+
+    //     // 🔹 Verificar si quedan más pagos
+    //     if ($documento->pagos()->count() === 0) {
+
+    //         // Recalcular nuevo estado automático
+    //         $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
+    //             ? 'Vencido'
+    //             : 'Al día';
+
+    //         // 🔹 Actualizar documento según módulo
+    //         if ($tipoDocumento === 'compra') {
+    //             $documento->update([
+    //                 'estado' => null, 
+    //                 'status_original' => $nuevoEstado,
+    //                 'fecha_estado_manual' => null,
+    //             ]);
+    //         } else {
+    //             $documento->update([
+    //                 'status' => null,
+    //                 'status_original' => $nuevoEstado,
+    //                 'fecha_estado_manual' => null,
+    //             ]);
+    //         }
+    //     }
+
+    //     // 🔹 Redirección
+    //     if ($tipoDocumento === 'compra') {
+    //         return redirect()
+    //             ->route('finanzas_compras.show', $documento->id)
+    //             ->with('success', 'Pago eliminado y estado actualizado correctamente.');
+    //     }
+
+    //     return redirect()
+    //         ->route('documentos.detalles', $documento->id)
+    //         ->with('success', 'Pago eliminado y estado actualizado correctamente.');
+    // }
+
     public function destroy($id)
     {
         $pago = \App\Models\Pago::findOrFail($id);
@@ -121,6 +173,12 @@ class PagoDocumentoController extends Controller
 
         // 🧩 Detectar tipo de documento
         $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
+
+        // 📝 Guardar datos antes de eliminar
+        $datosAnteriores = [
+            'fecha_pago' => $pago->fecha_pago,
+            'user_id' => $pago->user_id,
+        ];
 
         // 🔹 Eliminar el pago
         $pago->delete();
@@ -132,16 +190,13 @@ class PagoDocumentoController extends Controller
 
         // 🔹 Verificar si quedan más pagos
         if ($documento->pagos()->count() === 0) {
-
-            // Recalcular nuevo estado automático
             $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
                 ? 'Vencido'
                 : 'Al día';
 
-            // 🔹 Actualizar documento según módulo
             if ($tipoDocumento === 'compra') {
                 $documento->update([
-                    'estado' => null, 
+                    'estado' => null,
                     'status_original' => $nuevoEstado,
                     'fecha_estado_manual' => null,
                 ]);
@@ -154,17 +209,29 @@ class PagoDocumentoController extends Controller
             }
         }
 
+        // 🔹 Registrar movimiento (solo si es documento financiero)
+        if ($tipoDocumento === 'financiero') {
+            \App\Models\MovimientoDocumento::create([
+                'documento_financiero_id' => $documento->id,
+                'user_id' => Auth::id(),
+                'tipo_movimiento' => 'Eliminación de pago',
+                'descripcion' => "Se eliminó un pago registrado el {$datosAnteriores['fecha_pago']} correspondiente al documento folio {$documento->folio}.",
+                'datos_anteriores' => $datosAnteriores,
+            ]);
+        }
+
         // 🔹 Redirección
         if ($tipoDocumento === 'compra') {
             return redirect()
                 ->route('finanzas_compras.show', $documento->id)
-                ->with('success', 'Pago eliminado y estado actualizado correctamente.');
+                ->with('success', 'Pago eliminado, movimiento registrado y estado actualizado correctamente.');
         }
 
         return redirect()
             ->route('documentos.detalles', $documento->id)
-            ->with('success', 'Pago eliminado y estado actualizado correctamente.');
+            ->with('success', 'Pago eliminado, movimiento registrado y estado actualizado correctamente.');
     }
+
 
 
 

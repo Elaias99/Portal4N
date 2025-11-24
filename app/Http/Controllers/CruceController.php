@@ -6,9 +6,14 @@ use App\Models\Cruce;
 use App\Models\DocumentoFinanciero;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class CruceController extends Controller
 {
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // El método que guarda los abonos se encuentra en el controlador DocumentoFinancieroController, llamado storeCruce //
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /**
      * Mostrar todos los cruces asociados a un documento.
      */
@@ -63,6 +68,65 @@ class CruceController extends Controller
     /**
      * Eliminar un cruce.
      */
+    // public function destroy($id)
+    // {
+    //     $cruce = \App\Models\Cruce::findOrFail($id);
+    //     $documento = $cruce->documento ?? $cruce->documentoCompra;
+
+    //     // 🧩 Detectar tipo de documento
+    //     $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
+
+    //     // 🔹 Eliminar el cruce
+    //     $cruce->delete();
+
+
+    //      // 🔹 Recalcular saldo pendiente en la BD
+    //     if (method_exists($documento, 'recalcularSaldoPendiente')) {
+    //         $documento->recalcularSaldoPendiente(); 
+    //     }
+
+    //     // 🔹 Recalcular totales
+    //     $totalCruces = $documento->cruces()->sum('monto');
+    //     $totalAbonos = $documento->abonos()->sum('monto');
+
+    //     // 🔹 Determinar nuevo estado
+    //     if ($totalCruces > 0) {
+    //         $nuevoEstado = 'Cruce';
+    //     } elseif ($totalAbonos > 0) {
+    //         $nuevoEstado = 'Abono';
+    //     } else {
+    //         $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
+    //             ? 'Vencido'
+    //             : 'Al día';
+    //     }
+
+    //     // 🔹 Actualizar el documento según tipo
+    //     if ($tipoDocumento === 'compra') {
+    //         $documento->update([
+    //             'estado' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
+    //             'status_original' => $nuevoEstado,
+    //             'fecha_estado_manual' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
+    //         ]);
+    //     } else {
+    //         $documento->update([
+    //             'status' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
+    //             'status_original' => $nuevoEstado,
+    //             'fecha_estado_manual' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
+    //         ]);
+    //     }
+
+    //     // 🔹 Redirección inteligente
+    //     if ($tipoDocumento === 'compra') {
+    //         return redirect()
+    //             ->route('finanzas_compras.show', $documento->id)
+    //             ->with('success', 'Cruce eliminado y estado actualizado correctamente.');
+    //     }
+
+    //     return redirect()
+    //         ->route('documentos.detalles', $documento->id)
+    //         ->with('success', 'Cruce eliminado y estado actualizado correctamente.');
+    // }
+
     public function destroy($id)
     {
         $cruce = \App\Models\Cruce::findOrFail($id);
@@ -71,11 +135,17 @@ class CruceController extends Controller
         // 🧩 Detectar tipo de documento
         $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
 
+        // 📝 Guardar datos antes de eliminar
+        $datosAnteriores = [
+            'monto' => $cruce->monto,
+            'fecha_cruce' => $cruce->fecha_cruce,
+            'proveedor_id' => $cruce->proveedor_id,
+        ];
+
         // 🔹 Eliminar el cruce
         $cruce->delete();
 
-
-         // 🔹 Recalcular saldo pendiente en la BD
+        // 🔹 Recalcular saldo pendiente
         if (method_exists($documento, 'recalcularSaldoPendiente')) {
             $documento->recalcularSaldoPendiente(); 
         }
@@ -95,7 +165,7 @@ class CruceController extends Controller
                 : 'Al día';
         }
 
-        // 🔹 Actualizar el documento según tipo
+        // 🔹 Actualizar documento según tipo
         if ($tipoDocumento === 'compra') {
             $documento->update([
                 'estado' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
@@ -110,17 +180,29 @@ class CruceController extends Controller
             ]);
         }
 
+        // 🔹 Registrar movimiento (solo si es documento financiero)
+        if ($tipoDocumento === 'financiero') {
+            \App\Models\MovimientoDocumento::create([
+                'documento_financiero_id' => $documento->id,
+                'user_id' => Auth::id(),
+                'tipo_movimiento' => 'Eliminación de cruce',
+                'descripcion' => "Se eliminó un cruce de {$datosAnteriores['monto']} correspondiente al documento folio {$documento->folio}.",
+                'datos_anteriores' => $datosAnteriores,
+            ]);
+        }
+
         // 🔹 Redirección inteligente
         if ($tipoDocumento === 'compra') {
             return redirect()
                 ->route('finanzas_compras.show', $documento->id)
-                ->with('success', 'Cruce eliminado y estado actualizado correctamente.');
+                ->with('success', 'Cruce eliminado, movimiento registrado y estado actualizado correctamente.');
         }
 
         return redirect()
             ->route('documentos.detalles', $documento->id)
-            ->with('success', 'Cruce eliminado y estado actualizado correctamente.');
+            ->with('success', 'Cruce eliminado, movimiento registrado y estado actualizado correctamente.');
     }
+
 
 
 

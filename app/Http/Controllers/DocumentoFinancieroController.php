@@ -394,19 +394,19 @@ class DocumentoFinancieroController extends Controller
 
         $filename = $request->file('file')->getClientOriginalName();
 
-        // 🔍 Detectar RUT en el nombre del archivo
+        // Detectar RUT en el nombre del archivo
         $rut = null;
         if (preg_match('/(\d{7,8}-[0-9Kk])/', $filename, $matches)) {
             $rut = $this->normalizarRut($matches[1]);
         }
 
-        // 🏢 Buscar empresa con ese RUT
+        //Buscar empresa con ese RUT
         $empresa = null;
         if ($rut) {
             $empresa = \App\Models\Empresa::whereRaw("REPLACE(REPLACE(rut, '.', ''), '-', '-') = ?", [$rut])->first();
         }
 
-        // 📥 Ejecutar importación
+        // Ejecutar importación
         $import = new DocumentosImport($empresa?->id);
         Excel::import($import, $request->file('file'));
 
@@ -414,7 +414,7 @@ class DocumentoFinancieroController extends Controller
 
         $mensajes = [];
 
-        // 🛑 1️⃣ Errores estructurales
+        // Errores estructurales
         if (count($import->errores) > 0) {
             foreach ($import->errores as $error) {
                 $mensajes[] = "⚠️ " . $error;
@@ -425,7 +425,7 @@ class DocumentoFinancieroController extends Controller
                 ->with('detalles_errores', $mensajes);
         }
 
-        // ✅ 2️⃣ Mensajes informativos
+        // Mensajes informativos
         if (count($import->importados) > 0) {
             $mensajes[] = count($import->importados) . " documentos importados correctamente: " 
                         . implode(', ', $import->importados) . ".";
@@ -436,10 +436,10 @@ class DocumentoFinancieroController extends Controller
                         . implode(', ', $import->duplicados);
         }
 
-        // ⚡️ 3️⃣ Cobranzas faltantes (flujo guiado sin mostrar alerta)
+        // Cobranzas faltantes (flujo guiado sin mostrar alerta)
         if (count($import->sinCobranza) > 0) {
 
-            // 💾 Guardar listas en sesión, pero sin mostrar mensajes duplicados
+            // Guardar listas en sesión, pero sin mostrar mensajes duplicados
             session([
                 'sin_cobranza_guiada' => $import->sinCobranza,
                 'sin_cobranza_pendientes' => $import->sinCobranza,
@@ -455,21 +455,21 @@ class DocumentoFinancieroController extends Controller
             session()->forget(['sin_cobranza', 'sin_cobranza_guiada', 'sin_cobranza_pendientes']);
         }
 
-        // 🧾 4️⃣ Notas de crédito
+        // Notas de crédito
         if (count($import->notasCredito) > 0) {
             foreach ($import->notasCredito as $nota) {
                 $mensajes[] = $nota;
             }
         }
 
-        // ⚠️ 5️⃣ Si hubo observaciones (pero no errores)
+        // Si hubo observaciones (pero no errores)
         if (count($mensajes) > 0) {
             return redirect()->route('cobranzas.documentos')
                 ->with('warning', 'La importación finalizó con observaciones.')
                 ->with('detalles_errores', $mensajes);
         }
 
-        // 🧾 6️⃣ Registrar movimiento solo si todo fue correcto
+        // Registrar movimiento solo si todo fue correcto
         if (count($import->importados) > 0) {
             MovimientoDocumento::create([
                 'documento_financiero_id' => null,
@@ -480,7 +480,7 @@ class DocumentoFinancieroController extends Controller
             ]);
         }
 
-        // 🟢 7️⃣ Mensaje final
+        // Mensaje final
         return redirect()->route('cobranzas.documentos')
             ->with('success', 'Archivo importado correctamente.');
     }
@@ -575,7 +575,7 @@ class DocumentoFinancieroController extends Controller
             'cobranza'
         ]);
 
-        // === 2️⃣ Aplicar los mismos filtros que en index() ===
+        // === Aplicar los mismos filtros que en index() ===
         if ($request->filled('razon_social')) {
             $query->where('razon_social', 'like', "%{$request->razon_social}%");
         }
@@ -592,7 +592,7 @@ class DocumentoFinancieroController extends Controller
             $query->where('status_original', $request->status);
         }
 
-        // === 3️⃣ Filtros adicionales (de filtrarColumnas) ===
+        // === Filtros adicionales (de filtrarColumnas) ===
         if ($request->filled('columna') && $request->filled('valor')) {
             switch ($request->columna) {
                 case 'razon_social':
@@ -620,7 +620,7 @@ class DocumentoFinancieroController extends Controller
             }
         }
 
-        // === 4️⃣ Filtros de fechas ===
+        // === Filtros de fechas ===
         if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
             $query->whereBetween('fecha_docto', [$request->fecha_inicio, $request->fecha_fin]);
         } elseif ($request->filled('fecha_inicio')) {
@@ -637,7 +637,7 @@ class DocumentoFinancieroController extends Controller
             $query->whereDate('fecha_vencimiento', '<=', $request->vencimiento_fin);
         }
 
-        // === 5️⃣ Ordenamiento ===
+        // ===Ordenamiento ===
         if ($request->filled('sort_by')) {
             $sortBy = $request->get('sort_by', 'razon_social');
             $sortOrder = $request->get('sort_order', 'asc');
