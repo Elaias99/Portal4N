@@ -246,6 +246,9 @@ Route::get('/panelfinanza/show-compras', [App\Http\Controllers\PanelFinanzaContr
 Route::get('/panelfinanza/export', [App\Http\Controllers\PanelFinanzaController::class, 'export'])
     ->name('panelfinanza.export');
 
+Route::get('/panelfinanza/export-compras', [App\Http\Controllers\PanelFinanzaController::class, 'exportCompras'])
+    ->name('panelfinanza.export_compras');
+
 
 
 // 7. Rutas para otros modelos

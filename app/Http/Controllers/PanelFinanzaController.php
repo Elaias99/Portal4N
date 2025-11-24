@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\Auth;
 use App\Exports\MovimientoExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
+use App\Exports\MovimientoCompraExport;
+
+
 class PanelFinanzaController extends Controller
 {
     //
@@ -187,6 +190,55 @@ class PanelFinanzaController extends Controller
     /**
  * Mostrar historial combinado de Abonos, Cruces y Pagos para RCV_COMPRAS.
  */
+    // public function showCompras(Request $request)
+    // {
+    //     // 🚫 Control de acceso
+    //     $usuariosFinanzas = [1, 405, 374];
+    //     if (!in_array(Auth::id(), $usuariosFinanzas)) {
+    //         abort(403, 'Acceso denegado.');
+    //     }
+
+    //     // === Filtros ===
+    //     $fechaInicio = $request->input('fecha_inicio');
+    //     $fechaFin    = $request->input('fecha_fin');
+    //     $empresaId   = $request->input('empresa_id');
+    //     $razonSocial = $request->input('razon_social'); // proveedor
+    //     $perPage     = 20;
+
+    //     // === Consulta base ===
+    //     $query = \App\Models\MovimientoCompra::with(['compra.empresa', 'user'])
+    //         ->when($fechaInicio, fn($q) =>
+    //             $q->whereDate('movimientos_compras.created_at', '>=', $fechaInicio)
+    //         )
+    //         ->when($fechaFin, fn($q) =>
+    //             $q->whereDate('movimientos_compras.created_at', '<=', $fechaFin)
+    //         )
+    //         ->when($empresaId, fn($q) =>
+    //             $q->whereHas('compra', fn($d) =>
+    //                 $d->where('empresa_id', $empresaId)
+    //             )
+    //         )
+    //         ->when($razonSocial, fn($q) =>
+    //             $q->whereHas('compra', fn($d) =>
+    //                 $d->where('razon_social', 'like', "%{$razonSocial}%")
+    //             )
+    //         )
+    //         ->orderByDesc('movimientos_compras.created_at');
+
+    //     // === Paginación ===
+    //     $movimientos = $query->paginate($perPage);
+
+    //     // === Total montos ===
+    //     $totalMontos = (clone $query)
+    //         ->join('documentos_compras as dc', 'dc.id', '=', 'movimientos_compras.documento_compra_id')
+    //         ->sum('dc.monto_total');
+
+    //     // === Listado de empresas para filtro ===
+    //     $empresas = \App\Models\Empresa::orderBy('Nombre')->get();
+
+    //     // === Vista ===
+    //     return view('panelfinanza.show_compra', compact('movimientos', 'empresas', 'totalMontos'));
+    // }
     public function showCompras(Request $request)
     {
         // 🚫 Control de acceso
@@ -199,7 +251,7 @@ class PanelFinanzaController extends Controller
         $fechaInicio = $request->input('fecha_inicio');
         $fechaFin    = $request->input('fecha_fin');
         $empresaId   = $request->input('empresa_id');
-        $razonSocial = $request->input('razon_social'); // proveedor
+        $razonSocial = $request->input('razon_social');
         $perPage     = 20;
 
         // === Consulta base ===
@@ -222,20 +274,28 @@ class PanelFinanzaController extends Controller
             )
             ->orderByDesc('movimientos_compras.created_at');
 
-        // === Paginación ===
         $movimientos = $query->paginate($perPage);
-
-        // === Total montos ===
-        $totalMontos = (clone $query)
-            ->join('documentos_compras as dc', 'dc.id', '=', 'movimientos_compras.documento_compra_id')
-            ->sum('dc.monto_total');
 
         // === Listado de empresas para filtro ===
         $empresas = \App\Models\Empresa::orderBy('Nombre')->get();
 
-        // === Vista ===
-        return view('panelfinanza.show_compra', compact('movimientos', 'empresas', 'totalMontos'));
+        return view('panelfinanza.show_compra', compact('movimientos', 'empresas'));
     }
+
+    public function exportCompras (Request $request)
+    {
+
+        $fechaInicio = $request->input('fecha_inicio');
+        $fechaFin    = $request->input('fecha_fin');
+
+        return Excel::download(
+            new MovimientoCompraExport($fechaInicio, $fechaFin),
+            'Historial_Movimientos_Compras_' . now()->format('Ymd_His') . '.xlsx'
+        );
+
+    }
+
+
 
 
 

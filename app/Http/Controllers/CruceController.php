@@ -180,7 +180,7 @@ class CruceController extends Controller
             ]);
         }
 
-        // 🔹 Registrar movimiento (solo si es documento financiero)
+        // 🔹 Registrar movimiento según tipo de documento
         if ($tipoDocumento === 'financiero') {
             \App\Models\MovimientoDocumento::create([
                 'documento_financiero_id' => $documento->id,
@@ -188,6 +188,15 @@ class CruceController extends Controller
                 'tipo_movimiento' => 'Eliminación de cruce',
                 'descripcion' => "Se eliminó un cruce de {$datosAnteriores['monto']} correspondiente al documento folio {$documento->folio}.",
                 'datos_anteriores' => $datosAnteriores,
+            ]);
+        } elseif ($tipoDocumento === 'compra') {
+            \App\Models\MovimientoCompra::create([
+                'documento_compra_id' => $documento->id,
+                'usuario_id' => Auth::id(),
+                'tipo_movimiento' => 'Eliminación de cruce',
+                'descripcion' => "Se eliminó un cruce de {$datosAnteriores['monto']} correspondiente al documento de compra folio {$documento->folio}.",
+                'datos_anteriores' => $datosAnteriores,
+                'fecha_cambio' => now(),
             ]);
         }
 
@@ -202,6 +211,7 @@ class CruceController extends Controller
             ->route('documentos.detalles', $documento->id)
             ->with('success', 'Cruce eliminado, movimiento registrado y estado actualizado correctamente.');
     }
+
 
 
 

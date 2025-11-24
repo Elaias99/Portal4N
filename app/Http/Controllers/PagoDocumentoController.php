@@ -209,7 +209,7 @@ class PagoDocumentoController extends Controller
             }
         }
 
-        // 🔹 Registrar movimiento (solo si es documento financiero)
+        // 🔹 Registrar movimiento según tipo de documento
         if ($tipoDocumento === 'financiero') {
             \App\Models\MovimientoDocumento::create([
                 'documento_financiero_id' => $documento->id,
@@ -217,6 +217,15 @@ class PagoDocumentoController extends Controller
                 'tipo_movimiento' => 'Eliminación de pago',
                 'descripcion' => "Se eliminó un pago registrado el {$datosAnteriores['fecha_pago']} correspondiente al documento folio {$documento->folio}.",
                 'datos_anteriores' => $datosAnteriores,
+            ]);
+        } elseif ($tipoDocumento === 'compra') {
+            \App\Models\MovimientoCompra::create([
+                'documento_compra_id' => $documento->id,
+                'usuario_id' => Auth::id(),
+                'tipo_movimiento' => 'Eliminación de pago',
+                'descripcion' => "Se eliminó un pago registrado el {$datosAnteriores['fecha_pago']} correspondiente al documento de compra folio {$documento->folio}.",
+                'datos_anteriores' => $datosAnteriores,
+                'fecha_cambio' => now(),
             ]);
         }
 
@@ -231,6 +240,7 @@ class PagoDocumentoController extends Controller
             ->route('documentos.detalles', $documento->id)
             ->with('success', 'Pago eliminado, movimiento registrado y estado actualizado correctamente.');
     }
+
 
 
 

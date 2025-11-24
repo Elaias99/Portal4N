@@ -123,7 +123,7 @@ class AbonoController extends Controller
             ]);
         }
 
-        // 🔹 Registrar movimiento (solo si es documento financiero)
+        // 🔹 Registrar movimiento según tipo de documento
         if ($tipoDocumento === 'financiero') {
             \App\Models\MovimientoDocumento::create([
                 'documento_financiero_id' => $documento->id,
@@ -131,6 +131,15 @@ class AbonoController extends Controller
                 'tipo_movimiento' => 'Eliminación de abono',
                 'descripcion' => "Se eliminó un abono de {$datosAnteriores['monto']} correspondiente al documento folio {$documento->folio}.",
                 'datos_anteriores' => $datosAnteriores,
+            ]);
+        } elseif ($tipoDocumento === 'compra') {
+            \App\Models\MovimientoCompra::create([
+                'documento_compra_id' => $documento->id,
+                'usuario_id' => Auth::id(),
+                'tipo_movimiento' => 'Eliminación de abono',
+                'descripcion' => "Se eliminó un abono de {$datosAnteriores['monto']} correspondiente al documento de compra folio {$documento->folio}.",
+                'datos_anteriores' => $datosAnteriores,
+                'fecha_cambio' => now(),
             ]);
         }
 
@@ -145,6 +154,7 @@ class AbonoController extends Controller
             ->route('documentos.detalles', $documento->id)
             ->with('success', 'Abono eliminado, movimiento registrado y estado actualizado correctamente.');
     }
+
 
 
 

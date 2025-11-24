@@ -188,7 +188,7 @@ class ProntoPagoController extends Controller
         // 🔄 REFRESH
         $documento->refresh();
 
-        // 🔹 Registrar movimiento (solo si es documento financiero)
+        // 🔹 Registrar movimiento según tipo de documento
         if ($tipoDocumento === 'financiero') {
             \App\Models\MovimientoDocumento::create([
                 'documento_financiero_id' => $documento->id,
@@ -196,6 +196,15 @@ class ProntoPagoController extends Controller
                 'tipo_movimiento' => 'Eliminación de pronto pago',
                 'descripcion' => "Se eliminó un pronto pago registrado el {$datosAnteriores['fecha_pronto_pago']} correspondiente al documento folio {$documento->folio}.",
                 'datos_anteriores' => $datosAnteriores,
+            ]);
+        } elseif ($tipoDocumento === 'compra') {
+            \App\Models\MovimientoCompra::create([
+                'documento_compra_id' => $documento->id,
+                'usuario_id' => Auth::id(),
+                'tipo_movimiento' => 'Eliminación de pronto pago',
+                'descripcion' => "Se eliminó un pronto pago registrado el {$datosAnteriores['fecha_pronto_pago']} correspondiente al documento de compra folio {$documento->folio}.",
+                'datos_anteriores' => $datosAnteriores,
+                'fecha_cambio' => now(),
             ]);
         }
 
@@ -210,6 +219,7 @@ class ProntoPagoController extends Controller
             ->route('documentos.detalles', $documento->id)
             ->with('success', 'Pronto pago eliminado, movimiento registrado y estado actualizado correctamente.');
     }
+
 
 
 
