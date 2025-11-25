@@ -103,7 +103,9 @@ class DocumentoFinancieroController extends Controller
         // === OBTENER DATOS BASE SIN PAGINAR ===
         $documentosOriginal = $query
             ->orderByRaw('ISNULL(fecha_vencimiento), fecha_vencimiento DESC')
+            ->orderBy('folio', 'DESC')
             ->paginate(10);
+
 
         // === ACTUALIZAR ESTADO AUTOMÁTICO ===
         $hoy = \Carbon\Carbon::today();
