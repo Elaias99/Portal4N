@@ -100,9 +100,18 @@ class DocumentoFinancieroController extends Controller
             $query->where('status_original', $request->status);
         }
 
+
+        // === CALCULAR SALDO PENDIENTE GLOBAL (Optimizado SQL) ===
+        $totalSaldoPendiente = (clone $baseQuery)
+            ->whereNotIn('tipo_documento_id', [61, 56])   // excluir NC y ND
+            ->where('saldo_pendiente', '>', 0)            // excluir documentos pagados
+            ->sum('saldo_pendiente');
+
+
+
         // === OBTENER DATOS BASE SIN PAGINAR ===
         $documentosOriginal = $query
-            ->orderByRaw('ISNULL(fecha_vencimiento), fecha_vencimiento DESC')
+            ->orderByRaw('fecha_vencimiento IS NULL, fecha_vencimiento DESC')
             ->orderBy('folio', 'DESC')
             ->paginate(10);
 
@@ -153,18 +162,7 @@ class DocumentoFinancieroController extends Controller
         $totalPagados = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente <= 0)->count();
         $totalPendientes = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente > 0)->count();
 
-
-        // === SALDO PENDIENTE GLOBAL ===
-        $totalSaldoPendiente = $documentoFinancieros
-            ->filter(function ($doc) {
-                if (in_array($doc->tipo_documento_id, [61, 56])) return false;
-                if ($doc->pagos->count() > 0) return false;
-                return true;
-            })
-            ->sum('saldo_pendiente');
-
-
-        // === DATOS DE APOYO ===
+                
         $empresas = Empresa::orderBy('Nombre')->get(['id', 'Nombre']);
         $tiposDocumento = TipoDocumento::orderBy('nombre')->get(['id', 'nombre']);
         $proveedores = \App\Models\Proveedor::orderBy('razon_social')->get(['id', 'razon_social', 'rut']);
