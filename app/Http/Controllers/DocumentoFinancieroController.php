@@ -21,6 +21,8 @@ class DocumentoFinancieroController extends Controller
 
     public function index(Request $request)
     {
+        // Log::info('Valor recibido de page:', ['page' => $request->page]);
+
         $usuariosFinanzas = [1, 405, 374, 375];
 
         if (!in_array(Auth::id(), $usuariosFinanzas)) {
@@ -136,6 +138,9 @@ class DocumentoFinancieroController extends Controller
         // === FILTRO POR ESTADO DE PAGO ===
         $documentoFinancieros = $documentosOriginal; // conjunto base
 
+        // Log::info('IDs de esta página:', $documentosOriginal->pluck('id')->toArray());
+
+
         if ($request->filled('estado_pago')) {
             $documentoFinancieros = $documentosOriginal->filter(function ($doc) use ($request) {
                 if ($request->estado_pago === 'Pagado') {
@@ -148,13 +153,13 @@ class DocumentoFinancieroController extends Controller
             });
 
             // 🔥 Convertir colección nuevamente a paginador
-            $documentoFinancieros = new \Illuminate\Pagination\LengthAwarePaginator(
-                $documentoFinancieros->forPage($documentosOriginal->currentPage(), $documentosOriginal->perPage()),
-                $documentoFinancieros->count(),
-                $documentosOriginal->perPage(),
-                $documentosOriginal->currentPage(),
-                ['path' => request()->url(), 'query' => request()->query()]
-            );
+            // $documentoFinancieros = new \Illuminate\Pagination\LengthAwarePaginator(
+            //     $documentoFinancieros->forPage($documentosOriginal->currentPage(), $documentosOriginal->perPage()),
+            //     $documentoFinancieros->count(),
+            //     $documentosOriginal->perPage(),
+            //     $documentosOriginal->currentPage(),
+            //     ['path' => request()->url(), 'query' => request()->query()]
+            // );
         }
 
 
@@ -169,6 +174,7 @@ class DocumentoFinancieroController extends Controller
 
         return view('cobranzas.documentos', compact(
             'documentoFinancieros',
+            'documentosOriginal',
             'totalAlDia',
             'totalVencido',
             'totalSaldoPendiente',
@@ -222,9 +228,10 @@ class DocumentoFinancieroController extends Controller
                     $query->where('empresa_id', $valor);
                     break;
 
-                case 'tipo_doc_id':
-                    $query->where('tipo_doc_id', $valor);
+                case 'tipo_documento_id':
+                    $query->where('tipo_documento_id', $valor);
                     break;
+
             }
         }
 
@@ -245,9 +252,10 @@ class DocumentoFinancieroController extends Controller
             $query->where('empresa_id', $request->empresa_id);
         }
 
-        if ($request->filled('tipo_doc_id')) {
-            $query->where('tipo_doc_id', $request->tipo_doc_id);
+        if ($request->filled('tipo_documento_id')) {
+            $query->where('tipo_documento_id', $request->tipo_documento_id);
         }
+
 
         if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
             $query->whereBetween('fecha_docto', [$request->fecha_inicio, $request->fecha_fin]);
@@ -281,7 +289,7 @@ class DocumentoFinancieroController extends Controller
             'fecha_vencimiento',
             'monto_total',
             'empresa_id',
-            'tipo_doc_id',
+            'tipo_documento_id',
         ];
 
         if (!in_array($sortBy, $columnasPermitidas)) {
@@ -623,9 +631,10 @@ class DocumentoFinancieroController extends Controller
                     $query->where('empresa_id', $request->valor);
                     break;
 
-                case 'tipo_doc_id':
-                    $query->where('tipo_doc_id', $request->valor);
+                case 'tipo_documento_id':
+                    $query->where('tipo_documento_id', $request->valor);
                     break;
+
             }
         }
 
@@ -745,9 +754,10 @@ class DocumentoFinancieroController extends Controller
                     $query->where('empresa_id', $request->valor);
                     break;
 
-                case 'tipo_doc_id':
-                    $query->where('tipo_doc_id', $request->valor);
+                case 'tipo_documento_id':
+                    $query->where('tipo_documento_id', $request->valor);
                     break;
+
             }
         }
 

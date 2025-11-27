@@ -118,7 +118,8 @@
             <div class="flex-grow-1">
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body">
-                        <form method="GET" action="{{ route('cobranzas.documentos') }}">
+                        <form method="GET"  action="{{ route('cobranzas.documentos') }}" >
+                            <input type="hidden" name="page" value="{{ request('page', 1) }}">
                             <div class="row g-3 align-items-end">
                                 
                                 <div class="col-md-2">
@@ -466,7 +467,8 @@
 
         {{-- Paginación --}}
         <div class="mt-3 d-flex justify-content-center">
-            {{ $documentoFinancieros->appends(request()->query())->links('pagination::bootstrap-4') }}
+            {{ $documentosOriginal->appends(request()->query())->links('pagination::bootstrap-4') }}
+
         </div>
     </div>
 
