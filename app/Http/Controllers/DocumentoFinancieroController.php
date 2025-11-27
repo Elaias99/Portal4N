@@ -303,6 +303,8 @@ class DocumentoFinancieroController extends Controller
         // === CONSULTA FINAL ===
         $documentoFinancieros = $query->orderBy($sortBy, $sortOrder)->paginate(10);
 
+        $documentosOriginal = $documentoFinancieros;
+
         // === CALCULOS AUXILIARES ===
         $totalSaldoPendiente = $documentoFinancieros->sum(fn($d) => $d->saldo_pendiente);
         $totalPagados = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente <= 0)->count();
@@ -319,6 +321,7 @@ class DocumentoFinancieroController extends Controller
         // === RENDERIZAR VISTA ===
         return view('cobranzas.documentos', compact(
             'documentoFinancieros',
+            'documentosOriginal', 
             'totalSaldoPendiente',
             'totalPagados',
             'totalPendientes',
