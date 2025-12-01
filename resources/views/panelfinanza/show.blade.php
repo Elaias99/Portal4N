@@ -78,6 +78,7 @@
                         <th>Cliente</th>
                         <th>Empresa</th>
                         <th>Monto Movimiento</th>
+                        <th>Fecha ingreso estado</th>
                         <th>Usuario</th>
                         <th>Descripción</th>
                     </tr>
@@ -90,6 +91,7 @@
                             $signo = '+';
                             $color = 'text-success';
 
+                            // ==== Monto del movimiento ====
                             if (Str::contains($tipo, 'abono') || Str::contains($tipo, 'cruce')) {
                                 $monto = $mov->datos_nuevos['monto']
                                     ?? $mov->datos_anteriores['monto']
@@ -103,7 +105,32 @@
                                 $signo = '–';
                                 $color = 'text-danger';
                             }
+
+                            // ==== Fecha del estado (abono, cruce, pago, pronto pago) ====
+                            $fechaEstado = null;
+
+                            if (Str::contains($tipo, 'abono')) {
+                                $fechaEstado = $mov->datos_nuevos['fecha_abono']
+                                    ?? $mov->datos_anteriores['fecha_abono']
+                                    ?? null;
+                            }
+                            elseif (Str::contains($tipo, 'cruce')) {
+                                $fechaEstado = $mov->datos_nuevos['fecha_cruce']
+                                    ?? $mov->datos_anteriores['fecha_cruce']
+                                    ?? null;
+                            }
+                            elseif (Str::contains($tipo, 'pago')) {
+                                $fechaEstado = $mov->datos_nuevos['fecha_pago']
+                                    ?? $mov->datos_anteriores['fecha_pago']
+                                    ?? null;
+                            }
+                            elseif (Str::contains($tipo, 'pronto pago')) {
+                                $fechaEstado = $mov->datos_nuevos['fecha_pronto_pago']
+                                    ?? $mov->datos_anteriores['fecha_pronto_pago']
+                                    ?? null;
+                            }
                         @endphp
+
 
                         <tr>
                             <td>{{ optional($mov->created_at)->format('d-m-Y H:i') }}</td>
@@ -154,6 +181,15 @@
                             >
                                 {{ $signo }}${{ number_format(abs($monto), 0, ',', '.') }}
                             </td>
+
+                            <td>
+                                @if($fechaEstado)
+                                    {{ \Carbon\Carbon::parse($fechaEstado)->format('d-m-Y') }}
+                                @else
+                                    —
+                                @endif
+                            </td>
+
 
                             <td>{{ $mov->user->name ?? '—' }}</td>
                             <td>{{ $mov->descripcion ?? '—' }}</td>

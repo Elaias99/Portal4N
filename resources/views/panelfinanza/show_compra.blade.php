@@ -61,47 +61,109 @@
                         <th>Empresa</th>
                         <th>Proveedor</th>
                         <th>Folio</th>
+                        <th>Fecha ingreso estado</th>
+
                         <th>Estado anterior → nuevo</th>
                         <th>Usuario</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($movimientos as $mov)
-                        <tr>
-                            <td>{{ $mov->created_at?->format('d-m-Y H:i') ?? '—' }}</td>
-                            <td>{{ $mov->compra?->empresa?->Nombre ?? '—' }}</td>
-                            <td>{{ $mov->compra?->razon_social ?? '—' }}</td>
-                            <td>{{ $mov->compra?->folio ?? '—' }}</td>
-
-
-                            <td>
-                                @php
-                                    $anterior = $mov->estado_anterior;
-                                    $nuevo = $mov->nuevo_estado;
-                                @endphp
-
-                                @if(is_null($anterior) && is_null($nuevo))
-                                    <span class="text-danger fw-semibold">Eliminación de pago</span>
-                                @elseif($anterior === $nuevo && $nuevo === 'Pago')
-                                    <span class="text-success fw-semibold">Pago registrado</span>
-                                @elseif($anterior === $nuevo)
-                                    <span class="text-muted">Sin cambio ({{ $nuevo }})</span>
-                                @else
-                                    {{ $anterior ?? '—' }} <span class="text-muted">→</span> {{ $nuevo ?? '—' }}
-                                @endif
-                            </td>
 
 
 
+                @forelse($movimientos as $mov)
 
 
-                            <td>{{ $mov->user?->name ?? '—' }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-3">Sin movimientos registrados</td>
-                        </tr>
-                    @endforelse
+                    @php
+                        $fechaEstado = null;
+
+                        // Timestamp exacto del movimiento
+                        $ts = optional($mov->created_at)->toDateTimeString();
+
+                        // Buscar abono creado en ese momento
+                        $abono = $mov->compra->abonos()
+                            ->where('created_at', $ts)
+                            ->first();
+
+                        if ($abono) {
+                            $fechaEstado = $abono->fecha_abono;
+                        }
+
+                        // Buscar pago
+                        $pago = $mov->compra->pagos()
+                            ->where('created_at', $ts)
+                            ->first();
+
+                        if ($pago) {
+                            $fechaEstado = $pago->fecha_pago;
+                        }
+
+                        // Buscar cruce
+                        $cruce = $mov->compra->cruces()
+                            ->where('created_at', $ts)
+                            ->first();
+
+                        if ($cruce) {
+                            $fechaEstado = $cruce->fecha_cruce;
+                        }
+
+                        // Buscar pronto pago
+                        $pp = $mov->compra->prontoPagos()
+                            ->where('created_at', $ts)
+                            ->first();
+
+                        if ($pp) {
+                            $fechaEstado = $pp->fecha_pronto_pago;
+                        }
+                    @endphp
+
+
+                    <tr>
+                        <td>{{ $mov->created_at?->format('d-m-Y H:i') ?? '—' }}</td>
+                        <td>{{ $mov->compra?->empresa?->Nombre ?? '—' }}</td>
+                        <td>{{ $mov->compra?->razon_social ?? '—' }}</td>
+                        <td>{{ $mov->compra?->folio ?? '—' }}</td>
+
+                        <td>
+                            @if($fechaEstado)
+                                {{ \Carbon\Carbon::parse($fechaEstado)->format('d-m-Y') }}
+                            @else
+                                —
+                            @endif
+                        </td>
+
+
+                        {{-- ESTADO --}}
+                        <td>
+                            @php
+                                $anterior = $mov->estado_anterior;
+                                $nuevo = $mov->nuevo_estado;
+                            @endphp
+
+                            @if(is_null($anterior) && is_null($nuevo))
+                                <span class="text-danger fw-semibold">Eliminación de pago</span>
+                            @elseif($anterior === $nuevo && $nuevo === 'Pago')
+                                <span class="text-success fw-semibold">Pago registrado</span>
+                            @elseif($anterior === $nuevo)
+                                <span class="text-muted">Sin cambio ({{ $nuevo }})</span>
+                            @else
+                                {{ $anterior ?? '—' }} <span class="text-muted">→</span> {{ $nuevo ?? '—' }}
+                            @endif
+                        </td>
+
+                        <td>{{ $mov->user?->name ?? '—' }}</td>
+                    </tr>
+
+                @empty
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-3">Sin movimientos registrados</td>
+                    </tr>
+                @endforelse
+
+
+
+
+
                 </tbody>
             </table>
         </div>

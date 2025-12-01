@@ -35,43 +35,89 @@ class MovimientoCompraExport implements FromCollection, WithHeadings, WithMappin
     public function headings(): array
     {
         return [
-            'Fecha del Movimiento',
+            'Fecha Movimiento',
             'Empresa',
             'Proveedor',
-            'Folio Documento',
+            'Folio',
             'Tipo Documento',
+            'Fecha ingreso estado',
             'Cambio de Estado',
-            'Usuario Responsable',
+            'Usuario',
         ];
     }
 
     public function map($mov): array
     {
-        $fecha = optional($mov->created_at)->format('d-m-Y H:i');
+        $fechaMovimiento = optional($mov->created_at)->format('d-m-Y H:i');
         $empresa = $mov->compra?->empresa?->Nombre ?? '—';
         $proveedor = $mov->compra?->razon_social ?? '—';
         $folio = $mov->compra?->folio ?? '—';
         $tipoDoc = $mov->compra?->tipoDocumento?->nombre ?? '—';
         $usuario = $mov->user?->name ?? '—';
 
+        // ============================================================
+        // OBTENER LA FECHA REAL DEL ESTADO (abono/pago/cruce/pronto pago)
+        // ============================================================
+        $fechaEstado = null;
+        $ts = optional($mov->created_at)->toDateTimeString();
+
+        // Abono
+        $abono = $mov->compra->abonos()
+            ->where('created_at', $ts)
+            ->first();
+        if ($abono) {
+            $fechaEstado = $abono->fecha_abono;
+        }
+
+        // Pago
+        $pago = $mov->compra->pagos()
+            ->where('created_at', $ts)
+            ->first();
+        if ($pago) {
+            $fechaEstado = $pago->fecha_pago;
+        }
+
+        // Cruce
+        $cruce = $mov->compra->cruces()
+            ->where('created_at', $ts)
+            ->first();
+        if ($cruce) {
+            $fechaEstado = $cruce->fecha_cruce;
+        }
+
+        // Pronto pago
+        $pp = $mov->compra->prontoPagos()
+            ->where('created_at', $ts)
+            ->first();
+        if ($pp) {
+            $fechaEstado = $pp->fecha_pronto_pago;
+        }
+
+        $fechaEstadoFormateada = $fechaEstado
+            ? \Carbon\Carbon::parse($fechaEstado)->format('d-m-Y')
+            : '—';
+
+        // ============================================================
+        // TEXTO DEL MOVIMIENTO
+        // ============================================================
         $estadoAnterior = $mov->estado_anterior;
         $nuevoEstado = $mov->nuevo_estado;
 
-        // === Texto claro y entendible para el usuario final ===
         if (is_null($estadoAnterior) && is_null($nuevoEstado)) {
-            $cambio = "El estado que estaba ingresado fue eliminado";
+            $cambio = "Eliminación de pago";
         } elseif ($estadoAnterior === $nuevoEstado) {
-            $cambio = "Se registró un movimiento de tipo '{$nuevoEstado}'";
+            $cambio = "Movimiento: {$nuevoEstado}";
         } else {
-            $cambio = "Cambio de estado de '{$estadoAnterior}' a '{$nuevoEstado}'";
+            $cambio = "De '{$estadoAnterior}' a '{$nuevoEstado}'";
         }
 
         return [
-            $fecha,
+            $fechaMovimiento,
             $empresa,
             $proveedor,
             $folio,
             $tipoDoc,
+            $fechaEstadoFormateada,
             $cambio,
             $usuario,
         ];

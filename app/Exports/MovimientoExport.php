@@ -50,6 +50,7 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
             'Tipo Documento',
             'Cliente / Razón Social',
             'Empresa',
+            'Fecha ingreso estado',
             'Monto Movimiento ($)',
             'Usuario',
         ];
@@ -63,6 +64,7 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
         $fecha = optional($mov->created_at)->format('d-m-Y H:i');
         $tipoOriginal = $mov->tipo_movimiento ?? '—';
         $tipo = strtolower($tipoOriginal);
+        $fechaEstado = null;
         $descripcion = $mov->descripcion ?? '—';
         $folio = $mov->documento->folio ?? '—';
         $tipoDoc = $mov->documento->tipoDocumento->nombre ?? '—';
@@ -86,9 +88,34 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
             $montoMovimiento *= -1;
         }
 
+        if (Str::contains($tipo, 'abono')) {
+            $fechaEstado = $mov->datos_nuevos['fecha_abono']
+                ?? $mov->datos_anteriores['fecha_abono']
+                ?? null;
+        }
+        elseif (Str::contains($tipo, 'cruce')) {
+            $fechaEstado = $mov->datos_nuevos['fecha_cruce']
+                ?? $mov->datos_anteriores['fecha_cruce']
+                ?? null;
+        }
+        elseif (Str::contains($tipo, 'pago')) {
+            $fechaEstado = $mov->datos_nuevos['fecha_pago']
+                ?? $mov->datos_anteriores['fecha_pago']
+                ?? null;
+        }
+        elseif (Str::contains($tipo, 'pronto pago')) {
+            $fechaEstado = $mov->datos_nuevos['fecha_pronto_pago']
+                ?? $mov->datos_anteriores['fecha_pronto_pago']
+                ?? null;
+        }
+
         // Formato del monto con signo
-        $signo = $montoMovimiento < 0 ? '–' : '+';
-        $montoFormateado = $signo . '$' . number_format(abs($montoMovimiento), 0, ',', '.');
+        $montoFormateado = '$' . number_format(abs($montoMovimiento), 0, ',', '.');
+
+        $fechaEstadoFormateada = $fechaEstado
+            ? \Carbon\Carbon::parse($fechaEstado)->format('d-m-Y')
+            : '—';
+
 
         return [
             $fecha,
@@ -98,6 +125,7 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
             $tipoDoc,
             $cliente,
             $empresa,
+            $fechaEstadoFormateada,
             $montoFormateado,
             $usuario,
         ];

@@ -24,7 +24,7 @@ class ProntoPago extends Model
         return $this->belongsTo(DocumentoFinanciero::class, 'documento_financiero_id');
     }
 
-    // 🔹 Para módulo de compras
+    // Para módulo de compras
     public function documentoCompra()
     {
         return $this->belongsTo(DocumentoCompra::class, 'documento_compra_id');
