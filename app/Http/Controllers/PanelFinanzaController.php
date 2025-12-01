@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\Abono;
 use App\Models\Cruce;
 use App\Models\MovimientoDocumento;
+use App\Models\MovimientoCompra;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Exports\MovimientoExport;
@@ -94,13 +95,53 @@ class PanelFinanzaController extends Controller
         $perPage     = 10;
 
         // === Consulta base ===
-        $query = \App\Models\MovimientoDocumento::with(['documento.empresa', 'documento.tipoDocumento', 'user'])
-            ->when($fechaInicio, fn($q) =>
-                $q->whereDate('movimientos_documentos.created_at', '>=', $fechaInicio)
-            )
-            ->when($fechaFin, fn($q) =>
-                $q->whereDate('movimientos_documentos.created_at', '<=', $fechaFin)
-            )
+        $query = MovimientoDocumento::with(['documento.empresa', 'documento.tipoDocumento', 'user'])
+            ->when($fechaInicio || $fechaFin, function ($q) use ($fechaInicio, $fechaFin) {
+
+                $q->where(function ($sub) use ($fechaInicio, $fechaFin) {
+
+                    // FILTRO PARA ABONOS
+                    $sub->orWhereHas('documento.abonos', function ($a) use ($fechaInicio, $fechaFin) {
+                        if ($fechaInicio) {
+                            $a->whereDate('fecha_abono', '>=', $fechaInicio);
+                        }
+                        if ($fechaFin) {
+                            $a->whereDate('fecha_abono', '<=', $fechaFin);
+                        }
+                    });
+
+                    // FILTRO PARA CRUCES
+                    $sub->orWhereHas('documento.cruces', function ($c) use ($fechaInicio, $fechaFin) {
+                        if ($fechaInicio) {
+                            $c->whereDate('fecha_cruce', '>=', $fechaInicio);
+                        }
+                        if ($fechaFin) {
+                            $c->whereDate('fecha_cruce', '<=', $fechaFin);
+                        }
+                    });
+
+                    // FILTRO PARA PAGOS
+                    $sub->orWhereHas('documento.pagos', function ($p) use ($fechaInicio, $fechaFin) {
+                        if ($fechaInicio) {
+                            $p->whereDate('fecha_pago', '>=', $fechaInicio);
+                        }
+                        if ($fechaFin) {
+                            $p->whereDate('fecha_pago', '<=', $fechaFin);
+                        }
+                    });
+
+                    // FILTRO PARA PRONTO PAGO
+                    $sub->orWhereHas('documento.prontoPagos', function ($pp) use ($fechaInicio, $fechaFin) {
+                        if ($fechaInicio) {
+                            $pp->whereDate('fecha_pronto_pago', '>=', $fechaInicio);
+                        }
+                        if ($fechaFin) {
+                            $pp->whereDate('fecha_pronto_pago', '<=', $fechaFin);
+                        }
+                    });
+
+                });
+            })
             ->when($empresaId, fn($q) =>
                 $q->whereHas('documento', fn($d) =>
                     $d->where('empresa_id', $empresaId)
@@ -112,6 +153,7 @@ class PanelFinanzaController extends Controller
                 )
             )
             ->orderByDesc('movimientos_documentos.created_at');
+
 
         // === Paginación ===
         $movimientos = $query->paginate($perPage);
@@ -255,32 +297,77 @@ class PanelFinanzaController extends Controller
         $perPage     = 20;
 
         // === Consulta base ===
-        $query = \App\Models\MovimientoCompra::with(['compra.empresa', 'user'])
-            ->when($fechaInicio, fn($q) =>
-                $q->whereDate('movimientos_compras.created_at', '>=', $fechaInicio)
-            )
-            ->when($fechaFin, fn($q) =>
-                $q->whereDate('movimientos_compras.created_at', '<=', $fechaFin)
-            )
+        $query = MovimientoCompra::with(['compra.empresa', 'user'])
+
+            // === FILTRO POR FECHA REAL DE ABONO / PAGO / CRUCE / PRONTO PAGO ===
+            ->when($fechaInicio || $fechaFin, function ($q) use ($fechaInicio, $fechaFin) {
+
+                $q->where(function ($sub) use ($fechaInicio, $fechaFin) {
+
+                    // ABONOS
+                    $sub->orWhereHas('compra.abonos', function ($a) use ($fechaInicio, $fechaFin) {
+                        if ($fechaInicio) {
+                            $a->whereDate('fecha_abono', '>=', $fechaInicio);
+                        }
+                        if ($fechaFin) {
+                            $a->whereDate('fecha_abono', '<=', $fechaFin);
+                        }
+                    });
+
+                    // PAGOS
+                    $sub->orWhereHas('compra.pagos', function ($p) use ($fechaInicio, $fechaFin) {
+                        if ($fechaInicio) {
+                            $p->whereDate('fecha_pago', '>=', $fechaInicio);
+                        }
+                        if ($fechaFin) {
+                            $p->whereDate('fecha_pago', '<=', $fechaFin);
+                        }
+                    });
+
+                    // CRUCES
+                    $sub->orWhereHas('compra.cruces', function ($c) use ($fechaInicio, $fechaFin) {
+                        if ($fechaInicio) {
+                            $c->whereDate('fecha_cruce', '>=', $fechaInicio);
+                        }
+                        if ($fechaFin) {
+                            $c->whereDate('fecha_cruce', '<=', $fechaFin);
+                        }
+                    });
+
+                    // PRONTO PAGO
+                    $sub->orWhereHas('compra.prontoPagos', function ($pp) use ($fechaInicio, $fechaFin) {
+                        if ($fechaInicio) {
+                            $pp->whereDate('fecha_pronto_pago', '>=', $fechaInicio);
+                        }
+                        if ($fechaFin) {
+                            $pp->whereDate('fecha_pronto_pago', '<=', $fechaFin);
+                        }
+                    });
+
+                });
+            })
+
+            // === Filtros extra ===
             ->when($empresaId, fn($q) =>
-                $q->whereHas('compra', fn($d) =>
-                    $d->where('empresa_id', $empresaId)
+                $q->whereHas('compra', fn($c) =>
+                    $c->where('empresa_id', $empresaId)
                 )
             )
             ->when($razonSocial, fn($q) =>
-                $q->whereHas('compra', fn($d) =>
-                    $d->where('razon_social', 'like', "%{$razonSocial}%")
+                $q->whereHas('compra', fn($c) =>
+                    $c->where('razon_social', 'like', "%{$razonSocial}%")
                 )
             )
             ->orderByDesc('movimientos_compras.created_at');
 
         $movimientos = $query->paginate($perPage);
 
-        // === Listado de empresas para filtro ===
+        // === Listado de empresas ===
         $empresas = \App\Models\Empresa::orderBy('Nombre')->get();
 
         return view('panelfinanza.show_compra', compact('movimientos', 'empresas'));
     }
+
 
     public function exportCompras (Request $request)
     {

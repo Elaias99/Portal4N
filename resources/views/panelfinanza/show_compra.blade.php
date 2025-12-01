@@ -14,16 +14,21 @@
             <form method="GET" action="{{ route('panelfinanza.show_compras') }}">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-2">
-                        <label class="form-label small text-muted mb-1">Desde</label>
+                        <label class="form-label small text-muted mb-1">
+                            Fecha ingreso estado (desde)
+                        </label>
                         <input type="date" name="fecha_inicio" class="form-control form-control-sm"
-                               value="{{ request('fecha_inicio') }}">
+                            value="{{ request('fecha_inicio') }}">
                     </div>
 
                     <div class="col-md-2">
-                        <label class="form-label small text-muted mb-1">Hasta</label>
+                        <label class="form-label small text-muted mb-1">
+                            Fecha ingreso estado (hasta)
+                        </label>
                         <input type="date" name="fecha_fin" class="form-control form-control-sm"
-                               value="{{ request('fecha_fin') }}">
+                            value="{{ request('fecha_fin') }}">
                     </div>
+
 
                     <div class="col-md-3">
                         <label class="form-label small text-muted mb-1">Empresa</label>

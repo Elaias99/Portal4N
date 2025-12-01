@@ -14,16 +14,30 @@
         <div class="card-body">
             <form method="GET" action="{{ route('panelfinanza.show') }}">
                 <div class="row g-3 align-items-end">
+
+
+
                     <div class="col-md-2">
-                        <label class="form-label small text-muted mb-1">Desde</label>
+                        <label class="form-label small text-muted mb-1">
+                            Fecha ingreso estado (desde)
+                        </label>
                         <input type="date" name="fecha_inicio" class="form-control form-control-sm"
-                               value="{{ request('fecha_inicio') }}">
+                            value="{{ request('fecha_inicio') }}">
                     </div>
+
                     <div class="col-md-2">
-                        <label class="form-label small text-muted mb-1">Hasta</label>
+                        <label class="form-label small text-muted mb-1">
+                            Fecha ingreso estado (hasta)
+                        </label>
                         <input type="date" name="fecha_fin" class="form-control form-control-sm"
-                               value="{{ request('fecha_fin') }}">
+                            value="{{ request('fecha_fin') }}">
                     </div>
+
+
+
+
+
+                    
                     <div class="col-md-3">
                         <label class="form-label small text-muted mb-1">Empresa</label>
                         <select name="empresa_id" class="form-select form-select-sm">
@@ -72,13 +86,14 @@
             <table class="table align-middle mb-0">
                 <thead style="background-color: #f8f9fa;">
                     <tr class="text-muted small">
-                        <th>Fecha</th>
+                        {{-- <th>Fecha</th> --}}
+                        <th>Fecha ingreso estado</th>
                         <th>Tipo Movimiento</th>
                         <th>Documento</th>
                         <th>Cliente</th>
                         <th>Empresa</th>
                         <th>Monto Movimiento</th>
-                        <th>Fecha ingreso estado</th>
+                        
                         <th>Usuario</th>
                         <th>Descripción</th>
                     </tr>
@@ -133,7 +148,16 @@
 
 
                         <tr>
-                            <td>{{ optional($mov->created_at)->format('d-m-Y H:i') }}</td>
+                            {{-- <td>{{ optional($mov->created_at)->format('d-m-Y H:i') }}</td> --}}
+
+                            <td>
+                                @if($fechaEstado)
+                                    {{ \Carbon\Carbon::parse($fechaEstado)->format('d-m-Y') }}
+                                @else
+                                    —
+                                @endif
+                            </td>
+
 
                             <td>
                                 @if(Str::contains($tipo, 'reprocesamiento'))
@@ -181,15 +205,6 @@
                             >
                                 {{ $signo }}${{ number_format(abs($monto), 0, ',', '.') }}
                             </td>
-
-                            <td>
-                                @if($fechaEstado)
-                                    {{ \Carbon\Carbon::parse($fechaEstado)->format('d-m-Y') }}
-                                @else
-                                    —
-                                @endif
-                            </td>
-
 
                             <td>{{ $mov->user->name ?? '—' }}</td>
                             <td>{{ $mov->descripcion ?? '—' }}</td>
