@@ -94,11 +94,11 @@
             </tbody>
         </table>
 
-        <div class="footer" style="text-align:center; margin-top:28px;">
+        {{-- <div class="footer" style="text-align:center; margin-top:28px;">
             <img src="{{ asset('Firma_correos/thumbnail_image001.jpg') }}" 
                 alt="Firma 4N Logística" 
                 style="max-width:600px; width:100%; height:auto;">
-        </div>
+        </div> --}}
 
 
     </div>

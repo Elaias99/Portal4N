@@ -139,16 +139,15 @@ Schedule::call(function () {
 //////////////////    ////////////////////////////
 Schedule::call(function () {
 
-    Log::info("⏳ Ejecutando prueba de envío de ReservasDiarias...");
+    Log::info("⏳ Ejecutando envío diario de ReservasDiarias...");
 
-    // 👉 Aquí pondremos el texto del mensaje (versión de prueba)
     $mensaje = "HOLA
 
     Por favor solicito reservas para hoy según detalló
     tanto como para despacho y regreso.
 
     para hoy ENVIO";
-            
+
     $mensaje_tabular = "
     DESTINO   KG APROX   Vuelo   Estándar   Tipo de carga
     SCL ARICA         10    OV    CARGA GENERAL
@@ -159,16 +158,14 @@ Schedule::call(function () {
     SCL BALMACEDA     10    OV    CARGA GENERAL
     ";
 
-    // Enviarlo SOLO A TI por ahora
-    Mail::to(['eliascorrea@4nlogistica.cl'])
+    Mail::to(['eliascorrea@4nlogistica.cl', 'hansdelabarra@4nlogistica.cl'])
         ->send(new ReservasDiariasMail($mensaje, $mensaje_tabular));
 
-
-
-    Log::info("✅ Correo de prueba enviado a eliascorrea@4nlogistica.cl");
+    Log::info("✅ Correo de ReservasDiarias enviado a las 8:00 (Lun-Vie)");
 
 })
-->everyMinute(); // ⏱️ SOLO PARA PRUEBAS
+->weekdays()->at('08:00');
+
 
 
 
