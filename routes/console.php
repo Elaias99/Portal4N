@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use App\Models\DocumentoFinanciero;
 use App\Mail\DocumentosVencimientosNotificacion;
 use App\Mail\DocumentosAtrasadosMail;
+use App\Mail\ReservasDiariasMail;
 use Carbon\Carbon;
 
 
@@ -132,6 +133,42 @@ Schedule::call(function () {
     Log::info('✅ [ATRASADOS] Correo de documentos vencidos enviado a (' . implode(', ', $destinos) . ')');
 })
 ->weeklyOn(1, '07:00');
+
+
+//////////////////    ////////////////////////////
+//////////////////    ////////////////////////////
+Schedule::call(function () {
+
+    Log::info("⏳ Ejecutando prueba de envío de ReservasDiarias...");
+
+    // 👉 Aquí pondremos el texto del mensaje (versión de prueba)
+    $mensaje = "HOLA
+
+    Por favor solicito reservas para hoy según detalló
+    tanto como para despacho y regreso.
+
+    para hoy ENVIO";
+            
+    $mensaje_tabular = "
+    DESTINO   KG APROX   Vuelo   Estándar   Tipo de carga
+    SCL ARICA         10    OV    CARGA GENERAL
+    SCL IQUIQUE       10    OV    CARGA GENERAL
+    SCL ANTOFAGASTA   10    OV    CARGA GENERAL
+    SCL CALAMA        10    OV    CARGA GENERAL
+    SCL PUNTA ARENAS  10    OV    CARGA GENERAL
+    SCL BALMACEDA     10    OV    CARGA GENERAL
+    ";
+
+    // Enviarlo SOLO A TI por ahora
+    Mail::to(['eliascorrea@4nlogistica.cl'])
+        ->send(new ReservasDiariasMail($mensaje, $mensaje_tabular));
+
+
+
+    Log::info("✅ Correo de prueba enviado a eliascorrea@4nlogistica.cl");
+
+})
+->everyMinute(); // ⏱️ SOLO PARA PRUEBAS
 
 
 
