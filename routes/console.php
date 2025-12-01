@@ -39,6 +39,7 @@ Schedule::call(function () {
         $destinos = [
             'elizabeth.obreque@4nlogistica.cl',
             'hansdelabarra@4nlogistica.cl',
+            
         ];
 
         Mail::to($destinos)->send(new CumpleaniosNotificacion($cumpleanieros));
