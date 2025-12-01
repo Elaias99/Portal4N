@@ -85,20 +85,19 @@
                 </tr>
             </thead>
             <tbody>
-                <tr><td>SCL ARICA</td><td>10</td><td>OV</td><td>---</td><td>CARGA GENERAL</td></tr>
-                <tr><td>SCL IQUIQUE</td><td>10</td><td>OV</td><td>---</td><td>CARGA GENERAL</td></tr>
-                <tr><td>SCL ANTOFAGASTA</td><td>10</td><td>OV</td><td>---</td><td>CARGA GENERAL</td></tr>
-                <tr><td>SCL CALAMA</td><td>10</td><td>OV</td><td>---</td><td>CARGA GENERAL</td></tr>
-                <tr><td>SCL PUNTA ARENAS</td><td>10</td><td>OV</td><td>---</td><td>CARGA GENERAL</td></tr>
-                <tr><td>SCL BALMACEDA</td><td>10</td><td>OV</td><td>---</td><td>CARGA GENERAL</td></tr>
+                <tr><td>SCL ARICA</td><td>10</td><td>NN</td><td>---</td><td>CARGA GENERAL</td></tr>
+                <tr><td>SCL IQUIQUE</td><td>10</td><td>NN</td><td>---</td><td>CARGA GENERAL</td></tr>
+                <tr><td>SCL ANTOFAGASTA</td><td>10</td><td>NN</td><td>---</td><td>CARGA GENERAL</td></tr>
+                <tr><td>SCL CALAMA</td><td>10</td><td>NN</td><td>---</td><td>CARGA GENERAL</td></tr>
+                <tr><td>SCL PUNTA ARENAS</td><td>10</td><td>NN</td><td>---</td><td>CARGA GENERAL</td></tr>
+                <tr><td>SCL BALMACEDA</td><td>10</td><td>NN</td><td>---</td><td>CARGA GENERAL</td></tr>
             </tbody>
         </table>
 
-        {{-- <div class="footer" style="text-align:center; margin-top:28px;">
-            <img src="{{ asset('Firma_correos/thumbnail_image001.jpg') }}" 
-                alt="Firma 4N Logística" 
-                style="max-width:600px; width:100%; height:auto;">
-        </div> --}}
+        <div class="footer" style="text-align:center; margin-top:28px; font-size:14px; color:#555;">
+            Equipo de 4Nortes
+        </div>
+
 
 
     </div>

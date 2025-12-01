@@ -150,21 +150,31 @@ Schedule::call(function () {
 
     $mensaje_tabular = "
     DESTINO   KG APROX   Vuelo   Estándar   Tipo de carga
-    SCL ARICA         10    OV    CARGA GENERAL
-    SCL IQUIQUE       10    OV    CARGA GENERAL
-    SCL ANTOFAGASTA   10    OV    CARGA GENERAL
-    SCL CALAMA        10    OV    CARGA GENERAL
-    SCL PUNTA ARENAS  10    OV    CARGA GENERAL
-    SCL BALMACEDA     10    OV    CARGA GENERAL
+    SCL ARICA         10    NN    CARGA GENERAL
+    SCL IQUIQUE       10    NN    CARGA GENERAL
+    SCL ANTOFAGASTA   10    NN    CARGA GENERAL
+    SCL CALAMA        10    NN    CARGA GENERAL
+    SCL PUNTA ARENAS  10    NN    CARGA GENERAL
+    SCL BALMACEDA     10    NN    CARGA GENERAL
     ";
 
-    Mail::to(['eliascorrea@4nlogistica.cl', 'hansdelabarra@4nlogistica.cl'])
-        ->send(new ReservasDiariasMail($mensaje, $mensaje_tabular));
+    Mail::to([
+        'carganacional.chile@latam.com',
+        'operaciones@4nlogistica.cl',
+        'gisseth.mondaca@latam.com',
+        'hansdelabarra@4nlogistica.cl',
+        'homeropardo@4nlogistica.cl',
+        'eliascorrea@4nlogistica.cl',
+        'jp.soza@4nlogistica.cl',
+    ])
+    ->send(new ReservasDiariasMail($mensaje, $mensaje_tabular));
+
 
     Log::info("✅ Correo de ReservasDiarias enviado a las 8:00 (Lun-Vie)");
 
 })
 ->weekdays()->at('08:00');
+
 
 
 
