@@ -11,6 +11,7 @@ use Maatwebsite\Excel\Concerns\SkipsErrors;
 use Throwable;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 {
@@ -90,18 +91,47 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
         $tipoDocumento = \App\Models\TipoDocumento::find((int) $row['tipo_doc']);
 
         if (!$cobranza) {
-            // Evitar duplicados por RUT
-            $yaRegistrado = collect($this->sinCobranza)
-                ->contains(fn($item) => $item['rut_cliente'] === $row['rut_cliente']);
 
-            if (!$yaRegistrado) {
+            // Buscar si ya existe una entrada para este RUT
+            $index = collect($this->sinCobranza)->search(
+                fn($item) => $item['rut_cliente'] === $row['rut_cliente']
+            );
+
+            // Si no existe → crear una entrada nueva
+            if ($index === false) {
                 $this->sinCobranza[] = [
                     'razon_social' => $row['razon_social'],
                     'rut_cliente' => $row['rut_cliente'],
-                    'folio' => $folioExcel,
-                    'fecha_docto' => $row['fecha_docto'] ?? now(),
-                    'monto' => $row['monto_total'] ?? 0,
+                    // Guardamos el primer folio como array
+                    'folios' => [$folioExcel],
+                    
                 ];
+
+
+                Log::info("IMPORT DEBUG → Nueva entrada creada para RUT", [
+                    'rut'    => $row['rut_cliente'],
+                    'folios' => [$folioExcel],
+                    'sinCobranza_actual' => $this->sinCobranza
+                ]);
+
+
+
+            } else {
+                // Ya existe → agregarle el folio a la lista
+                $this->sinCobranza[$index]['folios'][] = $folioExcel;
+
+
+                Log::info("IMPORT DEBUG → Folio agregado a RUT existente", [
+                    'rut'    => $row['rut_cliente'],
+                    'folio_agregado' => $folioExcel,
+                    'folios_actuales' => $this->sinCobranza[$index]['folios'],
+                    'sinCobranza_actual' => $this->sinCobranza
+                ]);
+
+
+
+
+
             }
 
             // 🧩 Crear el documento con cobranza_id = null (para ser reprocesado luego)
@@ -123,7 +153,13 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                     'monto_neto'              => $this->cleanNumber($row['monto_neto']),
                     'monto_iva'               => $this->cleanNumber($row['monto_iva']),
                     'monto_total'             => $this->cleanNumber($row['monto_total']),
-                    'saldo_pendiente'         => $this->cleanNumber($row['monto_total']),
+
+                    'saldo_pendiente' => 
+                        ((int)$row['tipo_doc'] === 61) 
+                            ? 0 
+                            : $this->cleanNumber($row['monto_total']),
+
+
                     'iva_retenido_total'      => $this->cleanNumber($row['iva_retenido_total']),
                     'iva_retenido_parcial'    => $this->cleanNumber($row['iva_retenido_parcial']),
                     'iva_no_retenido'         => $this->cleanNumber($row['iva_no_retenido']),

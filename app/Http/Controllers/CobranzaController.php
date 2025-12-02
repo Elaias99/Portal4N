@@ -150,18 +150,29 @@ class CobranzaController extends Controller
         $omitidos = [];
 
         foreach ($pendientes as $item) {
+
             $rut = $item['rut_cliente'] ?? null;
-            $folio = $item['folio'] ?? null;
+            $folios = $item['folios'] ?? [];
 
-            Log::info("➡️ [reprocesarPendientes] Procesando folio {$folio} / RUT {$rut}");
+            Log::info("📝 [reprocesarPendientes] FOLIOS RECIBIDOS PARA RUT {$rut}", [
+                'folios' => $folios
+            ]);
 
-            if (!$rut || !$folio) {
+            // ⚠️ CORREGIDO → antes usabas $folios que siempre es truthy si es array
+            if (!$rut || empty($folios)) {
                 $omitidos[] = $rut ?: 'Sin RUT';
                 Log::warning('⛔ [reprocesarPendientes] Faltan datos RUT o FOLIO', $item);
                 continue;
             }
 
+            Log::info("🔍 [reprocesarPendientes] Cantidad de folios para procesar", [
+                'rut' => $rut,
+                'cantidad_folios' => count($folios),
+                'folios' => $folios
+            ]);
+
             try {
+
                 // 2️⃣ Buscar la cobranza creada
                 $cobranza = \App\Models\Cobranza::where('rut_cliente', $rut)->first();
 
@@ -171,42 +182,51 @@ class CobranzaController extends Controller
                     continue;
                 }
 
-                // 3️⃣ Buscar documento financiero que quedó sin cobranza_id
-                $documento = \App\Models\DocumentoFinanciero::where('folio', $folio)
-                    ->whereNull('cobranza_id')
-                    ->first();
+                // 🔄 NUEVO: procesar cada folio individualmente
+                foreach ($folios as $folio) {
 
-                if ($documento) {
+                    Log::info("➡️ [reprocesarPendientes] Procesando folio {$folio} / RUT {$rut}");
 
-                    $fechaBase = $documento->fecha_docto ?? now();
-                    $diasCredito = (int) ($cobranza->creditos ?? 0);
+                    // 3️⃣ Buscar documento financiero que quedó sin cobranza_id
+                    $documento = \App\Models\DocumentoFinanciero::where('folio', $folio)
+                        ->whereNull('cobranza_id')
+                        ->first();
 
+                    if ($documento) {
 
+                        $fechaBase = $documento->fecha_docto ?? now();
+                        $diasCredito = (int) ($cobranza->creditos ?? 0);
 
+                        $documento->update([
+                            'cobranza_id' => $cobranza->id,
+                            'fecha_vencimiento' => Carbon::parse($fechaBase)
+                                ->addDays($diasCredito)
+                                ->format('Y-m-d'),
+                            'updated_at' => now(),
+                        ]);
 
-                    $documento->update([
-                        'cobranza_id' => $cobranza->id,
-                        'fecha_vencimiento' => Carbon::parse($fechaBase)
-                            ->addDays($diasCredito)
-                            ->format('Y-m-d'),
+                        // ⚠️ CORREGIDO → antes guardabas el array completo
+                        $procesados[] = $folio;
 
-                        'updated_at' => now(),
-                    ]);
+                        Log::info("✅ [reprocesarPendientes] Documento actualizado correctamente", [
+                            'folio' => $folio,
+                            'cobranza_id' => $cobranza->id
+                        ]);
 
-                    $procesados[] = $folio;
-                    Log::info("✅ [reprocesarPendientes] Documento actualizado correctamente", [
-                        'folio' => $folio,
-                        'cobranza_id' => $cobranza->id
-                    ]);
-                } else {
-                    $omitidos[] = $folio;
-                    Log::warning("🔍 [reprocesarPendientes] No se encontró documento con folio {$folio} sin cobranza_id");
+                    } else {
+
+                        $omitidos[] = $folio;
+
+                        Log::warning("🔍 [reprocesarPendientes] No se encontró documento con folio {$folio} sin cobranza_id");
+                    }
                 }
 
             } catch (\Throwable $e) {
+
                 Log::error("💥 [reprocesarPendientes] Error al procesar RUT {$rut}: {$e->getMessage()}", [
                     'trace' => $e->getTraceAsString()
                 ]);
+
                 $omitidos[] = $rut;
             }
         }
@@ -250,6 +270,7 @@ class CobranzaController extends Controller
             'omitidos' => $omitidos,
         ]);
     }
+
 
 
 
