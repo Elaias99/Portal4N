@@ -98,16 +98,20 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
                 ?? $mov->datos_anteriores['fecha_cruce']
                 ?? null;
         }
-        elseif (Str::contains($tipo, 'pago')) {
-            $fechaEstado = $mov->datos_nuevos['fecha_pago']
-                ?? $mov->datos_anteriores['fecha_pago']
-                ?? null;
-        }
+
         elseif (Str::contains($tipo, 'pronto pago')) {
             $fechaEstado = $mov->datos_nuevos['fecha_pronto_pago']
                 ?? $mov->datos_anteriores['fecha_pronto_pago']
                 ?? null;
         }
+
+
+        elseif (Str::contains($tipo, 'pago')) {
+            $fechaEstado = $mov->datos_nuevos['fecha_pago']
+                ?? $mov->datos_anteriores['fecha_pago']
+                ?? null;
+        }
+
 
         // Formato del monto con signo
         $montoFormateado = '$' . number_format(abs($montoMovimiento), 0, ',', '.');

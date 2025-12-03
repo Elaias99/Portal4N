@@ -364,12 +364,13 @@
                                         : $doc->status_original;
                                 @endphp
 
-                                <span class="badge {{ $color }}">
-                                    {{ $estadoMostrar }}
-                                </span>
 
                                 {{-- Botón Editar (solo si NO es Nota de Crédito) --}}
-                                @if($doc->tipo_documento_id != 61)
+                                {{-- @if($doc->tipo_documento_id != 61)
+
+                                    
+
+
                                     @if (Auth::id() != 375)
                                         <button type="button"
                                                 class="btn btn-sm btn-outline-secondary mt-2"
@@ -382,7 +383,42 @@
                                     @include('cobranzas.modal_status', ['doc' => $doc])
                                 @else
                                     <small class="text-muted d-block mt-2">No editable</small>
+                                @endif --}}
+
+
+                                @if($doc->tipo_documento_id == 61)
+
+                                    {{-- NOTA DE CRÉDITO: no mostrar badge de estado --}}
+                                    <span class="badge bg-secondary">No aplica</span>
+                                    <small class="text-muted d-block mt-2">No editable</small>
+
+                                @else
+
+                                    {{-- DOCUMENTOS NORMALES: mostrar estado y permitir edición --}}
+                                    <span class="badge {{ $color }}">
+                                        {{ $estadoMostrar }}
+                                    </span>
+
+                                    @if (Auth::id() != 375)
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary mt-2"
+                                                data-toggle="modal"
+                                                data-target="#modalStatus-{{ $doc->id }}">
+                                            Editar
+                                        </button>
+                                    @endif
+
+                                    @include('cobranzas.modal_status', ['doc' => $doc])
+
                                 @endif
+
+
+
+
+
+
+
+
                             </td>
 
 
