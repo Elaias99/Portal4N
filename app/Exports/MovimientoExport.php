@@ -3,7 +3,6 @@
 namespace App\Exports;
 
 use App\Models\MovimientoDocumento;
-use Illuminate\Contracts\View\View;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -22,11 +21,11 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
     }
 
     /**
-     * Colección de movimientos con filtros aplicados
+     * Colección de movimientos filtrados
      */
     public function collection()
     {
-        return MovimientoDocumento::with(['documento.empresa', 'user', 'documento.tipoDocumento'])
+        return MovimientoDocumento::with(['documento.empresa', 'documento.tipoDocumento', 'user'])
             ->when($this->fechaInicio, fn($q) =>
                 $q->whereDate('created_at', '>=', $this->fechaInicio)
             )
@@ -38,14 +37,13 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
     }
 
     /**
-     * Encabezados del archivo Excel
+     * Encabezados del Excel (alineados a la vista)
      */
     public function headings(): array
     {
         return [
-            'Fecha',
+            'Fecha movimiento',
             'Tipo Movimiento',
-            'Descripción',
             'Folio Documento',
             'Tipo Documento',
             'Cliente / Razón Social',
@@ -53,40 +51,45 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
             'Fecha ingreso estado',
             'Monto Movimiento ($)',
             'Usuario',
+            'Descripción',
         ];
     }
 
     /**
-     * Mapeo de cada registro hacia las columnas del Excel
+     * Mapeo fila por fila
      */
     public function map($mov): array
     {
-        $fecha = optional($mov->created_at)->format('d-m-Y H:i');
-        $tipoOriginal = $mov->tipo_movimiento ?? '—';
-        $tipo = strtolower($tipoOriginal);
-        $fechaEstado = null;
-        $descripcion = $mov->descripcion ?? '—';
-        $folio = $mov->documento->folio ?? '—';
-        $tipoDoc = $mov->documento->tipoDocumento->nombre ?? '—';
-        $cliente = $mov->documento->razon_social ?? '—';
-        $empresa = $mov->documento->empresa->Nombre ?? '—';
-        $usuario = $mov->user->name ?? '—';
+        $fechaMovimiento = optional($mov->created_at)->format('d-m-Y H:i');
+        $tipoOriginal    = $mov->tipo_movimiento ?? '—';
+        $tipo            = strtolower($tipoOriginal);
 
-        // === Cálculo coherente del monto ===
-        $montoMovimiento = 0;
+        $folio      = $mov->documento->folio ?? '—';
+        $tipoDoc    = $mov->documento->tipoDocumento->nombre ?? '—';
+        $cliente    = $mov->documento->razon_social ?? '—';
+        $empresa    = $mov->documento->empresa->Nombre ?? '—';
+        $usuario    = $mov->user->name ?? '—';
+        $descripcion = $mov->descripcion ?? '—';
+
+        // ===== MONTO DEL MOVIMIENTO =====
+        $monto = 0;
 
         if (Str::contains($tipo, 'abono') || Str::contains($tipo, 'cruce')) {
-            $montoMovimiento = $mov->datos_nuevos['monto']
+            $monto = $mov->datos_nuevos['monto']
                 ?? $mov->datos_anteriores['monto']
                 ?? 0;
-        } elseif (Str::contains($tipo, 'pago') || Str::contains($tipo, 'pronto pago')) {
-            $montoMovimiento = $mov->documento->monto_total ?? 0;
+        }
+        elseif (Str::contains(Str::ascii($tipo), 'pronto pago') || Str::contains($tipo, 'pago')) {
+            $monto = $mov->documento->monto_total ?? 0;
         }
 
-        // Eliminaciones → monto negativo
+        // Eliminación → signo negativo
         if (Str::contains($tipo, 'eliminación')) {
-            $montoMovimiento *= -1;
+            $monto *= -1;
         }
+
+        // ===== FECHA DEL ESTADO =====
+        $fechaEstado = null;
 
         if (Str::contains($tipo, 'abono')) {
             $fechaEstado = $mov->datos_nuevos['fecha_abono']
@@ -98,33 +101,26 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
                 ?? $mov->datos_anteriores['fecha_cruce']
                 ?? null;
         }
-
-        elseif (Str::contains($tipo, 'pronto pago')) {
+        elseif (Str::contains(Str::ascii($tipo), 'pronto pago')) {
             $fechaEstado = $mov->datos_nuevos['fecha_pronto_pago']
                 ?? $mov->datos_anteriores['fecha_pronto_pago']
                 ?? null;
         }
-
-
         elseif (Str::contains($tipo, 'pago')) {
             $fechaEstado = $mov->datos_nuevos['fecha_pago']
                 ?? $mov->datos_anteriores['fecha_pago']
                 ?? null;
         }
 
-
-        // Formato del monto con signo
-        $montoFormateado = '$' . number_format(abs($montoMovimiento), 0, ',', '.');
-
         $fechaEstadoFormateada = $fechaEstado
             ? \Carbon\Carbon::parse($fechaEstado)->format('d-m-Y')
             : '—';
 
+        $montoFormateado = '$' . number_format(abs($monto), 0, ',', '.');
 
         return [
-            $fecha,
+            $fechaMovimiento,
             ucfirst($tipoOriginal),
-            $descripcion,
             $folio,
             $tipoDoc,
             $cliente,
@@ -132,6 +128,7 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
             $fechaEstadoFormateada,
             $montoFormateado,
             $usuario,
+            $descripcion,
         ];
     }
 }
