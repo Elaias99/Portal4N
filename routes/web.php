@@ -172,6 +172,12 @@ Route::middleware(['auth'])->group(function () {
         [\App\Http\Controllers\Admin\ControlPanelAdminController::class, 'index']
     )->name('admin.controlpanel.index');
 
+    Route::resource('automatic-emails', 
+        \App\Http\Controllers\Admin\AutomaticEmailController::class
+    )->names('admin.automatic_emails');
+
+    
+
 });
 
 

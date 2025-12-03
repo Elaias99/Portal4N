@@ -4,10 +4,8 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 use App\Models\Trabajador;
-use App\Models\Situacion;
-use App\Models\SistemaTrabajo;
-use App\Models\Desvinculacion;
 use App\Models\DocumentoCompra;
+use App\Services\AutomaticEmailService;
 use App\Mail\CumpleaniosNotificacion;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
@@ -178,6 +176,9 @@ Schedule::call(function () {
 
 
 
+Schedule::call(function () {
+    app(AutomaticEmailService::class)->procesar();
+})->everyMinute();
 
 
 

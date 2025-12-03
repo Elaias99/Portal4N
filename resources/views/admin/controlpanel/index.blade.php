@@ -42,6 +42,22 @@
             </div>
         </div>
 
+        <!-- Correos Automáticos -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Correos Automáticos</h5>
+                    <p class="card-text">
+                        Configura los correos automáticos y sus horarios de envío.
+                    </p>
+                    <a href="{{ route('admin.automatic_emails.index') }}" class="btn btn-warning">
+                        <i class="fas fa-envelope me-2"></i> Administrar Correos
+                    </a>
+                </div>
+            </div>
+        </div>
+
+
     </div>
 
 </div>
