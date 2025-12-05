@@ -500,6 +500,24 @@ Route::post('/finanzas/compras/{documento}/cruce', [DocumentoCompraController::c
 Route::get('/finanzas/compras/{documento}', [DocumentoCompraController::class, 'show'])
     ->name('finanzas_compras.show');
 
+Route::get('/finanzas/compras/sugerencias', [DocumentoCompraController::class, 'sugerencias'])
+    ->name('finanzas_compras.sugerencias');
+
+Route::get('/compras/limpiar-sugerencias', function () {
+    session()->forget('sugerencias_notas_compras');
+    return response()->json(['ok' => true]);
+})->name('compras.limpiar_sugerencias');
+
+Route::post('/compras/asignar-referencia', [DocumentoCompraController::class, 'asignarReferencia'])
+    ->name('compras.asignar_referencia');
+Route::post('/compras/asignar-referencias', [DocumentoCompraController::class, 'asignarReferencias'])
+    ->name('compras.asignar_referencias');
+
+
+
+
+
+
 
 
 

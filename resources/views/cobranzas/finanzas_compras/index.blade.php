@@ -417,28 +417,56 @@
                                 <tr class="small">
                                     <td>{{ $doc->fecha_estado_manual ?? '-' }}</td>
                                     <td>
-                                        <span class="badge {{ $color }}">{{ $estadoMostrar }}</span><br>
+                                        @php
+                                            $esNotaCredito = ($doc->tipo_documento_id == 61);
+                                        @endphp
 
+                                        {{-- Si es una nota de crédito, no mostramos estado ni botón --}}
+                                        @if(!$esNotaCredito)
+                                            <span class="badge {{ $color }}">{{ $estadoMostrar }}</span><br>
 
-                                        @if (Auth::id() != 375)
-                                            <button type="button"
-                                                    class="btn btn-outline-secondary btn-sm mt-1 px-2 py-0"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#modalEstadoCompra-{{ $doc->id }}">
-                                                Editar
-                                            </button>
+                                            @if (Auth::id() != 375)
+                                                <button type="button"
+                                                        class="btn btn-outline-secondary btn-sm mt-1 px-2 py-0"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#modalEstadoCompra-{{ $doc->id }}">
+                                                    Editar
+                                                </button>
+                                            @endif
+
+                                            @include('cobranzas.finanzas_compras.modal_estado', ['doc' => $doc])
+                                        @else
+                                            <span class="badge bg-secondary">Nota de Crédito</span>
                                         @endif
-
-
-
-
-                                        @include('cobranzas.finanzas_compras.modal_estado', ['doc' => $doc])
                                     </td>
+
                                     <td>{{ $doc->tipoDocumento?->nombre ?? '-' }}</td>
                                     <td>{{ $doc->tipo_compra ?? '-' }}</td>
                                     <td>{{ $doc->rut_proveedor }}</td>
                                     <td class="text-start">{{ $doc->razon_social }}</td>
-                                    <td>{{ $doc->folio }}</td>
+
+
+                                    <td>
+                                        {{ $doc->folio }}
+
+                                        {{-- La factura tiene notas de crédito que la referencian --}}
+                                        @if($doc->referenciados->count() > 0)
+                                            <span class="badge bg-info text-dark ms-1">
+                                                Referenciado por NC Nº{{ $doc->referenciados->pluck('folio')->join(', ') }}
+                                            </span>
+
+                                        {{-- Este documento (una nota de crédito) referencia a una factura --}}
+                                        @elseif($doc->referencia)
+                                            <span class="badge bg-warning text-dark ms-1">
+                                                Referencia a Factura Nº{{ $doc->referencia->folio }}
+                                            </span>
+                                        @endif
+                                    </td>
+
+
+
+
+
                                     <td>{{ $doc->fecha_docto ? \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') : '-' }}</td>
                                     <td>{{ $doc->fecha_vencimiento }}</td>
                                     <td class="text-end">${{ number_format($doc->monto_neto, 0, ',', '.') }}</td>
@@ -449,11 +477,16 @@
                                     </td>
                                     <td>{{ $doc->empresa?->Nombre ?? '—' }}</td>
                                     <td>
-                                        <a href="{{ route('finanzas_compras.show', $doc->id) }}?{{ http_build_query(request()->query()) }}" 
-                                        class="btn btn-outline-primary btn-sm w-100">
-                                            <i class="bi bi-eye"></i> Ver
-                                        </a>
+                                        @if(!$esNotaCredito)
+                                            <a href="{{ route('finanzas_compras.show', $doc->id) }}?{{ http_build_query(request()->query()) }}" 
+                                            class="btn btn-outline-primary btn-sm w-100">
+                                                <i class="bi bi-eye"></i> Ver
+                                            </a>
+                                        @else
+                                            <span class="text-muted small">—</span>
+                                        @endif
                                     </td>
+
                                 </tr>
                             @endforeach
                         </tbody>
@@ -502,9 +535,11 @@
     });
 </script>
 
-@include('cobranzas._modal_create_cobranza')
+{{-- @include('cobranzas._modal_create_cobranza') --}}
 @include('cobranzas.partials.modal_ExportarCompra')
 @include('cobranzas.modal_pagos_masivos')
+@include('cobranzas.finanzas_compras.modal_sugerencias')
+
 
 
 

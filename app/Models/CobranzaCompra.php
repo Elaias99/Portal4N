@@ -11,7 +11,22 @@ class CobranzaCompra extends Model
 
     protected $table = 'cobranza_compras';
 
-    protected $fillable = ['rut_cliente', 'razon_social', 'servicio', 'creditos'];
+    protected $fillable = ['rut_cliente', 'razon_social', 'servicio', 'creditos'  ,'tipo','facturacion','forma_pago','zona',
+                            'importancia', 'responsable', 'nombre_cuenta', 'rut_cuenta', 'numero_cuenta','banco_id', 'tipo_cuenta_id'];
+
+
+    // Una cobranza de compras → pertenece a un banco
+    public function banco()
+    {
+        return $this->belongsTo(Banco::class, 'banco_id');
+    }
+
+    // Una cobranza de compras → pertenece a un tipo de cuenta
+    public function tipoCuenta()
+    {
+        return $this->belongsTo(TipoCuenta::class, 'tipo_cuenta_id');
+    }
+
 
     // Relación: una cobranza de compras tiene muchos documentos de compra
     public function documentos()

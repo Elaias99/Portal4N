@@ -21,6 +21,8 @@ class ComprasImport implements ToModel, WithHeadingRow
     public $duplicados = [];
     public $importados = [];
     public $sinCobranza = [];
+    public $sugerenciasNotas = [];
+
 
     public $nuevos = 0;
 
@@ -226,7 +228,7 @@ class ComprasImport implements ToModel, WithHeadingRow
 
         // 🔹 Ahora ya puedes usar las claves igual que en DocumentosImport
         // (lo que tú ya tenías está correcto)
-        return new DocumentoCompra([
+        $documento = new DocumentoCompra([
             'empresa_id' => $this->empresaId,
             'tipo_documento_id' => $row['tipo_doc'] ?? null,
             'nro' => $row['nro'] ?? null,
@@ -246,7 +248,7 @@ class ComprasImport implements ToModel, WithHeadingRow
             'monto_neto_activo_fijo' => $this->cleanNumber($row['monto_neto_activo_fijo'] ?? 0),
             'iva_activo_fijo' => $this->cleanNumber($row['iva_activo_fijo'] ?? 0),
             'iva_uso_comun' => $this->cleanNumber($row['iva_uso_comun'] ?? 0),
-            'impto_sin_derecho_credito' => $this->cleanNumber($row['impto_sin_derecho_a_credito'] ?? 0),
+            'impto_sin_derecho_a_credito' => $this->cleanNumber($row['impto_sin_derecho_a_credito'] ?? 0),
             'iva_no_retenido' => $this->cleanNumber($row['iva_no_retenido'] ?? 0),
             'tabacos_puros' => $this->cleanNumber($row['tabacos_puros'] ?? 0),
             'tabacos_cigarrillos' => $this->cleanNumber($row['tabacos_cigarrillos'] ?? 0),
@@ -255,18 +257,26 @@ class ComprasImport implements ToModel, WithHeadingRow
             'codigo_otro_impuesto' => $row['codigo_otro_impuesto'] ?? null,
             'valor_otro_impuesto' => $this->cleanNumber($row['valor_otro_impuesto'] ?? 0),
             'tasa_otro_impuesto' => $row['tasa_otro_impuesto'] ?? null,
-
-
             'cobranza_compra_id' => $cobranzaId,
-
             'fecha_vencimiento' => $fechaVencimiento,
             'status_original' => $statusOriginal,
-
             'saldo_pendiente' => $this->cleanNumber($row['monto_total'] ?? 0),
         ]);
 
+        $documento->save();
 
-        $this->importados[] = $row['folio'] ?? 'sin folio'; // ✅ Solo aquí cuenta el guardado
+        if ((int) $documento->tipo_documento_id === 61) {
+            $service = new \App\Services\ReferenciaNotasCompraService();
+            $sugerencias = $service->generarSugerencias($documento);
+
+            $this->sugerenciasNotas[] = [
+                'nota' => $documento,
+                'sugerida' => $sugerencias['sugerida'],
+                'alternativas' => $sugerencias['alternativas']
+            ];
+        }
+
+        $this->importados[] = $row['folio'] ?? 'sin folio';
 
         return $documento;
 

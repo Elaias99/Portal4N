@@ -198,6 +198,49 @@
         </div>
     </div>
 
+
+
+    {{-- ========================================= --}}
+{{-- 🔹 Sección de Referencias (igual a ventas) --}}
+{{-- ========================================= --}}
+
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-light fw-bold">Referencias del Documento</div>
+        <div class="card-body">
+
+            {{-- 1️⃣ Si este documento referencia a otro --}}
+            @if($documento->referencia)
+                <p>
+                    <strong>Referencia a:</strong><br>
+                    {{ $documento->referencia->tipoDocumento->nombre ?? 'Documento' }}
+                    Folio <strong>{{ $documento->referencia->folio }}</strong> —
+                    Monto: ${{ number_format($documento->referencia->monto_total, 0, ',', '.') }}
+                </p>
+            @endif
+
+            {{-- 2️⃣ Si otros documentos referencian a este --}}
+            @if($documento->referenciados->isNotEmpty())
+                <p><strong>Referenciado por:</strong></p>
+                <ul>
+                    @foreach($documento->referenciados as $ref)
+                        <li>
+                            {{ $ref->tipoDocumento->nombre ?? 'Documento' }}
+                            Folio <strong>{{ $ref->folio }}</strong> —
+                            Monto: ${{ number_format($ref->monto_total, 0, ',', '.') }}
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+
+            {{-- 3️⃣ Si no tiene ninguna referencia (igual que ventas) --}}
+            @if(!$documento->referencia && $documento->referenciados->isEmpty())
+                <p class="text-muted">Sin referencias asociadas.</p>
+            @endif
+
+        </div>
+    </div>
+
+
     {{-- 🔹 Botón volver --}}
     <div class="text-center mt-4">
         <a href="{{ session('return_to_listado', route('finanzas_compras.index')) }}" class="btn btn-secondary">

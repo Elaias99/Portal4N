@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Exports\CobranzaCompraExport;
 use App\Models\CobranzaCompra;
+use App\Models\Banco;
+use App\Models\TipoCuenta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
@@ -26,7 +28,7 @@ class CobranzaCompraController extends Controller
                   ->orWhere('rut_cliente', 'like', "%{$busqueda}%");
         }
 
-        $cobranzasCompras  = $query->orderBy('id', 'desc')->paginate(10);
+        $cobranzasCompras  = $query->orderBy('id', 'ASC')->paginate(10);
 
         return view('cobranzas_compras.index', compact('cobranzasCompras'));
     }
@@ -36,8 +38,12 @@ class CobranzaCompraController extends Controller
      */
     public function create()
     {
-        return view('cobranzas_compras.create');
+        $bancos = Banco::all();
+        $tipoCuentas = TipoCuenta::all();
+
+        return view('cobranzas_compras.create', compact('bancos', 'tipoCuentas'));
     }
+
 
     /**
      * Guardar nueva cobranza
@@ -49,6 +55,25 @@ class CobranzaCompraController extends Controller
             'razon_social' => 'required|string|max:255',
             'servicio' => 'required|string|max:255',
             'creditos' => 'required|string|max:255',
+
+            // Los nuevos integrados
+
+            'tipo' => 'required|string|max:255',
+            'facturacion' => 'required|string|max:255',
+            'forma_pago' => 'required|string|max:255',
+            'zona' => 'required|string|max:255',
+            'importancia' => 'required|string|max:255',
+            'responsable' => 'required|string|max:255',
+            'nombre_cuenta' => 'required|string|max:255',
+            'rut_cuenta' => 'required|string|max:255',
+            'numero_cuenta' => 'required|string|max:255',
+	        'banco_id' =>    'required|exists:bancos,id',
+	        'tipo_cuenta_id' => 'required|exists:tipo_cuentas,id'
+
+            
+
+
+
         ]);
 
         $cobranza = CobranzaCompra::create($validated);
@@ -69,8 +94,12 @@ class CobranzaCompraController extends Controller
      */
     public function edit(CobranzaCompra $cobranzaCompra)
     {
-        return view('cobranzas_compras.edit', compact('cobranzaCompra'));
+        $bancos = Banco::all();
+        $tipoCuentas = TipoCuenta::all();
+
+        return view('cobranzas_compras.edit', compact('cobranzaCompra', 'bancos', 'tipoCuentas'));
     }
+
 
     /**
      * Actualizar una cobranza
@@ -82,6 +111,22 @@ class CobranzaCompraController extends Controller
             'razon_social' => 'required|string|max:255',
             'servicio' => 'required|string|max:255',
             'creditos' => 'required|string|max:255',
+
+
+            // Los nuevos integrados
+
+            'tipo' => 'required|string|max:255',
+            'facturacion' => 'required|string|max:255',
+            'forma_pago' => 'required|string|max:255',
+            'zona' => 'required|string|max:255',
+            'importancia' => 'required|string|max:255',
+            'responsable' => 'required|string|max:255',
+            'nombre_cuenta' => 'required|string|max:255',
+            'rut_cuenta' => 'required|string|max:255',
+            'numero_cuenta' => 'required|string|max:255',
+	        'banco_id' =>    'required|exists:bancos,id',
+	        'tipo_cuenta_id' => 'required|exists:tipo_cuentas,id'
+
         ]);
 
         $cobranzaCompra->update($validated);

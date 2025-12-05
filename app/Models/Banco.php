@@ -20,6 +20,13 @@ class Banco extends Model
     }
 
 
+    public function cobranzasCompras()
+    {
+        return $this->hasMany(CobranzaCompra::class, 'banco_id');
+    }
+
+
+
 
 
 }

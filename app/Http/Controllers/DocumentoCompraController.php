@@ -361,9 +361,13 @@ class DocumentoCompraController extends Controller
         $totalImportados = $import->nuevos;
         $totalDuplicados = count($import->duplicados);
 
+        if (count($import->sugerenciasNotas) > 0) {
+            session()->put('sugerencias_notas_compras', $import->sugerenciasNotas);
+        }
+        // dd(session('sugerencias_notas_compras'));
+
         
-        // ⚡️ Cobranzas faltantes
-        // ⚡️ Cobranzas faltantes (flujo COMPRAS)
+        // Cobranzas faltantes
         if (count($import->sinCobranza) > 0) {
 
             $mensajes = [];
@@ -417,6 +421,46 @@ class DocumentoCompraController extends Controller
         // 🔴 Caso 4: Archivo vacío o sin registros válidos
         return redirect()->route('finanzas_compras.index')->with('error', 'No se encontraron registros válidos para importar.');
     }
+
+
+    public function asignarReferencia(Request $request)
+    {
+        $request->validate([
+            'nota_id' => 'required|exists:documentos_compras,id',
+            'factura_id' => 'required|exists:documentos_compras,id',
+        ]);
+
+        $nota = DocumentoCompra::find($request->nota_id);
+
+        // Guardar referencia
+        $nota->referencia_id = $request->factura_id;
+        $nota->save();
+
+        // limpiar las sugerencias (para que no reaparezca el modal)
+        session()->forget('sugerencias_notas_compras');
+
+        return redirect()->route('finanzas_compras.index')
+            ->with('success', 'Referencia asignada correctamente.');
+    }
+
+
+
+    public function asignarReferencias(Request $request)
+    {
+        foreach ($request->referencia as $notaId => $facturaId) {
+
+            DocumentoCompra::where('id', $notaId)->update([
+                'referencia_id' => $facturaId
+            ]);
+        }
+
+        session()->forget('sugerencias_notas_compras');
+
+        return response()->json(['success' => true]);
+    }
+
+
+    
 
 
 
@@ -861,6 +905,32 @@ class DocumentoCompraController extends Controller
 
         return back()->with('success', 'Cruce registrado correctamente.');
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    public function sugerencias()
+    {
+        $sugerencias = session('sugerencias_notas_compras', []);
+
+        return view('cobranzas.finanzas_compras.sugerencias', compact('sugerencias'));
+    }
+
 
 
 

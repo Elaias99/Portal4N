@@ -21,7 +21,7 @@ class CobranzaCompraExport implements FromCollection, WithHeadings, WithMapping,
 
     public function collection()
     {
-        return CobranzaCompra::query()
+        return CobranzaCompra::with(['banco', 'tipoCuenta'])
             ->when($this->fechaInicio, fn($q) =>
                 $q->whereDate('created_at', '>=', $this->fechaInicio)
             )
@@ -38,19 +38,49 @@ class CobranzaCompraExport implements FromCollection, WithHeadings, WithMapping,
             'Fecha de Creación',
             'RUT Cliente',
             'Razón Social',
-            'Servicio',
+            'Servicio / Detalle',
             'Créditos (días)',
+
+            // Nuevos campos
+            'Tipo',
+            'Facturación',
+            'Forma de Pago',
+            'Zona',
+            'Importancia',
+            'Responsable',
+
+            // Datos bancarios
+            'Nombre Cuenta',
+            'RUT Cuenta',
+            'Banco',
+            'Tipo Cuenta',
+            'Número Cuenta',
         ];
     }
 
-    public function map($cobranza): array
+    public function map($c): array
     {
         return [
-            optional($cobranza->created_at)->format('d-m-Y H:i'),
-            $cobranza->rut_cliente ?? '—',
-            $cobranza->razon_social ?? '—',
-            $cobranza->servicio ?? '—',
-            $cobranza->creditos ?? '—',
+            optional($c->created_at)->format('d-m-Y H:i'),
+            $c->rut_cliente ?? '—',
+            $c->razon_social ?? '—',
+            $c->servicio ?? '—',
+            $c->creditos ?? '—',
+
+            // Nuevos campos
+            $c->tipo ?? '—',
+            $c->facturacion ?? '—',
+            $c->forma_pago ?? '—',
+            $c->zona ?? '—',
+            $c->importancia ?? '—',
+            $c->responsable ?? '—',
+
+            // Bancarios
+            $c->nombre_cuenta ?? '—',
+            $c->rut_cuenta ?? '—',
+            $c->banco->nombre ?? '—',
+            $c->tipoCuenta->nombre ?? '—',
+            $c->numero_cuenta ?? '—',
         ];
     }
 }
