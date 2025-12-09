@@ -314,7 +314,7 @@ class DocumentoCompraController extends Controller
 
 
     /**
-     * 📤 Importa el archivo Excel RCV_COMPRAS
+     * Importa el archivo Excel RCV_COMPRAS
      */
     public function import(Request $request)
     {
@@ -381,7 +381,7 @@ class DocumentoCompraController extends Controller
                 Cree la cobranza aquí</a>";
             }
 
-            // 🧠 Guardamos los pendientes para el flujo guiado
+            // Guardamos los pendientes para el flujo guiado
             session([
                 'sin_compra_pendientes' => $import->sinCobranza
             ]);
@@ -394,14 +394,33 @@ class DocumentoCompraController extends Controller
             session()->forget('sin_compra_pendientes');
         }
 
+        // Registrar movimiento si hubo importaciones exitosas
+        if ($totalImportados > 0) {
+            \App\Models\MovimientoCompra::create([
+                'documento_compra_id' => null,
+                'usuario_id' => Auth::id(),
+                'tipo_movimiento' => 'Importación masiva',
+                'descripcion' => "Se importaron {$totalImportados} documentos de compra desde el archivo '{$filename}' el " . now()->format('d/m/Y H:i:s'),
+                'datos_nuevos' => [
+                    'archivo' => $filename,
+                    'total_importados' => $totalImportados,
+                    'total_duplicados' => $totalDuplicados,
+                    'empresa_id' => $empresa->id,
+                    'empresa_nombre' => $empresa->razon_social ?? null,
+                ],
+                'fecha_cambio' => now(),
+            ]);
+        }
 
 
-        // 🟢 Caso 1: Importación exitosa, sin duplicados
+
+
+        // Caso 1: Importación exitosa, sin duplicados
         if ($totalImportados > 0 && $totalDuplicados === 0) {
             return redirect()->route('finanzas_compras.index')->with('success', "Archivo importado correctamente.");
         }
 
-        // 🟡 Caso 2: Todo duplicado (no se importó nada)
+        //  Caso 2: Todo duplicado (no se importó nada)
         if ($totalImportados === 0 && $totalDuplicados > 0) {
             return redirect()->route('finanzas_compras.index')->with([
                 'warning' => "Todos los registros del archivo ya existían. No se importó ningún registro nuevo.",
@@ -409,7 +428,7 @@ class DocumentoCompraController extends Controller
             ]);
         }
 
-        // 🟡 Caso 3: Mezcla (algunos nuevos y otros duplicados)
+        // Caso 3: Mezcla (algunos nuevos y otros duplicados)
         if ($totalImportados > 0 && $totalDuplicados > 0) {
             return redirect()->route('finanzas_compras.index')->with([
                 'success' => "Se importaron {$totalImportados} registros nuevos.",
@@ -418,7 +437,7 @@ class DocumentoCompraController extends Controller
             ]);
         }
 
-        // 🔴 Caso 4: Archivo vacío o sin registros válidos
+        // Caso 4: Archivo vacío o sin registros válidos
         return redirect()->route('finanzas_compras.index')->with('error', 'No se encontraron registros válidos para importar.');
     }
 
@@ -732,7 +751,7 @@ class DocumentoCompraController extends Controller
 
     public function updateEstado(Request $request, $id)
     {
-        // Validación básica
+        // 🧩 Validación básica
         $request->validate([
             'estado' => 'nullable|string|max:50',
         ]);
@@ -740,29 +759,40 @@ class DocumentoCompraController extends Controller
         // 🔍 Buscar el documento
         $documento = DocumentoCompra::findOrFail($id);
 
-        // Guardar estado anterior
-        $estadoAnterior = $documento->estado;
+        // 📝 Guardar datos originales antes del cambio
+        $datosAnteriores = [
+            'estado' => $documento->estado,
+            'fecha_estado_manual' => $documento->fecha_estado_manual,
+        ];
 
         // ⚙️ Actualizar el estado manual y fecha
         $documento->update([
             'estado' => $request->estado,
-            'fecha_estado_manual' => now(), // ⬅️ aquí agregamos la fecha
+            'fecha_estado_manual' => now(),
         ]);
 
-        //  Registrar movimiento con trazabilidad
+        // 🧾 Registrar movimiento con trazabilidad extendida
         MovimientoCompra::create([
             'documento_compra_id' => $documento->id,
             'usuario_id' => Auth::id(),
-            'estado_anterior' => $estadoAnterior,
+            'estado_anterior' => $datosAnteriores['estado'],
             'nuevo_estado' => $request->estado,
             'fecha_cambio' => now(),
+            'tipo_movimiento' => 'Cambio de estado manual',
+            'descripcion' => "El estado del documento fue cambiado de '{$datosAnteriores['estado']}' a '{$request->estado}'.",
+            'datos_anteriores' => $datosAnteriores,
+            'datos_nuevos' => [
+                'estado' => $request->estado,
+                'fecha_estado_manual' => $documento->fecha_estado_manual,
+            ],
         ]);
 
-        //  Redirigir con mensaje
+        // ✅ Redirigir con mensaje de éxito
         return redirect()
             ->route('finanzas_compras.index')
             ->with('success', 'Estado actualizado correctamente.');
     }
+
 
 
 
@@ -810,7 +840,7 @@ class DocumentoCompraController extends Controller
             'fecha_abono.required' => 'La fecha del abono es obligatoria.',
         ]);
 
-        // 1) Validar límite del saldo
+        // 1️⃣ Validar límite del saldo
         $saldoPendiente = $documento->saldo_pendiente;
         if ($request->monto > $saldoPendiente) {
             return back()
@@ -818,36 +848,47 @@ class DocumentoCompraController extends Controller
                 ->withInput();
         }
 
-        // 2) Registrar abono
+        // 2️⃣ Guardar datos anteriores
+        $datosAnteriores = [
+            'saldo_pendiente' => $saldoPendiente,
+            'estado' => $documento->estado,
+        ];
+
+        // 3️⃣ Registrar abono
         $documento->abonos()->create([
             'monto' => $request->monto,
             'fecha_abono' => $request->fecha_abono,
         ]);
 
-        // 3) Recalcular saldo pendiente (nuevo patrón)
+        // 4️⃣ Recalcular saldo pendiente
         $documento->recalcularSaldoPendiente();
 
-        // 4) Actualizar estado manual (NO tocar status_original)
+        // 5️⃣ Actualizar estado manual
         $documento->update([
             'estado' => 'Abono',
             'fecha_estado_manual' => now(),
         ]);
 
-        // 5) Registrar movimiento moderno
+        // 6️⃣ Registrar movimiento con trazabilidad extendida
         MovimientoCompra::create([
             'documento_compra_id' => $documento->id,
             'usuario_id' => Auth::id(),
-            'tipo_movimiento' => 'Abono registrado',
+            'estado_anterior' => $datosAnteriores['estado'],
+            'nuevo_estado' => 'Abono',
+            'fecha_cambio' => now(),
+            'tipo_movimiento' => 'Registro de abono',
             'descripcion' => "Se registró un abono de {$request->monto} el {$request->fecha_abono}.",
+            'datos_anteriores' => $datosAnteriores,
             'datos_nuevos' => [
                 'monto' => $request->monto,
                 'fecha_abono' => $request->fecha_abono,
+                'nuevo_saldo' => $documento->saldo_pendiente,
             ],
-            'fecha_cambio' => now(),
         ]);
 
         return back()->with('success', 'Abono registrado correctamente.');
     }
+
 
 
 
@@ -865,7 +906,7 @@ class DocumentoCompraController extends Controller
             'proveedor_id.exists' => 'El proveedor seleccionado no es válido.',
         ]);
 
-        // 1) Validar límite del saldo
+        // 1️⃣ Validar límite del saldo
         $saldoPendiente = $documento->saldo_pendiente;
         if ($request->monto > $saldoPendiente) {
             return back()
@@ -873,38 +914,49 @@ class DocumentoCompraController extends Controller
                 ->withInput();
         }
 
-        // 2) Registrar cruce
+        // 2️⃣ Guardar datos anteriores
+        $datosAnteriores = [
+            'saldo_pendiente' => $saldoPendiente,
+            'estado' => $documento->estado,
+        ];
+
+        // 3️⃣ Registrar cruce
         $cruce = $documento->cruces()->create([
             'monto' => $request->monto,
             'fecha_cruce' => $request->fecha_cruce,
             'proveedor_id' => $request->proveedor_id,
         ]);
 
-        // 3) Recalcular saldo pendiente
+        // 4️⃣ Recalcular saldo pendiente
         $documento->recalcularSaldoPendiente();
 
-        // 4) Actualizar estado manual (NO tocar status_original)
+        // 5️⃣ Actualizar estado manual
         $documento->update([
             'estado' => 'Cruce',
             'fecha_estado_manual' => now(),
         ]);
 
-        // 5) Registrar movimiento moderno
+        // 6️⃣ Registrar movimiento con trazabilidad extendida
         MovimientoCompra::create([
             'documento_compra_id' => $documento->id,
             'usuario_id' => Auth::id(),
-            'tipo_movimiento' => 'Cruce registrado',
+            'estado_anterior' => $datosAnteriores['estado'],
+            'nuevo_estado' => 'Cruce',
+            'fecha_cambio' => now(),
+            'tipo_movimiento' => 'Registro de cruce',
             'descripcion' => "Se registró un cruce de {$request->monto} el {$request->fecha_cruce} con proveedor ID {$request->proveedor_id}.",
+            'datos_anteriores' => $datosAnteriores,
             'datos_nuevos' => [
                 'monto' => $request->monto,
                 'fecha_cruce' => $request->fecha_cruce,
                 'proveedor_id' => $request->proveedor_id,
+                'nuevo_saldo' => $documento->saldo_pendiente,
             ],
-            'fecha_cambio' => now(),
         ]);
 
         return back()->with('success', 'Cruce registrado correctamente.');
     }
+
 
 
 

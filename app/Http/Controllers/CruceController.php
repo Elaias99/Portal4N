@@ -142,6 +142,8 @@ class CruceController extends Controller
             'proveedor_id' => $cruce->proveedor_id,
         ];
 
+        $estadoAnterior = $documento->estado;
+
         // 🔹 Eliminar el cruce
         $cruce->delete();
 
@@ -188,15 +190,25 @@ class CruceController extends Controller
                 'tipo_movimiento' => 'Eliminación de cruce',
                 'descripcion' => "Se eliminó un cruce de {$datosAnteriores['monto']} correspondiente al documento folio {$documento->folio}.",
                 'datos_anteriores' => $datosAnteriores,
+                'datos_nuevos' => [
+                    'nuevo_estado' => $nuevoEstado,
+                    'saldo_actual' => $documento->saldo_pendiente,
+                ],
             ]);
         } elseif ($tipoDocumento === 'compra') {
             \App\Models\MovimientoCompra::create([
                 'documento_compra_id' => $documento->id,
                 'usuario_id' => Auth::id(),
+                'estado_anterior' => $estadoAnterior,
+                'nuevo_estado' => $nuevoEstado,
+                'fecha_cambio' => now(),
                 'tipo_movimiento' => 'Eliminación de cruce',
                 'descripcion' => "Se eliminó un cruce de {$datosAnteriores['monto']} correspondiente al documento de compra folio {$documento->folio}.",
                 'datos_anteriores' => $datosAnteriores,
-                'fecha_cambio' => now(),
+                'datos_nuevos' => [
+                    'nuevo_estado' => $nuevoEstado,
+                    'saldo_actual' => $documento->saldo_pendiente,
+                ],
             ]);
         }
 
@@ -211,6 +223,7 @@ class CruceController extends Controller
             ->route('documentos.detalles', $documento->id)
             ->with('success', 'Cruce eliminado, movimiento registrado y estado actualizado correctamente.');
     }
+
 
 
 

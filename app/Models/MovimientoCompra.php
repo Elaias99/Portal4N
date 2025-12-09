@@ -17,8 +17,14 @@ class MovimientoCompra extends Model
         'estado_anterior',
         'nuevo_estado',
         'fecha_cambio',
+        'tipo_movimiento', 'descripcion', 'datos_anteriores', 'datos_nuevos'
 
 
+    ];
+
+    protected $casts = [
+        'datos_anteriores' => 'array',
+        'datos_nuevos' => 'array',
     ];
 
 

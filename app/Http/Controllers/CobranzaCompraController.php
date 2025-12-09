@@ -187,28 +187,45 @@ class CobranzaCompraController extends Controller
             if ($documento) {
                 $creditos = (int) ($cobranzaCompra->creditos ?? 0);
 
+                $fechaVenc = $documento->fecha_vencimiento
+                    ?? Carbon::parse($documento->fecha_docto ?? now())
+                        ->addDays($creditos)
+                        ->format('Y-m-d');
+
                 $documento->update([
                     'cobranza_compra_id' => $cobranzaCompra->id,
-                    'estado' => $documento->status_original,
+                    'estado' => $documento->status_original ?? 'Pendiente',
                     'status_original' => $documento->status_original ?? 'Pendiente',
-                    'fecha_vencimiento' => $documento->fecha_vencimiento
-                        ?? Carbon::parse($documento->fecha_docto ?? now())
-                            ->addDays($creditos)
-                            ->format('Y-m-d'),
+                    'fecha_vencimiento' => $fechaVenc,
                 ]);
 
-                Log::info("✅ DocumentoCompra actualizado correctamente", [
-                    'folio' => $folio,
-                    'cobranza_compra_id' => $cobranzaCompra->id
+                // 🧾 Registrar trazabilidad por documento
+                MovimientoCompra::create([
+                    'documento_compra_id' => $documento->id,
+                    'usuario_id' => auth()->id(),
+                    'tipo_movimiento' => 'Reprocesamiento automático',
+                    'descripcion' => "Se reprocesó el documento folio {$folio} tras la creación de una nueva cobranza de compras.",
+                    'datos_nuevos' => [
+                        'cobranza_compra_id' => $cobranzaCompra->id,
+                        'fecha_vencimiento' => $fechaVenc,
+                        'creditos_aplicados' => $creditos,
+                    ],
+                    'fecha_cambio' => now(),
                 ]);
 
                 $procesados[] = $folio;
+
+                Log::info("✅ DocumentoCompra actualizado y movimiento registrado", [
+                    'folio' => $folio,
+                    'cobranza_compra_id' => $cobranzaCompra->id
+                ]);
             } else {
                 $omitidos[] = $folio;
                 Log::warning("🔍 No se encontró documento con folio {$folio} sin cobranza_compra_id");
             }
         }
 
+        // 🧹 Limpiar sesión
         session()->forget('sin_compra_pendientes');
 
         Log::info('🧹 Sesión limpiada', [
@@ -216,12 +233,17 @@ class CobranzaCompraController extends Controller
             'omitidos' => $omitidos
         ]);
 
+        // Registrar movimiento general (con documento_compra_id = null)
         if (!empty($procesados)) {
             MovimientoCompra::create([
                 'documento_compra_id' => null,
                 'usuario_id' => auth()->id(),
-                'tipo_movimiento' => 'Reprocesamiento automático',
+                'tipo_movimiento' => 'Reprocesamiento global automático',
                 'descripcion' => "Se reprocesaron " . count($procesados) . " documentos de compra tras crear nuevas cobranzas de compras.",
+                'datos_nuevos' => [
+                    'folios_reprocesados' => $procesados,
+                ],
+                'fecha_cambio' => now(),
             ]);
         }
 
@@ -238,6 +260,7 @@ class CobranzaCompraController extends Controller
             'message' => 'Reprocesamiento de documentos de compra completado correctamente.'
         ]);
     }
+
 
 
 

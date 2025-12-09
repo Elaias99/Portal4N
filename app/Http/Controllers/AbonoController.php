@@ -85,12 +85,14 @@ class AbonoController extends Controller
             'fecha_abono' => $abono->fecha_abono,
         ];
 
+        $estadoAnterior = $documento->estado;
+
         // 🔹 Eliminar el abono
         $abono->delete();
 
-        // 🔹 Recalcular saldo pendiente en la BD
+        // 🔹 Recalcular saldo pendiente
         if (method_exists($documento, 'recalcularSaldoPendiente')) {
-            $documento->recalcularSaldoPendiente(); 
+            $documento->recalcularSaldoPendiente();
         }
 
         // 🔹 Recalcular totales
@@ -108,7 +110,7 @@ class AbonoController extends Controller
                 : 'Al día';
         }
 
-        // 🔹 Actualizar el documento según su tipo
+        // 🔹 Actualizar documento según tipo
         if ($tipoDocumento === 'compra') {
             $documento->update([
                 'estado' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
@@ -131,15 +133,25 @@ class AbonoController extends Controller
                 'tipo_movimiento' => 'Eliminación de abono',
                 'descripcion' => "Se eliminó un abono de {$datosAnteriores['monto']} correspondiente al documento folio {$documento->folio}.",
                 'datos_anteriores' => $datosAnteriores,
+                'datos_nuevos' => [
+                    'nuevo_estado' => $nuevoEstado,
+                    'saldo_actual' => $documento->saldo_pendiente,
+                ],
             ]);
         } elseif ($tipoDocumento === 'compra') {
             \App\Models\MovimientoCompra::create([
                 'documento_compra_id' => $documento->id,
                 'usuario_id' => Auth::id(),
+                'estado_anterior' => $estadoAnterior,
+                'nuevo_estado' => $nuevoEstado,
+                'fecha_cambio' => now(),
                 'tipo_movimiento' => 'Eliminación de abono',
                 'descripcion' => "Se eliminó un abono de {$datosAnteriores['monto']} correspondiente al documento de compra folio {$documento->folio}.",
                 'datos_anteriores' => $datosAnteriores,
-                'fecha_cambio' => now(),
+                'datos_nuevos' => [
+                    'nuevo_estado' => $nuevoEstado,
+                    'saldo_actual' => $documento->saldo_pendiente,
+                ],
             ]);
         }
 
@@ -154,6 +166,7 @@ class AbonoController extends Controller
             ->route('documentos.detalles', $documento->id)
             ->with('success', 'Abono eliminado, movimiento registrado y estado actualizado correctamente.');
     }
+
 
 
 
