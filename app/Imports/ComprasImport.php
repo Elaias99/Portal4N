@@ -70,14 +70,37 @@ class ComprasImport implements ToModel, WithHeadingRow
             return null;
         }
 
-        // ⚠️ Validar duplicados (folio + empresa)
-        if (DocumentoCompra::where('folio', $folio)
-            ->where('empresa_id', $this->empresaId)
-            ->exists()) {
+        //Evitar procesar duplicados tanto en base de datos como dentro del mismo archivo
+        static $foliosProcesados = []; // memoria temporal por archivo
 
+        $folio = trim((string)($row['folio'] ?? ''));
+        $rutProveedor = trim((string)($row['rut_proveedor'] ?? ''));
+        $tipoDoc = (int)($row['tipo_doc'] ?? 0);
+
+        //Revisar si ya se procesó en este mismo archivo
+        $claveUnica = "{$this->empresaId}-{$tipoDoc}-{$rutProveedor}-{$folio}";
+
+        if (in_array($claveUnica, $foliosProcesados, true)) {
+            // Duplicado dentro del mismo archivo Excel
             $this->duplicados[] = $folio;
             return null;
         }
+
+        $foliosProcesados[] = $claveUnica;
+
+        //Revisar si ya existe en la base de datos
+        if (
+            \App\Models\DocumentoCompra::where('empresa_id', $this->empresaId)
+                ->where('tipo_documento_id', $tipoDoc)
+                ->where('rut_proveedor', $rutProveedor)
+                ->where('folio', $folio)
+                ->exists()
+        ) {
+            // Duplicado ya guardado en la tabla
+            $this->duplicados[] = $folio;
+            return null;
+        }
+
 
         // ✅ Crear registro si no está duplicado
         $this->importados[] = $folio;

@@ -80,10 +80,37 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
         }
 
         // Validar duplicados
-        if (DocumentoFinanciero::where('folio', $folioExcel)->exists()) {
+        // 🧩 Evitar procesar duplicados en base de datos y dentro del mismo archivo
+        static $foliosProcesados = []; // memoria temporal para el archivo actual
+
+        $folioExcel = trim((string)($row['folio'] ?? ''));
+        $rutCliente = trim((string)($row['rut_cliente'] ?? ''));
+        $tipoDoc = (int)($row['tipo_doc'] ?? 0);
+
+        // 1️⃣ Revisar si ya se procesó en este mismo archivo
+        $claveUnica = "{$this->empresaId}-{$tipoDoc}-{$rutCliente}-{$folioExcel}";
+
+        if (in_array($claveUnica, $foliosProcesados, true)) {
+            // Duplicado dentro del mismo archivo
             $this->duplicados[] = $folioExcel;
             return null;
         }
+
+        $foliosProcesados[] = $claveUnica;
+
+        // 2️⃣ Revisar si ya existe en la base de datos
+        if (
+            \App\Models\DocumentoFinanciero::where('empresa_id', $this->empresaId)
+                ->where('tipo_documento_id', $tipoDoc)
+                ->where('rut_cliente', $rutCliente)
+                ->where('folio', $folioExcel)
+                ->exists()
+        ) {
+            // Duplicado ya guardado previamente
+            $this->duplicados[] = $folioExcel;
+            return null;
+        }
+
 
         // Buscar cobranza asociada
         $cobranza = Cobranza::where('rut_cliente', $row['rut_cliente'] ?? null)->first();
