@@ -103,9 +103,25 @@
                                 $monto = $mov->datos_nuevos['monto']
                                     ?? $mov->datos_anteriores['monto']
                                     ?? 0;
+
+
+
+                            // } elseif (Str::contains($tipo, 'pago') || Str::contains($tipo, 'pronto pago')) {
+                            //     $monto = $mov->compra->monto_total ?? 0;
                             } elseif (Str::contains($tipo, 'pago') || Str::contains($tipo, 'pronto pago')) {
-                                $monto = $mov->compra->monto_total ?? 0;
+                                // Si el movimiento tiene datos del saldo anterior, usar eso como monto del pago real
+                                if (!empty($mov->datos_anteriores['saldo_anterior'])) {
+                                    $monto = $mov->datos_anteriores['saldo_anterior'];
+                                } else {
+                                    // De lo contrario, usar el total del documento como respaldo
+                                    $monto = $mov->compra->monto_total ?? 0;
+                                }
                             }
+
+
+
+
+                            
 
                             // === Ajuste por eliminación ===
                             if (Str::contains($tipo, 'eliminación')) {
@@ -123,10 +139,16 @@
                                 $fechaEvento = $mov->datos_nuevos['fecha_cruce']
                                     ?? $mov->datos_anteriores['fecha_cruce']
                                     ?? null;
+
+
                             } elseif (Str::contains($tipo, 'pago')) {
                                 $fechaEvento = $mov->datos_nuevos['fecha_pago']
                                     ?? $mov->datos_anteriores['fecha_pago']
                                     ?? null;
+
+
+
+
                             } elseif (Str::contains(Str::ascii($tipo), 'pronto pago')) {
                                 $fechaEvento = $mov->datos_nuevos['fecha_pronto_pago']
                                     ?? $mov->datos_anteriores['fecha_pronto_pago']
