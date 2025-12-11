@@ -22,15 +22,31 @@ class DocumentoCompraController extends Controller
     public function index(Request $request)
     {
         // === BASE QUERY con relaciones ===
-        $baseQuery = \App\Models\DocumentoCompra::with([
-            'empresa',
-            'tipoDocumento',
-            'movimientos',
-            'abonos',
-            'cruces',
-            'pagos',
-            'prontoPagos'
-        ]);
+        $baseQuery = DocumentoCompra::select([
+                'id',
+                'empresa_id',
+                'tipo_documento_id',
+                'nro',
+                'tipo_doc',
+                'tipo_compra',
+                'rut_proveedor',
+                'razon_social',
+                'folio',
+                'fecha_docto',
+                'fecha_vencimiento',
+                'monto_neto',
+                'monto_iva_recuperable',
+                'monto_total',
+                'saldo_pendiente',
+                'estado',
+                'status_original'
+            ])
+            ->with([
+                'empresa:id,Nombre',
+                'tipoDocumento:id,nombre',
+                'referencia:id,folio',
+                'referenciados:id,folio,referencia_id,tipo_documento_id,monto_total'
+            ]);
 
         // === FILTROS GENERALES ===
         if ($request->filled('rut_proveedor')) {
@@ -69,27 +85,23 @@ class DocumentoCompraController extends Controller
             $baseQuery->whereDate('fecha_vencimiento', '<=', $request->fecha_venc_fin);
         }
 
-
+        // === FILTRO POR SALDO ===
         if ($request->filled('saldo_pendiente')) {
-            // Normaliza número (quita puntos y comas)
             $valor = (float) str_replace(['.', ','], '', $request->saldo_pendiente);
-
-            // Coincidencia exacta o muy cercana (± 1 peso)
             $baseQuery->whereBetween('saldo_pendiente', [$valor - 1, $valor + 1]);
         }
 
-        // === CLONAR PARA CONTAR ESTADOS ===
-        $queryAlDia = (clone $baseQuery)->where('status_original', 'Al día');
-        $queryVencido = (clone $baseQuery)->where('status_original', 'Vencido');
-
-        $totalAlDia = $queryAlDia->count();
-        $totalVencido = $queryVencido->count();
-
-        // === OBTENER DOCUMENTOS ===
-        $documentosOriginal = $baseQuery->orderBy('fecha_vencimiento', 'desc')->get();
+        // === FILTRO POR ESTADO DE PAGO ===
+        if ($request->filled('estado_pago')) {
+            if ($request->estado_pago === 'Pagado') {
+                $baseQuery->where('saldo_pendiente', '<=', 0);
+            }
+            if ($request->estado_pago === 'Pendiente') {
+                $baseQuery->where('saldo_pendiente', '>', 0);
+            }
+        }
 
         // === ACTUALIZAR ESTADO AUTOMÁTICO ===
-        // === ACTUALIZAR ESTADO AUTOMÁTICO (optimizado) ===
         DB::table('documentos_compras')
             ->whereDate('fecha_vencimiento', '<', now())
             ->where('saldo_pendiente', '>', 0)
@@ -102,54 +114,28 @@ class DocumentoCompraController extends Controller
             ->where('status_original', '!=', 'Al día')
             ->update(['status_original' => 'Al día']);
 
+        // === RE-CONTAR ESTADOS DESPUÉS DEL UPDATE ===
+        $totalAlDia = (clone $baseQuery)->where('status_original', 'Al día')->count();
+        $totalVencido = (clone $baseQuery)->where('status_original', 'Vencido')->count();
 
-        // === FILTRO POR ESTADO DE PAGO ===
-        $documentosCompras = $documentosOriginal;
-        if ($request->filled('estado_pago')) {
-            $documentosCompras = $documentosOriginal->filter(function ($doc) use ($request) {
-                if ($request->estado_pago === 'Pagado') {
-                    return $doc->saldo_pendiente <= 0;
-                }
-                if ($request->estado_pago === 'Pendiente') {
-                    return $doc->saldo_pendiente > 0;
-                }
-                return true;
-            });
-        }
-
-        // === RECALCULAR TOTALES TRAS FILTRO ===
-        $totalPagados = $documentosCompras->filter(fn($d) => $d->saldo_pendiente <= 0)->count();
-        $totalPendientes = $documentosCompras->filter(fn($d) => $d->saldo_pendiente > 0)->count();
+        // === CONTAR PAGADOS / PENDIENTES ===
+        $totalPagados = (clone $baseQuery)->where('saldo_pendiente', '<=', 0)->count();
+        $totalPendientes = (clone $baseQuery)->where('saldo_pendiente', '>', 0)->count();
 
         // === SALDO PENDIENTE GLOBAL ===
-        $totalSaldoPendiente = $documentosCompras
-            ->filter(function ($doc) {
-                if (in_array($doc->tipo_documento_id, [61, 56])) return false;
-                if ($doc->saldo_pendiente <= 0) return false;
-                return true;
-            })
+        $totalSaldoPendiente = (clone $baseQuery)
+            ->whereNotIn('tipo_documento_id', [61, 56])
+            ->where('saldo_pendiente', '>', 0)
             ->sum('saldo_pendiente');
 
-        // === PAGINACIÓN MANUAL ===
-        $page = $request->get('page', 1);
-        $perPage = 10;
-        $offset = ($page - 1) * $perPage;
-        $itemsPaginated = $documentosCompras->slice($offset, $perPage)->values();
-
-        $documentosCompras = new \Illuminate\Pagination\LengthAwarePaginator(
-            $itemsPaginated,
-            $documentosCompras->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
+        // === PAGINACIÓN ===
+        $documentosCompras = $baseQuery->orderBy('fecha_vencimiento', 'desc')->paginate(10);
 
         // === LISTAS AUXILIARES ===
         $proveedores = \App\Models\Proveedor::select('id', 'razon_social', 'rut')->orderBy('razon_social')->get();
         $tiposDocumento = \App\Models\TipoDocumento::orderBy('nombre')->get();
         $empresas = \App\Models\Empresa::orderBy('Nombre')->get();
 
-        // === RETORNAR VISTA ===
         return view('cobranzas.finanzas_compras.index', compact(
             'documentosCompras',
             'proveedores',
@@ -162,6 +148,7 @@ class DocumentoCompraController extends Controller
             'totalSaldoPendiente'
         ));
     }
+
 
 
 

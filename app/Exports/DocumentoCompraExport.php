@@ -20,8 +20,9 @@ class DocumentoCompraExport implements FromCollection, WithHeadings, WithMapping
     {
         $this->documentos = $documentos;
     }
+
     /**
-     * 🔹 Colección de registros a exportar
+     * Colección de registros
      */
     public function collection()
     {
@@ -29,11 +30,87 @@ class DocumentoCompraExport implements FromCollection, WithHeadings, WithMapping
     }
 
     /**
-     * 🔹 Definición de encabezados de las columnas en Excel
+     * Mapeo de filas del Excel (similar al exportador financiero)
+     */
+    public function map($doc): array
+    {
+        // === Saldo pendiente dinámico ===
+        if ($doc->tipo_documento_id == 61) {
+            // Nota de crédito → saldo 0
+            $saldoPendiente = 0;
+        } else {
+            $saldoPendiente = $doc->saldo_pendiente;
+        }
+
+        // === Documento Referencia (si este documento referencia otro) ===
+        $documentoReferencia = null;
+        if ($doc->referencia) {
+            $ref = $doc->referencia;
+            $documentoReferencia = "{$ref->tipoDocumento?->nombre} folio {$ref->folio}";
+            if ($ref->fecha_docto) {
+                $documentoReferencia .= " ({$ref->fecha_docto})";
+            }
+        }
+
+        // === Referenciado Por (si tiene notas asociadas) ===
+        $referenciadoPor = null;
+        if ($doc->referenciados->isNotEmpty()) {
+            $referenciadoPor = $doc->referenciados->map(function ($ref) {
+                $monto = number_format($ref->monto_total, 0, ',', '.');
+                return $ref->tipoDocumento?->nombre . ' folio ' . $ref->folio . ' ($' . $monto . ')';
+            })->join(', ');
+        }
+
+        return [
+            $doc->id,
+            $doc->empresa?->Nombre,
+            $doc->tipoDocumento?->nombre,
+            $doc->nro,
+            $doc->tipo_compra,
+            $doc->rut_proveedor,
+            $doc->razon_social,
+            $doc->folio,
+
+            // Fechas base
+            $this->format($doc->fecha_docto),
+            $this->format($doc->fecha_vencimiento),
+
+            // Estados
+            $doc->status_original,
+            $doc->estado,
+            $this->format($doc->fecha_estado_manual),
+
+            // Montos
+            $doc->monto_exento,
+            $doc->monto_neto,
+            $doc->monto_iva_recuperable,
+            $doc->monto_iva_no_recuperable,
+            $doc->monto_total,
+
+            // Saldo
+            $saldoPendiente,
+
+            // Referencias
+            $documentoReferencia,
+            $referenciadoPor,
+
+            // Fechas administrativas del registro
+            $this->format($doc->fecha_recepcion),
+            $this->format($doc->fecha_acuse),
+
+            // Timestamps
+            $this->format($doc->created_at),
+            $this->format($doc->updated_at),
+        ];
+    }
+
+    /**
+     * Encabezados del Excel
      */
     public function headings(): array
     {
         return [
+            'ID',
             'Empresa',
             'Tipo Documento',
             'Nro',
@@ -41,76 +118,31 @@ class DocumentoCompraExport implements FromCollection, WithHeadings, WithMapping
             'RUT Proveedor',
             'Razón Social',
             'Folio',
-            'Fecha Docto',
-            'Fecha Recepción',
-            'Fecha Acuse',
+            'Fecha Documento',
+            'Fecha Vencimiento',
+            'Estado Original',
+            'Estado Actual',
+            'Fecha Estado Manual',
             'Monto Exento',
             'Monto Neto',
             'Monto IVA Recuperable',
             'Monto IVA No Recuperable',
-            'Código IVA No Rec.',
             'Monto Total',
-            'Monto Neto Activo Fijo',
-            'IVA Activo Fijo',
-            'IVA Uso Común',
-            'Impto. sin Derecho a Crédito',
-            'IVA No Retenido',
-            'Tabacos Puros',
-            'Tabacos Cigarrillos',
-            'Tabacos Elaborados',
-            'NCE o NDE sobre Fact. de Compra',
-            'Código Otro Impuesto',
-            'Valor Otro Impuesto',
-            'Tasa Otro Impuesto',
-            'Fecha Creación',
-            'Última Actualización',
+            'Saldo Pendiente',
+            'Documento Referencia',
+            'Referenciado Por',
+            'Fecha Recepción',
+            'Fecha Acuse',
+            'Creado en',
+            'Actualizado en',
         ];
     }
 
     /**
-     * 🔹 Mapeo de los datos por fila
+     * Formateo seguro de fechas
      */
-    public function map($doc): array
+    private function format($date)
     {
-        return [
-            $doc->empresa?->Nombre ?? 'Sin empresa',
-            $doc->tipoDocumento?->nombre ?? 'Sin tipo',
-            $doc->nro,
-            $doc->tipo_compra,
-            $doc->rut_proveedor,
-            $doc->razon_social,
-            $doc->folio,
-            $this->formatDate($doc->fecha_docto),
-            $this->formatDate($doc->fecha_recepcion),
-            $this->formatDate($doc->fecha_acuse),
-            $doc->monto_exento,
-            $doc->monto_neto,
-            $doc->monto_iva_recuperable,
-            $doc->monto_iva_no_recuperable,
-            $doc->codigo_iva_no_rec,
-            $doc->monto_total,
-            $doc->monto_neto_activo_fijo,
-            $doc->iva_activo_fijo,
-            $doc->iva_uso_comun,
-            $doc->impto_sin_derecho_credito,
-            $doc->iva_no_retenido,
-            $doc->tabacos_puros,
-            $doc->tabacos_cigarrillos,
-            $doc->tabacos_elaborados,
-            $doc->nce_nde_sobre_fact_compra,
-            $doc->codigo_otro_impuesto,
-            $doc->valor_otro_impuesto,
-            $doc->tasa_otro_impuesto,
-            $this->formatDate($doc->created_at),
-            $this->formatDate($doc->updated_at),
-        ];
-    }
-
-    /**
-     * 🔹 Formateo seguro de fechas
-     */
-    private function formatDate($date)
-    {
-        return $date ? Carbon::parse($date)->format('d-m-Y') : '-';
+        return $date ? Carbon::parse($date)->format('Y-m-d') : null;
     }
 }
