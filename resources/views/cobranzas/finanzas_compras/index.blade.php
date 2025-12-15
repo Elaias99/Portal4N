@@ -104,6 +104,23 @@
                                     placeholder="N° Folio" value="{{ request('folio') }}">
                             </div>
 
+                            <div class="col-md-2">
+                                <label class="form-label small text-muted">Empresa</label>
+                                <select name="empresa_id" class="form-control form-control-sm">
+                                    <option value="">Todas</option>
+
+                                    @foreach ($empresas as $empresa)
+                                        <option value="{{ $empresa->id }}"
+                                            {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
+                                            {{ $empresa->Nombre }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+
+
+
 
                             <div class="col-md-1">
                                 <label class="form-label small text-muted">Saldo Pendiente</label>

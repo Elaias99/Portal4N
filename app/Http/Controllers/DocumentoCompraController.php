@@ -61,6 +61,10 @@ class DocumentoCompraController extends Controller
             $baseQuery->where('folio', 'like', "%{$request->folio}%");
         }
 
+        if ($request->filled('empresa_id')) {
+            $baseQuery->where('empresa_id', $request->empresa_id);
+        }
+
         if ($request->filled('estado')) {
             $baseQuery->where(function ($q) use ($request) {
                 $q->where('status_original', $request->estado)
