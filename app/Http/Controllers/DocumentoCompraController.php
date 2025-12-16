@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Exports\DocumentoCompraExport;
 use App\Models\MovimientoCompra;
 use Illuminate\Support\Facades\DB;
-
+use Illuminate\Support\Facades\Log;
 
 class DocumentoCompraController extends Controller
 {
@@ -140,6 +140,46 @@ class DocumentoCompraController extends Controller
         $tiposDocumento = \App\Models\TipoDocumento::orderBy('nombre')->get();
         $empresas = \App\Models\Empresa::orderBy('Nombre')->get();
 
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+
+        Log::info('🧪 DEBUG MODAL SUGERENCIAS', [
+            'existe_session' => session()->has('sugerencias_notas_compras'),
+            'count' => session()->has('sugerencias_notas_compras')
+                ? count(session('sugerencias_notas_compras'))
+                : 0,
+        ]);
+
+        if (session()->has('sugerencias_notas_compras')) {
+            foreach (session('sugerencias_notas_compras') as $i => $item) {
+                Log::info("🧪 SUGERENCIA {$i}", [
+                    'nota_id' => $item['nota']->id ?? null,
+                    'nota_folio' => $item['nota']->folio ?? null,
+                ]);
+            }
+        }
+
+        if (session()->has('sugerencias_notas_compras')) {
+            foreach (session('sugerencias_notas_compras') as $item) {
+                $id = $item['nota']->id ?? null;
+
+                $existe = $id
+                    ? \App\Models\DocumentoCompra::where('id', $id)->exists()
+                    : false;
+
+                Log::info('🧪 VALIDACION NOTA', [
+                    'nota_id' => $id,
+                    'existe_en_bd' => $existe,
+                ]);
+            }
+        }
+
+
+
+
+
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         return view('cobranzas.finanzas_compras.index', compact(
             'documentosCompras',
             'proveedores',
@@ -457,17 +497,33 @@ class DocumentoCompraController extends Controller
 
     public function asignarReferencias(Request $request)
     {
-        foreach ($request->referencia as $notaId => $facturaId) {
+        $referencias = $request->input('referencia');
 
+        // 🟡 Caso: no se seleccionó ninguna referencia
+        if (empty($referencias) || !is_array($referencias)) {
+
+            // No se referencia nada, solo se cierra el flujo
+            session()->forget('sugerencias_notas_compras');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'No había referencias para asignar'
+            ]);
+        }
+
+        // 🟢 Caso: sí hay referencias seleccionadas
+        foreach ($referencias as $notaId => $facturaId) {
             DocumentoCompra::where('id', $notaId)->update([
                 'referencia_id' => $facturaId
             ]);
         }
 
+        // Limpiar sesión SIEMPRE
         session()->forget('sugerencias_notas_compras');
 
         return response()->json(['success' => true]);
     }
+
 
 
     

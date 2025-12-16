@@ -1,3 +1,15 @@
+{{-- DEBUG --}}
+@php
+    \Log::info('🧪 RENDER MODAL', [
+        'session_existe' => session()->has('sugerencias_notas_compras'),
+        'count' => session()->has('sugerencias_notas_compras')
+            ? count(session('sugerencias_notas_compras'))
+            : 0
+    ]);
+@endphp
+
+
+
 @if(session('sugerencias_notas_compras') && count(session('sugerencias_notas_compras')) > 0)
 <div class="modal fade" id="modalSugerenciasNotas" tabindex="-1" aria-labelledby="modalSugerenciasNotasLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -21,12 +33,15 @@
                             $nota = $item['nota'];
                             $sugerida = $item['sugerida'];
                             $alternativas = $item['alternativas'];
+                            $tieneOpciones = $sugerida || (is_array($alternativas) && count($alternativas) > 0);
                         @endphp
 
                         <div class="border rounded p-3 mb-4 bg-light">
 
                             <h6 class="fw-bold text-primary">
-                                Nota: Folio {{ $nota->folio }} — Monto: ${{ number_format($nota->monto_total, 0, ',', '.') }}
+                                Nota: Folio {{ $nota->folio }}
+                                — Fecha: {{ $nota->fecha_docto ? \Carbon\Carbon::parse($nota->fecha_docto)->format('d-m-Y') : '—' }}
+                                — Monto: ${{ number_format($nota->monto_total, 0, ',', '.') }}
                             </h6>
 
                             <p class="mb-1">
@@ -84,12 +99,22 @@
 
             <!-- FOOTER -->
             <div class="modal-footer">
-                <button type="button" id="btnGuardarReferencias" class="btn btn-success">
+
+
+                <button type="button"
+                        id="btnGuardarReferencias"
+                        class="btn btn-success"
+                        {{ !$tieneOpciones ? 'disabled' : '' }}>
                     Guardar referencias seleccionadas
                 </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+
+
+
+
+                <button type="button" id="btnCerrarSugerencias" class="btn btn-secondary">
                     Cerrar
                 </button>
+
             </div>
 
         </div>
@@ -99,7 +124,10 @@
 <!-- AUTO-ABRIR MODAL -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    $('#modalSugerenciasNotas').modal('show');
+    const modal = new bootstrap.Modal(
+        document.getElementById('modalSugerenciasNotas')
+    );
+    modal.show();
 });
 </script>
 
@@ -131,5 +159,21 @@ document.getElementById('btnGuardarReferencias').addEventListener('click', funct
     });
 });
 </script>
+
+
+<script>
+document.getElementById('btnCerrarSugerencias')?.addEventListener('click', function () {
+    fetch("{{ route('compras.asignar_referencias') }}", {
+        method: "POST",
+        headers: {
+            "X-CSRF-TOKEN": "{{ csrf_token() }}"
+        }
+    }).then(() => {
+        $('#modalSugerenciasNotas').modal('hide');
+        location.reload();
+    });
+});
+</script>
+
 
 @endif
