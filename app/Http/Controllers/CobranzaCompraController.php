@@ -58,17 +58,17 @@ class CobranzaCompraController extends Controller
 
             // Los nuevos integrados
 
-            'tipo' => 'required|string|max:255',
-            'facturacion' => 'required|string|max:255',
-            'forma_pago' => 'required|string|max:255',
-            'zona' => 'required|string|max:255',
-            'importancia' => 'required|string|max:255',
-            'responsable' => 'required|string|max:255',
-            'nombre_cuenta' => 'required|string|max:255',
-            'rut_cuenta' => 'required|string|max:255',
-            'numero_cuenta' => 'required|string|max:255',
-	        'banco_id' =>    'required|exists:bancos,id',
-	        'tipo_cuenta_id' => 'required|exists:tipo_cuentas,id'
+            'tipo' => 'nullable|string|max:255',
+            'facturacion' => 'nullable|string|max:255',
+            'forma_pago' => 'nullable|string|max:255',
+            'zona' => 'nullable|string|max:255',
+            'importancia' => 'nullable|string|max:255',
+            'responsable' => 'nullable|string|max:255',
+            'nombre_cuenta' => 'nullable|string|max:255',
+            'rut_cuenta' => 'nullable|string|max:255',
+            'numero_cuenta' => 'nullable|string|max:255',
+            'banco_id' => 'nullable|exists:bancos,id',
+            'tipo_cuenta_id' => 'nullable|exists:tipo_cuentas,id',
 
             
 

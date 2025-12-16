@@ -552,7 +552,7 @@
     });
 </script>
 
-{{-- @include('cobranzas._modal_create_cobranza') --}}
+@include('cobranzas._modal_create_cobranza')
 @include('cobranzas.partials.modal_ExportarCompra')
 @include('cobranzas.modal_pagos_masivos')
 @include('cobranzas.finanzas_compras.modal_sugerencias')
