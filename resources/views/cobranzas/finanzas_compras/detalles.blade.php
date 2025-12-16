@@ -167,7 +167,7 @@
                         <tr>
                             <th>Fecha Cruce</th>
                             <th>Monto</th>
-                            <th>Proveedor</th>
+                            <th>Cliente</th>
                             <th class="text-center" style="width: 150px;">Acciones</th>
                         </tr>
                     </thead>
@@ -176,7 +176,16 @@
                             <tr>
                                 <td>{{ \Carbon\Carbon::parse($cruce->fecha_cruce)->format('d-m-Y') }}</td>
                                 <td>${{ number_format($cruce->monto, 0, ',', '.') }}</td>
-                                <td>{{ $cruce->proveedor->razon_social ?? '—' }}</td>
+                                <td>
+                                    {{ $cruce->cobranzaCompra->razon_social ?? '—' }}
+                                    @if($cruce->cobranzaCompra)
+                                        <br>
+                                        <small class="text-muted">
+                                            RUT: {{ $cruce->cobranzaCompra->rut_cliente }}
+                                        </small>
+                                    @endif
+                                </td>
+
                                 <td class="text-center">
                                     <form action="{{ route('cruces.destroy', $cruce->id) }}" 
                                           method="POST"

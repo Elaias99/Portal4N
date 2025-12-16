@@ -230,13 +230,14 @@
                             <td>{{ \Carbon\Carbon::parse($cruce->fecha_cruce)->format('d-m-Y') }}</td>
                             <td>${{ number_format($cruce->monto, 0, ',', '.') }}</td>
                             <td>
-                                @if($cruce->proveedor)
-                                    <span class="fw-semibold">{{ $cruce->proveedor->razon_social }}</span><br>
-                                    <small class="text-muted">RUT: {{ $cruce->proveedor->rut }}</small>
+                                @if($cruce->cobranza)
+                                    <span class="fw-semibold">{{ $cruce->cobranza->razon_social }}</span><br>
+                                    <small class="text-muted">RUT: {{ $cruce->cobranza->rut_cliente }}</small>
                                 @else
-                                    <span class="text-muted">— Sin proveedor —</span>
+                                    <span class="text-muted">— Sin cliente —</span>
                                 @endif
                             </td>
+
                             <td class="text-center">
                                 {{-- Botón Eliminar --}}
                                 <form action="{{ route('cruces.destroy', $cruce->id) }}" 

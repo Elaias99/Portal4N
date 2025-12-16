@@ -12,11 +12,11 @@ class Cruce extends Model
     protected $fillable = [
         'documento_financiero_id',
         'documento_compra_id',
+        'cobranza_id',
+        'cobranza_compra_id',
         'monto',
         'fecha_cruce',
-        'proveedor_id',
     ];
-
     /**
      * Relación con el documento financiero.
      */
@@ -34,6 +34,17 @@ class Cruce extends Model
     {
         return $this->belongsTo(DocumentoCompra::class, 'documento_compra_id');
     }
+
+    public function cobranza()
+    {
+        return $this->belongsTo(Cobranza::class, 'cobranza_id');
+    }
+
+    public function cobranzaCompra()
+    {
+        return $this->belongsTo(CobranzaCompra::class, 'cobranza_compra_id');
+    }
+
 
 
 }

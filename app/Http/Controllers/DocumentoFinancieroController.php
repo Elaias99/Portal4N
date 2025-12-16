@@ -13,6 +13,7 @@ use App\Exports\DocumentosExport;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\Cobranza;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class DocumentoFinancieroController extends Controller
@@ -171,6 +172,7 @@ class DocumentoFinancieroController extends Controller
         $empresas = Empresa::orderBy('Nombre')->get(['id', 'Nombre']);
         $tiposDocumento = TipoDocumento::orderBy('nombre')->get(['id', 'nombre']);
         $proveedores = \App\Models\Proveedor::orderBy('razon_social')->get(['id', 'razon_social', 'rut']);
+        $cobranzas = Cobranza::orderBy('razon_social')->get(['id', 'razon_social', 'rut_cliente']);
 
         return view('cobranzas.documentos', compact(
             'documentoFinancieros',
@@ -182,7 +184,8 @@ class DocumentoFinancieroController extends Controller
             'totalPendientes',
             'empresas',
             'tiposDocumento',
-            'proveedores'
+            'proveedores',
+            'cobranzas'
         ));
     }
 
@@ -950,15 +953,15 @@ class DocumentoFinancieroController extends Controller
         $request->validate([
             'monto' => 'required|integer|min:1',
             'fecha_cruce' => 'required|date|before_or_equal:today',
-            'proveedor_id' => 'required|exists:proveedores,id',
+            'cobranza_id' => 'required|exists:cobranzas,id',
         ], [
             'fecha_cruce.before_or_equal' => 'La fecha del cruce no debe sobrepasar la fecha actual.',
             'fecha_cruce.required' => 'La fecha del cruce es obligatoria.',
-            'proveedor_id.required' => 'Debe seleccionar un proveedor.',
-            'proveedor_id.exists' => 'El proveedor seleccionado no es válido.',
+            'cobranza_id.required' => 'Debe seleccionar un cliente.',
+            'cobranza_id.exists' => 'El cliente seleccionado no es válido.',
         ]);
 
-        // Validar que el cruce no supere el saldo pendiente
+        // 1️⃣ Validar límite del saldo
         $saldoPendiente = $documento->saldo_pendiente;
 
         if ($request->monto > $saldoPendiente) {
@@ -967,33 +970,32 @@ class DocumentoFinancieroController extends Controller
                 ->withInput();
         }
 
-        // Crear el registro del cruce
+        // 2️⃣ Registrar cruce
         $cruce = $documento->cruces()->create([
             'monto' => $request->monto,
             'fecha_cruce' => $request->fecha_cruce,
-            'proveedor_id' => $request->proveedor_id,
+            'cobranza_id' => $request->cobranza_id,
         ]);
 
-
-        // Recalcular saldo pendiente
+        // 3️⃣ Recalcular saldo pendiente
         $documento->recalcularSaldoPendiente();
 
-        // Actualizar el estado del documento
+        // 4️⃣ Actualizar estado del documento
         $documento->update([
             'status' => 'Cruce',
             'fecha_estado_manual' => now(),
         ]);
 
-        // Registrar movimiento
+        // 5️⃣ Registrar movimiento
         \App\Models\MovimientoDocumento::create([
             'documento_financiero_id' => $documento->id,
             'user_id' => Auth::id(),
             'tipo_movimiento' => 'Cruce registrado',
-            'descripcion' => "Se registró un cruce de {$request->monto} el {$request->fecha_cruce} con el proveedor ID {$request->proveedor_id}.",
+            'descripcion' => "Se registró un cruce de {$request->monto} el {$request->fecha_cruce} con la cobranza ID {$request->cobranza_id}.",
             'datos_nuevos' => [
                 'monto' => $request->monto,
                 'fecha_cruce' => $request->fecha_cruce,
-                'proveedor_id' => $request->proveedor_id,
+                'cobranza_id' => $request->cobranza_id,
             ],
         ]);
 

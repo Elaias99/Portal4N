@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\DocumentoCompra;
 use App\Imports\ComprasImport;
 use App\Models\Empresa;
-use App\Models\TipoDocumento;
+use App\Models\CobranzaCompra;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Auth;
 use App\Exports\DocumentoCompraExport;
@@ -137,6 +137,12 @@ class DocumentoCompraController extends Controller
 
         // === LISTAS AUXILIARES ===
         $proveedores = \App\Models\Proveedor::select('id', 'razon_social', 'rut')->orderBy('razon_social')->get();
+
+
+        $cobranzasCompras = CobranzaCompra::select('id', 'razon_social', 'rut_cliente')
+        ->orderBy('razon_social')
+        ->get();
+
         $tiposDocumento = \App\Models\TipoDocumento::orderBy('nombre')->get();
         $empresas = \App\Models\Empresa::orderBy('Nombre')->get();
 
@@ -182,7 +188,8 @@ class DocumentoCompraController extends Controller
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         return view('cobranzas.finanzas_compras.index', compact(
             'documentosCompras',
-            'proveedores',
+            'proveedores',          // si aún se usa en otra parte
+            'cobranzasCompras',
             'tiposDocumento',
             'empresas',
             'totalAlDia',
@@ -942,19 +949,21 @@ class DocumentoCompraController extends Controller
 
     public function storeCruce(Request $request, DocumentoCompra $documento)
     {
+        // ✅ Validación usando cobranza_compras
         $request->validate([
             'monto' => 'required|integer|min:1',
             'fecha_cruce' => 'required|date|before_or_equal:today',
-            'proveedor_id' => 'required|exists:proveedores,id',
+            'cobranza_compra_id' => 'required|exists:cobranza_compras,id',
         ], [
             'fecha_cruce.before_or_equal' => 'La fecha del cruce no debe sobrepasar la fecha actual.',
             'fecha_cruce.required' => 'La fecha del cruce es obligatoria.',
-            'proveedor_id.required' => 'Debe seleccionar un proveedor.',
-            'proveedor_id.exists' => 'El proveedor seleccionado no es válido.',
+            'cobranza_compra_id.required' => 'Debe seleccionar un cliente.',
+            'cobranza_compra_id.exists' => 'El cliente seleccionado no es válido.',
         ]);
 
-        // 1️⃣ Validar límite del saldo
+        // 1️⃣ Validar que el cruce no supere el saldo pendiente
         $saldoPendiente = $documento->saldo_pendiente;
+
         if ($request->monto > $saldoPendiente) {
             return back()
                 ->withErrors(['monto' => 'El cruce no puede ser mayor al saldo pendiente actual.'])
@@ -967,11 +976,11 @@ class DocumentoCompraController extends Controller
             'estado' => $documento->estado,
         ];
 
-        // 3️⃣ Registrar cruce
+        // 3️⃣ Registrar el cruce (SIN proveedores)
         $cruce = $documento->cruces()->create([
             'monto' => $request->monto,
             'fecha_cruce' => $request->fecha_cruce,
-            'proveedor_id' => $request->proveedor_id,
+            'cobranza_compra_id' => $request->cobranza_compra_id,
         ]);
 
         // 4️⃣ Recalcular saldo pendiente
@@ -983,7 +992,7 @@ class DocumentoCompraController extends Controller
             'fecha_estado_manual' => now(),
         ]);
 
-        // 6️⃣ Registrar movimiento con trazabilidad extendida
+        // 6️⃣ Registrar movimiento con trazabilidad
         MovimientoCompra::create([
             'documento_compra_id' => $documento->id,
             'usuario_id' => Auth::id(),
@@ -991,18 +1000,19 @@ class DocumentoCompraController extends Controller
             'nuevo_estado' => 'Cruce',
             'fecha_cambio' => now(),
             'tipo_movimiento' => 'Registro de cruce',
-            'descripcion' => "Se registró un cruce de {$request->monto} el {$request->fecha_cruce} con proveedor ID {$request->proveedor_id}.",
+            'descripcion' => "Se registró un cruce de {$request->monto} el {$request->fecha_cruce} con cobranza_compra ID {$request->cobranza_compra_id}.",
             'datos_anteriores' => $datosAnteriores,
             'datos_nuevos' => [
                 'monto' => $request->monto,
                 'fecha_cruce' => $request->fecha_cruce,
-                'proveedor_id' => $request->proveedor_id,
+                'cobranza_compra_id' => $request->cobranza_compra_id,
                 'nuevo_saldo' => $documento->saldo_pendiente,
             ],
         ]);
 
         return back()->with('success', 'Cruce registrado correctamente.');
     }
+
 
 
 

@@ -74,15 +74,21 @@
                         <label class="form-label small text-muted">Fecha del cruce</label>
                         <input type="date" name="fecha_cruce" class="form-control form-control-sm" value="{{ now()->format('Y-m-d') }}" required>
                     </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label small text-muted">Proveedor asociado</label>
-                        <select name="proveedor_id" class="form-select form-select-sm" required>
-                            <option value="">-- Seleccionar proveedor --</option>
-                            @foreach($proveedores as $proveedor)
-                                <option value="{{ $proveedor->id }}">{{ $proveedor->razon_social }} — RUT: {{ $proveedor->rut }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+
+
+
+                    <label class="form-label small text-muted">Cobranza asociada</label>
+                    <select name="cobranza_compra_id" class="form-select form-select-sm" required>
+                        <option value="">-- Seleccionar cobranza de compra --</option>
+                        @foreach($cobranzasCompras as $cobranza)
+                            <option value="{{ $cobranza->id }}">
+                                {{ $cobranza->razon_social }} — RUT: {{ $cobranza->rut_cliente }}
+                            </option>
+                        @endforeach
+                    </select>
+
+
+
                 </form>
 
                 {{-- === FORMULARIO DE PAGO === --}}

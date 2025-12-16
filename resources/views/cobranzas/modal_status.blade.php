@@ -141,35 +141,28 @@
                     {{-- Seleccionar proveedor --}}
                     {{-- Seleccionar proveedor --}}
                     <div class="form-group mb-3">
-                        <label for="proveedor_id-{{ $doc->id }}" class="form-label small text-muted">
-                            Seleccionar proveedor
+                        <label class="form-label small text-muted">
+                            Cliente (Cobranza asociada)
                         </label>
 
-                        <select name="proveedor_id" 
-                                id="proveedor_id-{{ $doc->id }}" 
-                                class="form-select form-select-sm @error('proveedor_id') is-invalid @enderror" 
+                        <select name="cobranza_id"
+                                class="form-select form-select-sm @error('cobranza_id') is-invalid @enderror"
                                 required>
-                            <option value="">-- Seleccionar proveedor --</option>
-                            @foreach($proveedores as $proveedor)
-                                <option value="{{ $proveedor->id }}">
-                                    {{ $proveedor->razon_social }} — RUT: {{ $proveedor->rut }}
+                            <option value="">-- Seleccionar cliente --</option>
+                            @foreach($cobranzas as $cobranza)
+                                <option value="{{ $cobranza->id }}">
+                                    {{ $cobranza->razon_social }} — RUT: {{ $cobranza->rut_cliente }}
                                 </option>
                             @endforeach
                         </select>
 
-                        @error('proveedor_id')
+                        @error('cobranza_id')
                             <span class="invalid-feedback d-block text-danger">
                                 <strong>{{ $message }}</strong>
                             </span>
                         @enderror
-
-                        {{-- 🔹 Enlace rápido para crear nuevo proveedor --}}
-                        <div class="mt-1">
-                            <a href="{{ route('proveedores.create') }}" target="_blank" class="small text-primary text-decoration-none">
-                                <i class="bi bi-plus-circle"></i> Agregar nuevo proveedor
-                            </a>
-                        </div>
                     </div>
+
 
                 </form>
 
