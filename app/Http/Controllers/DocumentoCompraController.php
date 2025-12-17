@@ -749,7 +749,7 @@ class DocumentoCompraController extends Controller
         }
 
         // === 5️⃣ Excluir notas de crédito / anulados ===
-        $query->whereNotIn('tipo_documento_id', [61, 56]);
+        // $query->whereNotIn('tipo_documento_id', [61, 56]);
 
         // === 6️⃣ Orden ===
         if ($request->filled('sort_by')) {
