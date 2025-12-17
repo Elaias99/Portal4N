@@ -1,7 +1,6 @@
 <thead>
     <tr>
-        {{-- 🔹 Columnas fijas sin dropdown --}}
-        <th>Estado</th>
+
         {{-- 🔹 EMPRESA --}}
         <th>
             <div class="dropdown d-inline">
@@ -67,6 +66,9 @@
                 </ul>
             </div>
         </th>
+
+        {{-- 🔹 Columnas fijas sin dropdown --}}
+        <th>Estado</th>
 
 
         {{-- 🔹 TIPO DOCUMENTO --}}
@@ -428,9 +430,8 @@
             </div>
         </th>
 
-        {{-- 🔹 Columnas fijas --}}
-        <th>Fecha Estado Manual</th>
-        <th class="text-right">Monto Exento</th>
+
+
         <th class="text-right">Monto Neto</th>
         <th class="text-right">Monto IVA</th>
 
@@ -494,5 +495,7 @@
 
         <th class="text-right">Saldo Pendiente</th>
         <th class="text-center">Acción</th>
+        {{-- 🔹 Columnas fijas --}}
+        <th>Fecha Estado Manual</th>
     </tr>
 </thead>

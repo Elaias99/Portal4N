@@ -302,32 +302,6 @@
                                 <span>Exportar Excel</span>
                             </button>
 
-
-
-
-                        {{-- PAGO MASIVO --}}
-
-                        {{-- @if (Auth::id() != 375)
-                            <button type="button"
-                                    class="btn btn-outline-primary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#modalPagosMasivos">
-                                <i class="bi bi-cash-stack"></i>
-                                <span>Pagos Masivos</span>
-                            </button>
-                        @endif --}}
-
-
-
-
-
-
-
-
-
-
-
-
                     </div>
                 </div>
           
@@ -341,163 +315,133 @@
 
                 @include('cobranzas.partials.filtros')
 
+            <tbody>
+            @foreach ($documentoFinancieros as $doc)
+                <tr>
+
+                    {{-- 1️⃣ Empresa --}}
+                    <td class="text-nowrap">
+                        {{ $doc->empresa?->Nombre ?? 'Sin empresa' }}
+                    </td>
+
+                    {{-- 2️⃣ Status (status_original / status manual) --}}
+                    <td>
+                        @php
+                            $color = $doc->status_original === 'Vencido' ? 'bg-danger' : 'bg-success';
+                            $estadosManuales = ['Abono', 'Cruce', 'Pago', 'Pronto pago', 'Cobranza judicial'];
+                            $estadoMostrar = in_array($doc->status, $estadosManuales)
+                                ? $doc->status
+                                : $doc->status_original;
+                        @endphp
+
+                        @if($doc->tipo_documento_id == 61)
+                            <span class="badge bg-secondary">No aplica</span>
+                            <small class="text-muted d-block mt-2">No editable</small>
+                        @else
+                            <span class="badge {{ $color }}">{{ $estadoMostrar }}</span>
+
+                            @if (Auth::id() != 375)
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-secondary mt-2"
+                                        data-toggle="modal"
+                                        data-target="#modalStatus-{{ $doc->id }}">
+                                    Editar
+                                </button>
+                            @endif
+
+                            @include('cobranzas.modal_status', ['doc' => $doc])
+                        @endif
+                    </td>
+
+                    {{-- 3️⃣ Tipo Doc --}}
+                    {{-- <td class="text-nowrap">
+                        {{ $doc->tipoDocumento?->nombre ?? 'Sin tipo' }}
+                    </td> --}}
+                    <td title="{{ $doc->tipoDocumento?->nombre }}">
+                        {{ \Illuminate\Support\Str::limit($doc->tipoDocumento?->nombre ?? '-', 18) }}
+                    </td>                    
+
+                    {{-- 4️⃣ RUT Proveedor --}}
+                    <td class="text-nowrap">
+                        {{ $doc->rut_cliente }}
+                    </td>
+
+                    {{-- 5️⃣ Razón Social --}}
+                    <td class="text-nowrap">
+                        {{ $doc->razon_social }}
+                    </td>
+
+                    {{-- 6️⃣ Folio --}}
+                    <td>
+                        {{ $doc->folio }}
+
+                        @if($doc->referenciados->count() > 0)
+                            <small class="badge bg-info text-dark ms-1">
+                                Referenciado por NC Nº{{ $doc->referenciados->pluck('folio')->join(', ') }}
+                            </small>
+                        @elseif($doc->referencia)
+                            <small class="badge bg-warning text-dark ms-1">
+                                Referencia a Factura Nº{{ $doc->referencia->folio }}
+                            </small>
+                        @endif
+                    </td>
+
+                    {{-- 7️⃣ Fecha Docto --}}
+                    <td>
+                        {{ $doc->fecha_docto ? \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') : '-' }}
+                    </td>
+
+                    {{-- 8️⃣ Fecha Vencimiento --}}
+                    <td>
+                        {{ $doc->fecha_vencimiento ? \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') : '-' }}
+                    </td>
+
+                    {{-- 9️⃣ Monto Neto --}}
+                    <td class="text-end">
+                        ${{ number_format($doc->monto_neto, 0, ',', '.') }}
+                    </td>
+
+                    {{-- 🔟 IVA Rec. --}}
+                    <td class="text-end">
+                        ${{ number_format($doc->monto_iva, 0, ',', '.') }}
+                    </td>
+
+                    {{-- 1️⃣1️⃣ Total --}}
+                    <td class="text-end fw-bold">
+                        ${{ number_format($doc->monto_total, 0, ',', '.') }}
+                    </td>
+
+                    {{-- 1️⃣2️⃣ Saldo Pendiente --}}
+                    <td class="text-end fw-bold {{ $doc->saldo_pendiente == 0 ? 'text-success' : 'text-danger' }}">
+                        ${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}
+                    </td>
+
+                    {{-- 1️⃣3️⃣ Acción --}}
+                    <td class="text-center">
+                        @if($doc->tipo_documento_id == 61)
+                            <span class="text-muted d-block">No aplica</span>
+                        @else
+                            <a href="{{ route('documentos.detalles', $doc->id) }}?{{ http_build_query(request()->query()) }}"
+                            class="btn btn-sm btn-outline-primary w-100">
+                                <i class="bi bi-eye"></i> Ver Detalles
+                            </a>
+                        @endif
+                    </td>
+
+                    {{-- 1️⃣4️⃣ Fecha Estado Manual --}}
+                    <td>
+                        {{ $doc->fecha_estado_manual
+                            ? \Carbon\Carbon::parse($doc->fecha_estado_manual)->format('d-m-Y')
+                            : '-' }}
+                    </td>
+
+                </tr>
+            @endforeach
+            </tbody>
 
 
 
 
-                
-
-                <tbody>
-                    @foreach ($documentoFinancieros as $doc)
-                        <tr>
-                            {{-- 🔹 Estado visible según status_original (solo 2 colores) --}}
-                            <td>
-                                @php
-                                    // El color siempre depende del estado automático
-                                    $color = $doc->status_original === 'Vencido' ? 'bg-danger' : 'bg-success';
-
-                                    // Solo usamos el status manual si es uno de los estados válidos
-                                    $estadosManuales = ['Abono', 'Cruce', 'Pago', 'Pronto pago', 'Cobranza judicial'];
-
-                                    $estadoMostrar = in_array($doc->status, $estadosManuales)
-                                        ? $doc->status
-                                        : $doc->status_original;
-                                @endphp
-
-
-                                {{-- Botón Editar (solo si NO es Nota de Crédito) --}}
-                                {{-- @if($doc->tipo_documento_id != 61)
-
-                                    
-
-
-                                    @if (Auth::id() != 375)
-                                        <button type="button"
-                                                class="btn btn-sm btn-outline-secondary mt-2"
-                                                data-toggle="modal"
-                                                data-target="#modalStatus-{{ $doc->id }}">
-                                            Editar
-                                        </button>
-                                    @endif
-
-                                    @include('cobranzas.modal_status', ['doc' => $doc])
-                                @else
-                                    <small class="text-muted d-block mt-2">No editable</small>
-                                @endif --}}
-
-
-                                @if($doc->tipo_documento_id == 61)
-
-                                    {{-- NOTA DE CRÉDITO: no mostrar badge de estado --}}
-                                    <span class="badge bg-secondary">No aplica</span>
-                                    <small class="text-muted d-block mt-2">No editable</small>
-
-                                @else
-
-                                    {{-- DOCUMENTOS NORMALES: mostrar estado y permitir edición --}}
-                                    <span class="badge {{ $color }}">
-                                        {{ $estadoMostrar }}
-                                    </span>
-
-                                    @if (Auth::id() != 375)
-                                        <button type="button"
-                                                class="btn btn-sm btn-outline-secondary mt-2"
-                                                data-toggle="modal"
-                                                data-target="#modalStatus-{{ $doc->id }}">
-                                            Editar
-                                        </button>
-                                    @endif
-
-                                    @include('cobranzas.modal_status', ['doc' => $doc])
-
-                                @endif
-
-
-
-
-
-
-
-
-                            </td>
-
-
-                            {{-- 🔹 Empresa --}}
-                            <td class="text-nowrap">{{ $doc->empresa?->Nombre ?? 'Sin empresa' }}</td>
-
-                            {{-- 🔹 Tipo Documento --}}
-                            {{-- 🔹 Tipo Documento --}}
-                            <td class="text-nowrap">{{ $doc->tipoDocumento?->nombre ?? 'Sin tipo' }}</td>
-
-
-
-                            {{-- 🔹 Rut Cliente --}}
-                            <td class="text-nowrap">{{ $doc->rut_cliente }}</td>
-
-                            {{-- 🔹 Razón Social --}}
-                            <td class="text-nowrap">{{ $doc->razon_social }}</td>
-
-                            {{-- 🔹 Folio --}}
-                            <td>{{ $doc->folio }}
-                                @if($doc->referenciados->count() > 0)
-                                    <small class="badge bg-info text-dark ms-1">
-                                        Referenciado por NC Nº{{ $doc->referenciados->pluck('folio')->join(', ') }}
-                                    </small>
-                                @elseif($doc->referencia)
-                                    <small class="badge bg-warning text-dark ms-1">
-                                        Referencia a Factura Nº{{ $doc->referencia->folio }}
-                                    </small>
-                                @endif
-                            </td>
-
-
-
-
-
-                            {{-- 🔹 Fecha Documento --}}
-                            <td><span style="white-space: nowrap;">{{ $doc->fecha_docto ? \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') : '-' }}</span></td>
-
-
-                            <td><span style="white-space: nowrap;">{{ $doc->fecha_vencimiento ? \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') : '-' }}</span></td>
-
-
-                            <td><span style="white-space: nowrap;">{{ $doc->fecha_estado_manual ? \Carbon\Carbon::parse($doc->fecha_estado_manual)->format('d-m-Y') : '-' }}</span></td>
-
-
-                            {{-- 🔹 Montos --}}
-                            <td class="text-right">${{ number_format($doc->monto_exento, 0, ',', '.') }}</td>
-                            <td class="text-right">${{ number_format($doc->monto_neto, 0, ',', '.') }}</td>
-                            <td class="text-right">${{ number_format($doc->monto_iva, 0, ',', '.') }}</td>
-                            <td class="text-right fw-bold">${{ number_format($doc->monto_total, 0, ',', '.') }}</td>
-
-                            {{-- 🔹 Saldo Pendiente --}}
-                            <td class="text-right fw-bold {{ $doc->saldo_pendiente == 0 ? 'text-success' : 'text-danger' }}">
-                                ${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}
-                            </td>
-
-
-                            {{-- 🔹 Abonos --}}
-                            <td class="text-center">
-
-                                {{-- 🚫 Si es una Nota de Crédito --}}
-                                @if($doc->tipo_documento_id == 61)
-                                    <span class="text-muted d-block">No aplica</span>
-                                @else
-                                    {{-- 🔹 Un solo botón para ver todos los detalles --}}
-                                    <a href="{{ route('documentos.detalles', $doc->id) }}?{{ http_build_query(request()->query()) }}" 
-                                    class="btn btn-sm btn-outline-primary w-100">
-                                    <i class="bi bi-eye"></i> Ver Detalles
-                                    </a>
-
-                                @endif
-
-                            </td>
-
-
-
-                        </tr>
-                    @endforeach
-                </tbody>
             </table>
         </div>
 

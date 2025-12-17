@@ -315,13 +315,13 @@
                         <thead class="table-light text-uppercase align-middle">
                             <tr class="small">
 
-                                {{-- 📅 Fecha Estado Manual --}}
+                                {{-- 🏢 Empresa --}}
                                 @include('cobranzas.partials.filtros_compras', [
-                                    'label' => 'Fecha Estado Manual',
-                                    'columna' => 'fecha_estado_manual',
+                                    'label' => 'Empresa',
+                                    'columna' => 'empresa_id',
                                     'sortBy' => $sortBy ?? null,
                                     'sortOrder' => $sortOrder ?? 'asc',
-                                    'placeholder' => 'AAAA-MM-DD'
+                                    'placeholder' => 'Buscar empresa...'
                                 ])
 
                                 {{-- ⚙️ Status (status_original) --}}
@@ -343,7 +343,7 @@
                                 ])
 
                                 {{-- 🛒 Tipo Compra (sin filtro directo) --}}
-                                <th>Tipo Compra</th>
+                                {{-- <th>Tipo Compra</th> --}}
 
                                 {{-- 🆔 RUT Proveedor --}}
                                 @include('cobranzas.partials.filtros_compras', [
@@ -408,17 +408,20 @@
                                 {{-- 💸 Saldo Pendiente (sin filtro directo) --}}
                                 <th>Saldo Pendiente</th>
 
-                                {{-- 🏢 Empresa --}}
-                                @include('cobranzas.partials.filtros_compras', [
-                                    'label' => 'Empresa',
-                                    'columna' => 'empresa_id',
-                                    'sortBy' => $sortBy ?? null,
-                                    'sortOrder' => $sortOrder ?? 'asc',
-                                    'placeholder' => 'Buscar empresa...'
-                                ])
+
 
                                 {{-- ⚡ Acción --}}
                                 <th>Acción</th>
+
+
+                                {{-- 📅 Fecha Estado Manual --}}
+                                @include('cobranzas.partials.filtros_compras', [
+                                    'label' => 'Fecha Estado Manual',
+                                    'columna' => 'fecha_estado_manual',
+                                    'sortBy' => $sortBy ?? null,
+                                    'sortOrder' => $sortOrder ?? 'asc',
+                                    'placeholder' => 'AAAA-MM-DD'
+                                ])
 
                             </tr>
                         </thead>
@@ -431,8 +434,11 @@
                                     $estadoMostrar = $doc->estado ?: $doc->status_original;
                                 @endphp
 
+
+
                                 <tr class="small">
-                                    <td>{{ $doc->fecha_estado_manual ?? '-' }}</td>
+                                    <td>{{ $doc->empresa?->Nombre ?? '—' }}</td>
+                                    
                                     <td>
                                         @php
                                             $esNotaCredito = ($doc->tipo_documento_id == 61);
@@ -457,8 +463,11 @@
                                         @endif
                                     </td>
 
-                                    <td>{{ $doc->tipoDocumento?->nombre ?? '-' }}</td>
-                                    <td>{{ $doc->tipo_compra ?? '-' }}</td>
+                                    <td title="{{ $doc->tipoDocumento?->nombre }}">
+                                        {{ \Illuminate\Support\Str::limit($doc->tipoDocumento?->nombre ?? '-', 18) }}
+                                    </td>
+
+                                    {{-- <td>{{ $doc->tipo_compra ?? '-' }}</td> --}}
                                     <td>{{ $doc->rut_proveedor }}</td>
                                     <td class="text-start">{{ $doc->razon_social }}</td>
 
@@ -492,7 +501,7 @@
                                     <td class="text-end fw-semibold {{ $doc->saldo_pendiente == 0 ? 'text-success' : 'text-danger' }}">
                                         ${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}
                                     </td>
-                                    <td>{{ $doc->empresa?->Nombre ?? '—' }}</td>
+                                    
                                     <td>
                                         @if(!$esNotaCredito)
                                             <a href="{{ route('finanzas_compras.show', $doc->id) }}?{{ http_build_query(request()->query()) }}" 
@@ -503,6 +512,8 @@
                                             <span class="text-muted small">—</span>
                                         @endif
                                     </td>
+
+                                    <td>{{ $doc->fecha_estado_manual ?? '-' }}</td>
 
                                 </tr>
                             @endforeach
