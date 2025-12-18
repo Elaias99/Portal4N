@@ -256,5 +256,17 @@ class DocumentoCompra extends Model
 
 
 
+    public function getEstadoVisibleAttribute()
+    {
+        if ($this->estado === 'Pago') {
+            return 'Pagado';
+        }
+
+        return $this->estado ?: $this->status_original;
+    }
+
+
+
+
 
 }

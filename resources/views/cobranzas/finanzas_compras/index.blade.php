@@ -273,13 +273,13 @@
 
 
                 
-                <button type="button"
+                {{-- <button type="button"
                                 class="btn btn-outline-primary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
                                 data-bs-toggle="modal"
                                 data-bs-target="#modalPagosMasivos">
                     <i class="bi bi-cash-stack"></i>
                     <span>Pagos Masivos</span>
-                </button>
+                </button> --}}
                 
 
 
@@ -431,7 +431,7 @@
                             @foreach ($documentosCompras as $doc)
                                 @php
                                     $color = $doc->status_original === 'Vencido' ? 'bg-danger' : 'bg-success';
-                                    $estadoMostrar = $doc->estado ?: $doc->status_original;
+                                    $estadoMostrar = $doc->estado_visible;
                                 @endphp
 
 

@@ -44,7 +44,7 @@
                     </div>
                     <div class="card-body d-flex justify-content-between align-items-center flex-wrap">
                         <p class="mb-2 mb-md-0">
-                            Este documento fue marcado como <strong>Pago</strong>
+                            Este documento fue marcado como <strong>Pagado</strong>
                             {{ $pago->fecha_pago ? 'el ' . \Carbon\Carbon::parse($pago->fecha_pago)->format('d-m-Y') : '' }}.
                         </p>
 

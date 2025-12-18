@@ -25,7 +25,7 @@
                     {{-- Estado actual --}}
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Estado actual</label>
-                        <input type="text" class="form-control form-control-sm" value="{{ $doc->status_original }}" readonly>
+                        <input type="text" class="form-control form-control-sm" value="{{ $doc->estado_visible  }}" readonly>
                     </div>
 
                     {{-- Nuevo estado --}}
@@ -35,7 +35,11 @@
                             <option value="">Sin estado manual</option>
                             <option value="Abono" {{ $doc->estado == 'Abono' ? 'selected' : '' }}>Abono</option>
                             <option value="Cruce" {{ $doc->estado == 'Cruce' ? 'selected' : '' }}>Cruce</option>
-                            <option value="Pago" {{ $doc->estado == 'Pago' ? 'selected' : '' }}>Pago</option>
+
+                            <option value="Pago" {{ $doc->estado == 'Pago' ? 'selected' : '' }}>Pagado</option>
+
+
+
                             <option value="Pronto pago" {{ $doc->estado == 'Pronto pago' ? 'selected' : '' }}>Pronto pago</option>
                             <option value="Cobranza judicial" {{ $doc->estado == 'Cobranza judicial' ? 'selected' : '' }}>Cobranza judicial</option>
                         </select>
