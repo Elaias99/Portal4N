@@ -153,14 +153,6 @@ class DocumentoFinancieroController extends Controller
                 return true;
             });
 
-            // 🔥 Convertir colección nuevamente a paginador
-            // $documentoFinancieros = new \Illuminate\Pagination\LengthAwarePaginator(
-            //     $documentoFinancieros->forPage($documentosOriginal->currentPage(), $documentosOriginal->perPage()),
-            //     $documentoFinancieros->count(),
-            //     $documentosOriginal->perPage(),
-            //     $documentosOriginal->currentPage(),
-            //     ['path' => request()->url(), 'query' => request()->query()]
-            // );
         }
 
 

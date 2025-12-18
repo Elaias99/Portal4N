@@ -494,7 +494,6 @@
         </th>
 
         <th class="text-right">Saldo Pendiente</th>
-        <th class="text-center">Acción</th>
         {{-- 🔹 Columnas fijas --}}
         <th>Fecha Estado Manual</th>
     </tr>

@@ -224,7 +224,7 @@
                             </div>
 
                             <a href="{{ route('cobranzas-compras.index') }}" class="btn btn-outline-secondary btn-sm">
-                                Detalle Cliente
+                                Detalle Proveedor
                             </a>
 
 
@@ -273,13 +273,13 @@
 
 
                 
-                {{-- <button type="button"
+                <button type="button"
                                 class="btn btn-outline-primary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
                                 data-bs-toggle="modal"
                                 data-bs-target="#modalPagosMasivos">
                     <i class="bi bi-cash-stack"></i>
                     <span>Pagos Masivos</span>
-                </button> --}}
+                </button>
                 
 
 
@@ -411,7 +411,7 @@
 
 
                                 {{-- ⚡ Acción --}}
-                                <th>Acción</th>
+                                {{-- <th>Acción</th> --}}
 
 
                                 {{-- 📅 Fecha Estado Manual --}}
@@ -473,7 +473,10 @@
 
 
                                     <td>
-                                        {{ $doc->folio }}
+                                        <a href="{{ route('finanzas_compras.show', $doc->id) }}?{{ http_build_query(request()->query()) }}" 
+                                            class="fw-semibold text-decoration-none">
+                                            {{ $doc->folio }}
+                                        </a>
 
                                         {{-- La factura tiene notas de crédito que la referencian --}}
                                         @if($doc->referenciados->count() > 0)
@@ -502,7 +505,7 @@
                                         ${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}
                                     </td>
                                     
-                                    <td>
+                                    {{-- <td>
                                         @if(!$esNotaCredito)
                                             <a href="{{ route('finanzas_compras.show', $doc->id) }}?{{ http_build_query(request()->query()) }}" 
                                             class="btn btn-outline-primary btn-sm w-100">
@@ -511,7 +514,7 @@
                                         @else
                                             <span class="text-muted small">—</span>
                                         @endif
-                                    </td>
+                                    </td> --}}
 
                                     <td>{{ $doc->fecha_estado_manual ?? '-' }}</td>
 

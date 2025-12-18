@@ -349,11 +349,6 @@
                         @endif
                     </td>
 
-
-                    {{-- 3️⃣ Tipo Doc --}}
-                    {{-- <td class="text-nowrap">
-                        {{ $doc->tipoDocumento?->nombre ?? 'Sin tipo' }}
-                    </td> --}}
                     <td title="{{ $doc->tipoDocumento?->nombre }}">
                         {{ \Illuminate\Support\Str::limit($doc->tipoDocumento?->nombre ?? '-', 18) }}
                     </td>                    
@@ -370,7 +365,11 @@
 
                     {{-- 6️⃣ Folio --}}
                     <td>
-                        {{ $doc->folio }}
+                        <a href="{{ route('documentos.detalles', $doc->id) }}?{{ http_build_query(request()->query()) }}"
+                            class="fw-semibold text-decoration-none">
+                                {{ $doc->folio }}
+                        </a>
+
 
                         @if($doc->referenciados->count() > 0)
                             <small class="badge bg-info text-dark ms-1">
@@ -398,34 +397,22 @@
                         ${{ number_format($doc->monto_neto, 0, ',', '.') }}
                     </td>
 
-                    {{-- 🔟 IVA Rec. --}}
+                    {{--IVA Rec. --}}
                     <td class="text-end">
                         ${{ number_format($doc->monto_iva, 0, ',', '.') }}
                     </td>
 
-                    {{-- 1️⃣1️⃣ Total --}}
+                    {{-- Total --}}
                     <td class="text-end fw-bold">
                         ${{ number_format($doc->monto_total, 0, ',', '.') }}
                     </td>
 
-                    {{-- 1️⃣2️⃣ Saldo Pendiente --}}
+                    {{--Saldo Pendiente --}}
                     <td class="text-end fw-bold {{ $doc->saldo_pendiente == 0 ? 'text-success' : 'text-danger' }}">
                         ${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}
                     </td>
 
-                    {{-- 1️⃣3️⃣ Acción --}}
-                    <td class="text-center">
-                        @if($doc->tipo_documento_id == 61)
-                            <span class="text-muted d-block">No aplica</span>
-                        @else
-                            <a href="{{ route('documentos.detalles', $doc->id) }}?{{ http_build_query(request()->query()) }}"
-                            class="btn btn-sm btn-outline-primary w-100">
-                                <i class="bi bi-eye"></i> Ver Detalles
-                            </a>
-                        @endif
-                    </td>
-
-                    {{-- 1️⃣4️⃣ Fecha Estado Manual --}}
+                    {{-- Fecha Estado Manual --}}
                     <td>
                         {{ $doc->fecha_estado_manual
                             ? \Carbon\Carbon::parse($doc->fecha_estado_manual)->format('d-m-Y')
