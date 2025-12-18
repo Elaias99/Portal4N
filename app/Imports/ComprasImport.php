@@ -127,6 +127,16 @@ class ComprasImport implements ToModel, WithHeadingRow
     $tipoDocumento = \App\Models\TipoDocumento::find((int) $row['tipo_doc']);
 
     if (!$cobranza) {
+
+        Log::warning('🟡 [ComprasImport] Documento creado SIN cobranza', [
+            'folio' => $row['folio'],
+            'rut_proveedor' => $row['rut_proveedor'],
+            'tipo_documento_id' => $tipoDocumento?->id,
+            'es_nota_credito' => ((int) $row['tipo_doc'] === 61),
+        ]);
+
+
+
         // Evitar duplicados por RUT
         $yaRegistrado = collect($this->sinCobranza)
             ->contains(fn($item) => $item['rut_proveedor'] === ($row['rut_proveedor'] ?? null));
@@ -143,6 +153,11 @@ class ComprasImport implements ToModel, WithHeadingRow
 
         // 🧩 Crear el documento con cobranza_id = null (para ser reprocesado luego)
         \App\Models\DocumentoCompra::updateOrCreate(
+
+
+            
+
+
             ['folio' => $row['folio']],
             [
                 'empresa_id'        => $this->empresaId ?? null,
@@ -289,8 +304,35 @@ class ComprasImport implements ToModel, WithHeadingRow
         $documento->save();
 
         if ((int) $documento->tipo_documento_id === 61) {
+
+
+            Log::info('🧪 [ComprasImport] Detectada Nota de Crédito', [
+                'folio' => $documento->folio,
+                'nota_id' => $documento->id,
+                'rut_proveedor' => $documento->rut_proveedor,
+                'cobranza_compra_id' => $documento->cobranza_compra_id,
+                'fecha_docto' => $documento->fecha_docto,
+                'monto_total' => $documento->monto_total,
+            ]);
+
+
+
             $service = new \App\Services\ReferenciaNotasCompraService();
             $sugerencias = $service->generarSugerencias($documento);
+
+
+
+            Log::info('🧪 [ComprasImport] Resultado sugerencias NC', [
+                'nota_folio' => $documento->folio,
+                'sugerida' => $sugerencias['sugerida']?->id ?? null,
+                'alternativas_count' => is_array($sugerencias['alternativas'])
+                    ? count($sugerencias['alternativas'])
+                    : 0,
+            ]);
+
+
+
+
 
             $this->sugerenciasNotas[] = [
                 'nota' => $documento,

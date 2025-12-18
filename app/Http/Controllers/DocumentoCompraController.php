@@ -480,6 +480,15 @@ class DocumentoCompraController extends Controller
             ]);
         }
 
+        Log::info('🧪 [ComprasController] Estado sesión sugerencias', [
+            'existe' => session()->has('sugerencias_notas_compras'),
+            'count' => session()->has('sugerencias_notas_compras')
+                ? count(session('sugerencias_notas_compras'))
+                : 0,
+            'sin_compra_pendientes' => session()->has('sin_compra_pendientes'),
+        ]);
+
+
         // Caso 4: Archivo vacío o sin registros válidos
         return redirect()->route('finanzas_compras.index')->with('error', 'No se encontraron registros válidos para importar.');
     }

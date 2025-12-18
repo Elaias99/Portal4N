@@ -12,6 +12,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
 use App\Models\DocumentoCompra;
 use App\Models\MovimientoCompra;
+use App\Services\ReferenciaNotasCompraService;
 
 class CobranzaCompraController extends Controller
 {
@@ -166,25 +167,36 @@ class CobranzaCompraController extends Controller
         $procesados = [];
         $omitidos = [];
 
+
         foreach ($pendientes as $item) {
-            $folio = $item['folio'] ?? null;
+
             $rutProveedor = $item['rut_proveedor'] ?? null;
 
-            Log::info("➡️ Procesando folio {$folio} / RUT {$rutProveedor}");
+            if (!$rutProveedor) {
+                continue;
+            }
+
+            Log::info("➡️ Reprocesando documentos del proveedor {$rutProveedor}");
 
             $cobranzaCompra = CobranzaCompra::where('rut_cliente', $rutProveedor)->first();
 
             if (!$cobranzaCompra) {
                 Log::warning("⚠️ No se encontró cobranza_compra para el RUT {$rutProveedor}");
-                $omitidos[] = $folio;
                 continue;
             }
 
-            $documento = DocumentoCompra::where('folio', $folio)
+            // 🔥 CLAVE: traer TODOS los documentos pendientes del proveedor
+            $documentos = DocumentoCompra::where('rut_proveedor', $rutProveedor)
                 ->whereNull('cobranza_compra_id')
-                ->first();
+                ->get();
 
-            if ($documento) {
+            if ($documentos->isEmpty()) {
+                Log::warning("🔍 No hay documentos pendientes para el RUT {$rutProveedor}");
+                continue;
+            }
+
+            foreach ($documentos as $documento) {
+
                 $creditos = (int) ($cobranzaCompra->creditos ?? 0);
 
                 $fechaVenc = $documento->fecha_vencimiento
@@ -194,36 +206,71 @@ class CobranzaCompraController extends Controller
 
                 $documento->update([
                     'cobranza_compra_id' => $cobranzaCompra->id,
-                    'estado' => $documento->status_original ?? 'Pendiente',
-                    'status_original' => $documento->status_original ?? 'Pendiente',
-                    'fecha_vencimiento' => $fechaVenc,
+                    'estado'             => $documento->status_original ?? 'Pendiente',
+                    'status_original'    => $documento->status_original ?? 'Pendiente',
+                    'fecha_vencimiento'  => $fechaVenc,
                 ]);
 
-                // 🧾 Registrar trazabilidad por documento
+                // 🧪 DEBUG CLARO
+                Log::info('🧪 [DEBUG REPROCESO] Documento reprocesado', [
+                    'documento_id'      => $documento->id,
+                    'folio'             => $documento->folio,
+                    'tipo_documento_id' => $documento->tipo_documento_id,
+                    'es_nota_credito'   => (int) $documento->tipo_documento_id === 61,
+                    'rut_proveedor'     => $documento->rut_proveedor,
+                ]);
+
+                // 🧾 Movimiento por documento
                 MovimientoCompra::create([
                     'documento_compra_id' => $documento->id,
-                    'usuario_id' => auth()->id(),
-                    'tipo_movimiento' => 'Reprocesamiento automático',
-                    'descripcion' => "Se reprocesó el documento folio {$folio} tras la creación de una nueva cobranza de compras.",
-                    'datos_nuevos' => [
+                    'usuario_id'          => auth()->id(),
+                    'tipo_movimiento'     => 'Reprocesamiento automático',
+                    'descripcion'         => "Documento reprocesado tras creación de cobranza de compras.",
+                    'datos_nuevos'        => [
                         'cobranza_compra_id' => $cobranzaCompra->id,
-                        'fecha_vencimiento' => $fechaVenc,
+                        'fecha_vencimiento'  => $fechaVenc,
                         'creditos_aplicados' => $creditos,
                     ],
                     'fecha_cambio' => now(),
                 ]);
 
-                $procesados[] = $folio;
-
-                Log::info("✅ DocumentoCompra actualizado y movimiento registrado", [
-                    'folio' => $folio,
-                    'cobranza_compra_id' => $cobranzaCompra->id
-                ]);
-            } else {
-                $omitidos[] = $folio;
-                Log::warning("🔍 No se encontró documento con folio {$folio} sin cobranza_compra_id");
+                $procesados[] = $documento->folio;
             }
         }
+
+
+
+
+
+
+
+
+        
+        $service = new ReferenciaNotasCompraService();
+        $sugerencias = [];
+
+        $notasCredito = DocumentoCompra::whereIn('folio', $procesados)
+            ->where('tipo_documento_id', 61)
+            ->get();
+
+        foreach ($notasCredito as $nota) {
+            $resultado = $service->generarSugerencias($nota);
+
+            if ($resultado['sugerida'] || ($resultado['alternativas'] && $resultado['alternativas']->count() > 0)) {
+                $sugerencias[] = [
+                    'nota' => $nota,
+                    'sugerida' => $resultado['sugerida'],
+                    'alternativas' => $resultado['alternativas'],
+                ];
+            }
+        }
+
+        // Guardar sugerencias en sesión para el modal
+        if (!empty($sugerencias)) {
+            session(['sugerencias_notas_compras' => $sugerencias]);
+        }
+
+
 
         // 🧹 Limpiar sesión
         session()->forget('sin_compra_pendientes');
