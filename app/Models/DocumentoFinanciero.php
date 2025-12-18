@@ -323,6 +323,22 @@ class DocumentoFinanciero extends Model
 
 
 
+    public function getEstadoVisibleAttribute()
+    {
+        // Si hay estado manual
+        if ($this->status) {
+            return $this->status === 'Pago'
+                ? 'Pagado'
+                : $this->status;
+        }
+
+        // Si no hay estado manual, usar el final calculado
+        return $this->status_final;
+    }
+
+
+
+
 
 
 

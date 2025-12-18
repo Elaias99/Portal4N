@@ -328,17 +328,13 @@
                     <td>
                         @php
                             $color = $doc->status_original === 'Vencido' ? 'bg-danger' : 'bg-success';
-                            $estadosManuales = ['Abono', 'Cruce', 'Pago', 'Pronto pago', 'Cobranza judicial'];
-                            $estadoMostrar = in_array($doc->status, $estadosManuales)
-                                ? $doc->status
-                                : $doc->status_original;
                         @endphp
 
                         @if($doc->tipo_documento_id == 61)
                             <span class="badge bg-secondary">No aplica</span>
                             <small class="text-muted d-block mt-2">No editable</small>
                         @else
-                            <span class="badge {{ $color }}">{{ $estadoMostrar }}</span>
+                            <span class="badge {{ $color }}">{{ $doc->estado_visible }}</span>
 
                             @if (Auth::id() != 375)
                                 <button type="button"
@@ -352,6 +348,7 @@
                             @include('cobranzas.modal_status', ['doc' => $doc])
                         @endif
                     </td>
+
 
                     {{-- 3️⃣ Tipo Doc --}}
                     {{-- <td class="text-nowrap">

@@ -41,7 +41,7 @@
                         <label class="form-label small text-muted">Estado actual</label>
                         <input type="text"
                             class="form-control form-control-sm"
-                            value="{{ $doc->status_original }}"
+                            value="{{ $doc->estado_visible  }}"
                             readonly>
                     </div>
 
@@ -55,7 +55,7 @@
                             <option value="">Sin estado manual</option>
                             <option value="Abono" {{ $doc->status == 'Abono' ? 'selected' : '' }}>Abono</option>
                             <option value="Cruce" {{ $doc->status == 'Cruce' ? 'selected' : '' }}>Cruce</option>
-                            <option value="Pago" {{ $doc->status == 'Pago' ? 'selected' : '' }}>Pago</option>
+                            <option value="Pago" {{ $doc->status == 'Pago' ? 'selected' : '' }}>Pagado</option>
                             <option value="Pronto pago" {{ $doc->status == 'Pronto pago' ? 'selected' : '' }}>Pronto pago</option>
                             <option value="Cobranza judicial" {{ $doc->status == 'Cobranza judicial' ? 'selected' : '' }}>Cobranza judicial</option>
                         </select>

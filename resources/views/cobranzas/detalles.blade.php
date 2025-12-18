@@ -23,7 +23,7 @@
                     <p><strong>Saldo Pendiente:</strong> ${{ number_format($documento->saldo_pendiente, 0, ',', '.') }}</p>
 
                     
-                    <p><strong>Estado Actual:</strong> {{ $documento->status_original }}</p>
+                    <p><strong>Estado Actual:</strong> {{ $documento->estado_visible  }}</p>
 
 
                     
@@ -54,12 +54,12 @@
 
                 <div class="card mb-4 shadow-sm border-success">
                     <div class="card-header bg-light fw-bold text-success">
-                        Documento marcado como Pago
+                        Documento marcado como Pagado
                     </div>
 
                     <div class="card-body d-flex justify-content-between align-items-center flex-wrap">
                         <p class="mb-2 mb-md-0">
-                            Este documento fue marcado como <strong>Pago</strong>
+                            Este documento fue marcado como <strong>Pagado</strong>
                             {{ $pago->fecha_pago ? 'el ' . \Carbon\Carbon::parse($pago->fecha_pago)->format('d-m-Y') : '' }}.
                         </p>
 
