@@ -10,6 +10,8 @@ use App\Models\MovimientoCompra;
 use App\Models\DocumentoCompra;
 use App\Models\Pago;
 use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\PagosMasivosDocumentoCompraExport;
 
 
 class PagoDocumentoController extends Controller
@@ -182,6 +184,11 @@ class PagoDocumentoController extends Controller
 
     public function storeMasivo(Request $request)
     {
+        Log::info('🧪 PAGOS MASIVOS RECIBIDOS', [
+            'fecha_pago' => $request->fecha_pago,
+            'documentos' => $request->documentos,
+        ]);
+
         $request->validate([
             'fecha_pago' => 'required|date|before_or_equal:today',
             'documentos' => 'required|array|min:1',
@@ -200,28 +207,29 @@ class PagoDocumentoController extends Controller
 
         foreach ($ids as $id) {
             $documento = \App\Models\DocumentoCompra::find($id);
+
             if (!$documento || $documento->pagos()->exists()) {
                 $duplicados++;
                 continue;
             }
 
             $estadoAnterior = $documento->estado;
-            $saldoAnterior = $documento->saldo_pendiente;
+            $saldoAnterior  = $documento->saldo_pendiente;
 
-            // ✅ Crear el pago
+            // ✅ Crear pago
             $documento->pagos()->create([
                 'fecha_pago' => $fechaPago,
                 'user_id' => Auth::id(),
             ]);
 
-            // ✅ Actualizar estado y saldo
+            // ✅ Actualizar documento
             $documento->update([
                 'estado' => 'Pago',
                 'fecha_estado_manual' => now(),
                 'saldo_pendiente' => 0,
             ]);
 
-            // ✅ Registrar movimiento extendido
+            // ✅ Movimiento
             \App\Models\MovimientoCompra::create([
                 'documento_compra_id' => $documento->id,
                 'usuario_id' => Auth::id(),
@@ -243,13 +251,20 @@ class PagoDocumentoController extends Controller
             $procesados++;
         }
 
-        $mensaje = "Pagos registrados correctamente: {$procesados}.";
-        if ($duplicados > 0) {
-            $mensaje .= " {$duplicados} documentos ya tenían pago registrado y fueron omitidos.";
-        }
+        Log::info('✅ PAGOS MASIVOS PROCESADOS', [
+            'procesados' => $procesados,
+            'duplicados' => $duplicados,
+        ]);
 
-        return back()->with('success', $mensaje);
+        // 📤 EXPORTAR EXCEL AUTOMÁTICAMENTE
+        $nombreArchivo = 'pagos_masivos_' . now()->format('Ymd_His') . '.xlsx';
+
+        return Excel::download(
+            new PagosMasivosDocumentoCompraExport($ids),
+            $nombreArchivo
+        );
     }
+
 
 
 
@@ -265,10 +280,19 @@ class PagoDocumentoController extends Controller
                     ->orWhere('razon_social', 'like', "%{$filtro}%")
                     ->orWhere('rut_proveedor', 'like', "%{$filtro}%");
             })
-            ->get(); // sin limit()
+            ->where('saldo_pendiente', '>', 0)     // 🔴 SOLO PENDIENTES
+            ->whereDoesntHave('pagos')             // 🔴 SIN PAGO REGISTRADO
+            ->orderBy('fecha_vencimiento', 'asc')
+            ->get();
+
+        // \Log::info('🧪 BUSQUEDA PAGOS MASIVOS', [
+        //     'filtro' => $filtro,
+        //     'resultados' => $documentos->count(),
+        // ]);
 
         return response()->json($documentos);
     }
+
 
 
 

@@ -48,7 +48,7 @@ class PagosMasivosDocumentoCompraExport implements
         $cobranza = $documento->cobranzaCompra;
 
         // 🏦 Cuenta origen (por ahora fija / configurable)
-        $cuentaOrigen = '123456789';
+        $cuentaOrigen = '0';
         $moneda = 'CLP';
 
         // 🏦 Datos destino
@@ -64,8 +64,12 @@ class PagosMasivosDocumentoCompraExport implements
 
         $nombreBeneficiario = $cobranza->razon_social ?? '';
 
+        
+
         // 💰 Monto
-        $monto = (int) ($documento->saldo_pendiente ?? $documento->monto_total);
+        $monto = (int) $documento->monto_total;
+
+
 
         // 📝 Glosas
         $glosa = "Pago documento {$documento->folio}";

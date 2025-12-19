@@ -49,7 +49,25 @@
                         </table>
                     </div>
 
-                    {{-- 📅 Fecha de pago --}}
+
+
+                    {{-- Documentos seleccionados --}}
+                    <div id="contenedor-seleccionados" class="card mb-3" style="display:none;">
+                        <div class="card-header fw-bold small">
+                            Documentos seleccionados para pago
+                        </div>
+                        <div class="card-body p-2">
+                            <ul id="lista-seleccionados" class="list-group list-group-flush"></ul>
+                        </div>
+                    </div>
+
+
+
+
+
+
+
+                    {{-- Fecha de pago --}}
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Fecha de pago</label>
                         <input type="date" name="fecha_pago" class="form-control form-control-sm" required>
@@ -73,6 +91,10 @@
 
 {{-- === SCRIPT === --}}
 <script>
+
+
+let documentosSeleccionados = {};
+
 /**
  * Buscar documentos pendientes para pagos masivos.
  * Se ejecuta al enviar el formulario dentro del modal.
@@ -118,7 +140,21 @@ function buscarDocumentosMasivos(e) {
             data.forEach(doc => {
                 const fila = `
                     <tr>
-                        <td><input type="checkbox" name="documentos[]" value="${doc.id}"></td>
+
+
+                        <td>
+
+                            <input type="checkbox"
+                                onchange="toggleDocumento(this)"
+                                data-id="${doc.id}"
+                                data-folio="${doc.folio}"
+                                data-razon="${doc.razon_social}">
+
+                            
+                        </td>
+
+
+
                         <td>${doc.folio ?? ''}</td>
                         <td>${doc.razon_social ?? ''}</td>
                         <td>${doc.rut_proveedor ?? ''}</td>
@@ -143,4 +179,73 @@ function toggleSelectAll(source) {
     const checkboxes = document.querySelectorAll('#resultados-body input[type="checkbox"]');
     checkboxes.forEach(cb => cb.checked = source.checked);
 }
+
+
+function toggleDocumento(checkbox) {
+    const id = checkbox.dataset.id;
+    const folio = checkbox.dataset.folio;
+    const razon = checkbox.dataset.razon;
+
+    if (checkbox.checked) {
+        documentosSeleccionados[id] = { id, folio, razon };
+    } else {
+        delete documentosSeleccionados[id];
+    }
+
+    renderSeleccionados();
+}
+
+
+function renderSeleccionados() {
+    const contenedor = document.getElementById('contenedor-seleccionados');
+    const lista = document.getElementById('lista-seleccionados');
+
+    lista.innerHTML = '';
+
+    const ids = Object.keys(documentosSeleccionados);
+
+    if (ids.length === 0) {
+        contenedor.style.display = 'none';
+        return;
+    }
+
+    contenedor.style.display = 'block';
+
+    ids.forEach(id => {
+        const doc = documentosSeleccionados[id];
+
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center small';
+
+        li.innerHTML = `
+            <span>
+                <strong>${doc.folio}</strong> — ${doc.razon}
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-danger"
+                onclick="quitarDocumento(${id})">
+                ✕
+            </button>
+
+            <input type="hidden" name="documentos[]" value="${id}">
+        `;
+
+        lista.appendChild(li);
+    });
+}
+
+function quitarDocumento(id) {
+    delete documentosSeleccionados[id];
+
+    // desmarcar checkbox si existe en la tabla actual
+    document.querySelectorAll(
+        `input[type="checkbox"][data-id="${id}"]`
+    ).forEach(cb => cb.checked = false);
+
+    renderSeleccionados();
+}
+
+
+
+
+
 </script>

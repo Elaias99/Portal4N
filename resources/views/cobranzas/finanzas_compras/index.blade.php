@@ -506,16 +506,6 @@
                                         ${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}
                                     </td>
                                     
-                                    {{-- <td>
-                                        @if(!$esNotaCredito)
-                                            <a href="{{ route('finanzas_compras.show', $doc->id) }}?{{ http_build_query(request()->query()) }}" 
-                                            class="btn btn-outline-primary btn-sm w-100">
-                                                <i class="bi bi-eye"></i> Ver
-                                            </a>
-                                        @else
-                                            <span class="text-muted small">—</span>
-                                        @endif
-                                    </td> --}}
 
                                     <td>{{ $doc->fecha_estado_manual ?? '-' }}</td>
 
