@@ -882,10 +882,16 @@ class DocumentoCompraController extends Controller
             session(['return_to_listado' => url()->previous()]);
         }
 
+        $cobranzasCompras = \App\Models\CobranzaCompra::select('id', 'razon_social', 'rut_cliente')
+            ->orderBy('razon_social')
+            ->get();
+
+
         // Cargar proveedores para los posibles cruces
         $proveedores = \App\Models\Proveedor::orderBy('razon_social')->get(['id', 'razon_social', 'rut']);
 
-        return view('cobranzas.finanzas_compras.detalles', compact('documento', 'proveedores'));
+        return view('cobranzas.finanzas_compras.detalles', compact('documento', 'proveedores',
+    'cobranzasCompras'));
     }
 
 

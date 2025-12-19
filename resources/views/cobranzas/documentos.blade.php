@@ -336,14 +336,14 @@
                         @else
                             <span class="badge {{ $color }}">{{ $doc->estado_visible }}</span>
 
-                            @if (Auth::id() != 375)
+                            {{-- @if (Auth::id() != 375)
                                 <button type="button"
                                         class="btn btn-sm btn-outline-secondary mt-2"
                                         data-toggle="modal"
                                         data-target="#modalStatus-{{ $doc->id }}">
                                     Editar
                                 </button>
-                            @endif
+                            @endif --}}
 
                             @include('cobranzas.modal_status', ['doc' => $doc])
                         @endif

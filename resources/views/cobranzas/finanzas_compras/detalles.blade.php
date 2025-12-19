@@ -2,9 +2,26 @@
 
 @section('content')
 <div class="container mt-4" style="max-width: 1100px;">
-    <h2 class="mb-4 text-center fw-bold text-primary">
-        Detalles del Documento de Compra
-    </h2>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-primary mb-0">
+            Detalles del Documento de Compra
+        </h2>
+
+
+        @if($documento->tipo_documento_id != 61 && Auth::id() != 375)
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm mt-1 px-2 py-0"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalEstadoCompra-{{ $documento->id }}">
+                Editar
+            </button>
+            @include('cobranzas.finanzas_compras.modal_estado', ['doc' => $documento])
+        @endif
+    </div>
+
+
+
 
     {{-- 🔹 Información general --}}
     <div class="card mb-4 shadow-sm">

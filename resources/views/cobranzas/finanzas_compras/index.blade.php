@@ -448,16 +448,16 @@
                                         @if(!$esNotaCredito)
                                             <span class="badge {{ $color }}">{{ $estadoMostrar }}</span><br>
 
-                                            @if (Auth::id() != 375)
+                                            {{-- @if (Auth::id() != 375)
                                                 <button type="button"
                                                         class="btn btn-outline-secondary btn-sm mt-1 px-2 py-0"
                                                         data-bs-toggle="modal"
                                                         data-bs-target="#modalEstadoCompra-{{ $doc->id }}">
                                                     Editar
                                                 </button>
-                                            @endif
+                                            @endif --}}
 
-                                            @include('cobranzas.finanzas_compras.modal_estado', ['doc' => $doc])
+                                            
                                         @else
                                             <span class="badge bg-secondary">Nota de Crédito</span>
                                         @endif
