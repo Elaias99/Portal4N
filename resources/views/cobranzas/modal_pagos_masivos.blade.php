@@ -74,9 +74,13 @@
                     </div>
 
                     <div class="text-end">
-                        <button type="submit" class="btn btn-success btn-sm">
+
+
+                        <button type="submit" id="btn-registrar-pagos" class="btn btn-success btn-sm">
                             <i class="bi bi-check-circle"></i> Registrar Pagos Seleccionados
                         </button>
+
+
                     </div>
                 </form>
 
@@ -249,3 +253,28 @@ function quitarDocumento(id) {
 
 
 </script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const form = document.getElementById('form-pagos-masivos');
+    const btn  = document.getElementById('btn-registrar-pagos');
+
+    if (!form) return;
+
+    form.addEventListener('submit', function () {
+
+        // 🔒 Evitar doble envío
+        btn.disabled = true;
+        btn.innerHTML = 'Procesando pagos...';
+
+        // ⏱️ Recargar la vista después de iniciar la descarga
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000); // puedes ajustar 1500–2500 ms
+    });
+
+});
+</script>
+
