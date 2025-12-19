@@ -874,7 +874,11 @@ class DocumentoFinancieroController extends Controller
         // Cargar proveedores disponibles (para poder mostrar o editar cruces)
         $proveedores = \App\Models\Proveedor::orderBy('razon_social')->get(['id', 'razon_social', 'rut']);
 
-        return view('cobranzas.detalles', compact('documento', 'referencias', 'proveedores'));
+        $cobranzas = \App\Models\Cobranza::orderBy('razon_social')->get(['id', 'razon_social', 'rut_cliente']);
+
+
+        return view('cobranzas.detalles', compact('documento', 'referencias', 'proveedores',
+    'cobranzas'));
     }
 
 

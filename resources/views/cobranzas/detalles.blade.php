@@ -2,9 +2,23 @@
 
 @section('content')
 <div class="container mt-4" style="max-width: 1100px;">
-    <h2 class="mb-4 text-center fw-bold text-primary">
-        Detalles del Documento Financiero
-    </h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-primary mb-0">
+            Detalles del Documento Financiero
+        </h2>
+
+        @if($documento->tipo_documento_id != 61 && Auth::id() != 375)
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    data-toggle="modal"
+                    data-target="#modalStatus-{{ $documento->id }}">
+                Editar
+            </button>
+
+            @include('cobranzas.modal_status', ['doc' => $documento])
+        @endif
+    </div>
+
 
     {{-- 🔹 Información general del documento --}}
     <div class="card mb-4 shadow-sm">
