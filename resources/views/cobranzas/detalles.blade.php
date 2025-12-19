@@ -2,7 +2,10 @@
 
 @section('content')
 <div class="container mt-4" style="max-width: 1100px;">
+
+
     <div class="d-flex justify-content-between align-items-center mb-4">
+        
         <h2 class="fw-bold text-primary mb-0">
             Detalles del Documento Financiero
         </h2>

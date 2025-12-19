@@ -23,13 +23,16 @@
                 Volver a Panel
             </a>
 
-            <a href="{{ route('cobranzas.create') }}" class="btn btn-primary px-4">
-                Nueva Cobranza
-            </a>
+            @if (Auth::id() != 375)
 
-            <a href="{{ route('cobranzas.export') }}" class="btn btn-success px-4">
-                Exportar a Excel
-            </a>
+                <a href="{{ route('cobranzas.create') }}" class="btn btn-primary px-4">
+                    Nueva Cobranza
+                </a>
+
+                <a href="{{ route('cobranzas.export') }}" class="btn btn-success px-4">
+                    Exportar a Excel
+                </a>
+            @endif
 
 
 
@@ -84,20 +87,26 @@
                                 <td class="text-center">{{ $cobranza->creditos }}</td>
 
                                 <td>
-                                    @if (Auth::id() != 375)
 
-                                        <a href="{{ route('cobranzas.edit', $cobranza->id) }}" class="btn btn-sm btn-warning">
-                                            Editar
-                                        </a>
+                                    @if (Auth::id() != 375)
+                                        @if (Auth::id() != 375)
+
+                                            <a href="{{ route('cobranzas.edit', $cobranza->id) }}" class="btn btn-sm btn-warning">
+                                                Editar
+                                            </a>
+                                        @endif
+
+                                        <form action="{{ route('cobranzas.destroy', $cobranza->id) }}" method="POST" style="display:inline;">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Seguro que deseas eliminar esta cobranza?')">
+                                                Eliminar
+                                            </button>
+                                        </form>
                                     @endif
 
-                                    <form action="{{ route('cobranzas.destroy', $cobranza->id) }}" method="POST" style="display:inline;">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Seguro que deseas eliminar esta cobranza?')">
-                                            Eliminar
-                                        </button>
-                                    </form>
+
+
                                 </td>
 
 

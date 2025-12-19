@@ -24,9 +24,11 @@
                 Volver a Compras
             </a>
 
-            <a href="{{ route('cobranzas-compras.create') }}" class="btn btn-primary px-4">
-                Nueva Cobranza
-            </a>
+            @if (Auth::id() != 375)
+                <a href="{{ route('cobranzas-compras.create') }}" class="btn btn-primary px-4">
+                    Nueva Cobranza
+                </a>
+            @endif
 
             <a href="{{ route('cobranzasCompra.export') }}" class="btn btn-outline-success px-4">
                 Exportar Excel
@@ -94,21 +96,28 @@
                                 </button>
                             </td>
 
-                            {{-- Acciones --}}
-                            <td>
-                                <a href="{{ route('cobranzas-compras.edit', $c) }}" class="btn btn-sm btn-warning">
-                                    Editar
-                                </a>
 
-                                <form action="{{ route('cobranzas-compras.destroy', $c) }}" method="POST" style="display:inline;">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger"
-                                        onclick="return confirm('¿Seguro que deseas eliminar esta cobranza?')">
-                                        Eliminar
-                                    </button>
-                                </form>
-                            </td>
+
+                                {{-- Acciones --}}
+                                <td>
+                                    @if (Auth::id() != 375)
+                                        <a href="{{ route('cobranzas-compras.edit', $c) }}" class="btn btn-sm btn-warning">
+                                            Editar
+                                        </a>
+
+                                        <form action="{{ route('cobranzas-compras.destroy', $c) }}" method="POST" style="display:inline;">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-danger"
+                                                onclick="return confirm('¿Seguro que deseas eliminar esta cobranza?')">
+                                                Eliminar
+                                            </button>
+                                        </form>
+                                    @endif
+                                </td>
+
+
+
                         </tr>
 
                         {{-- Modal Detalles --}}
