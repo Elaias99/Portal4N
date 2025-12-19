@@ -86,7 +86,7 @@ Schedule::call(function () {
     Log::info('✅ [VENCIMIENTOS] Correo de vencimientos enviado a (' . implode(', ', $destinos) . ') - Rango: ' .
         $inicio->format('d/m/Y') . ' - ' . $fin->format('d/m/Y'));
 })
-->weeklyOn(1, '07:00');// Lunes 07:00 de la mañana
+->cron('0 7 * * 1,5');// Lunes 07:00 de la mañana
 
 
 
@@ -131,7 +131,7 @@ Schedule::call(function () {
 
     Log::info('✅ [ATRASADOS] Correo de documentos vencidos enviado a (' . implode(', ', $destinos) . ')');
 })
-->weeklyOn(1, '07:00');
+->cron('0 7 * * 1,5');
 
 
 //////////////////    ////////////////////////////
