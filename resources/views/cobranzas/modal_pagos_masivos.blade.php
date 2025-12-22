@@ -263,18 +263,53 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!form) return;
 
-    form.addEventListener('submit', function () {
+    form.addEventListener('submit', function (e) {
+        e.preventDefault(); // ⛔ detener submit normal
 
-        // 🔒 Evitar doble envío
         btn.disabled = true;
         btn.innerHTML = 'Procesando pagos...';
 
-        // ⏱️ Recargar la vista después de iniciar la descarga
-        setTimeout(() => {
-            window.location.reload();
-        }, 2000); // puedes ajustar 1500–2500 ms
+        const formData = new FormData(form);
+
+        // 1️⃣ Registrar pagos (POST)
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Error registrando pagos');
+            return res.json();
+        })
+        .then(data => {
+            if (!data.ok) {
+                throw new Error('Respuesta inválida');
+            }
+
+            // 2️⃣ Descargar Excel (GET)
+            window.location.href = "{{ route('documentos.pagos.masivo.export') }}";
+
+            // 3️⃣ Cerrar modal y refrescar después
+            setTimeout(() => {
+                const modal = bootstrap.Modal.getInstance(
+                    document.getElementById('modalPagosMasivos')
+                );
+                if (modal) modal.hide();
+
+                window.location.reload();
+            }, 2500);
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Ocurrió un error al registrar los pagos');
+            btn.disabled = false;
+            btn.innerHTML = 'Registrar Pagos Seleccionados';
+        });
     });
 
 });
 </script>
+
 

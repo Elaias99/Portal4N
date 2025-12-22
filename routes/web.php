@@ -451,6 +451,12 @@ Route::get('/api/documentos/buscar', [App\Http\Controllers\PagoDocumentoControll
 Route::delete('/pagos/{id}', [App\Http\Controllers\PagoDocumentoController::class, 'destroy'])
     ->name('pagos.destroy');
 
+Route::get(
+    '/documentos/pagos/masivo/export',
+    [App\Http\Controllers\PagoDocumentoController::class, 'exportPagosMasivos']
+)->name('documentos.pagos.masivo.export');
+
+
 
 
 

@@ -193,14 +193,10 @@ class PagoDocumentoController extends Controller
             'fecha_pago' => 'required|date|before_or_equal:today',
             'documentos' => 'required|array|min:1',
             'documentos.*' => 'integer|exists:documentos_compras,id',
-        ], [
-            'fecha_pago.before_or_equal' => 'La fecha del pago no debe sobrepasar la fecha actual.',
-            'fecha_pago.required' => 'La fecha del pago es obligatoria.',
-            'documentos.required' => 'Debes seleccionar al menos un documento.',
         ]);
 
-        $ids = $request->input('documentos');
-        $fechaPago = $request->input('fecha_pago');
+        $ids = $request->documentos;
+        $fechaPago = $request->fecha_pago;
 
         $procesados = 0;
         $duplicados = 0;
@@ -229,7 +225,7 @@ class PagoDocumentoController extends Controller
                 'saldo_pendiente' => 0,
             ]);
 
-            // ✅ Movimiento
+            // ✅ Movimiento (ESTO NO SE TOCA)
             \App\Models\MovimientoCompra::create([
                 'documento_compra_id' => $documento->id,
                 'usuario_id' => Auth::id(),
@@ -256,14 +252,44 @@ class PagoDocumentoController extends Controller
             'duplicados' => $duplicados,
         ]);
 
-        // 📤 EXPORTAR EXCEL AUTOMÁTICAMENTE
+        // 🔐 Guardar IDs para exportación
+        session([
+            'pagos_masivos_export' => $ids
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'procesados' => $procesados,
+            'duplicados' => $duplicados,
+        ]);
+    }
+
+
+    public function exportPagosMasivos()
+    {
+        $ids = session('pagos_masivos_export');
+
+        if (!$ids || !is_array($ids) || count($ids) === 0) {
+            Log::warning('⚠️ EXPORT PAGOS MASIVOS SIN IDS EN SESIÓN');
+            abort(404, 'No hay pagos masivos para exportar.');
+        }
+
+        Log::info('📤 EXPORTANDO EXCEL PAGOS MASIVOS', [
+            'ids' => $ids
+        ]);
+
+        // 🔐 Limpiar sesión para evitar descargas duplicadas
+        session()->forget('pagos_masivos_export');
+
         $nombreArchivo = 'pagos_masivos_' . now()->format('Ymd_His') . '.xlsx';
 
         return Excel::download(
-            new PagosMasivosDocumentoCompraExport($ids),
+            new \App\Exports\PagosMasivosDocumentoCompraExport($ids),
             $nombreArchivo
         );
     }
+
+
 
 
 
