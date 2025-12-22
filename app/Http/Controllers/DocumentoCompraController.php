@@ -42,7 +42,8 @@ class DocumentoCompraController extends Controller
                 'monto_total',
                 'saldo_pendiente',
                 'estado',
-                'status_original'
+                'status_original',
+                'fecha_estado_manual',
             ])
             ->with([
                 'empresa:id,Nombre',
