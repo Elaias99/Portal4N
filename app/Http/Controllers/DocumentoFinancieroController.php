@@ -22,7 +22,6 @@ class DocumentoFinancieroController extends Controller
 
     public function index(Request $request)
     {
-        // Log::info('Valor recibido de page:', ['page' => $request->page]);
 
         $usuariosFinanzas = [1, 405, 374, 375];
 
@@ -77,6 +76,17 @@ class DocumentoFinancieroController extends Controller
 
             // Coincidencia exacta o muy cercana (± 1 peso)
             $baseQuery->whereBetween('saldo_pendiente', [$valor - 1, $valor + 1]);
+        }
+
+        // === FILTRO POR ESTADO DE PAGO (GLOBAL) ===
+        if ($request->filled('estado_pago')) {
+            if ($request->estado_pago === 'Pagado') {
+                $baseQuery->where('saldo_pendiente', '<=', 0);
+            }
+
+            if ($request->estado_pago === 'Pendiente') {
+                $baseQuery->where('saldo_pendiente', '>', 0);
+            }
         }
 
         // === CLONAR PARA CONTAR ESTADOS ===
@@ -136,29 +146,16 @@ class DocumentoFinancieroController extends Controller
             ->where('status_original', '!=', 'Al día')
             ->update(['status_original' => 'Al día']);
 
-        // === FILTRO POR ESTADO DE PAGO ===
-        $documentoFinancieros = $documentosOriginal; // conjunto base
-
-        // Log::info('IDs de esta página:', $documentosOriginal->pluck('id')->toArray());
 
 
-        if ($request->filled('estado_pago')) {
-            $documentoFinancieros = $documentosOriginal->filter(function ($doc) use ($request) {
-                if ($request->estado_pago === 'Pagado') {
-                    return $doc->saldo_pendiente <= 0;
-                }
-                if ($request->estado_pago === 'Pendiente') {
-                    return $doc->saldo_pendiente > 0;
-                }
-                return true;
-            });
+        // === CONTAR PAGADOS / PENDIENTES (GLOBAL) ===
+        $totalPagados = (clone $baseQuery)
+            ->where('saldo_pendiente', '<=', 0)
+            ->count();
 
-        }
-
-
-        // === RECALCULAR TOTALES TRAS FILTRO ===
-        $totalPagados = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente <= 0)->count();
-        $totalPendientes = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente > 0)->count();
+        $totalPendientes = (clone $baseQuery)
+            ->where('saldo_pendiente', '>', 0)
+            ->count();
 
                 
         $empresas = Empresa::orderBy('Nombre')->get(['id', 'Nombre']);
@@ -167,7 +164,6 @@ class DocumentoFinancieroController extends Controller
         $cobranzas = Cobranza::orderBy('razon_social')->get(['id', 'razon_social', 'rut_cliente']);
 
         return view('cobranzas.documentos', compact(
-            'documentoFinancieros',
             'documentosOriginal',
             'totalAlDia',
             'totalVencido',
@@ -179,6 +175,7 @@ class DocumentoFinancieroController extends Controller
             'proveedores',
             'cobranzas'
         ));
+
     }
 
 
@@ -188,7 +185,7 @@ class DocumentoFinancieroController extends Controller
 
     public function filtrarColumnas(Request $request)
     {
-        // 🔒 Control de acceso
+        //Control de acceso
         $usuariosFinanzas = [1, 405, 374, 375];
         if (!in_array(Auth::id(), $usuariosFinanzas)) {
             abort(403, 'Acceso denegado.');

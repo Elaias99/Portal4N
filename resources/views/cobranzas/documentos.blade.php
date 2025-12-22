@@ -316,7 +316,7 @@
                 @include('cobranzas.partials.filtros')
 
             <tbody>
-            @foreach ($documentoFinancieros as $doc)
+            @foreach ($documentosOriginal as $doc)
                 <tr>
 
                     {{-- 1️⃣ Empresa --}}
@@ -331,19 +331,9 @@
                         @endphp
 
                         @if($doc->tipo_documento_id == 61)
-                            <span class="badge bg-secondary">No aplica</span>
-                            <small class="text-muted d-block mt-2">No editable</small>
+
                         @else
                             <span class="badge {{ $color }}">{{ $doc->estado_visible }}</span>
-
-                            {{-- @if (Auth::id() != 375)
-                                <button type="button"
-                                        class="btn btn-sm btn-outline-secondary mt-2"
-                                        data-toggle="modal"
-                                        data-target="#modalStatus-{{ $doc->id }}">
-                                    Editar
-                                </button>
-                            @endif --}}
 
                             @include('cobranzas.modal_status', ['doc' => $doc])
                         @endif
