@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 use App\Models\Trabajador;
 use App\Models\DocumentoCompra;
+use App\Models\Vacacion;
 use App\Services\AutomaticEmailService;
 use App\Mail\CumpleaniosNotificacion;
 use Illuminate\Support\Facades\Mail;
@@ -14,6 +15,7 @@ use App\Mail\DocumentosVencimientosNotificacion;
 use App\Mail\DocumentosAtrasadosMail;
 use App\Mail\ReservasDiariasMail;
 use Carbon\Carbon;
+use App\Mail\VacacionesProximasNotificacion;
 
 
 // ===========================================================
@@ -173,6 +175,76 @@ Schedule::call(function () {
 
 })
 ->weekdays()->at('08:00');
+
+
+Schedule::call(function () {
+
+    Log::info('⏳ [VACACIONES] Iniciando verificación de vacaciones próximas');
+
+    $hoy = Carbon::today();
+
+    $vacaciones = Vacacion::with(['trabajador', 'solicitud'])
+        ->whereHas('solicitud', function ($query) {
+            $query->where('estado', 'aprobado')
+                  ->where('tipo_dia', 'vacaciones');
+        })
+        ->whereDate('fecha_inicio', '>', $hoy)
+        ->get();
+
+    foreach ($vacaciones as $vacacion) {
+
+        $fechaInicio = Carbon::parse($vacacion->fecha_inicio);
+        $diasRestantes = $hoy->diffInDays($fechaInicio, false);
+
+        // Ventana válida: desde 7 días antes hasta 1 día antes
+        if ($diasRestantes > 7 || $diasRestantes <= 0) {
+            continue;
+        }
+
+        // Lógica intercalada (día por medio)
+        if ($diasRestantes % 2 === 0) {
+            continue;
+        }
+
+        Log::info(
+            '📌 [VACACIONES] Vacación próxima detectada',
+            [
+                'vacacion_id'    => $vacacion->id,
+                'trabajador_id'  => $vacacion->trabajador_id,
+                'fecha_inicio'   => $vacacion->fecha_inicio->format('Y-m-d'),
+                'dias_restantes' => $diasRestantes,
+            ]
+        );
+
+        $destinos = [
+            'luisdelabarra@4nlogistica.cl',
+            'raul.suazo@4nlogistica.cl',
+            'jp.soza@4nlogistica.cl',
+            'hansdelabarra@4nlogistica.cl',
+            'eliascorrea@4nlogistica.cl',
+
+        ];
+
+        Mail::to($destinos)->send(
+            new VacacionesProximasNotificacion($vacacion, $diasRestantes)
+        );
+
+        Log::info(
+            '📧 [VACACIONES] Correo enviado por vacaciones próximas',
+            [
+                'vacacion_id'    => $vacacion->id,
+                'fecha_inicio'   => $vacacion->fecha_inicio->format('Y-m-d'),
+                'dias_restantes' => $diasRestantes,
+                'destinatarios'  => $destinos,
+            ]
+        );
+    }
+
+    Log::info('✅ [VACACIONES] Verificación de vacaciones finalizada');
+
+})->dailyAt('09:00');
+
+
 
 
 
