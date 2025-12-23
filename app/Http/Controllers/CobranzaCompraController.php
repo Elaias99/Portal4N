@@ -199,17 +199,21 @@ class CobranzaCompraController extends Controller
 
                 $creditos = (int) ($cobranzaCompra->creditos ?? 0);
 
-                $fechaVenc = $documento->fecha_vencimiento
-                    ?? Carbon::parse($documento->fecha_docto ?? now())
-                        ->addDays($creditos)
-                        ->format('Y-m-d');
+                $fechaVenc = Carbon::parse($documento->fecha_docto ?? now())
+                    ->addDays($creditos)
+                    ->format('Y-m-d');
+
+                $status = Carbon::parse($fechaVenc)->isPast()
+                    ? 'Vencido'
+                    : 'Al día';
 
                 $documento->update([
                     'cobranza_compra_id' => $cobranzaCompra->id,
-                    'estado'             => $documento->status_original ?? 'Pendiente',
-                    'status_original'    => $documento->status_original ?? 'Pendiente',
                     'fecha_vencimiento'  => $fechaVenc,
+                    'status_original'    => $status,
+                    'estado'             => null,
                 ]);
+
 
                 // 🧪 DEBUG CLARO
                 Log::info('🧪 [DEBUG REPROCESO] Documento reprocesado', [

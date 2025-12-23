@@ -195,17 +195,20 @@ class ComprasImport implements ToModel, WithHeadingRow
                 // 🟢 Estado manual debe ser null
                 'estado'            => null,
 
+
+
+
                 // 🟢 Fecha de vencimiento usando 30 días por defecto
-                'fecha_vencimiento' => Carbon::parse($this->transformDate($row['fecha_docto']))
-                                        ->addDays((int) 30)
-                                        ->format('Y-m-d'),
-
+                'fecha_vencimiento' => null,
                 // 🟢 Estado automático real
-                'status_original'   => Carbon::parse(
-                    Carbon::parse($this->transformDate($row['fecha_docto']))
-                        ->addDays(30)
-                )->isPast() ? 'Vencido' : 'Al día',
+                'status_original'   => 'Pendiente',
 
+
+
+
+
+
+                
                 // 🟢 Saldo pendiente inicial
                 'saldo_pendiente'   => $this->cleanNumber($row['monto_total'] ?? 0),
 
