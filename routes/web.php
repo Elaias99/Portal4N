@@ -176,6 +176,19 @@ Route::middleware(['auth'])->group(function () {
         \App\Http\Controllers\Admin\AutomaticEmailController::class
     )->names('admin.automatic_emails');
 
+    Route::post(
+        'automatic-emails/{automatic_email}/test',
+        [\App\Http\Controllers\Admin\AutomaticEmailController::class, 'test']
+    )->name('admin.automatic_emails.test');
+
+
+    Route::post(
+        'automatic-emails/{automatic_email}/simulate',
+        [\App\Http\Controllers\Admin\AutomaticEmailController::class, 'simulate']
+    )->name('admin.automatic_emails.simulate');
+
+
+
     
 
 });

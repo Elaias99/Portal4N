@@ -15,6 +15,7 @@ class AutomaticEmail extends Model
         'hora_envio',
         'dias_semana',
         'activo',
+        'last_sent_at',
     ];
 
     protected $casts = [

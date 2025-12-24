@@ -41,16 +41,31 @@
 
 <div class="mb-3">
     <label class="form-label">Días de la semana (si es semanal)</label>
+
+
     @php
-        $seleccion = old('dias_semana', $email->dias_semana ?? []);
+        $dias = [
+            1 => 'Lunes',
+            2 => 'Martes',
+            3 => 'Miércoles',
+            4 => 'Jueves',
+            5 => 'Viernes',
+            6 => 'Sábado',
+            0 => 'Domingo',
+        ];
     @endphp
-    @foreach (['lunes','martes','miercoles','jueves','viernes','sabado','domingo'] as $dia)
+
+    @foreach ($dias as $valor => $label)
         <label class="me-2">
-            <input type="checkbox" name="dias_semana[]" value="{{ $dia }}" 
-            {{ in_array($dia, $seleccion ?? []) ? 'checked' : '' }}>
-            {{ ucfirst($dia) }}
+            <input type="checkbox" name="dias_semana[]" value="{{ $valor }}"
+                {{ in_array($valor, $seleccion ?? []) ? 'checked' : '' }}>
+            {{ $label }}
         </label>
     @endforeach
+
+
+
+
 </div>
 
 <div class="mb-3">

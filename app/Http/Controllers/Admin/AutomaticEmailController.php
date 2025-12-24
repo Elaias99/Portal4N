@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Admin;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\AutomaticEmail;
+use App\Services\AutomaticEmailService;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class AutomaticEmailController extends Controller
 {
@@ -33,8 +36,6 @@ class AutomaticEmailController extends Controller
             'activo'          => 'required|boolean',
         ]);
 
-        $data['dias_semana'] = $request->dias_semana ? json_encode($request->dias_semana) : null;
-
         AutomaticEmail::create($data);
 
         return redirect()
@@ -62,7 +63,6 @@ class AutomaticEmailController extends Controller
             'activo'          => 'required|boolean',
         ]);
 
-        $data['dias_semana'] = $request->dias_semana ? json_encode($request->dias_semana) : null;
 
         $automatic_email->update($data);
 
@@ -93,7 +93,54 @@ class AutomaticEmailController extends Controller
     
 
 
+    public function test(AutomaticEmail $automatic_email, AutomaticEmailService $service)
+    {
+        Log::info("🧪 Test manual iniciado", [
+            'email_id' => $automatic_email->id
+        ]);
 
+        $ahora = Carbon::now();
+
+        // Forzar envío ignorando hora/frecuencia
+        $service->enviarCorreoManual($automatic_email);
+
+        return redirect()
+            ->route('admin.automatic_emails.index')
+            ->with('success', 'Correo de prueba enviado correctamente.');
+    }
+
+
+
+    
+
+
+
+public function simulate(
+    AutomaticEmail $automatic_email,
+    AutomaticEmailService $service
+) {
+    $ahora = Carbon::now();
+
+    Log::info("🧪 Simulación automática iniciada", [
+        'email_id' => $automatic_email->id,
+        'hora_actual' => $ahora->format('H:i'),
+        'dia' => $ahora->dayOfWeek
+    ]);
+
+    // Usamos la MISMA lógica del scheduler,
+    // pero solo para este correo
+    $resultado = $service->procesarSimulacion($automatic_email);
+
+    if ($resultado === true) {
+        return redirect()
+            ->route('admin.automatic_emails.index')
+            ->with('success', '✅ El correo cumplía las reglas y fue enviado.');
+    }
+
+    return redirect()
+        ->route('admin.automatic_emails.index')
+        ->with('warning', '⏭ El correo NO cumplía las reglas (hora / día / frecuencia).');
+}
 
 
 
