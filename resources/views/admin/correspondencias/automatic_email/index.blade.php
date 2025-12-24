@@ -4,84 +4,206 @@
 
 <div class="container">
 
-    <h1 class="mb-4">📨 Correos Automáticos</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0">Correos automáticos</h1>
 
-    <a href="{{ route('admin.automatic_emails.create') }}" class="btn btn-primary mb-3">
-        <i class="fas fa-plus mr-1"></i> Nuevo Correo Automático
-    </a>
+        <a href="{{ route('admin.automatic_emails.create') }}"
+           class="btn btn-primary">
+            Nuevo correo automático
+        </a>
+    </div>
 
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
+    <div class="email-rules">
 
-            <div class="table-responsive">
-                <table class="table table-striped mb-0">
-                    <thead class="thead-dark">
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Asunto</th>
-                            <th>Frecuencia</th>
-                            <th>Hora</th>
-                            <th>Activo</th>
-                            <th width="150">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($emails as $email)
-                            <tr>
-                                <td>{{ $email->nombre }}</td>
-                                <td>{{ $email->asunto }}</td>
-                                <td>{{ ucfirst($email->tipo_frecuencia) }}</td>
-                                <td>{{ $email->hora_envio ? substr($email->hora_envio, 0, 5) : '-' }}</td>
+        @forelse ($emails as $email)
+            <div class="email-rule">
 
-                                <td>
-                                    @if($email->activo)
-                                        <span class="badge badge-success">Activo</span>
-                                    @else
-                                        <span class="badge badge-danger">Inactivo</span>
-                                    @endif
-                                </td>
+                <div class="email-rule-content">
 
-                                <td>
-                                    <a href="{{ route('admin.automatic_emails.edit', $email->id) }}" 
-                                       class="btn btn-sm btn-warning">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
+                    <div class="email-rule-title">
+                        {{ $email->nombre }}
+                    </div>
 
-                                    <form method="POST" 
-                                          action="{{ route('admin.automatic_emails.destroy', $email->id) }}" 
-                                          class="d-inline"
-                                          onsubmit="return confirm('¿Seguro que deseas eliminar este correo?');">
-                                        @csrf
-                                        @method('DELETE')
+                    <div class="email-rule-subject">
+                        {{ $email->asunto }}
+                    </div>
 
-                                        <button type="submit" class="btn btn-sm btn-danger">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
+                    <div class="email-rule-details">
+                        <div>
+                            <strong>De:</strong>
+                            {{ config('mail.from.address') }}
+                        </div>
 
+                        <div>
+                            <strong>Para:</strong>
+                            {{ $email->destinatarios }}
+                        </div>
+                    </div>
 
+                    <div class="email-rule-meta">
+                        <span>{{ ucfirst($email->tipo_frecuencia) }}</span>
+                        <span class="dot">·</span>
 
+                        <span>
+                            {{ $email->hora_envio ? substr($email->hora_envio, 0, 5) : 'Sin hora' }}
+                        </span>
 
-                                    
+                        <span class="dot">·</span>
 
+                        <span class="{{ $email->activo ? 'status-active' : 'status-inactive' }}">
+                            {{ $email->activo ? 'Activo' : 'Inactivo' }}
+                        </span>
+                    </div>
 
-                                </td>
+                    <div class="email-rule-range">
+                        <span>
+                            Desde {{ $email->created_at->format('d/m/Y') }}
+                        </span>
 
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="text-center py-4">
-                                    No hay correos automáticos creados.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                        <span class="dot">·</span>
+
+                        <span>
+                            Sin fecha de término
+                        </span>
+                    </div>
+
+                </div>
+
+                <div class="email-rule-actions">
+                    <a href="{{ route('admin.automatic_emails.edit', $email->id) }}">
+                        Editar
+                    </a>
+
+                    <form method="POST"
+                        action="{{ route('admin.automatic_emails.destroy', $email->id) }}"
+                        onsubmit="return confirm('¿Eliminar este correo automático?');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit">
+                            Eliminar
+                        </button>
+                    </form>
+                </div>
+
             </div>
+        @empty
+            <div class="email-rules-empty">
+                No hay correos automáticos creados.
+            </div>
+        @endforelse
 
-        </div>
+
     </div>
 
 </div>
+
+
+<style>
+
+
+    .email-rules {
+        background: #ffffff;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .email-rule {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .email-rule:last-child {
+        border-bottom: none;
+    }
+
+    .email-rule-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .email-rule-subject {
+        font-size: 0.85rem;
+        color: #6b7280;
+        margin-top: 2px;
+    }
+
+    .email-rule-meta {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        margin-top: 6px;
+    }
+
+    .email-rule-meta .dot {
+        margin: 0 6px;
+    }
+
+    .status-active {
+        color: #047857;
+    }
+
+    .status-inactive {
+        color: #6b7280;
+    }
+
+    .email-rule-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        white-space: nowrap;
+    }
+
+    .email-rule-actions a,
+    .email-rule-actions button {
+        background: none;
+        border: none;
+        padding: 0;
+        font-size: 0.8rem;
+        color: #2563eb;
+        cursor: pointer;
+    }
+
+    .email-rule-actions button {
+        color: #dc2626;
+    }
+
+    .email-rules-empty {
+        padding: 24px;
+        text-align: center;
+        color: #6b7280;
+        font-size: 0.85rem;
+    }
+
+
+    .email-rule-details {
+        margin-top: 8px;
+        font-size: 0.8rem;
+        color: #374151;
+    }
+
+    .email-rule-details div {
+        margin-bottom: 2px;
+    }
+
+    .email-rule-details strong {
+        font-weight: 500;
+        color: #111827;
+    }
+
+    .email-rule-range {
+        margin-top: 6px;
+        font-size: 0.75rem;
+        color: #9ca3af;
+    }
+
+
+
+
+
+
+</style>
 
 @endsection

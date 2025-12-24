@@ -25,11 +25,17 @@
 
         @include('admin.correspondencias.automatic_email.form')
 
-        <div class="mt-4">
+        <div class="d-flex gap-2 mt-4">
             <button type="submit" class="btn btn-primary">
-                💾 Guardar Correo Automático
+                Guardar correo automático
             </button>
+
+            <a href="{{ route('admin.automatic_emails.index') }}"
+            class="btn btn-outline-secondary">
+                Cancelar y volver al listado
+            </a>
         </div>
+
     </form>
 
 </div>
