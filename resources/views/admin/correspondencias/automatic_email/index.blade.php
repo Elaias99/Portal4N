@@ -40,12 +40,40 @@
                         </div>
                     </div>
 
-                    <div class="email-rule-meta">
-                        <span>{{ ucfirst($email->tipo_frecuencia) }}</span>
-                        <span class="dot">·</span>
 
+
+
+                    <div class="email-rule-meta">
+
+                        {{-- DESCRIPCIÓN HUMANA --}}
                         <span>
-                            {{ $email->hora_envio ? substr($email->hora_envio, 0, 5) : 'Sin hora' }}
+                            @php
+                                $hora = $email->hora_envio ? substr($email->hora_envio, 0, 5) : 'hora no definida';
+
+                                $diasSemana = [
+                                    1 => 'lunes',
+                                    2 => 'martes',
+                                    3 => 'miércoles',
+                                    4 => 'jueves',
+                                    5 => 'viernes',
+                                    6 => 'sábado',
+                                    0 => 'domingo',
+                                ];
+
+                                $diasSeleccionados = collect($email->dias_semana ?? [])
+                                    ->map(fn($d) => $diasSemana[$d] ?? null)
+                                    ->filter()
+                                    ->values()
+                                    ->implode(', ');
+                            @endphp
+
+                            @if ($email->tipo_frecuencia === 'diario')
+                                Se envía todos los días a las {{ $hora }}
+                            @elseif ($email->tipo_frecuencia === 'semanal')
+                                Se envía los {{ $diasSeleccionados }} a las {{ $hora }}
+                            @elseif ($email->tipo_frecuencia === 'mensual')
+                                Se envía el primer día de cada mes a las {{ $hora }}
+                            @endif
                         </span>
 
                         <span class="dot">·</span>
@@ -53,19 +81,13 @@
                         <span class="{{ $email->activo ? 'status-active' : 'status-inactive' }}">
                             {{ $email->activo ? 'Activo' : 'Inactivo' }}
                         </span>
+
                     </div>
 
-                    <div class="email-rule-range">
-                        <span>
-                            Desde {{ $email->created_at->format('d/m/Y') }}
-                        </span>
 
-                        <span class="dot">·</span>
 
-                        <span>
-                            Sin fecha de término
-                        </span>
-                    </div>
+
+
 
                 </div>
 
