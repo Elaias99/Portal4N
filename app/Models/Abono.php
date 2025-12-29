@@ -21,6 +21,14 @@ class Abono extends Model
         return $this->belongsTo(DocumentoCompra::class, 'documento_compra_id');
     }
 
+    public function movimientos()
+    {
+        return $this->morphMany(
+            MovimientoDocumento::class,
+            'origen'
+        );
+    }
+
 
 
 

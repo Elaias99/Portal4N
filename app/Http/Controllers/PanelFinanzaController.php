@@ -96,52 +96,109 @@ class PanelFinanzaController extends Controller
 
         // === Consulta base ===
         $query = MovimientoDocumento::with(['documento.empresa', 'documento.tipoDocumento', 'user'])
+
+
             ->when($fechaInicio || $fechaFin, function ($q) use ($fechaInicio, $fechaFin) {
 
                 $q->where(function ($sub) use ($fechaInicio, $fechaFin) {
 
-                    // FILTRO PARA ABONOS
-                    $sub->orWhereHas('documento.abonos', function ($a) use ($fechaInicio, $fechaFin) {
-                        if ($fechaInicio) {
-                            $a->whereDate('fecha_abono', '>=', $fechaInicio);
+                    // =========================
+                    // MOVIMIENTOS NUEVOS (con origen)
+                    // =========================
+                    $sub->orWhereHasMorph(
+                        'origen',
+                        [
+                            \App\Models\Abono::class,
+                            \App\Models\Pago::class,
+                            \App\Models\Cruce::class,
+                            \App\Models\ProntoPago::class,
+                        ],
+                        function ($origenQuery, $type) use ($fechaInicio, $fechaFin) {
+
+                            if ($type === \App\Models\Abono::class) {
+                                if ($fechaInicio) $origenQuery->whereDate('fecha_abono', '>=', $fechaInicio);
+                                if ($fechaFin)    $origenQuery->whereDate('fecha_abono', '<=', $fechaFin);
+                            }
+
+                            if ($type === \App\Models\Pago::class) {
+                                if ($fechaInicio) $origenQuery->whereDate('fecha_pago', '>=', $fechaInicio);
+                                if ($fechaFin)    $origenQuery->whereDate('fecha_pago', '<=', $fechaFin);
+                            }
+
+                            if ($type === \App\Models\Cruce::class) {
+                                if ($fechaInicio) $origenQuery->whereDate('fecha_cruce', '>=', $fechaInicio);
+                                if ($fechaFin)    $origenQuery->whereDate('fecha_cruce', '<=', $fechaFin);
+                            }
+
+                            if ($type === \App\Models\ProntoPago::class) {
+                                if ($fechaInicio) $origenQuery->whereDate('fecha_pronto_pago', '>=', $fechaInicio);
+                                if ($fechaFin)    $origenQuery->whereDate('fecha_pronto_pago', '<=', $fechaFin);
+                            }
                         }
-                        if ($fechaFin) {
-                            $a->whereDate('fecha_abono', '<=', $fechaFin);
-                        }
+                    );
+
+                    // =========================
+                    // MOVIMIENTOS ANTIGUOS (sin origen, usando JSON)
+                    // =========================
+                    $sub->orWhere(function ($q2) use ($fechaInicio, $fechaFin) {
+
+                        $q2->whereNull('origen_id')
+                        ->where(function ($q3) use ($fechaInicio, $fechaFin) {
+
+                                // ABONOS
+                                $q3->orWhere(function ($q4) use ($fechaInicio, $fechaFin) {
+                                    $q4->where('tipo_movimiento', 'like', '%Abono%');
+
+                                    if ($fechaInicio) {
+                                        $q4->whereDate(
+                                            DB::raw("JSON_UNQUOTE(JSON_EXTRACT(datos_nuevos, '$.fecha_abono'))"),
+                                            '>=',
+                                            $fechaInicio
+                                        );
+                                    }
+
+                                    if ($fechaFin) {
+                                        $q4->whereDate(
+                                            DB::raw("JSON_UNQUOTE(JSON_EXTRACT(datos_nuevos, '$.fecha_abono'))"),
+                                            '<=',
+                                            $fechaFin
+                                        );
+                                    }
+                                });
+
+                                // PAGOS
+                                $q3->orWhere(function ($q4) use ($fechaInicio, $fechaFin) {
+                                    $q4->where('tipo_movimiento', 'like', '%Pago%');
+
+                                    if ($fechaInicio) {
+                                        $q4->whereDate(
+                                            DB::raw("JSON_UNQUOTE(JSON_EXTRACT(datos_nuevos, '$.fecha_pago'))"),
+                                            '>=',
+                                            $fechaInicio
+                                        );
+                                    }
+
+                                    if ($fechaFin) {
+                                        $q4->whereDate(
+                                            DB::raw("JSON_UNQUOTE(JSON_EXTRACT(datos_nuevos, '$.fecha_pago'))"),
+                                            '<=',
+                                            $fechaFin
+                                        );
+                                    }
+                                });
+
+                        });
                     });
 
-                    // FILTRO PARA CRUCES
-                    $sub->orWhereHas('documento.cruces', function ($c) use ($fechaInicio, $fechaFin) {
-                        if ($fechaInicio) {
-                            $c->whereDate('fecha_cruce', '>=', $fechaInicio);
-                        }
-                        if ($fechaFin) {
-                            $c->whereDate('fecha_cruce', '<=', $fechaFin);
-                        }
-                    });
-
-                    // FILTRO PARA PAGOS
-                    $sub->orWhereHas('documento.pagos', function ($p) use ($fechaInicio, $fechaFin) {
-                        if ($fechaInicio) {
-                            $p->whereDate('fecha_pago', '>=', $fechaInicio);
-                        }
-                        if ($fechaFin) {
-                            $p->whereDate('fecha_pago', '<=', $fechaFin);
-                        }
-                    });
-
-                    // FILTRO PARA PRONTO PAGO
-                    $sub->orWhereHas('documento.prontoPagos', function ($pp) use ($fechaInicio, $fechaFin) {
-                        if ($fechaInicio) {
-                            $pp->whereDate('fecha_pronto_pago', '>=', $fechaInicio);
-                        }
-                        if ($fechaFin) {
-                            $pp->whereDate('fecha_pronto_pago', '<=', $fechaFin);
-                        }
-                    });
 
                 });
             })
+
+
+
+
+
+
             ->when($empresaId, fn($q) =>
                 $q->whereHas('documento', fn($d) =>
                     $d->where('empresa_id', $empresaId)
@@ -196,7 +253,6 @@ class PanelFinanzaController extends Controller
         // === Vista ===
         return view('panelfinanza.show', compact('movimientos', 'empresas', 'totalMontos'));
     }
-
 
 
 
