@@ -35,6 +35,14 @@ class ProntoPago extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function movimientos()
+    {
+        return $this->morphMany(
+            MovimientoDocumento::class,
+            'origen'
+        );
+    }
+
 
 
 

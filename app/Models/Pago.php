@@ -35,5 +35,14 @@ class Pago extends Model
     }
 
 
+    public function movimientos()
+    {
+        return $this->morphMany(
+            MovimientoDocumento::class,
+            'origen'
+        );
+    }
+
+
 
 }

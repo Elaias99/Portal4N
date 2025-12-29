@@ -252,7 +252,7 @@ class PagoDocumentoController extends Controller
             'duplicados' => $duplicados,
         ]);
 
-        // 🔐 Guardar IDs para exportación
+        // Guardar IDs para exportación
         session([
             'pagos_masivos_export' => $ids
         ]);
@@ -278,7 +278,7 @@ class PagoDocumentoController extends Controller
             'ids' => $ids
         ]);
 
-        // 🔐 Limpiar sesión para evitar descargas duplicadas
+        // Limpiar sesión para evitar descargas duplicadas
         session()->forget('pagos_masivos_export');
 
         $nombreArchivo = 'pagos_masivos_' . now()->format('Ymd_His') . '.xlsx';
@@ -299,25 +299,28 @@ class PagoDocumentoController extends Controller
 
     public function buscarDocumentos(Request $request)
     {
-        $filtro = $request->get('filtro');
+        $filtro = trim($request->get('filtro'));
 
         $documentos = DocumentoCompra::where(function ($query) use ($filtro) {
-                $query->where('folio', 'like', "%{$filtro}%")
-                    ->orWhere('razon_social', 'like', "%{$filtro}%")
-                    ->orWhere('rut_proveedor', 'like', "%{$filtro}%");
+
+                if (ctype_digit($filtro)) {
+                    // 🔹 Búsqueda EXACTA por folio
+                    $query->where('folio', $filtro);
+                } else {
+                    // 🔹 Búsqueda por texto
+                    $query->where('razon_social', 'like', "%{$filtro}%")
+                        ->orWhere('rut_proveedor', 'like', "%{$filtro}%");
+                }
+
             })
-            ->where('saldo_pendiente', '>', 0)     // 🔴 SOLO PENDIENTES
-            ->whereDoesntHave('pagos')             // 🔴 SIN PAGO REGISTRADO
+            ->where('saldo_pendiente', '>', 0)     // SOLO PENDIENTES
+            ->whereDoesntHave('pagos')             // SIN PAGO REGISTRADO
             ->orderBy('fecha_vencimiento', 'asc')
             ->get();
 
-        // \Log::info('🧪 BUSQUEDA PAGOS MASIVOS', [
-        //     'filtro' => $filtro,
-        //     'resultados' => $documentos->count(),
-        // ]);
-
         return response()->json($documentos);
     }
+
 
 
 

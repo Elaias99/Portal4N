@@ -12,7 +12,7 @@
 
             {{-- === BODY === --}}
             <div class="modal-body">
-                {{-- 🔍 Búsqueda --}}
+                {{-- Búsqueda --}}
                 <form id="form-busqueda-pagos" method="GET" onsubmit="buscarDocumentosMasivos(event)">
                     <div class="row g-2 mb-3">
                         <div class="col-md-5">
@@ -27,7 +27,7 @@
                     </div>
                 </form>
 
-                {{-- 📋 Resultados de búsqueda --}}
+                {{-- Resultados de búsqueda --}}
                 <form id="form-pagos-masivos" action="{{ route('documentos.pagos.masivo') }}" method="POST">
                     @csrf
 
@@ -84,7 +84,7 @@
                     </div>
                 </form>
 
-                {{-- 🕳️ Mensaje cuando no hay resultados --}}
+                {{-- Mensaje cuando no hay resultados --}}
                 <div id="sin-resultados" class="text-center text-muted mt-3" style="display:none;">
                     <i class="bi bi-inbox"></i> No se encontraron documentos.
                 </div>
@@ -264,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!form) return;
 
     form.addEventListener('submit', function (e) {
-        e.preventDefault(); // ⛔ detener submit normal
+        e.preventDefault(); // detener submit normal
 
         btn.disabled = true;
         btn.innerHTML = 'Procesando pagos...';
@@ -288,10 +288,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error('Respuesta inválida');
             }
 
-            // 2️⃣ Descargar Excel (GET)
+            //Descargar Excel (GET)
             window.location.href = "{{ route('documentos.pagos.masivo.export') }}";
 
-            // 3️⃣ Cerrar modal y refrescar después
+            // Cerrar modal y refrescar después
             setTimeout(() => {
                 const modal = bootstrap.Modal.getInstance(
                     document.getElementById('modalPagosMasivos')

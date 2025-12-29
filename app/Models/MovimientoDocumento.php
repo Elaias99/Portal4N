@@ -18,6 +18,8 @@ class MovimientoDocumento extends Model
         'descripcion',
         'datos_anteriores',
         'datos_nuevos',
+        'origen_id',
+        'origen_type',
     ];
 
     protected $casts = [
@@ -35,4 +37,10 @@ class MovimientoDocumento extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    public function origen()
+    {
+        return $this->morphTo();
+    }
+
 }
