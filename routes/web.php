@@ -39,6 +39,7 @@ use App\Http\Controllers\CruceController;
 use App\Http\Controllers\DocumentoCompraController;
 use App\Http\Controllers\Admin\BackupDatabaseController;
 use App\Http\Controllers\Admin\ControlPanelAdminController;
+use App\Http\Controllers\HonorarioResumenAnualController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -537,6 +538,22 @@ Route::post('/compras/asignar-referencias', [DocumentoCompraController::class, '
 
 
 
+// Rutas Honorarios Resumen Anual
+Route::get(
+    '/honorarios/resumen-anual',
+    [HonorarioResumenAnualController::class, 'index']
+)->name('honorarios.resumen.index');
+
+Route::post(
+    '/honorarios/resumen-anual/store',
+    [HonorarioResumenAnualController::class, 'store']
+)->name('honorarios.resumen.store');
+
+
+Route::post(
+    '/honorarios/resumen-anual/import',
+    [HonorarioResumenAnualController::class, 'import']
+)->name('honorarios.resumen.import');
 
 
 
