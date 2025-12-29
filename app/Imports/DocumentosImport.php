@@ -218,12 +218,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                     'tasa_otro_imp'                  => $this->cleanNumber($row['tasa_otro_imp']),
 
 
-                    'status'          => $this->definirEstadoInicial(
-                                            $this->calcularFechaVencimiento(
-                                                Carbon::parse($this->transformDate($row['fecha_docto']))->toDateString(),
-                                                $cobranza?->creditos ?? 30
-                                            )
-                                        ),
+                    'status'          => null,
                     'status_original' => $this->definirEstadoInicial(
                                             $this->calcularFechaVencimiento(
                                                 Carbon::parse($this->transformDate($row['fecha_docto']))->toDateString(),
@@ -312,7 +307,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                 'empresa_id' => $this->empresaId,
                 'cobranza_id' => $cobranza?->id,
                 'status_original' => $estadoInicial,
-                'status' => $estadoInicial,
+                'status' => null,
                 'tipo_docto_referencia' => $tipoReferencia,
                 'folio_docto_referencia' => $folioReferencia,
                 'referencia_id' => $factura?->id,
@@ -399,7 +394,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
             // 🧩 Guardamos ambos estados
             'status_original' => $estadoInicial,
-            'status' => $estadoInicial,
+            'status' => null,
         ]);
 
         // Registrar como importado solo después de todo el proceso
