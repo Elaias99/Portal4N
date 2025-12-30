@@ -15,7 +15,6 @@ class BteResumenAnualParser
 
         $raw = file_get_contents($archivo->getRealPath());
 
-        // Normalización de encoding (archivos SII)
         $this->contenido = mb_convert_encoding(
             $raw,
             'UTF-8',
@@ -32,90 +31,134 @@ class BteResumenAnualParser
             'rut_contribuyente' => $this->extraerRut(),
             'razon_social'      => $this->extraerRazonSocial(),
             'anio'              => $this->extraerAnio(),
-            'meses'             => $this->extraerMeses(),
+            'mes'               => $this->extraerMes(),
+            'registros'         => $this->extraerBoletas(),
             'totales'           => $this->extraerTotales(),
         ];
     }
 
-
     protected function extraerRut(): ?string
     {
-        if (preg_match('/RUT\s*:\s*([0-9\-Kk]+)/', $this->contenido, $m)) {
-            return trim($m[1]);
-        }
-
-        return null;
+        return preg_match('/RUT\s*:\s*([0-9\-Kk]+)/i', $this->contenido, $m)
+            ? trim($m[1])
+            : null;
     }
 
     protected function extraerRazonSocial(): ?string
     {
-        if (preg_match('/Contribuyente\s*:\s*([^\r\n<]+)/i', $this->contenido, $m)) {
-            return trim($m[1]);
-        }
-
-        return null;
+        return preg_match('/Contribuyente\s*:\s*([^\r\n<]+)/i', $this->contenido, $m)
+            ? trim($m[1])
+            : null;
     }
 
     protected function extraerAnio(): ?int
     {
-        if (preg_match('/Informe\s+correspondiente\s+al\s+año\s+(\d{4})/i', $this->contenido, $m)) {
-            return (int) $m[1];
+        return preg_match('/año\s+(\d{4})/i', $this->contenido, $m)
+            ? (int) $m[1]
+            : null;
+    }
+
+    protected function extraerMes(): ?int
+    {
+        if (preg_match(
+            '/correspondiente\s+a\s+([A-Za-zÁÉÍÓÚáéíóú]+)\s+del\s+año/i',
+            $this->contenido,
+            $m
+        )) {
+            $mes = strtoupper(trim($m[1]));
+
+            return [
+                'ENERO'       => 1,
+                'FEBRERO'     => 2,
+                'MARZO'       => 3,
+                'ABRIL'       => 4,
+                'MAYO'        => 5,
+                'JUNIO'       => 6,
+                'JULIO'       => 7,
+                'AGOSTO'      => 8,
+                'SEPTIEMBRE'  => 9,
+                'OCTUBRE'     => 10,
+                'NOVIEMBRE'   => 11,
+                'DICIEMBRE'   => 12,
+            ][$mes] ?? null;
         }
 
         return null;
     }
 
-    protected function extraerMeses(): array
+
+    /**
+     * EXTRAER BOLETAS INDIVIDUALES
+     */
+    protected function extraerBoletas(): array
     {
-        $meses = [];
+        $boletas = [];
 
-        preg_match_all(
-            '/<tr>\s*<td>.*?(ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|SEPTIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE).*?<\/tr>/si',
-            $this->contenido,
-            $rows
-        );
+        preg_match_all('/<tr[^>]*>(.*?)<\/tr>/si', $this->contenido, $rows);
 
-        foreach ($rows[0] as $row) {
-            preg_match_all(
-                '/<td[^>]*>\s*<div[^>]*>\s*<font[^>]*>(.*?)<\/font>/si',
-                $row,
-                $cols
+        foreach ($rows[1] as $row) {
+            preg_match_all('/<td[^>]*>(.*?)<\/td>/si', $row, $cols);
+
+            $c = array_map(
+                fn ($v) => trim(preg_replace('/\s+/', ' ', strip_tags($v))),
+                $cols[1]
             );
 
-            if (count($cols[1]) >= 8) {
-                $meses[] = [
-                    'mes_nombre'       => trim($cols[1][0]),
-                    'folio_inicial'    => (int) str_replace('.', '', $cols[1][1]),
-                    'folio_final'      => (int) str_replace('.', '', $cols[1][2]),
-                    'boletas_vigentes' => (int) $cols[1][3],
-                    'boletas_nulas'    => (int) $cols[1][4],
-                    'honorario_bruto'  => (int) str_replace('.', '', $cols[1][5]),
-                    'retenciones'      => (int) str_replace('.', '', $cols[1][6]),
-                    'total_liquido'    => (int) str_replace('.', '', $cols[1][7]),
-                ];
+            // Validación mínima: fila real de boleta
+            if (count($c) < 11 || !is_numeric($c[0])) {
+                continue;
             }
+
+            $boletas[] = [
+                'folio'           => (int) $c[0],
+                'estado'          => $c[1],
+
+                // 🔴 CLAVES QUE FALTABAN
+                'fecha_boleta'    => $this->normalizarFecha($c[2]),
+                'fecha_emision'   => $this->normalizarFecha($c[5]),
+
+                'rut_emisor'      => $c[3],
+                'nombre_emisor'   => $c[4],
+
+                'rut_receptor'    => $c[6],
+                'nombre_receptor' => $c[7],
+
+                'monto_bruto'     => (int) str_replace('.', '', $c[8]),
+                'monto_retenido'  => (int) str_replace('.', '', $c[9]),
+                'monto_pagado'    => (int) str_replace('.', '', $c[10]),
+            ];
         }
 
-        return $meses;
+        return $boletas;
     }
 
 
     protected function extraerTotales(): ?array
     {
-        if (preg_match(
-            '/\*Totales.*?<font[^>]*>(\d+).*?<font[^>]*>(\d+).*?<font[^>]*>(\d+).*?<font[^>]*>(\d+).*?<font[^>]*>([\d\.]+).*?<font[^>]*>([\d\.]+).*?<font[^>]*>([\d\.]+)/si',
+        return preg_match(
+            '/Totales.*?([\d\.]+).*?([\d\.]+).*?([\d\.]+)/si',
             $this->contenido,
             $m
-        )) {
-            return [
-                'folio_inicial'    => (int) $m[1],
-                'folio_final'      => (int) $m[2],
-                'boletas_vigentes' => (int) $m[3],
-                'boletas_nulas'    => (int) $m[4],
-                'honorario_bruto'  => (int) str_replace('.', '', $m[5]),
-                'retenciones'      => (int) str_replace('.', '', $m[6]),
-                'total_liquido'    => (int) str_replace('.', '', $m[7]),
-            ];
+        )
+        ? [
+            'bruto'    => (int) str_replace('.', '', $m[1]),
+            'retenido' => (int) str_replace('.', '', $m[2]),
+            'pagado'   => (int) str_replace('.', '', $m[3]),
+        ]
+        : null;
+    }
+
+    protected function normalizarFecha(?string $fecha): ?string
+    {
+        if (!$fecha) {
+            return null;
+        }
+
+        // Espera formato dd-mm-yyyy
+        $fecha = trim($fecha);
+
+        if (preg_match('/(\d{2})-(\d{2})-(\d{4})/', $fecha, $m)) {
+            return "{$m[3]}-{$m[2]}-{$m[1]}";
         }
 
         return null;

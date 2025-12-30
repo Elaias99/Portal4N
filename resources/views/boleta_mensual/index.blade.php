@@ -83,39 +83,39 @@
                                 <td>{{ $r['rut_emisor'] }}</td>
                                 <td>{{ $r['razon_social_emisor'] }}</td>
                                 <td>{{ $r['sociedad_profesional'] ? 'SI' : 'NO' }}</td>
-                                <td>{{ number_format($r['monto_bruto'], 0, ',', '.') }}</td>
-                                <td>{{ number_format($r['monto_retenido'], 0, ',', '.') }}</td>
-                                <td>{{ number_format($r['monto_pagado'], 0, ',', '.') }}</td>
+
+
+                                <td class="text-end">
+                                    {{ number_format($r['monto_bruto'], 0, ',', '.') }}
+                                </td>
+                                <td class="text-end">
+                                    {{ number_format($r['monto_retenido'], 0, ',', '.') }}
+                                </td>
+                                <td class="text-end">
+                                    {{ number_format($r['monto_pagado'], 0, ',', '.') }}
+                                </td>
+
+
                             </tr>
                         @endforeach
+
+                        {{-- FILA DE TOTALES (estilo Excel) --}}
+                        <tr class="table-light fw-bold">
+                            <td colspan="6">Totales</td>
+                            <td class="text-end">
+                                {{ number_format($preview['totales']['bruto'], 0, ',', '.') }}
+                            </td>
+                            <td class="text-end">
+                                {{ number_format($preview['totales']['retenido'], 0, ',', '.') }}
+                            </td>
+                            <td class="text-end">
+                                {{ number_format($preview['totales']['pagado'], 0, ',', '.') }}
+                            </td>
+                        </tr>
+
+
                     </tbody>
                 </table>
-
-                {{-- Totales --}}
-                @if(isset($preview['totales']))
-                    <table class="table table-sm table-bordered mt-4">
-                        <thead class="table-secondary">
-                            <tr>
-                                <th colspan="6">Totales *</th>
-                                <th>Bruto</th>
-                                <th>Retenido</th>
-                                <th>Pagado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td colspan="6"></td>
-                                <td>{{ number_format($preview['totales']['monto_bruto'], 0, ',', '.') }}</td>
-                                <td>{{ number_format($preview['totales']['monto_retenido'], 0, ',', '.') }}</td>
-                                <td>{{ number_format($preview['totales']['monto_pagado'], 0, ',', '.') }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <small class="text-muted">
-                        (*) Los valores totales no consideran boletas anuladas.
-                    </small>
-                @endif
 
                 {{-- Botón guardar (siguiente paso) --}}
                 <div class="mt-4">

@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\HonorarioMensualRec;
 use App\Services\Sii\HonorarioMensualRecParser;
 
+use Illuminate\Support\Facades\Log;
+
 class HonorarioMensualRecController extends Controller
 {
     public function index()
@@ -29,6 +31,22 @@ class HonorarioMensualRecController extends Controller
         );
 
         $preview = $parser->parse();
+
+        $totales = [
+            'bruto'    => 0,
+            'retenido' => 0,
+            'pagado'   => 0,
+        ];
+
+        foreach ($preview['registros'] as $fila) {
+            if (($fila['estado'] ?? null) !== 'ANULADA') {
+                $totales['bruto']    += (int) ($fila['monto_bruto'] ?? 0);
+                $totales['retenido'] += (int) ($fila['monto_retenido'] ?? 0);
+                $totales['pagado']   += (int) ($fila['monto_pagado'] ?? 0);
+            }
+        }
+
+        $preview['totales'] = $totales;
 
         return redirect()
             ->route('honorarios.mensual.index')
