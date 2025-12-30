@@ -11,7 +11,7 @@ class HonorarioResumenAnual extends Model
 
     protected $table = 'honorarios_resumen_anual';
 
-        protected $fillable = [
+    protected $fillable = [
             'rut_contribuyente',
             'razon_social',
             'anio',
@@ -24,6 +24,6 @@ class HonorarioResumenAnual extends Model
             'honorario_bruto',
             'retenciones',
             'total_liquido',
-        ];
+    ];
 
 }

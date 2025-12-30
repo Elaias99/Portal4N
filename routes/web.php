@@ -40,6 +40,7 @@ use App\Http\Controllers\DocumentoCompraController;
 use App\Http\Controllers\Admin\BackupDatabaseController;
 use App\Http\Controllers\Admin\ControlPanelAdminController;
 use App\Http\Controllers\HonorarioResumenAnualController;
+use App\Http\Controllers\HonorarioMensualRecController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -554,6 +555,20 @@ Route::post(
     '/honorarios/resumen-anual/import',
     [HonorarioResumenAnualController::class, 'import']
 )->name('honorarios.resumen.import');
+
+
+
+// Rutas Honorarios Mensual Recepción
+Route::get(
+    '/honorarios/mensual-rec',
+    [HonorarioMensualRecController::class, 'index']
+)->name('honorarios.mensual.index');
+
+Route::post(
+    '/honorarios/mensual-rec/import',
+    [HonorarioMensualRecController::class, 'import']
+)->name('honorarios.mensual.import');
+
 
 
 
