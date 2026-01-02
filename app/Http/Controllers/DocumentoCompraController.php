@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Banco;
 use App\Models\TipoCuenta;
+use App\Services\ReferenciaNotasCompraService;
 
 
 class DocumentoCompraController extends Controller
@@ -354,7 +355,6 @@ class DocumentoCompraController extends Controller
      */
     public function import(Request $request)
     {
-        
         $request->validate([
             'file' => 'required|mimetypes:text/plain,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
@@ -362,22 +362,14 @@ class DocumentoCompraController extends Controller
         $file = $request->file('file');
         $filename = $file->getClientOriginalName();
 
-
-
-
-        // 🔍 Extraer el RUT del nombre del archivo (ej: RCV_COMPRA_REGISTRO_77639015-1_202510)
+        // 🔍 Extraer RUT desde el nombre del archivo
         $rut = null;
         if (preg_match('/(\d{7,8}-[0-9Kk])/', $filename, $matches)) {
             $rut = $matches[1];
         }
 
-        // 🧩 Normalizar formato: quitar puntos, guiones y espacios
-        $rutLimpio = null;
-        if ($rut) {
-            $rutLimpio = str_replace(['.', '-', ' '], '', $rut);
-        }
+        $rutLimpio = $rut ? str_replace(['.', '-', ' '], '', $rut) : null;
 
-        // 🏢 Buscar empresa con ese RUT normalizado
         $empresa = null;
         if ($rutLimpio) {
             $empresa = \App\Models\Empresa::whereRaw("
@@ -385,97 +377,132 @@ class DocumentoCompraController extends Controller
             ", [$rutLimpio])->first();
         }
 
-        // 🟢 Si no se encontró empresa, evita romper el flujo
         if (!$empresa) {
-            return redirect()->back()->with('error', "No se encontró ninguna empresa asociada al RUT {$rut} (archivo: {$filename}).");
+            return redirect()->back()
+                ->with('error', "No se encontró ninguna empresa asociada al RUT {$rut} (archivo: {$filename}).");
         }
 
-        // ✅ Importar vinculando a la empresa encontrada
+        // ✅ Importación
         $import = new ComprasImport($empresa->id);
         Excel::import($import, $request->file('file'));
-        
+
+        /*
+        |--------------------------------------------------------------------------
+        | 🔁 BLOQUE AGREGADO: reprocesar sugerencias DESPUÉS del import completo
+        |--------------------------------------------------------------------------
+        */
+        $service = new \App\Services\ReferenciaNotasCompraService();
+
+        $notas = \App\Models\DocumentoCompra::where('empresa_id', $empresa->id)
+            ->where('tipo_documento_id', 61)
+            ->whereNull('referencia_id')
+            ->where('created_at', '>=', now()->subMinutes(5))
+            ->get();
+
+        $sugerenciasPostImport = [];
+
+        foreach ($notas as $nota) {
+
+            Log::info('🧪 [POST-IMPORT] Evaluando NC para sugerencias', [
+                'nota_id' => $nota->id,
+                'folio' => $nota->folio,
+                'rut_proveedor' => $nota->rut_proveedor,
+            ]);
+
+            // 🟠 NC sin cobranza → no se sugiere nada (correcto)
+            if (!$nota->cobranza_compra_id) {
+                Log::info('🟠 [POST-IMPORT] NC sin cobranza, se omite sugerencias', [
+                    'nota_id' => $nota->id,
+                    'folio' => $nota->folio,
+                    'rut_proveedor' => $nota->rut_proveedor,
+                ]);
+                continue;
+            }
+
+            $resultado = $service->generarSugerencias($nota);
+
+            if ($resultado['sugerida'] || $resultado['alternativas']->count() > 0) {
+                $sugerenciasPostImport[] = [
+                    'nota' => $nota,
+                    'sugerida' => $resultado['sugerida'],
+                    'alternativas' => $resultado['alternativas'],
+                ];
+            }
+        }
+
+        if (!empty($sugerenciasPostImport)) {
+            session(['sugerencias_notas_compras' => $sugerenciasPostImport]);
+
+            Log::info('🧪 [POST-IMPORT] Sugerencias guardadas en sesión', [
+                'count' => count($sugerenciasPostImport),
+                'notas_ids' => collect($sugerenciasPostImport)->pluck('nota.id')->toArray(),
+            ]);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 🔚 FIN BLOQUE AGREGADO
+        |--------------------------------------------------------------------------
+        */
+
+        // ======================
+        // Lo que YA TENÍAS
+        // ======================
+
         $totalImportados = $import->nuevos;
         $totalDuplicados = count($import->duplicados);
 
         if (count($import->sugerenciasNotas) > 0) {
             session()->put('sugerencias_notas_compras', $import->sugerenciasNotas);
         }
-        // dd(session('sugerencias_notas_compras'));
 
-        
-        // Cobranzas faltantes
         if (count($import->sinCobranza) > 0) {
-
-            $mensajes = [];
-
-            foreach ($import->sinCobranza as $item) {
-                $mensajes[] = "No existe cobranza para la razón social '{$item['razon_social']}' (RUT: {$item['rut_proveedor']}), 
-                folio {$item['folio']}. <a href='#' 
-                class='btn-link text-primary crear-compra-link' 
-                data-rut='{$item['rut_proveedor']}' 
-                data-razon='{$item['razon_social']}'>
-                Cree la cobranza aquí</a>";
-            }
-
-            // Guardamos los pendientes para el flujo guiado
-            session([
-                'sin_compra_pendientes' => $import->sinCobranza
-            ]);
-
-            // Opcional: limpiar las sesiones del otro flujo
-            session()->forget('sin_cobranza');
-            session()->forget('sin_cobranza_pendientes');
-
+            session(['sin_compra_pendientes' => $import->sinCobranza]);
+            session()->forget(['sin_cobranza', 'sin_cobranza_pendientes']);
         } else {
             session()->forget('sin_compra_pendientes');
         }
 
-        // Registrar movimiento si hubo importaciones exitosas
         if ($totalImportados > 0) {
             \App\Models\MovimientoCompra::create([
                 'documento_compra_id' => null,
                 'usuario_id' => Auth::id(),
                 'tipo_movimiento' => 'Importación masiva',
-                'descripcion' => "Se importaron {$totalImportados} documentos de compra desde el archivo '{$filename}' el " . now()->format('d/m/Y H:i:s'),
+                'descripcion' => "Se importaron {$totalImportados} documentos desde '{$filename}'",
                 'datos_nuevos' => [
                     'archivo' => $filename,
                     'total_importados' => $totalImportados,
                     'total_duplicados' => $totalDuplicados,
                     'empresa_id' => $empresa->id,
-                    'empresa_nombre' => $empresa->razon_social ?? null,
                 ],
                 'fecha_cambio' => now(),
             ]);
         }
 
-
-
-
-        // Caso 1: Importación exitosa, sin duplicados
         if ($totalImportados > 0 && $totalDuplicados === 0) {
-            return redirect()->route('finanzas_compras.index')->with('success', "Archivo importado correctamente.");
+            return redirect()->route('finanzas_compras.index')->with('success', 'Archivo importado correctamente.');
         }
 
-        //  Caso 2: Todo duplicado (no se importó nada)
         if ($totalImportados === 0 && $totalDuplicados > 0) {
             return redirect()->route('finanzas_compras.index')->with([
-                'warning' => "Todos los registros del archivo ya existían. No se importó ningún registro nuevo.",
+                'warning' => 'Todos los registros ya existían.',
                 'detalles_errores' => $import->duplicados
             ]);
         }
 
-        // Caso 3: Mezcla (algunos nuevos y otros duplicados)
         if ($totalImportados > 0 && $totalDuplicados > 0) {
             return redirect()->route('finanzas_compras.index')->with([
-                'success' => "Se importaron {$totalImportados} registros nuevos.",
-                'warning' => "Se detectaron {$totalDuplicados} folios duplicados que no fueron importados.",
+                'success' => "Se importaron {$totalImportados} registros.",
+                'warning' => "Se omitieron {$totalDuplicados} duplicados.",
                 'detalles_errores' => $import->duplicados
             ]);
         }
 
-        // Caso 4: Archivo vacío o sin registros válidos
-        return redirect()->route('finanzas_compras.index')->with('error', 'No se encontraron registros válidos para importar.');
+        return redirect()->route('finanzas_compras.index')
+            ->with('error', 'No se encontraron registros válidos para importar.');
     }
+
+
 
 
     public function asignarReferencia(Request $request)

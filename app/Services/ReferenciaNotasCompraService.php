@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\DocumentoCompra;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
 
 class ReferenciaNotasCompraService
@@ -15,6 +16,16 @@ class ReferenciaNotasCompraService
      */
     public function generarSugerencias(DocumentoCompra $notaCredito): array
     {
+
+        Log::info('🧪 [SERVICE] Iniciando sugerencias', [
+            'nota_id' => $notaCredito->id,
+            'rut_proveedor' => $notaCredito->rut_proveedor,
+            'fecha_nota' => $notaCredito->fecha_docto,
+            'monto_nota' => $notaCredito->monto_total,
+        ]);
+
+
+
         // Solo procesar si es Nota de Crédito
         if ((int) $notaCredito->tipo_documento_id !== 61) {
             return [
@@ -49,12 +60,20 @@ class ReferenciaNotasCompraService
 
     protected function obtenerFacturasProveedor(DocumentoCompra $notaCredito): Collection
     {
-        return DocumentoCompra::query()
+        $facturas = DocumentoCompra::query()
             ->where('rut_proveedor', $notaCredito->rut_proveedor)
-            ->whereIn('tipo_documento_id', [30, 32, 33, 34, 40, 43, 45, 46]) // Facturas válidas para compras
+            ->whereIn('tipo_documento_id', [30, 32, 33, 34, 40, 43, 45, 46])
             ->where('saldo_pendiente', '>', 0)
             ->orderBy('fecha_docto', 'asc')
             ->get();
+
+        Log::info('🧪 [SERVICE] Facturas encontradas', [
+            'nota_id' => $notaCredito->id,
+            'count' => $facturas->count(),
+            'facturas_ids' => $facturas->pluck('id')->toArray(),
+        ]);
+
+        return $facturas;
     }
 
 
@@ -66,18 +85,18 @@ class ReferenciaNotasCompraService
     {
         return $facturas->filter(function ($factura) use ($notaCredito) {
 
-            // No permitir asociar la nota a sí misma (defensivo)
-            if ($factura->id === $notaCredito->id) {
-                return false;
-            }
-
-            // La factura debe tener saldo suficiente para absorber la nota
             if ($factura->saldo_pendiente < $notaCredito->monto_total) {
+                Log::info('🧪 [SERVICE] Factura descartada por monto', [
+                    'factura_id' => $factura->id,
+                    'saldo_factura' => $factura->saldo_pendiente,
+                    'monto_nota' => $notaCredito->monto_total,
+                ]);
                 return false;
             }
 
             return true;
         })->values();
+
     }
 
 

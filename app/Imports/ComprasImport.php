@@ -311,43 +311,41 @@ class ComprasImport implements ToModel, WithHeadingRow
 
         $documento->save();
 
-        if ((int) $documento->tipo_documento_id === 61) {
+        // if ((int) $documento->tipo_documento_id === 61) {
 
 
-            Log::info('🧪 [ComprasImport] Detectada Nota de Crédito', [
-                'folio' => $documento->folio,
-                'nota_id' => $documento->id,
-                'rut_proveedor' => $documento->rut_proveedor,
-                'cobranza_compra_id' => $documento->cobranza_compra_id,
-                'fecha_docto' => $documento->fecha_docto,
-                'monto_total' => $documento->monto_total,
-            ]);
+        //     Log::info('🧪 [ComprasImport] Detectada Nota de Crédito', [
+        //         'folio' => $documento->folio,
+        //         'nota_id' => $documento->id,
+        //         'rut_proveedor' => $documento->rut_proveedor,
+        //         'cobranza_compra_id' => $documento->cobranza_compra_id,
+        //         'fecha_docto' => $documento->fecha_docto,
+        //         'monto_total' => $documento->monto_total,
+        //     ]);
 
-
-
-            $service = new \App\Services\ReferenciaNotasCompraService();
-            $sugerencias = $service->generarSugerencias($documento);
+        //     $service = new \App\Services\ReferenciaNotasCompraService();
+        //     $sugerencias = $service->generarSugerencias($documento);
 
 
 
-            Log::info('🧪 [ComprasImport] Resultado sugerencias NC', [
-                'nota_folio' => $documento->folio,
-                'sugerida' => $sugerencias['sugerida']?->id ?? null,
-                'alternativas_count' => is_array($sugerencias['alternativas'])
-                    ? count($sugerencias['alternativas'])
-                    : 0,
-            ]);
+        //     Log::info('🧪 [ComprasImport] Resultado sugerencias NC', [
+        //         'nota_folio' => $documento->folio,
+        //         'sugerida' => $sugerencias['sugerida']?->id ?? null,
+        //         'alternativas_count' => is_array($sugerencias['alternativas'])
+        //             ? count($sugerencias['alternativas'])
+        //             : 0,
+        //     ]);
 
 
 
 
 
-            $this->sugerenciasNotas[] = [
-                'nota' => $documento,
-                'sugerida' => $sugerencias['sugerida'],
-                'alternativas' => $sugerencias['alternativas']
-            ];
-        }
+        //     $this->sugerenciasNotas[] = [
+        //         'nota' => $documento,
+        //         'sugerida' => $sugerencias['sugerida'],
+        //         'alternativas' => $sugerencias['alternativas']
+        //     ];
+        // }
 
         $this->importados[] = $row['folio'] ?? 'sin folio';
 
