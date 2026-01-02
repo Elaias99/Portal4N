@@ -71,8 +71,10 @@ class PagosMasivosDocumentoCompraExport implements
 
 
 
+        $tipo = $documento->estado === 'Abono' ? 'Abono' : 'Pago';
         // 📝 Glosas
-        $glosa = "Pago documento {$documento->folio}";
+        $glosa = "{$tipo} documento {$documento->folio}";
+
 
         return [
             $cuentaOrigen,

@@ -243,7 +243,7 @@ class ComprasImport implements ToModel, WithHeadingRow
         
 
 
-        // 📅 Calcular fecha de vencimiento (si hay cobranza)
+        // Calcular fecha de vencimiento (si hay cobranza)
         $fechaDocto = $this->transformDate($row['fecha_docto'] ?? null);
 
         $fechaVencimiento = null;
@@ -251,12 +251,16 @@ class ComprasImport implements ToModel, WithHeadingRow
 
         // Asegurar que la cobranza no rompa el flujo
         $cobranzaId = null;
+
         if ($cobranza) {
             $cobranzaId = $cobranza->id;
 
-            if ($fechaDocto && $cobranza->creditos) {
+            // Créditos puede ser 0 → vencimiento inmediato
+            $creditos = (int) ($cobranza->creditos ?? 0);
+
+            if ($fechaDocto) {
                 $fechaVencimiento = \Carbon\Carbon::parse($fechaDocto)
-                    ->addDays((int) $cobranza->creditos)
+                    ->addDays($creditos)
                     ->format('Y-m-d');
 
                 $statusOriginal = \Carbon\Carbon::parse($fechaVencimiento)->isPast()
@@ -264,6 +268,7 @@ class ComprasImport implements ToModel, WithHeadingRow
                     : 'Al día';
             }
         }
+
 
 
 

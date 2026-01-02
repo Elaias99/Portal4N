@@ -68,7 +68,9 @@ class PagosMasivosDocumentoCompraExport implements
         $monto = (int) ($documento->saldo_pendiente ?? $documento->monto_total);
 
         // 📝 Glosas
-        $glosa = "Pago documento {$documento->folio}";
+        $tipo = $documento->estado === 'Abono' ? 'Abono' : 'Pago';
+        $glosa = "{$tipo} documento {$documento->folio}";
+
 
         return [
             $cuentaOrigen,

@@ -184,27 +184,61 @@ class PagoDocumentoController extends Controller
 
     public function storeMasivo(Request $request)
     {
-        Log::info('🧪 PAGOS MASIVOS RECIBIDOS', [
-            'fecha_pago' => $request->fecha_pago,
-            'documentos' => $request->documentos,
+        Log::info('🧪 storeMasivo - REQUEST INICIAL', [
+            'fecha_pago'     => $request->fecha_pago,
+            'tipo_operacion' => $request->tipo_operacion,
+            'documentos'     => $request->documentos,
+            'montos'         => $request->montos,
+            'all'            => $request->all(),
         ]);
+
 
         $request->validate([
-            'fecha_pago' => 'required|date|before_or_equal:today',
-            'documentos' => 'required|array|min:1',
-            'documentos.*' => 'integer|exists:documentos_compras,id',
+            'fecha_pago'     => 'required|date|before_or_equal:today',
+            'documentos'     => 'required|array|min:1',
+            'documentos.*'   => 'integer|exists:documentos_compras,id',
+            'tipo_operacion' => 'required|in:pago,abono',
+
+            // ✅ montos NO es obligatorio como array
+            'montos'         => 'nullable|array',
+            'montos.*'       => 'integer|min:1',
         ]);
 
-        $ids = $request->documentos;
-        $fechaPago = $request->fecha_pago;
+        Log::info('✅ storeMasivo - VALIDACIÓN OK');
+
+
+        $ids           = $request->documentos;
+        $fechaPago     = $request->fecha_pago;
+        $tipoOperacion = $request->tipo_operacion;
+        $montos        = $request->montos ?? [];
 
         $procesados = 0;
         $duplicados = 0;
+        $errores    = [];
+
+        
 
         foreach ($ids as $id) {
+
             $documento = \App\Models\DocumentoCompra::find($id);
 
-            if (!$documento || $documento->pagos()->exists()) {
+            Log::info('🔄 Procesando documento', [
+                'documento_id'   => $id,
+                'tipo_operacion' => $tipoOperacion,
+                'saldo_anterior' => $documento?->saldo_pendiente,
+                'estado_actual'  => $documento?->estado,
+            ]);
+
+
+            
+
+            if (!$documento) {
+                $duplicados++;
+                continue;
+            }
+
+            // 🚫 Si ya está pagado, no se toca
+            if ($documento->pagos()->exists()) {
                 $duplicados++;
                 continue;
             }
@@ -212,57 +246,142 @@ class PagoDocumentoController extends Controller
             $estadoAnterior = $documento->estado;
             $saldoAnterior  = $documento->saldo_pendiente;
 
-            // ✅ Crear pago
-            $documento->pagos()->create([
-                'fecha_pago' => $fechaPago,
-                'user_id' => Auth::id(),
-            ]);
+            /**
+             * =====================================================
+             * 🟢 PAGO TOTAL (flujo actual, NO se rompe)
+             * =====================================================
+             */
+            if ($tipoOperacion === 'pago') {
 
-            // ✅ Actualizar documento
-            $documento->update([
-                'estado' => 'Pago',
-                'fecha_estado_manual' => now(),
-                'saldo_pendiente' => 0,
-            ]);
-
-            // ✅ Movimiento (ESTO NO SE TOCA)
-            \App\Models\MovimientoCompra::create([
-                'documento_compra_id' => $documento->id,
-                'usuario_id' => Auth::id(),
-                'estado_anterior' => $estadoAnterior,
-                'nuevo_estado' => 'Pago',
-                'fecha_cambio' => now(),
-                'tipo_movimiento' => 'Pago registrado (masivo)',
-                'descripcion' => "Pago masivo registrado el {$fechaPago}.",
-                'datos_anteriores' => [
-                    'estado' => $estadoAnterior,
-                    'saldo_anterior' => $saldoAnterior,
-                ],
-                'datos_nuevos' => [
+                $documento->pagos()->create([
                     'fecha_pago' => $fechaPago,
-                    'saldo_actual' => 0,
-                ],
-            ]);
+                    'user_id'    => Auth::id(),
+                ]);
 
-            $procesados++;
+                $documento->update([
+                    'estado'              => 'Pago',
+                    'fecha_estado_manual' => now(),
+                    'saldo_pendiente'     => 0,
+                ]);
+
+                \App\Models\MovimientoCompra::create([
+                    'documento_compra_id' => $documento->id,
+                    'usuario_id'          => Auth::id(),
+                    'estado_anterior'     => $estadoAnterior,
+                    'nuevo_estado'        => 'Pago',
+                    'fecha_cambio'        => now(),
+                    'tipo_movimiento'     => 'Pago registrado (masivo)',
+                    'descripcion'         => "Pago masivo registrado el {$fechaPago}.",
+                    'datos_anteriores'    => [
+                        'estado'         => $estadoAnterior,
+                        'saldo_anterior' => $saldoAnterior,
+                    ],
+                    'datos_nuevos' => [
+                        'fecha_pago'  => $fechaPago,
+                        'saldo_actual'=> 0,
+                    ],
+                ]);
+
+                $procesados++;
+                continue;
+            }
+
+            /**
+             * =====================================================
+             * 🟡 ABONO MASIVO
+             * =====================================================
+             */
+            if ($tipoOperacion === 'abono') {
+
+                $monto = (int) ($montos[$id] ?? 0);
+
+                Log::info('🟡 ABONO MASIVO', [
+                    'documento_id' => $id,
+                    'monto'        => $monto,
+                    'saldo_antes'  => $saldoAnterior,
+                    'fecha_abono'  => $fechaPago,
+                ]);
+
+
+                // Validaciones duras
+                if ($monto <= 0 || $monto > $saldoAnterior) {
+                    $errores[] = [
+                        'documento_id' => $id,
+                        'error'        => 'Monto de abono inválido',
+                    ];
+                    continue;
+                }
+
+                // Crear abono
+                $documento->abonos()->create([
+                    'monto'       => $monto,
+                    'fecha_abono' => $fechaPago,
+                ]);
+
+                Log::info('✅ ABONO CREADO', [
+                    'documento_id' => $id,
+                    'abonos_count' => $documento->abonos()->count(),
+                ]);
+
+
+                // Recalcular saldo
+                $documento->recalcularSaldoPendiente();
+
+                Log::info('📉 SALDO RECALCULADO', [
+                    'documento_id' => $id,
+                    'nuevo_saldo'  => $documento->saldo_pendiente,
+                ]);
+
+
+                // Actualizar estado
+                $documento->update([
+                    'estado'              => 'Abono',
+                    'fecha_estado_manual' => now(),
+                ]);
+
+                \App\Models\MovimientoCompra::create([
+                    'documento_compra_id' => $documento->id,
+                    'usuario_id'          => Auth::id(),
+                    'estado_anterior'     => $estadoAnterior,
+                    'nuevo_estado'        => 'Abono',
+                    'fecha_cambio'        => now(),
+                    'tipo_movimiento'     => 'Registro de abono (masivo)',
+                    'descripcion'         => "Abono masivo de {$monto} registrado el {$fechaPago}.",
+                    'datos_anteriores'    => [
+                        'estado'         => $estadoAnterior,
+                        'saldo_anterior' => $saldoAnterior,
+                    ],
+                    'datos_nuevos' => [
+                        'monto'       => $monto,
+                        'nuevo_saldo' => $documento->saldo_pendiente,
+                    ],
+                ]);
+
+                $procesados++;
+            }
         }
 
-        Log::info('✅ PAGOS MASIVOS PROCESADOS', [
-            'procesados' => $procesados,
-            'duplicados' => $duplicados,
-        ]);
-
-        // Guardar IDs para exportación
+        // Guardar IDs solo si fueron pagos totales
         session([
             'pagos_masivos_export' => $ids
         ]);
 
-        return response()->json([
-            'ok' => true,
+
+        Log::info('🏁 storeMasivo FINALIZADO', [
             'procesados' => $procesados,
             'duplicados' => $duplicados,
+            'errores'    => $errores,
+        ]);
+
+
+        return response()->json([
+            'ok'         => true,
+            'procesados'=> $procesados,
+            'duplicados'=> $duplicados,
+            'errores'   => $errores,
         ]);
     }
+
 
 
     public function exportPagosMasivos()
@@ -270,13 +389,8 @@ class PagoDocumentoController extends Controller
         $ids = session('pagos_masivos_export');
 
         if (!$ids || !is_array($ids) || count($ids) === 0) {
-            Log::warning('⚠️ EXPORT PAGOS MASIVOS SIN IDS EN SESIÓN');
             abort(404, 'No hay pagos masivos para exportar.');
         }
-
-        Log::info('📤 EXPORTANDO EXCEL PAGOS MASIVOS', [
-            'ids' => $ids
-        ]);
 
         // Limpiar sesión para evitar descargas duplicadas
         session()->forget('pagos_masivos_export');

@@ -27,8 +27,47 @@
                     </div>
                 </form>
 
+
+
+
+
+
+
                 {{-- Resultados de búsqueda --}}
                 <form id="form-pagos-masivos" action="{{ route('documentos.pagos.masivo') }}" method="POST">
+
+                    {{-- Tipo de operación --}}
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Tipo de operación</label>
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                    type="radio"
+                                    name="tipo_operacion"
+                                    id="tipoPago"
+                                    value="pago"
+                                    checked
+                                    onchange="toggleTipoOperacion()">
+                                <label class="form-check-label small" for="tipoPago">
+                                    Pago total
+                                </label>
+                            </div>
+
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                    type="radio"
+                                    name="tipo_operacion"
+                                    id="tipoAbono"
+                                    value="abono"
+                                    onchange="toggleTipoOperacion()">
+                                <label class="form-check-label small" for="tipoAbono">
+                                    Abono
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+
                     @csrf
 
                     <div id="tabla-resultados" class="table-responsive mb-3" style="display:none;">
@@ -40,6 +79,7 @@
                                     <th>Razón Social</th>
                                     <th>RUT</th>
                                     <th>Monto Total</th>
+                                    <th>Monto a pagar</th>
                                     <th>Saldo Pendiente</th>
                                 </tr>
                             </thead>
@@ -82,7 +122,12 @@
 
 
                     </div>
+
+                    <div id="contenedor-montos-hidden"></div>
                 </form>
+
+                
+
 
                 {{-- Mensaje cuando no hay resultados --}}
                 <div id="sin-resultados" class="text-center text-muted mt-3" style="display:none;">
@@ -142,30 +187,47 @@ function buscarDocumentosMasivos(e) {
             vacio.style.display = 'none';
 
             data.forEach(doc => {
-                const fila = `
-                    <tr>
-
-
-                        <td>
-
-                            <input type="checkbox"
-                                onchange="toggleDocumento(this)"
-                                data-id="${doc.id}"
-                                data-folio="${doc.folio}"
-                                data-razon="${doc.razon_social}">
-
-                            
-                        </td>
 
 
 
-                        <td>${doc.folio ?? ''}</td>
-                        <td>${doc.razon_social ?? ''}</td>
-                        <td>${doc.rut_proveedor ?? ''}</td>
-                        <td>$${Number(doc.monto_total || 0).toLocaleString('es-CL')}</td>
-                        <td>$${Number(doc.saldo_pendiente || 0).toLocaleString('es-CL')}</td>
-                    </tr>
-                `;
+            const fila = `
+            <tr>
+                <td>
+                    <input type="checkbox"
+                        onchange="toggleDocumento(this)"
+                        data-id="${doc.id}"
+                        data-folio="${doc.folio}"
+                        data-razon="${doc.razon_social}"
+                        data-saldo="${doc.saldo_pendiente}">
+                </td>
+
+                <td>${doc.folio ?? ''}</td>
+                <td>${doc.razon_social ?? ''}</td>
+                <td>${doc.rut_proveedor ?? ''}</td>
+
+                <td>$${Number(doc.monto_total || 0).toLocaleString('es-CL')}</td>
+
+                <td>
+                    <input type="number"
+                        class="form-control form-control-sm monto-abono"
+                        min="1"
+                        max="${doc.saldo_pendiente}"
+                        step="1"
+                        data-id="${doc.id}"
+                        value="${doc.saldo_pendiente}"
+                        disabled>
+                </td>
+
+                <td>$${Number(doc.saldo_pendiente || 0).toLocaleString('es-CL')}</td>
+            </tr>
+            `;
+
+
+
+
+
+
+
                 tbody.insertAdjacentHTML('beforeend', fila);
             });
         })
@@ -181,23 +243,52 @@ function buscarDocumentosMasivos(e) {
  */
 function toggleSelectAll(source) {
     const checkboxes = document.querySelectorAll('#resultados-body input[type="checkbox"]');
-    checkboxes.forEach(cb => cb.checked = source.checked);
+
+    checkboxes.forEach(cb => {
+        cb.checked = source.checked;
+        toggleDocumento(cb);
+    });
 }
+
 
 
 function toggleDocumento(checkbox) {
     const id = checkbox.dataset.id;
-    const folio = checkbox.dataset.folio;
-    const razon = checkbox.dataset.razon;
 
     if (checkbox.checked) {
-        documentosSeleccionados[id] = { id, folio, razon };
+        documentosSeleccionados[id] = {
+            id,
+            folio: checkbox.dataset.folio,
+            razon: checkbox.dataset.razon
+        };
+
+        const inputVisible = document.querySelector(`.monto-abono[data-id="${id}"]`);
+        if (inputVisible) {
+            upsertHiddenMonto(id, inputVisible.value);
+        }
+
     } else {
         delete documentosSeleccionados[id];
+
+        document
+            .querySelector(`#contenedor-montos-hidden input[name="montos[${id}]"]`)
+            ?.remove();
     }
+
+
+    // 🔑 habilitar/deshabilitar monto según selección + tipo
+    const inputMonto = document.querySelector(`.monto-abono[data-id="${id}"]`);
+    const esAbono = document.getElementById('tipoAbono').checked;
+
+    if (inputMonto) {
+        inputMonto.disabled = !(checkbox.checked && esAbono);
+    }
+
+    console.log('documentosSeleccionados:', JSON.parse(JSON.stringify(documentosSeleccionados)));
 
     renderSeleccionados();
 }
+
 
 
 function renderSeleccionados() {
@@ -218,6 +309,12 @@ function renderSeleccionados() {
     ids.forEach(id => {
         const doc = documentosSeleccionados[id];
 
+        // habilitar input monto solo si está seleccionado
+        const inputMonto = document.querySelector(`.monto-abono[data-id="${id}"]`);
+        if (inputMonto) {
+            inputMonto.disabled = false;
+        }
+
         const li = document.createElement('li');
         li.className = 'list-group-item d-flex justify-content-between align-items-center small';
 
@@ -225,7 +322,8 @@ function renderSeleccionados() {
             <span>
                 <strong>${doc.folio}</strong> — ${doc.razon}
             </span>
-            <button type="button" class="btn btn-sm btn-outline-danger"
+            <button type="button"
+                class="btn btn-sm btn-outline-danger"
                 onclick="quitarDocumento(${id})">
                 ✕
             </button>
@@ -237,16 +335,66 @@ function renderSeleccionados() {
     });
 }
 
+
 function quitarDocumento(id) {
     delete documentosSeleccionados[id];
 
-    // desmarcar checkbox si existe en la tabla actual
     document.querySelectorAll(
         `input[type="checkbox"][data-id="${id}"]`
     ).forEach(cb => cb.checked = false);
 
+    const inputMonto = document.querySelector(`.monto-abono[data-id="${id}"]`);
+    if (inputMonto) {
+        inputMonto.disabled = true;
+    }
+
     renderSeleccionados();
 }
+
+
+function toggleTipoOperacion() {
+    const esAbono = document.getElementById('tipoAbono').checked;
+
+    document.querySelectorAll('.monto-abono').forEach(input => {
+        const id = input.dataset.id;
+        const seleccionado = !!documentosSeleccionados[id];
+
+        input.disabled = !(esAbono && seleccionado);
+
+        if (!esAbono) {
+            input.value = input.max;
+        }
+    });
+}
+
+
+function upsertHiddenMonto(id, valor) {
+    const contenedor = document.getElementById('contenedor-montos-hidden');
+
+    let input = contenedor.querySelector(`input[name="montos[${id}]"]`);
+
+    if (!input) {
+        input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = `montos[${id}]`;
+        contenedor.appendChild(input);
+    }
+
+    input.value = valor;
+}
+
+
+
+document.addEventListener('input', function (e) {
+    if (!e.target.classList.contains('monto-abono')) return;
+
+    const id = e.target.dataset.id;
+    upsertHiddenMonto(id, e.target.value);
+});
+
+
+
+
 
 
 
@@ -266,10 +414,27 @@ document.addEventListener('DOMContentLoaded', function () {
     form.addEventListener('submit', function (e) {
         e.preventDefault(); // detener submit normal
 
+        renderSeleccionados();
+
+        console.log('🧾 Inputs montos en DOM:', 
+            Array.from(document.querySelectorAll('input[name^="montos["]'))
+                .map(i => ({
+                    name: i.name,
+                    value: i.value,
+                    disabled: i.disabled
+                }))
+        );
+
+
         btn.disabled = true;
         btn.innerHTML = 'Procesando pagos...';
 
         const formData = new FormData(form);
+
+        console.log('📦 FormData enviado:');
+        for (let pair of formData.entries()) {
+            console.log(pair[0], pair[1]);
+        }
 
         // 1️⃣ Registrar pagos (POST)
         fetch(form.action, {
@@ -293,10 +458,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Cerrar modal y refrescar después
             setTimeout(() => {
-                const modal = bootstrap.Modal.getInstance(
-                    document.getElementById('modalPagosMasivos')
-                );
-                if (modal) modal.hide();
+
+
+                const modalEl = document.getElementById('modalPagosMasivos');
+
+                if (modalEl) {
+                    const modal = new bootstrap.Modal(modalEl);
+                    modal.hide();
+                }
+
+
+
+
+
 
                 window.location.reload();
             }, 2500);
