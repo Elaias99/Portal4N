@@ -36,36 +36,7 @@
                 {{-- Resultados de búsqueda --}}
                 <form id="form-pagos-masivos" action="{{ route('documentos.pagos.masivo') }}" method="POST">
 
-                    {{-- Tipo de operación --}}
-                    <div class="mb-3">
-                        <label class="form-label small text-muted">Tipo de operación</label>
-                        <div class="d-flex gap-3">
-                            <div class="form-check">
-                                <input class="form-check-input"
-                                    type="radio"
-                                    name="tipo_operacion"
-                                    id="tipoPago"
-                                    value="pago"
-                                    checked
-                                    onchange="toggleTipoOperacion()">
-                                <label class="form-check-label small" for="tipoPago">
-                                    Pago total
-                                </label>
-                            </div>
 
-                            <div class="form-check">
-                                <input class="form-check-input"
-                                    type="radio"
-                                    name="tipo_operacion"
-                                    id="tipoAbono"
-                                    value="abono"
-                                    onchange="toggleTipoOperacion()">
-                                <label class="form-check-label small" for="tipoAbono">
-                                    Abono
-                                </label>
-                            </div>
-                        </div>
-                    </div>
 
 
                     @csrf
@@ -79,6 +50,7 @@
                                     <th>Razón Social</th>
                                     <th>RUT</th>
                                     <th>Monto Total</th>
+                                    <th>Operación</th>
                                     <th>Monto a pagar</th>
                                     <th>Saldo Pendiente</th>
                                 </tr>
@@ -207,7 +179,18 @@ function buscarDocumentosMasivos(e) {
 
                 <td>$${Number(doc.monto_total || 0).toLocaleString('es-CL')}</td>
 
-                <td>
+                <!-- ✅ NUEVO: selector de operación por documento -->
+                <td style="width:160px;">
+                    <select class="form-select form-select-sm op-doc"
+                        data-id="${doc.id}"
+                        onchange="onOperacionChange(this)"
+                        disabled>
+                        <option value="pago" selected>Pago total</option>
+                        <option value="abono">Abono</option>
+                    </select>
+                </td>
+
+                <td style="width:160px;">
                     <input type="number"
                         class="form-control form-control-sm monto-abono"
                         min="1"
@@ -231,11 +214,8 @@ function buscarDocumentosMasivos(e) {
                 tbody.insertAdjacentHTML('beforeend', fila);
             });
         })
-        .catch(error => {
-            console.error('❌ Error en la búsqueda masiva:', error);
-            alert('Ocurrió un error al buscar documentos. Revisa la consola para más detalles.');
-            if (spinner) spinner.style.display = 'none';
-        });
+
+
 }
 
 /**
@@ -255,6 +235,9 @@ function toggleSelectAll(source) {
 function toggleDocumento(checkbox) {
     const id = checkbox.dataset.id;
 
+    const inputMonto = document.querySelector(`.monto-abono[data-id="${id}"]`);
+    const selectOp  = document.querySelector(`.op-doc[data-id="${id}"]`);
+
     if (checkbox.checked) {
         documentosSeleccionados[id] = {
             id,
@@ -262,31 +245,78 @@ function toggleDocumento(checkbox) {
             razon: checkbox.dataset.razon
         };
 
-        const inputVisible = document.querySelector(`.monto-abono[data-id="${id}"]`);
-        if (inputVisible) {
-            upsertHiddenMonto(id, inputVisible.value);
+        // habilitar select operación
+        if (selectOp) {
+            selectOp.disabled = false;
+            upsertHiddenOperacion(id, selectOp.value);
+        }
+
+        // habilitar monto solo si es abono
+        if (inputMonto) {
+            inputMonto.disabled = selectOp?.value !== 'abono';
+            upsertHiddenMonto(id, inputMonto.value);
         }
 
     } else {
+        // ❌ quitar selección
         delete documentosSeleccionados[id];
 
+        // eliminar hidden inputs
         document
             .querySelector(`#contenedor-montos-hidden input[name="montos[${id}]"]`)
             ?.remove();
+
+        document
+            .querySelector(`#contenedor-montos-hidden input[name="operaciones[${id}]"]`)
+            ?.remove();
+
+        // deshabilitar inputs visibles
+        if (inputMonto) inputMonto.disabled = true;
+        if (selectOp)  selectOp.disabled  = true;
     }
 
-
-    // 🔑 habilitar/deshabilitar monto según selección + tipo
-    const inputMonto = document.querySelector(`.monto-abono[data-id="${id}"]`);
-    const esAbono = document.getElementById('tipoAbono').checked;
-
-    if (inputMonto) {
-        inputMonto.disabled = !(checkbox.checked && esAbono);
-    }
-
-    console.log('documentosSeleccionados:', JSON.parse(JSON.stringify(documentosSeleccionados)));
 
     renderSeleccionados();
+}
+
+
+
+
+
+
+function onOperacionChange(select) {
+    const id = select.dataset.id;
+    const op = select.value; // "pago" | "abono"
+
+    // Guardar operación en hidden (operaciones[id])
+    upsertHiddenOperacion(id, op);
+
+    // Habilitar monto solo si es abono y está seleccionado
+    const checkbox = document.querySelector(`#resultados-body input[type="checkbox"][data-id="${id}"]`);
+    const inputMonto = document.querySelector(`.monto-abono[data-id="${id}"]`);
+
+    const seleccionado = checkbox?.checked;
+    if (inputMonto) {
+        inputMonto.disabled = !(seleccionado && op === 'abono');
+
+
+        if (op === 'pago') {
+            inputMonto.disabled = true;
+            // no importa el monto en pago
+            document
+                .querySelector(`#contenedor-montos-hidden input[name="montos[${id}]"]`)
+                ?.remove();
+        }
+
+
+
+
+        if (op === 'abono') {
+            upsertHiddenMonto(id, inputMonto.value);
+        }
+    }
+
+ 
 }
 
 
@@ -351,23 +381,6 @@ function quitarDocumento(id) {
     renderSeleccionados();
 }
 
-
-function toggleTipoOperacion() {
-    const esAbono = document.getElementById('tipoAbono').checked;
-
-    document.querySelectorAll('.monto-abono').forEach(input => {
-        const id = input.dataset.id;
-        const seleccionado = !!documentosSeleccionados[id];
-
-        input.disabled = !(esAbono && seleccionado);
-
-        if (!esAbono) {
-            input.value = input.max;
-        }
-    });
-}
-
-
 function upsertHiddenMonto(id, valor) {
     const contenedor = document.getElementById('contenedor-montos-hidden');
 
@@ -377,6 +390,22 @@ function upsertHiddenMonto(id, valor) {
         input = document.createElement('input');
         input.type = 'hidden';
         input.name = `montos[${id}]`;
+        contenedor.appendChild(input);
+    }
+
+    input.value = valor;
+}
+
+
+function upsertHiddenOperacion(id, valor) {
+    const contenedor = document.getElementById('contenedor-montos-hidden');
+
+    let input = contenedor.querySelector(`input[name="operaciones[${id}]"]`);
+
+    if (!input) {
+        input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = `operaciones[${id}]`;
         contenedor.appendChild(input);
     }
 
@@ -416,25 +445,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         renderSeleccionados();
 
-        console.log('🧾 Inputs montos en DOM:', 
-            Array.from(document.querySelectorAll('input[name^="montos["]'))
-                .map(i => ({
-                    name: i.name,
-                    value: i.value,
-                    disabled: i.disabled
-                }))
-        );
-
-
         btn.disabled = true;
         btn.innerHTML = 'Procesando pagos...';
 
         const formData = new FormData(form);
-
-        console.log('📦 FormData enviado:');
-        for (let pair of formData.entries()) {
-            console.log(pair[0], pair[1]);
-        }
 
         // 1️⃣ Registrar pagos (POST)
         fetch(form.action, {
@@ -448,6 +462,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!res.ok) throw new Error('Error registrando pagos');
             return res.json();
         })
+
+
         .then(data => {
             if (!data.ok) {
                 throw new Error('Respuesta inválida');
@@ -468,19 +484,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
 
-
-
-
-
                 window.location.reload();
             }, 2500);
         })
-        .catch(err => {
-            console.error(err);
-            alert('Ocurrió un error al registrar los pagos');
-            btn.disabled = false;
-            btn.innerHTML = 'Registrar Pagos Seleccionados';
-        });
+
     });
 
 });

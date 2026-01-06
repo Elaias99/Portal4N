@@ -184,62 +184,50 @@ class PagoDocumentoController extends Controller
 
     public function storeMasivo(Request $request)
     {
-        Log::info('🧪 storeMasivo - REQUEST INICIAL', [
-            'fecha_pago'     => $request->fecha_pago,
-            'tipo_operacion' => $request->tipo_operacion,
-            'documentos'     => $request->documentos,
-            'montos'         => $request->montos,
-            'all'            => $request->all(),
-        ]);
-
-
         $request->validate([
-            'fecha_pago'     => 'required|date|before_or_equal:today',
-            'documentos'     => 'required|array|min:1',
-            'documentos.*'   => 'integer|exists:documentos_compras,id',
-            'tipo_operacion' => 'required|in:pago,abono',
+            'fecha_pago'      => 'required|date|before_or_equal:today',
+            'documentos'      => 'required|array|min:1',
+            'documentos.*'    => 'integer|exists:documentos_compras,id',
 
-            // ✅ montos NO es obligatorio como array
-            'montos'         => 'nullable|array',
-            'montos.*'       => 'integer|min:1',
+            'operaciones'     => 'required|array|min:1',
+            'operaciones.*'   => 'required|in:pago,abono',
+
+            'montos'          => 'nullable|array',
+            'montos.*'        => 'integer|min:1',
         ]);
 
-        Log::info('✅ storeMasivo - VALIDACIÓN OK');
-
-
-        $ids           = $request->documentos;
-        $fechaPago     = $request->fecha_pago;
-        $tipoOperacion = $request->tipo_operacion;
-        $montos        = $request->montos ?? [];
+        $ids       = $request->documentos;
+        $fechaPago = $request->fecha_pago;
+        $montos    = $request->montos ?? [];
 
         $procesados = 0;
         $duplicados = 0;
         $errores    = [];
 
-        
+        // 🆕 Aquí se guardan PAGOS y ABONOS
+        $operacionesExport = [];
 
         foreach ($ids as $id) {
 
             $documento = \App\Models\DocumentoCompra::find($id);
-
-            Log::info('🔄 Procesando documento', [
-                'documento_id'   => $id,
-                'tipo_operacion' => $tipoOperacion,
-                'saldo_anterior' => $documento?->saldo_pendiente,
-                'estado_actual'  => $documento?->estado,
-            ]);
-
-
-            
 
             if (!$documento) {
                 $duplicados++;
                 continue;
             }
 
-            // 🚫 Si ya está pagado, no se toca
             if ($documento->pagos()->exists()) {
                 $duplicados++;
+                continue;
+            }
+
+            $operacion = $request->operaciones[$id] ?? null;
+
+            if (!$operacion) {
+                $errores[] = [
+                    'documento_id' => $id,
+                    'error' => 'Operación no definida',
+                ];
                 continue;
             }
 
@@ -248,10 +236,10 @@ class PagoDocumentoController extends Controller
 
             /**
              * =====================================================
-             * 🟢 PAGO TOTAL (flujo actual, NO se rompe)
+             * PAGO TOTAL
              * =====================================================
              */
-            if ($tipoOperacion === 'pago') {
+            if ($operacion === 'pago') {
 
                 $documento->pagos()->create([
                     'fecha_pago' => $fechaPago,
@@ -277,10 +265,18 @@ class PagoDocumentoController extends Controller
                         'saldo_anterior' => $saldoAnterior,
                     ],
                     'datos_nuevos' => [
-                        'fecha_pago'  => $fechaPago,
-                        'saldo_actual'=> 0,
+                        'fecha_pago'   => $fechaPago,
+                        'saldo_actual' => 0,
                     ],
                 ]);
+
+                // 🆕 Registrar operación para export
+                $operacionesExport[] = [
+                    'documento_id' => $documento->id,
+                    'tipo'         => 'pago',
+                    'monto'        => $documento->monto_total,
+                    'fecha'        => $fechaPago,
+                ];
 
                 $procesados++;
                 continue;
@@ -288,22 +284,13 @@ class PagoDocumentoController extends Controller
 
             /**
              * =====================================================
-             * 🟡 ABONO MASIVO
+             * ABONO MASIVO
              * =====================================================
              */
-            if ($tipoOperacion === 'abono') {
+            if ($operacion === 'abono') {
 
                 $monto = (int) ($montos[$id] ?? 0);
 
-                Log::info('🟡 ABONO MASIVO', [
-                    'documento_id' => $id,
-                    'monto'        => $monto,
-                    'saldo_antes'  => $saldoAnterior,
-                    'fecha_abono'  => $fechaPago,
-                ]);
-
-
-                // Validaciones duras
                 if ($monto <= 0 || $monto > $saldoAnterior) {
                     $errores[] = [
                         'documento_id' => $id,
@@ -312,28 +299,13 @@ class PagoDocumentoController extends Controller
                     continue;
                 }
 
-                // Crear abono
                 $documento->abonos()->create([
                     'monto'       => $monto,
                     'fecha_abono' => $fechaPago,
                 ]);
 
-                Log::info('✅ ABONO CREADO', [
-                    'documento_id' => $id,
-                    'abonos_count' => $documento->abonos()->count(),
-                ]);
-
-
-                // Recalcular saldo
                 $documento->recalcularSaldoPendiente();
 
-                Log::info('📉 SALDO RECALCULADO', [
-                    'documento_id' => $id,
-                    'nuevo_saldo'  => $documento->saldo_pendiente,
-                ]);
-
-
-                // Actualizar estado
                 $documento->update([
                     'estado'              => 'Abono',
                     'fecha_estado_manual' => now(),
@@ -357,35 +329,47 @@ class PagoDocumentoController extends Controller
                     ],
                 ]);
 
+                // 🆕 Registrar operación para export
+                $operacionesExport[] = [
+                    'documento_id' => $documento->id,
+                    'tipo'         => 'abono',
+                    'monto'        => $monto,
+                    'fecha'        => $fechaPago,
+                ];
+
                 $procesados++;
             }
         }
 
-        // Guardar IDs solo si fueron pagos totales
+        // 🆕 Guardar PAGOS + ABONOS para el Excel
         session([
-            'pagos_masivos_export' => $ids
+            'pagos_masivos_export' => $operacionesExport
         ]);
 
-
-        Log::info('🏁 storeMasivo FINALIZADO', [
-            'procesados' => $procesados,
-            'duplicados' => $duplicados,
-            'errores'    => $errores,
+        Log::info('🧪 DEBUG SESION EXPORT', [
+            'session_data' => session('pagos_masivos_export'),
         ]);
 
 
         return response()->json([
-            'ok'         => true,
-            'procesados'=> $procesados,
-            'duplicados'=> $duplicados,
-            'errores'   => $errores,
+            'ok'          => true,
+            'procesados' => $procesados,
+            'duplicados' => $duplicados,
+            'errores'    => $errores,
         ]);
     }
 
 
 
+
+
     public function exportPagosMasivos()
     {
+
+        Log::info('🧪 DEBUG EXPORT INICIADO', [
+            'session_data' => session('pagos_masivos_export'),
+        ]);
+
         $ids = session('pagos_masivos_export');
 
         if (!$ids || !is_array($ids) || count($ids) === 0) {

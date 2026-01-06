@@ -163,7 +163,7 @@ class ComprasImport implements ToModel, WithHeadingRow
                 'empresa_id'        => $this->empresaId ?? null,
                 'tipo_documento_id' => $tipoDocumento?->id,
                 'nro'               => $row['nro'] ?? null,
-                'tipo_doc'          => $row['tipo_doc'] ?? null,
+                // 'tipo_doc'          => $row['tipo_doc'] ?? null,
                 'tipo_compra'       => $row['tipo_compra'] ?? null,
                 'rut_proveedor'     => $row['rut_proveedor'],
                 'razon_social'      => $row['razon_social'],

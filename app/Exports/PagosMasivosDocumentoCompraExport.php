@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\DocumentoCompra;
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -17,19 +18,14 @@ class PagosMasivosDocumentoCompraExport implements
     ShouldAutoSize,
     WithStyles
 {
-    protected $documentos;
+    protected Collection $operaciones;
 
     /**
-     * @param array $documentosSeleccionados
+     * @param array $operacionesExport
      */
-    public function __construct(array $documentosSeleccionados)
+    public function __construct(array $operacionesExport)
     {
-        $this->documentos = DocumentoCompra::with([
-                'cobranzaCompra.banco',
-                'cobranzaCompra.tipoCuenta',
-            ])
-            ->whereIn('id', $documentosSeleccionados)
-            ->get();
+        $this->operaciones = collect($operacionesExport);
     }
 
     /**
@@ -37,44 +33,48 @@ class PagosMasivosDocumentoCompraExport implements
      */
     public function collection()
     {
-        return $this->documentos;
+        return $this->operaciones;
     }
 
     /**
-     * Mapeo fila por fila
+     * Mapeo fila por fila (UNA FILA = UNA OPERACIÓN)
      */
-    public function map($documento): array
+    public function map($op): array
     {
+        $documento = DocumentoCompra::with([
+            'cobranzaCompra.banco',
+            'cobranzaCompra.tipoCuenta',
+        ])->find($op['documento_id']);
+
+        if (!$documento || !$documento->cobranzaCompra) {
+            return [];
+        }
+
         $cobranza = $documento->cobranzaCompra;
 
-        // 🏦 Cuenta origen (por ahora fija / configurable)
+        // Cuenta origen
         $cuentaOrigen = '0';
         $moneda = 'CLP';
 
-        // 🏦 Datos destino
+        // Destino
         $cuentaDestino = $cobranza->numero_cuenta ?? '';
         $codigoBanco = $cobranza->banco_id
             ? str_pad($cobranza->banco_id, 2, '0', STR_PAD_LEFT)
             : '';
 
-        // 👤 Beneficiario
+        // Beneficiario
         $rutBeneficiario = $cobranza->rut_cliente
             ? preg_replace('/[^0-9kK]/', '', $cobranza->rut_cliente)
             : '';
 
         $nombreBeneficiario = $cobranza->razon_social ?? '';
 
-        
+        // Monto REAL (pago o abono)
+        $monto = (int) $op['monto'];
 
-        // 💰 Monto
-        $monto = (int) $documento->monto_total;
-
-
-
-        $tipo = $documento->estado === 'Abono' ? 'Abono' : 'Pago';
-        // 📝 Glosas
+        // Glosa
+        $tipo = $op['tipo'] === 'abono' ? 'Abono' : 'Pago';
         $glosa = "{$tipo} documento {$documento->folio}";
-
 
         return [
             $cuentaOrigen,
@@ -85,11 +85,11 @@ class PagosMasivosDocumentoCompraExport implements
             $rutBeneficiario,
             $nombreBeneficiario,
             $monto,
-            $glosa,        // Glosa personalizada transferencia
-            null,          // Correo beneficiario
-            null,          // Mensaje correo beneficiario
-            $glosa,        // Glosa cartola originador
-            null,          // Glosa cartola beneficiario
+            $glosa,
+            null,
+            null,
+            $glosa,
+            null,
         ];
     }
 
