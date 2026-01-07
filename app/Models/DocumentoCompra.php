@@ -248,11 +248,13 @@ class DocumentoCompra extends Model
     protected static function booted()
     {
         static::updating(function ($model) {
-            if ($model->isDirty('estado')) {
+            if ($model->isDirty('estado') && $model->estado !== null) {
                 $model->fecha_estado_manual = now();
             }
         });
     }
+
+
 
 
 

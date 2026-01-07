@@ -239,11 +239,28 @@ function toggleDocumento(checkbox) {
     const selectOp  = document.querySelector(`.op-doc[data-id="${id}"]`);
 
     if (checkbox.checked) {
+
+
+
+        const saldoInicial = Number(checkbox.dataset.saldo || 0);
+        const operacionActual = selectOp?.value || 'pago';
+        const montoActual =
+            operacionActual === 'abono'
+                ? Number(inputMonto?.value || 0)
+                : saldoInicial;
+
         documentosSeleccionados[id] = {
             id,
             folio: checkbox.dataset.folio,
-            razon: checkbox.dataset.razon
+            razon: checkbox.dataset.razon,
+            saldoInicial,
+            operacion: operacionActual,
+            monto: montoActual
         };
+
+
+
+
 
         // habilitar select operación
         if (selectOp) {
@@ -254,8 +271,12 @@ function toggleDocumento(checkbox) {
         // habilitar monto solo si es abono
         if (inputMonto) {
             inputMonto.disabled = selectOp?.value !== 'abono';
-            upsertHiddenMonto(id, inputMonto.value);
+
+            if (selectOp?.value === 'abono') {
+                upsertHiddenMonto(id, inputMonto.value);
+            }
         }
+
 
     } else {
         // ❌ quitar selección
@@ -288,36 +309,54 @@ function onOperacionChange(select) {
     const id = select.dataset.id;
     const op = select.value; // "pago" | "abono"
 
-    // Guardar operación en hidden (operaciones[id])
+    const checkbox = document.querySelector(
+        `#resultados-body input[type="checkbox"][data-id="${id}"]`
+    );
+    const inputMonto = document.querySelector(
+        `.monto-abono[data-id="${id}"]`
+    );
+
+    // Guardar operación en hidden
     upsertHiddenOperacion(id, op);
 
-    // Habilitar monto solo si es abono y está seleccionado
-    const checkbox = document.querySelector(`#resultados-body input[type="checkbox"][data-id="${id}"]`);
-    const inputMonto = document.querySelector(`.monto-abono[data-id="${id}"]`);
-
-    const seleccionado = checkbox?.checked;
-    if (inputMonto) {
-        inputMonto.disabled = !(seleccionado && op === 'abono');
-
-
-        if (op === 'pago') {
-            inputMonto.disabled = true;
-            // no importa el monto en pago
-            document
-                .querySelector(`#contenedor-montos-hidden input[name="montos[${id}]"]`)
-                ?.remove();
-        }
-
-
-
-
-        if (op === 'abono') {
-            upsertHiddenMonto(id, inputMonto.value);
-        }
+    // Si el documento no está seleccionado, no hacemos nada más
+    if (!checkbox?.checked || !documentosSeleccionados[id]) {
+        return;
     }
 
- 
+    documentosSeleccionados[id].operacion = op;
+
+    if (op === 'pago') {
+        const saldo = documentosSeleccionados[id].saldoInicial;
+
+        // Estado interno
+        documentosSeleccionados[id].monto = saldo;
+
+        // Input visible
+        if (inputMonto) {
+            inputMonto.value = saldo;
+            inputMonto.disabled = true;
+        }
+
+        // Hidden
+        upsertHiddenMonto(id, saldo);
+
+    } else { // abono
+        const monto = Number(inputMonto?.value || 0);
+
+        documentosSeleccionados[id].monto = monto;
+
+        if (inputMonto) {
+            inputMonto.disabled = false;
+        }
+
+        upsertHiddenMonto(id, monto);
+    }
+
+    renderSeleccionados();
 }
+
+
 
 
 
@@ -339,19 +378,32 @@ function renderSeleccionados() {
     ids.forEach(id => {
         const doc = documentosSeleccionados[id];
 
-        // habilitar input monto solo si está seleccionado
-        const inputMonto = document.querySelector(`.monto-abono[data-id="${id}"]`);
-        if (inputMonto) {
-            inputMonto.disabled = false;
-        }
+        const operacionTexto =
+            doc.operacion === 'abono' ? 'Abono' : 'Pago';
+
+        const monto = doc.monto;
+        const saldoFinal =
+            doc.operacion === 'pago'
+                ? 0
+                : Math.max(doc.saldoInicial - monto, 0);
 
         const li = document.createElement('li');
-        li.className = 'list-group-item d-flex justify-content-between align-items-center small';
+        li.className =
+            'list-group-item d-flex justify-content-between align-items-start small';
 
         li.innerHTML = `
-            <span>
-                <strong>${doc.folio}</strong> — ${doc.razon}
-            </span>
+            <div>
+                <div class="fw-semibold">
+                    ${doc.folio} — ${doc.razon}
+                </div>
+                <div class="text-muted">
+                    ${operacionTexto}
+                    | $${monto.toLocaleString('es-CL')}
+                    | Saldo: $${doc.saldoInicial.toLocaleString('es-CL')}
+                    → $${saldoFinal.toLocaleString('es-CL')}
+                </div>
+            </div>
+
             <button type="button"
                 class="btn btn-sm btn-outline-danger"
                 onclick="quitarDocumento(${id})">
@@ -364,6 +416,8 @@ function renderSeleccionados() {
         lista.appendChild(li);
     });
 }
+
+
 
 
 function quitarDocumento(id) {
@@ -417,9 +471,18 @@ function upsertHiddenOperacion(id, valor) {
 document.addEventListener('input', function (e) {
     if (!e.target.classList.contains('monto-abono')) return;
 
-    const id = e.target.dataset.id;
-    upsertHiddenMonto(id, e.target.value);
+    const id = e.target.dataset.id; // 👈 ESTA LÍNEA FALTABA
+    const valor = Number(e.target.value || 0);
+
+    upsertHiddenMonto(id, valor);
+
+    if (documentosSeleccionados[id]) {
+        documentosSeleccionados[id].monto = valor;
+    }
+
+    renderSeleccionados();
 });
+
 
 
 

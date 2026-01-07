@@ -175,6 +175,7 @@ class CruceController extends Controller
                 'fecha_estado_manual' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
             ]);
         } else {
+
             $documento->update([
                 'status' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
                 'status_original' => $nuevoEstado,
