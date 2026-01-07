@@ -184,6 +184,12 @@ class PagoDocumentoController extends Controller
 
     public function storeMasivo(Request $request)
     {
+        Log::info('[PAGOS_MASIVOS] storeMasivo iniciado', [
+            'user_id'   => Auth::id(),
+            'session_id'=> session()->getId(),
+            'payload'   => $request->all(),
+        ]);
+
         $request->validate([
             'fecha_pago'      => 'required|date|before_or_equal:today',
             'documentos'      => 'required|array|min:1',
@@ -204,19 +210,29 @@ class PagoDocumentoController extends Controller
         $duplicados = 0;
         $errores    = [];
 
-        // 🆕 Aquí se guardan PAGOS y ABONOS
+        // Aquí se guardan PAGOS y ABONOS para export
         $operacionesExport = [];
 
         foreach ($ids as $id) {
 
+            Log::info('[PAGOS_MASIVOS] Procesando documento', [
+                'documento_id' => $id,
+            ]);
+
             $documento = \App\Models\DocumentoCompra::find($id);
 
             if (!$documento) {
+                Log::warning('[PAGOS_MASIVOS] Documento no encontrado', [
+                    'documento_id' => $id,
+                ]);
                 $duplicados++;
                 continue;
             }
 
             if ($documento->pagos()->exists()) {
+                Log::warning('[PAGOS_MASIVOS] Documento con pago previo, omitido', [
+                    'documento_id' => $id,
+                ]);
                 $duplicados++;
                 continue;
             }
@@ -224,15 +240,25 @@ class PagoDocumentoController extends Controller
             $operacion = $request->operaciones[$id] ?? null;
 
             if (!$operacion) {
+                Log::warning('[PAGOS_MASIVOS] Operación no definida para documento', [
+                    'documento_id' => $id,
+                ]);
                 $errores[] = [
                     'documento_id' => $id,
-                    'error' => 'Operación no definida',
+                    'error'        => 'Operación no definida',
                 ];
                 continue;
             }
 
             $estadoAnterior = $documento->estado;
             $saldoAnterior  = $documento->saldo_pendiente;
+
+            Log::info('[PAGOS_MASIVOS] Estado inicial documento', [
+                'documento_id'   => $id,
+                'estado'         => $estadoAnterior,
+                'saldo_anterior' => $saldoAnterior,
+                'operacion'      => $operacion,
+            ]);
 
             /**
              * =====================================================
@@ -270,13 +296,17 @@ class PagoDocumentoController extends Controller
                     ],
                 ]);
 
-                // 🆕 Registrar operación para export
                 $operacionesExport[] = [
                     'documento_id' => $documento->id,
                     'tipo'         => 'pago',
                     'monto'        => $documento->monto_total,
                     'fecha'        => $fechaPago,
                 ];
+
+                Log::info('[PAGOS_MASIVOS] Pago masivo procesado', [
+                    'documento_id' => $documento->id,
+                    'monto'        => $documento->monto_total,
+                ]);
 
                 $procesados++;
                 continue;
@@ -292,6 +322,12 @@ class PagoDocumentoController extends Controller
                 $monto = (int) ($montos[$id] ?? 0);
 
                 if ($monto <= 0 || $monto > $saldoAnterior) {
+                    Log::warning('[PAGOS_MASIVOS] Monto de abono inválido', [
+                        'documento_id' => $id,
+                        'monto'        => $monto,
+                        'saldo'        => $saldoAnterior,
+                    ]);
+
                     $errores[] = [
                         'documento_id' => $id,
                         'error'        => 'Monto de abono inválido',
@@ -329,7 +365,6 @@ class PagoDocumentoController extends Controller
                     ],
                 ]);
 
-                // 🆕 Registrar operación para export
                 $operacionesExport[] = [
                     'documento_id' => $documento->id,
                     'tipo'         => 'abono',
@@ -337,27 +372,39 @@ class PagoDocumentoController extends Controller
                     'fecha'        => $fechaPago,
                 ];
 
+                Log::info('[PAGOS_MASIVOS] Abono masivo procesado', [
+                    'documento_id' => $documento->id,
+                    'monto'        => $monto,
+                    'nuevo_saldo'  => $documento->saldo_pendiente,
+                ]);
+
                 $procesados++;
             }
         }
 
-        // 🆕 Guardar PAGOS + ABONOS para el Excel
+        // Guardar en sesión para export
+        Log::info('[PAGOS_MASIVOS] Guardando operaciones para export en sesión', [
+            'cantidad'   => count($operacionesExport),
+            'session_id' => session()->getId(),
+        ]);
+
         session([
             'pagos_masivos_export' => $operacionesExport
         ]);
 
-        Log::info('🧪 DEBUG SESION EXPORT', [
+        Log::info('[PAGOS_MASIVOS] Operaciones guardadas en sesión', [
             'session_data' => session('pagos_masivos_export'),
+            'session_id'   => session()->getId(),
         ]);
-
 
         return response()->json([
             'ok'          => true,
-            'procesados' => $procesados,
-            'duplicados' => $duplicados,
-            'errores'    => $errores,
+            'procesados'  => $procesados,
+            'duplicados'  => $duplicados,
+            'errores'     => $errores,
         ]);
     }
+
 
 
 
@@ -365,27 +412,56 @@ class PagoDocumentoController extends Controller
 
     public function exportPagosMasivos()
     {
-
-        Log::info('🧪 DEBUG EXPORT INICIADO', [
-            'session_data' => session('pagos_masivos_export'),
+        Log::info('[PAGOS_MASIVOS] exportPagosMasivos iniciado', [
+            'user_id'    => Auth::id(),
+            'session_id' => session()->getId(),
+            'session_all'=> session()->all(),
         ]);
 
         $ids = session('pagos_masivos_export');
 
+        Log::info('[PAGOS_MASIVOS] Datos leídos desde sesión', [
+            'session_id'   => session()->getId(),
+            'export_data'  => $ids,
+            'is_array'     => is_array($ids),
+            'count'        => is_array($ids) ? count($ids) : null,
+        ]);
+
         if (!$ids || !is_array($ids) || count($ids) === 0) {
+
+            Log::warning('[PAGOS_MASIVOS] Export abortado: sesión vacía o inválida', [
+                'session_id'  => session()->getId(),
+                'session_all' => session()->all(),
+            ]);
+
             abort(404, 'No hay pagos masivos para exportar.');
         }
+
+        Log::info('[PAGOS_MASIVOS] Export válido, preparando descarga', [
+            'cantidad'   => count($ids),
+            'session_id' => session()->getId(),
+        ]);
 
         // Limpiar sesión para evitar descargas duplicadas
         session()->forget('pagos_masivos_export');
 
+        Log::info('[PAGOS_MASIVOS] Sesión limpiada después de export', [
+            'session_id' => session()->getId(),
+        ]);
+
         $nombreArchivo = 'pagos_masivos_' . now()->format('Ymd_His') . '.xlsx';
+
+        Log::info('[PAGOS_MASIVOS] Descarga Excel iniciada', [
+            'archivo'    => $nombreArchivo,
+            'session_id' => session()->getId(),
+        ]);
 
         return Excel::download(
             new \App\Exports\PagosMasivosDocumentoCompraExport($ids),
             $nombreArchivo
         );
     }
+
 
 
 

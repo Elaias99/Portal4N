@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\Models\DocumentoCompra;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -25,6 +26,10 @@ class PagosMasivosDocumentoCompraExport implements
      */
     public function __construct(array $operacionesExport)
     {
+        Log::info('[PAGOS_MASIVOS] Export constructor iniciado', [
+            'cantidad_operaciones' => count($operacionesExport),
+        ]);
+
         $this->operaciones = collect($operacionesExport);
     }
 
@@ -33,6 +38,10 @@ class PagosMasivosDocumentoCompraExport implements
      */
     public function collection()
     {
+        Log::info('[PAGOS_MASIVOS] Export collection()', [
+            'cantidad_operaciones' => $this->operaciones->count(),
+        ]);
+
         return $this->operaciones;
     }
 
@@ -41,12 +50,30 @@ class PagosMasivosDocumentoCompraExport implements
      */
     public function map($op): array
     {
+        // Validación defensiva
+        if (!isset($op['documento_id'])) {
+            Log::warning('[PAGOS_MASIVOS] Operación sin documento_id', [
+                'operacion' => $op,
+            ]);
+            return [];
+        }
+
         $documento = DocumentoCompra::with([
             'cobranzaCompra.banco',
             'cobranzaCompra.tipoCuenta',
         ])->find($op['documento_id']);
 
-        if (!$documento || !$documento->cobranzaCompra) {
+        if (!$documento) {
+            Log::warning('[PAGOS_MASIVOS] Documento no encontrado en export', [
+                'documento_id' => $op['documento_id'],
+            ]);
+            return [];
+        }
+
+        if (!$documento->cobranzaCompra) {
+            Log::warning('[PAGOS_MASIVOS] Documento sin cobranza asociada en export', [
+                'documento_id' => $op['documento_id'],
+            ]);
             return [];
         }
 
@@ -70,10 +97,10 @@ class PagosMasivosDocumentoCompraExport implements
         $nombreBeneficiario = $cobranza->razon_social ?? '';
 
         // Monto REAL (pago o abono)
-        $monto = (int) $op['monto'];
+        $monto = (int) ($op['monto'] ?? 0);
 
         // Glosa
-        $tipo = $op['tipo'] === 'abono' ? 'Abono' : 'Pago';
+        $tipo = ($op['tipo'] ?? '') === 'abono' ? 'Abono' : 'Pago';
         $glosa = "{$tipo} documento {$documento->folio}";
 
         return [
@@ -98,6 +125,8 @@ class PagosMasivosDocumentoCompraExport implements
      */
     public function headings(): array
     {
+        Log::info('[PAGOS_MASIVOS] Export headings()');
+
         return [
             'Cuenta origen',
             'Moneda origen',
@@ -120,6 +149,8 @@ class PagosMasivosDocumentoCompraExport implements
      */
     public function styles(Worksheet $sheet)
     {
+        Log::info('[PAGOS_MASIVOS] Export styles()');
+
         return [
             1 => [
                 'font' => [
