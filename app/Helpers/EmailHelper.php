@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Reclamos;
 
 /* ============================================================
- | 🧩 1. CORRESPONDENCIAS ENTRE CORREOS
+ | 1. CORRESPONDENCIAS ENTRE CORREOS
  * ============================================================*/
 
 if (!function_exists('getAdminPerfilMappings')) {
@@ -59,7 +59,7 @@ if (!function_exists('resolveAdminEmail')) {
 
 
 /* ============================================================
- | 📨 2. CORREO DE NOTIFICACIÓN REAL (OUTLOOK)
+ |  2. CORREO DE NOTIFICACIÓN REAL (OUTLOOK)
  * ============================================================*/
 
 if (!function_exists('resolveCorreoNotificacion')) {
@@ -95,7 +95,7 @@ if (!function_exists('resolveCorreoNotificacion')) {
 
 
 /* ============================================================
- | 🧮 3. UTILIDADES VARIAS
+ | 3. UTILIDADES VARIAS
  * ============================================================*/
 
 if (!function_exists('calcularSiguienteViernes')) {
@@ -113,7 +113,7 @@ if (!function_exists('calcularSiguienteViernes')) {
 
 
 /* ============================================================
- | 🔔 4. NOTIFICACIONES INTERNAS (Reclamos y Áreas)
+ | 4. NOTIFICACIONES INTERNAS (Reclamos y Áreas)
  * ============================================================*/
 
 if (!function_exists('usuariosInvolucradosEnReclamo')) {

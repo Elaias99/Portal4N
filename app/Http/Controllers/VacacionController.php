@@ -7,11 +7,12 @@ use App\Models\Vacacion;
 use App\Models\Solicitud;
 use App\Models\HistorialVacacion;
 use Illuminate\Support\Facades\Auth;
-use App\Notifications\NotificacionAdminVacaciones;
+use App\Models\Trabajador;
 use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 use App\Mail\VacacionesSolicitadas;
 use Illuminate\Support\Facades\Mail;
+use App\Notifications\NotificacionAdminVacaciones;
 
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\VacacionDisponibleExport;
@@ -21,13 +22,33 @@ class VacacionController extends Controller
 
     public function create()
     {
+        // 1. Usuario autenticado (puede ser correo administrativo o interno)
         $user = Auth::user();
-        $solicitudPendiente = Vacacion::solicitudesPendientes($user->trabajador->id);
-        $diasProporcionales = $this->diaProporcional();
 
-        // $response = Http::get('https://apis.digital.gob.cl/fl/feriados');
-        // $feriados = $response->successful() ? $response->json() : [];
+        // 2. Resolver correo interno del perfil trabajador
+        $resolvedEmail = resolvePerfilEmail($user->email);
 
+        // 3. Obtener el trabajador real asociado al perfil
+        $trabajador = Trabajador::whereHas('user', function ($q) use ($resolvedEmail) {
+                $q->where('email', $resolvedEmail);
+            })
+            ->whereNull('deleted_at')
+            ->first();
+
+        // 4. Blindaje: si no se encuentra trabajador, no continuar
+        if (!$trabajador) {
+            return redirect()->route('home')->withErrors([
+                'msg' => 'No se pudo encontrar el perfil del trabajador asociado.'
+            ]);
+        }
+
+        // 5. Buscar si existe una solicitud de vacaciones pendiente
+        $solicitudPendiente = Vacacion::solicitudesPendientes($trabajador->id);
+
+        // 6. Calcular días proporcionales
+        $diasProporcionales = $this->diaProporcional($trabajador);
+
+        // 7. Retornar vista
         return view('vacaciones.create', compact('diasProporcionales', 'solicitudPendiente'));
     }
 
@@ -43,10 +64,28 @@ class VacacionController extends Controller
         ]);
 
         $tipoDia = $request->input('tipo_dia');
-        $trabajador = Auth::user()->trabajador;
+
+
+        $user = Auth::user();
+
+        // 2. Resolver correo interno del perfil trabajador
+        $resolvedEmail = resolvePerfilEmail($user->email);
+
+        // 3. Obtener el trabajador real asociado al perfil
+        $trabajador = Trabajador::whereHas('user', function ($q) use ($resolvedEmail) {
+                $q->where('email', $resolvedEmail);
+            })
+            ->whereNull('deleted_at')
+            ->first();
+
+        if (!$trabajador) {
+            return redirect()->back()->withErrors([
+                'msg' => 'No se pudo encontrar el perfil del trabajador asociado.'
+            ]);
+        }
 
         if ($tipoDia === 'vacaciones') {
-            $diasProporcionales = $this->diaProporcional();
+            $diasProporcionales = $this->diaProporcional($trabajador);
             if ($request->dias > $diasProporcionales) {
                 return redirect()->back()->withErrors(['msg' => 'No puedes solicitar más días de los que tienes acumulados.']);
             }
@@ -97,12 +136,9 @@ class VacacionController extends Controller
 
 
 
-    public function diaProporcional()
+    public function diaProporcional(Trabajador $trabajador)
     {
-        $user = Auth::user();
-        $trabajador = $user->trabajador;
-
-        if (!$trabajador || !$trabajador->fecha_inicio_trabajo) {
+        if (!$trabajador->fecha_inicio_trabajo) {
             return 0;
         }
 
@@ -114,12 +150,12 @@ class VacacionController extends Controller
         $proporcionMesInicio = $diasTrabajadosMesInicio / $diasMesInicio;
 
         $mesesCompletosTrabajados = $fechaInicio->diffInMonths($fechaActual) - 1;
-        $diasProporcionalesCalculados = (15 / 12) * ($mesesCompletosTrabajados + $proporcionMesInicio);
+        $diasProporcionalesCalculados =
+            (15 / 12) * ($mesesCompletosTrabajados + $proporcionMesInicio);
 
-        // Incluir solo solicitudes de tipo "vacaciones" aprobadas
-        $diasTomadosVacaciones = Vacacion::whereHas('solicitud', function ($query) {
-                $query->where('estado', 'aprobado')
-                    ->where('tipo_dia', 'vacaciones'); // Filtrar solo solicitudes de tipo "vacaciones"
+        $diasTomadosVacaciones = Vacacion::whereHas('solicitud', function ($q) {
+                $q->where('estado', 'aprobado')
+                ->where('tipo_dia', 'vacaciones');
             })
             ->where('trabajador_id', $trabajador->id)
             ->sum('dias');
@@ -128,56 +164,30 @@ class VacacionController extends Controller
             ->where('tipo_dia', 'vacaciones')
             ->sum('dias_laborales');
 
-        $diasProporcionalesRestantes = max(round($diasProporcionalesCalculados - ($diasTomadosVacaciones + $diasTomadosHistoricos), 2), 0);
-
-
-
-        return $diasProporcionalesRestantes;
+        return max(
+            round($diasProporcionalesCalculados - ($diasTomadosVacaciones + $diasTomadosHistoricos), 2),
+            0
+        );
     }
 
 
-
-    private function obtenerDiasHabiles($fechaInicio, $fechaFin)
-    {
-        $fechaInicio = Carbon::parse($fechaInicio);
-        $fechaFin = Carbon::parse($fechaFin);
-
-        // Obtener los feriados desde la API
-        $response = Http::get('https://apis.digital.gob.cl/fl/feriados');
-        $feriados = collect(); // No se consideran feriados externos
-
-        $diasHabiles = 0;
-        while ($fechaInicio->lessThanOrEqualTo($fechaFin)) {
-            // Excluir fines de semana y feriados
-            if ($fechaInicio->isWeekday() && !$feriados->contains($fechaInicio->toDateString())) {
-                $diasHabiles++;
-            }
-            $fechaInicio->addDay();
-        }
-        return $diasHabiles;
-    }
-
-
-    private function validarDiasProporcionales($fechaInicio, $fechaFin)
-    {
-        $diasProporcionales = $this->diaProporcional();
-        $diasSolicitados = $this->obtenerDiasHabiles($fechaInicio, $fechaFin);
-
-        if ($diasSolicitados > $diasProporcionales) {
-            return ['error' => 'No puedes solicitar más días de los que tienes acumulados.'];
-        }
-
-        return ['success' => true];
-    }
 
 
     public function misVacaciones()
     {
         $user = Auth::user();
-        $trabajador = $user->trabajador;
+        $resolvedEmail = resolvePerfilEmail($user->email);
+
+        $trabajador = Trabajador::whereHas('user', function ($q) use ($resolvedEmail) {
+                $q->where('email', $resolvedEmail);
+            })
+            ->whereNull('deleted_at')
+            ->first();
 
         if (!$trabajador) {
-            return redirect()->back()->with('error', 'No se encontró información del trabajador.');
+            return redirect()->back()->withErrors([
+                'msg' => 'No se pudo encontrar el perfil del trabajador asociado.'
+            ]);
         }
 
         // Vacaciones históricas

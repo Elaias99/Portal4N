@@ -433,13 +433,9 @@ class SolicitudController extends Controller
         if ($notificar) {
             $solicitud->trabajador->user->notify(new SolicitudActualizada('rechazada', $solicitud));
 
-
             $correoDestino = resolveCorreoNotificacion($solicitud->trabajador->user);
             Mail::to($correoDestino)->send(new EstadoVacacionesActualizado($solicitud, 'rechazada'));
-
-            
-
-            
+   
         }
 
         return redirect()->route('solicitudes.vacaciones')->with('success', 'Solicitud rechazada con éxito.');
