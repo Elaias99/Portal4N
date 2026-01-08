@@ -424,10 +424,10 @@
             });
         }
 
-        $(document).ready(function() {
-            cargarNotificaciones();
-            setInterval(cargarNotificaciones, 30000); // cada 30 segundos
-        });
+        // $(document).ready(function() {
+        //     cargarNotificaciones();
+        //     setInterval(cargarNotificaciones, 30000); // cada 30 segundos
+        // });
     </script>
 
     <script>
