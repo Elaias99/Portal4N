@@ -21,7 +21,7 @@ class DocumentoCompra extends Model
         'estado', 'fecha_vencimiento','status_original','fecha_estado_manual', 'cobranza_compra_id','saldo_pendiente'];
 
     public function empresa()
-    {
+    {               
         return $this->belongsTo(Empresa::class);
     }
 

@@ -122,17 +122,52 @@
 
 
 
-                            <div class="col-md-1">
-                                <label class="form-label small text-muted">Saldo Pendiente</label>
-                                <input 
-                                        type="text" 
-                                        name="saldo_pendiente" 
-                                        class="form-control form-control-sm"
-                                        placeholder="Ej: 260000" 
-                                        value="{{ request('saldo_pendiente') }}"
-                                        min="0"
+                            <div class="col-md-1 dropdown-saldo">
+                                <label class="form-label small text-muted">Saldo</label>
+
+                                <div class="dropdown w-100">
+                                    <button
+                                        class="form-control form-control-sm dropdown-toggle text-start"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false"
                                     >
+                                        Buscar saldo por
+                                    </button>
+
+                                    <div class="dropdown-menu p-3" style="min-width: 220px;">
+                                        
+                                        {{-- Tipo de saldo --}}
+                                        <label class="form-label small text-muted mb-1">Tipo</label>
+                                        <select
+                                            name="saldo_tipo"
+                                            class="form-select form-select-sm mb-2"
+                                        >
+                                            <option value="saldo_pendiente"
+                                                {{ request('saldo_tipo', 'saldo_pendiente') === 'saldo_pendiente' ? 'selected' : '' }}>
+                                                Saldo pendiente
+                                            </option>
+
+                                            <option value="monto_total"
+                                                {{ request('saldo_tipo') === 'monto_total' ? 'selected' : '' }}>
+                                                Monto original
+                                            </option>
+                                        </select>
+
+                                        {{-- Valor --}}
+                                        <label class="form-label small text-muted mb-1">Monto</label>
+                                        <input
+                                            type="text"
+                                            name="saldo_valor"
+                                            class="form-control form-control-sm"
+                                            placeholder="Ej: 260000"
+                                            value="{{ request('saldo_valor') }}"
+                                            min="0"
+                                        >
+                                    </div>
+                                </div>
                             </div>
+
 
 
                             <div class="col-md-1">

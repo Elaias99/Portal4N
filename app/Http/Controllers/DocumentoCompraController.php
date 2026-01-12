@@ -94,10 +94,31 @@ class DocumentoCompraController extends Controller
             $baseQuery->whereDate('fecha_vencimiento', '<=', $request->fecha_venc_fin);
         }
 
-        // === FILTRO POR SALDO ===
-        if ($request->filled('saldo_pendiente')) {
-            $valor = (float) str_replace(['.', ','], '', $request->saldo_pendiente);
-            $baseQuery->whereBetween('saldo_pendiente', [$valor - 1, $valor + 1]);
+
+        if ($request->filled('saldo_valor')) {
+
+            // 1️⃣ Normalizar número (quita puntos y comas)
+            $valor = (float) str_replace(['.', ','], '', $request->saldo_valor);
+
+            // 2️⃣ Determinar tipo de saldo (default: saldo_pendiente)
+            $tipoSaldo = $request->input('saldo_tipo', 'saldo_pendiente');
+
+            // 3️⃣ Whitelist de columnas permitidas
+            $columnasPermitidas = [
+                'saldo_pendiente',
+                'monto_total',
+            ];
+
+            // 4️⃣ Fallback de seguridad
+            if (!in_array($tipoSaldo, $columnasPermitidas, true)) {
+                $tipoSaldo = 'saldo_pendiente';
+            }
+
+            // 5️⃣ Aplicar filtro con tolerancia ±1
+            $baseQuery->whereBetween($tipoSaldo, [
+                $valor - 1,
+                $valor + 1
+            ]);
         }
 
         // === FILTRO POR ESTADO DE PAGO ===
