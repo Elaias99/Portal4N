@@ -14,6 +14,11 @@ return [
     |
     */
 
+    'internal' => [
+        'key' => env('INTERNAL_TRACKING_KEY'),
+    ],
+
+
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],
