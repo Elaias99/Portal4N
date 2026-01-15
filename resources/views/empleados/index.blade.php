@@ -62,7 +62,7 @@ $notificaciones = Auth::user()->unreadNotifications
 
 
 
-                        <a href="{{ route('historial-vacacion.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Vacaciones">
+                        <a href="{{ route('solicitudes.vacaciones') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Vacaciones">
                             <i class="fa-solid fa-plane-departure me-2"></i> Vacaciones
                         </a>
 
