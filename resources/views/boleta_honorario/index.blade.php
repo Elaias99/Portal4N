@@ -33,59 +33,39 @@
 
         <p><strong>Contribuyente:</strong> {{ $preview['razon_social'] }}</p>
         <p><strong>RUT:</strong> {{ $preview['rut_contribuyente'] }}</p>
-        <p>
-            <strong>Periodo:</strong>
-            {{ $preview['mes'] ? $preview['mes'].' / ' : '' }}{{ $preview['anio'] }}
-        </p>
+        <p><strong>Año:</strong> {{ $preview['anio'] }}</p>
 
-        {{-- TABLA DETALLE POR BOLETA --}}
+        {{-- TABLA RESUMEN MENSUAL --}}
         <table class="table table-sm table-bordered mt-3">
             <thead class="table-light">
                 <tr>
-                    <th>Folio</th>
-                    <th>Estado</th>
-                    <th>Fecha Boleta</th>
-
-                    <th>Rut Emisor</th>
-                    <th>Nombre Emisor</th>
-                    <th>Fecha Emisión</th>
-
-                    <th>Rut Receptor</th>
-                    <th>Nombre Receptor</th>
-
-                    <th class="text-end">Bruto</th>
-                    <th class="text-end">Retenido</th>
-                    <th class="text-end">Pagado</th>
+                    <th>Mes</th>
+                    <th class="text-end">Folio Inicial</th>
+                    <th class="text-end">Folio Final</th>
+                    <th class="text-end">Vigentes</th>
+                    <th class="text-end">Nulas</th>
+                    <th class="text-end">Honorario Bruto</th>
+                    <th class="text-end">Retenciones</th>
+                    <th class="text-end">Total Líquido</th>
                 </tr>
             </thead>
 
             <tbody>
-                @foreach($preview['registros'] as $r)
+                @foreach($preview['resumen_mensual'] as $r)
                     <tr>
-                        <td>{{ $r['folio'] }}</td>
-                        <td>{{ $r['estado'] }}</td>
-
-                        <td>
-                            {{ \Carbon\Carbon::parse($r['fecha_boleta'])->format('d-m-Y') }}
-                        </td>
-
-                        <td>{{ $r['rut_emisor'] }}</td>
-                        <td>{{ $r['nombre_emisor'] }}</td>
-                        <td>
-                            {{ \Carbon\Carbon::parse($r['fecha_emision'])->format('d-m-Y') }}
-                        </td>
-
-                        <td>{{ $r['rut_receptor'] }}</td>
-                        <td>{{ $r['nombre_receptor'] }}</td>
-
+                        <td>{{ $r['mes_nombre'] }}</td>
+                        <td class="text-end">{{ $r['folio_inicial'] }}</td>
+                        <td class="text-end">{{ $r['folio_final'] }}</td>
+                        <td class="text-end">{{ $r['boletas_vigentes'] }}</td>
+                        <td class="text-end">{{ $r['boletas_nulas'] }}</td>
                         <td class="text-end">
-                            {{ number_format($r['monto_bruto'], 0, ',', '.') }}
+                            {{ number_format($r['honorario_bruto'], 0, ',', '.') }}
                         </td>
                         <td class="text-end">
-                            {{ number_format($r['monto_retenido'], 0, ',', '.') }}
+                            {{ number_format($r['retenciones'], 0, ',', '.') }}
                         </td>
                         <td class="text-end">
-                            {{ number_format($r['monto_pagado'], 0, ',', '.') }}
+                            {{ number_format($r['total_liquido'], 0, ',', '.') }}
                         </td>
                     </tr>
                 @endforeach
@@ -93,7 +73,7 @@
                 {{-- FILA TOTALES --}}
                 @if(isset($preview['totales']))
                     <tr class="table-secondary fw-bold">
-                        <td colspan="8">Totales</td>
+                        <td colspan="5">Totales</td>
                         <td class="text-end">
                             {{ number_format($preview['totales']['bruto'], 0, ',', '.') }}
                         </td>
@@ -101,7 +81,7 @@
                             {{ number_format($preview['totales']['retenido'], 0, ',', '.') }}
                         </td>
                         <td class="text-end">
-                            {{ number_format($preview['totales']['pagado'], 0, ',', '.') }}
+                            {{ number_format($preview['totales']['liquido'], 0, ',', '.') }}
                         </td>
                     </tr>
                 @endif

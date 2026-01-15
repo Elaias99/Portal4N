@@ -118,11 +118,15 @@
                 </table>
 
                 {{-- Botón guardar (siguiente paso) --}}
-                <div class="mt-4">
-                    <button class="btn btn-success" disabled>
-                        Confirmar y guardar (siguiente paso)
+                <form action="{{ route('honorarios.mensual.store') }}" method="POST" class="mt-4">
+                    @csrf
+                    <input type="hidden" name="data" value="{{ base64_encode(json_encode($preview)) }}">
+                    <button class="btn btn-success">
+                        Confirmar y guardar
                     </button>
-                </div>
+                </form>
+
+
 
             </div>
         </div>

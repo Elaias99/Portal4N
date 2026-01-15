@@ -39,46 +39,37 @@ class HonorarioResumenAnualController extends Controller
             true
         );
 
-        $registros = $data['registros'];
+        $rut   = $data['rut_contribuyente'];
+        $razon = $data['razon_social'];
+        $anio  = $data['anio'];
 
-        // Filtrar vigentes / anuladas
-        $vigentes = array_filter($registros, fn($r) => $r['estado'] === 'VIGENTE');
-        $anuladas = array_filter($registros, fn($r) => $r['estado'] !== 'VIGENTE');
+        foreach ($data['resumen_mensual'] as $mes) {
 
-        // Folios
-        $folios = array_column($registros, 'folio');
-
-        $folioInicial = !empty($folios) ? min($folios) : 0;
-        $folioFinal   = !empty($folios) ? max($folios) : 0;
-
-        // Montos (solo vigentes)
-        $honorarioBruto = array_sum(array_column($vigentes, 'monto_bruto'));
-        $retenciones    = array_sum(array_column($vigentes, 'monto_retenido'));
-        $totalLiquido   = array_sum(array_column($vigentes, 'monto_pagado'));
-
-        HonorarioResumenAnual::updateOrCreate(
-            [
-                'rut_contribuyente' => $data['rut_contribuyente'],
-                'anio'              => $data['anio'],
-                'mes'               => $data['mes'],
-            ],
-            [
-                'razon_social'      => $data['razon_social'],
-                'mes_nombre'        => $this->mapMesNumeroInverso($data['mes']),
-                'folio_inicial'     => $folioInicial,
-                'folio_final'       => $folioFinal,
-                'boletas_vigentes'  => count($vigentes),
-                'boletas_nulas'     => count($anuladas),
-                'honorario_bruto'   => $honorarioBruto,
-                'retenciones'       => $retenciones,
-                'total_liquido'     => $totalLiquido,
-            ]
-        );
+            HonorarioResumenAnual::updateOrCreate(
+                [
+                    'rut_contribuyente' => $rut,
+                    'anio'              => $anio,
+                    'mes'               => $mes['mes'],
+                ],
+                [
+                    'razon_social'      => $razon,
+                    'mes_nombre'        => $mes['mes_nombre'],
+                    'folio_inicial'     => $mes['folio_inicial'],
+                    'folio_final'       => $mes['folio_final'],
+                    'boletas_vigentes'  => $mes['boletas_vigentes'],
+                    'boletas_nulas'     => $mes['boletas_nulas'],
+                    'honorario_bruto'   => $mes['honorario_bruto'],
+                    'retenciones'       => $mes['retenciones'],
+                    'total_liquido'     => $mes['total_liquido'],
+                ]
+            );
+        }
 
         return redirect()
             ->route('honorarios.resumen.index')
-            ->with('success', 'Resumen mensual importado correctamente.');
+            ->with('success', 'Resumen anual importado correctamente.');
     }
+
 
 
     protected function mapMesNumero(string $mes): int

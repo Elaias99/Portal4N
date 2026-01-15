@@ -570,6 +570,12 @@ Route::post(
     [HonorarioMensualRecController::class, 'import']
 )->name('honorarios.mensual.import');
 
+Route::post(
+    '/honorarios/mensual-rec/store',
+    [HonorarioMensualRecController::class, 'store']
+)->name('honorarios.mensual.store');
+
+
 
 
 

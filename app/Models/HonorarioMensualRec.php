@@ -29,4 +29,9 @@ class HonorarioMensualRec extends Model
         'monto_pagado',
     ];
 
+    protected $casts = [
+        'fecha_emision'   => 'date',
+        'fecha_anulacion' => 'date',
+    ];
+
 }

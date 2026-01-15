@@ -58,6 +58,42 @@ class HonorarioMensualRecController extends Controller
 
     public function store(Request $request)
     {
-        // persistencia luego del preview
+        $data = json_decode(
+            base64_decode($request->input('data')),
+            true
+        );
+
+        $meta      = $data['meta'];
+        $registros = $data['registros'];
+
+        foreach ($registros as $r) {
+
+            HonorarioMensualRec::updateOrCreate(
+                [
+                    // Clave única lógica
+                    'rut_contribuyente' => $meta['rut_contribuyente'],
+                    'anio'              => $meta['anio'],
+                    'mes'               => $meta['mes'],
+                    'folio'             => $r['folio'],
+                ],
+                [
+                    'razon_social'          => $meta['razon_social'],
+                    'fecha_emision'         => $r['fecha_emision'],
+                    'estado'                => $r['estado'],
+                    'fecha_anulacion'       => $r['fecha_anulacion'],
+                    'rut_emisor'            => $r['rut_emisor'],
+                    'razon_social_emisor'   => $r['razon_social_emisor'],
+                    'sociedad_profesional'  => $r['sociedad_profesional'],
+                    'monto_bruto'           => $r['monto_bruto'],
+                    'monto_retenido'        => $r['monto_retenido'],
+                    'monto_pagado'          => $r['monto_pagado'],
+                ]
+            );
+        }
+
+        return redirect()
+            ->route('honorarios.mensual.index')
+            ->with('success', 'Honorarios mensuales guardados correctamente.');
     }
+
 }

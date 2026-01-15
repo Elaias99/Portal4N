@@ -9,6 +9,21 @@ class BteResumenAnualParser
     protected UploadedFile $archivo;
     protected string $contenido;
 
+    protected const MESES = [
+        'ENERO'       => 1,
+        'FEBRERO'     => 2,
+        'MARZO'       => 3,
+        'ABRIL'       => 4,
+        'MAYO'        => 5,
+        'JUNIO'       => 6,
+        'JULIO'       => 7,
+        'AGOSTO'      => 8,
+        'SEPTIEMBRE'  => 9,
+        'OCTUBRE'     => 10,
+        'NOVIEMBRE'   => 11,
+        'DICIEMBRE'   => 12,
+    ];
+
     public function __construct(UploadedFile $archivo)
     {
         $this->archivo = $archivo;
@@ -31,8 +46,7 @@ class BteResumenAnualParser
             'rut_contribuyente' => $this->extraerRut(),
             'razon_social'      => $this->extraerRazonSocial(),
             'anio'              => $this->extraerAnio(),
-            'mes'               => $this->extraerMes(),
-            'registros'         => $this->extraerBoletas(),
+            'resumen_mensual'   => $this->extraerResumenMensual(),
             'totales'           => $this->extraerTotales(),
         ];
     }
@@ -58,41 +72,12 @@ class BteResumenAnualParser
             : null;
     }
 
-    protected function extraerMes(): ?int
-    {
-        if (preg_match(
-            '/correspondiente\s+a\s+([A-Za-zÁÉÍÓÚáéíóú]+)\s+del\s+año/i',
-            $this->contenido,
-            $m
-        )) {
-            $mes = strtoupper(trim($m[1]));
-
-            return [
-                'ENERO'       => 1,
-                'FEBRERO'     => 2,
-                'MARZO'       => 3,
-                'ABRIL'       => 4,
-                'MAYO'        => 5,
-                'JUNIO'       => 6,
-                'JULIO'       => 7,
-                'AGOSTO'      => 8,
-                'SEPTIEMBRE'  => 9,
-                'OCTUBRE'     => 10,
-                'NOVIEMBRE'   => 11,
-                'DICIEMBRE'   => 12,
-            ][$mes] ?? null;
-        }
-
-        return null;
-    }
-
-
     /**
-     * EXTRAER BOLETAS INDIVIDUALES
+     * Extrae filas mensuales del resumen anual
      */
-    protected function extraerBoletas(): array
+    protected function extraerResumenMensual(): array
     {
-        $boletas = [];
+        $resumen = [];
 
         preg_match_all('/<tr[^>]*>(.*?)<\/tr>/si', $this->contenido, $rows);
 
@@ -101,69 +86,77 @@ class BteResumenAnualParser
 
             $c = array_map(
                 fn ($v) => trim(preg_replace('/\s+/', ' ', strip_tags($v))),
-                $cols[1]
+                $cols[1] ?? []
             );
 
-            // Validación mínima: fila real de boleta
-            if (count($c) < 11 || !is_numeric($c[0])) {
+            // Esperamos exactamente 8 columnas
+            if (count($c) !== 8) {
                 continue;
             }
 
-            $boletas[] = [
-                'folio'           => (int) $c[0],
-                'estado'          => $c[1],
+            $mesNombre = strtoupper($c[0]);
 
-                // 🔴 CLAVES QUE FALTABAN
-                'fecha_boleta'    => $this->normalizarFecha($c[2]),
-                'fecha_emision'   => $this->normalizarFecha($c[5]),
+            if (!isset(self::MESES[$mesNombre])) {
+                continue;
+            }
 
-                'rut_emisor'      => $c[3],
-                'nombre_emisor'   => $c[4],
-
-                'rut_receptor'    => $c[6],
-                'nombre_receptor' => $c[7],
-
-                'monto_bruto'     => (int) str_replace('.', '', $c[8]),
-                'monto_retenido'  => (int) str_replace('.', '', $c[9]),
-                'monto_pagado'    => (int) str_replace('.', '', $c[10]),
+            $resumen[] = [
+                'mes'              => self::MESES[$mesNombre],
+                'mes_nombre'       => $mesNombre,
+                'folio_inicial'    => (int) $c[1],
+                'folio_final'      => (int) $c[2],
+                'boletas_vigentes' => (int) $c[3],
+                'boletas_nulas'    => (int) $c[4],
+                'honorario_bruto'  => $this->toInt($c[5]),
+                'retenciones'      => $this->toInt($c[6]),
+                'total_liquido'    => $this->toInt($c[7]),
             ];
         }
 
-        return $boletas;
+        return $resumen;
     }
 
-
+    /**
+     * Extrae totales generales
+     */
     protected function extraerTotales(): ?array
     {
-        return preg_match(
-            '/Totales.*?([\d\.]+).*?([\d\.]+).*?([\d\.]+)/si',
-            $this->contenido,
-            $m
-        )
-        ? [
-            'bruto'    => (int) str_replace('.', '', $m[1]),
-            'retenido' => (int) str_replace('.', '', $m[2]),
-            'pagado'   => (int) str_replace('.', '', $m[3]),
-        ]
-        : null;
-    }
+        preg_match_all('/<tr[^>]*>(.*?)<\/tr>/si', $this->contenido, $rows);
 
-    protected function normalizarFecha(?string $fecha): ?string
-    {
-        if (!$fecha) {
-            return null;
-        }
+        foreach ($rows[1] as $row) {
+            preg_match_all('/<td[^>]*>(.*?)<\/td>/si', $row, $cols);
 
-        // Espera formato dd-mm-yyyy
-        $fecha = trim($fecha);
+            $c = array_map(
+                fn ($v) => trim(preg_replace('/\s+/', ' ', strip_tags($v))),
+                $cols[1] ?? []
+            );
 
-        if (preg_match('/(\d{2})-(\d{2})-(\d{4})/', $fecha, $m)) {
-            return "{$m[3]}-{$m[2]}-{$m[1]}";
+            // Esperamos: Totales + 7 columnas
+            if (count($c) !== 8) {
+                continue;
+            }
+
+            if (stripos($c[0], 'Totales') === false) {
+                continue;
+            }
+
+            return [
+                'folio_inicial' => (int) $c[1],
+                'folio_final'   => (int) $c[2],
+                'vigentes'      => (int) $c[3],
+                'nulas'         => (int) $c[4],
+                'bruto'         => $this->toInt($c[5]),
+                'retenido'      => $this->toInt($c[6]),
+                'liquido'       => $this->toInt($c[7]),
+            ];
         }
 
         return null;
     }
 
 
-
+    protected function toInt(string $valor): int
+    {
+        return (int) str_replace('.', '', $valor);
+    }
 }
