@@ -629,6 +629,9 @@ Route::prefix('exportar')->group(function () {
 
 // Obtener link foto en consulta de Tracking
 Route::get('/tracking/delivery-links', [TrackingDeliveryLinksController::class, 'index']);
+Route::post('/reports/tracking/search', [TrackingDeliveryLinksController::class, 'search']);
+Route::post('/reports/tracking/export', [TrackingDeliveryLinksController::class, 'export']);
+
 
 
 
