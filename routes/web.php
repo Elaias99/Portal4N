@@ -38,9 +38,10 @@ use App\Http\Controllers\TrackingProductoController;
 use App\Http\Controllers\CruceController;
 use App\Http\Controllers\DocumentoCompraController;
 use App\Http\Controllers\Admin\BackupDatabaseController;
-use App\Http\Controllers\Admin\ControlPanelAdminController;
+use App\Http\Controllers\TrackingDeliveryLinksController;
 use App\Http\Controllers\HonorarioResumenAnualController;
 use App\Http\Controllers\HonorarioMensualRecController;
+use App\Http\Controllers\TrackingReportController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -572,7 +573,9 @@ Route::post(
 
 
 
+// rEPORTE TRACKING 
 
+Route::get('/report/tracking/{year}/{month}', [TrackingReportController::class, 'monthly']);
 
 
 
@@ -623,6 +626,10 @@ Route::prefix('exportar')->group(function () {
 
 
 });
+
+// Obtener link foto en consulta de Tracking
+Route::get('/tracking/delivery-links', [TrackingDeliveryLinksController::class, 'index']);
+
 
 
 
