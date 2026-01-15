@@ -7,44 +7,53 @@
     <div class="mb-4">
         <h1 class="h3">Envíos con prueba de entrega</h1>
         <p class="text-muted mb-0">
-            Consulta manual de tracking y exportación de pruebas de entrega (POD).
+            Consulta masiva de tracking y exportación de Pruebas de Entrega (POD).
         </p>
     </div>
 
-    {{-- BUSCADOR --}}
+    {{-- BUSCADOR MASIVO --}}
     <div class="card mb-4">
         <div class="card-header">
-            <strong>Buscar tracking manualmente</strong>
+            <strong>Búsqueda masiva de tracking</strong>
         </div>
 
         <div class="card-body">
-            <div class="row align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label">Número de tracking</label>
-                    <input
-                        type="text"
-                        id="trackingInput"
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label">
+                        Números de tracking (uno por línea)
+                    </label>
+
+                    <textarea
+                        id="trackingBatchInput"
                         class="form-control"
-                        placeholder="Ej: 4N202601081369"
-                    >
+                        rows="10"
+                        placeholder="Ej:
+4N202601123267
+4N202601148262
+4N202601141651"
+                    ></textarea>
+
+                    <small class="text-muted">
+                        Puedes pegar múltiples trackings desde Excel, correo o texto plano.
+                    </small>
                 </div>
 
-                <div class="col-md-2">
+                <div class="col-md-3 d-flex flex-column justify-content-end gap-2">
                     <button
-                        class="btn btn-primary w-100"
-                        onclick="buscarTracking()"
+                        id="batchBtn"
+                        class="btn btn-warning"
+                        onclick="buscarTrackingMasivo()"
                     >
-                        Buscar
+                        Buscar masivo
                     </button>
-                </div>
 
-                <div class="col-md-2">
                     <button
-                        id="exportBtn"
-                        class="btn btn-outline-success w-100"
-                        onclick="exportarExcel()"
+                        id="batchExportBtn"
+                        class="btn btn-success"
+                        onclick="exportarExcelMasivo()"
                     >
-                        Exportar Excel
+                        Exportar Excel masivo
                     </button>
                 </div>
             </div>
@@ -67,102 +76,108 @@ const estadosES = {
     returned: 'Devuelto'
 };
 
-/* ================= BUSCAR TRACKING ================= */
-function buscarTracking() {
-    const tracking = document.getElementById('trackingInput').value.trim();
-    const result = document.getElementById('searchResult');
+/* ================= UTIL ================= */
+function getBatchRawInput() {
+    return document.getElementById('trackingBatchInput').value || '';
+}
 
-    if (!tracking) {
-        alert('Ingresa un número de tracking');
+/* ================= BUSCAR MASIVO ================= */
+function buscarTrackingMasivo() {
+    const raw = getBatchRawInput();
+    const result = document.getElementById('searchResult');
+    const btn = document.getElementById('batchBtn');
+
+    if (!raw.trim()) {
+        alert('Pega al menos un tracking (uno por línea).');
         return;
     }
+
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Procesando...';
 
     result.innerHTML = `
         <div class="card">
             <div class="card-body">
-                ⏳ Consultando tracking...
+                ⏳ Procesando tracking(s) en modo masivo...
             </div>
         </div>
     `;
 
-    fetch('/reports/tracking/search', {
+    fetch('/reports/tracking/search-batch', {
         method: 'POST',
+        credentials: 'same-origin', // 👈 CLAVE
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document
-                .querySelector('meta[name="csrf-token"]')
-                .content
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
         },
-        body: JSON.stringify({ tracking })
+        body: JSON.stringify({ trackings: raw })
     })
+
     .then(r => r.json())
     .then(res => {
         if (!res.success) {
             result.innerHTML = `
-                <div class="alert alert-warning">
-                    ❌ ${res.message}
+                <div class="alert alert-danger">
+                    ❌ Error en la búsqueda masiva
                 </div>
             `;
             return;
         }
 
-        const rawState = res.data.delivery_state || 'unknown';
-        const state = estadosES[rawState] || rawState;
-        const photos = res.data.photos || [];
+        const rows = res.results || [];
 
-        const estadoBadge = `
-            <span class="badge bg-${rawState === 'delivered' ? 'success' : 'warning'}">
-                ${state}
-            </span>
-        `;
-
-        let photosHtml = '';
-
-        if (photos.length) {
-            photosHtml += `<ul class="list-group list-group-flush mt-2">`;
-
-            photos.forEach((url, i) => {
-                photosHtml += `
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>Foto ${i + 1}</span>
-                        <a href="${url}" target="_blank" class="btn btn-sm btn-outline-primary">
-                            Ver
-                        </a>
-                    </li>
-                `;
-            });
-
-            photosHtml += `</ul>`;
-        } else {
-            photosHtml = `<p class="text-muted mb-0">No existen fotos de entrega.</p>`;
-        }
-
-        result.innerHTML = `
+        let html = `
             <div class="card">
                 <div class="card-header">
-                    Resultado del tracking
+                    Resultados (${rows.length})
                 </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Tracking</th>
+                                    <th>Estado</th>
+                                    <th>Fotos</th>
+                                    <th>Links POD</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+        `;
 
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <strong>Tracking</strong><br>
-                            ${tracking}
-                        </div>
+        rows.forEach(item => {
+            const rawState = item.delivery_state || 'unknown';
+            const state = estadosES[rawState] || rawState;
+            const badge = rawState === 'delivered' ? 'success' : 'warning';
+            const photos = item.photos || [];
 
-                        <div class="col-md-4">
-                            <strong>Estado</strong><br>
-                            ${estadoBadge}
-                        </div>
-                    </div>
+            let links = '—';
 
-                    <div>
-                        <strong>Pruebas de entrega (POD)</strong>
-                        ${photosHtml}
+            if (photos.length) {
+                links = photos.map((url, i) =>
+                    `<a href="${url}" target="_blank">Foto ${i + 1}</a>`
+                ).join(' | ');
+            }
+
+            html += `
+                <tr>
+                    <td>${item.tracking}</td>
+                    <td><span class="badge bg-${badge}">${state}</span></td>
+                    <td>${photos.length}</td>
+                    <td style="white-space:nowrap;">${links}</td>
+                </tr>
+            `;
+        });
+
+        html += `
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         `;
+
+        result.innerHTML = html;
     })
     .catch(() => {
         result.innerHTML = `
@@ -170,33 +185,36 @@ function buscarTracking() {
                 ❌ Error al consultar el servicio
             </div>
         `;
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = 'Buscar masivo';
     });
 }
 
-/* ================= EXPORTAR EXCEL ================= */
-function exportarExcel() {
-    const tracking = document.getElementById('trackingInput').value.trim();
-    const btn = document.getElementById('exportBtn');
+/* ================= EXPORTAR EXCEL MASIVO ================= */
+function exportarExcelMasivo() {
+    const raw = getBatchRawInput();
+    const btn = document.getElementById('batchExportBtn');
 
-    if (!tracking) {
-        alert('Busca un tracking primero');
+    if (!raw.trim()) {
+        alert('Pega al menos un tracking antes de exportar.');
         return;
     }
 
-    // Feedback visual
     btn.disabled = true;
     btn.innerHTML = '⏳ Exportando...';
 
-    fetch('/reports/tracking/export', {
+    fetch('/reports/tracking/export-batch', {
         method: 'POST',
+        credentials: 'same-origin', // 👈 CLAVE
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document
-                .querySelector('meta[name="csrf-token"]')
-                .content
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
         },
-        body: JSON.stringify({ tracking })
+        body: JSON.stringify({ trackings: raw })
     })
+
     .then(res => {
         if (!res.ok) throw new Error();
         return res.blob();
@@ -205,17 +223,16 @@ function exportarExcel() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `tracking_${tracking}.xlsx`;
+        a.download = 'tracking_batch_pod.xlsx';
         a.click();
         window.URL.revokeObjectURL(url);
     })
     .catch(() => {
-        alert('Error al exportar Excel');
+        alert('Error al exportar Excel masivo');
     })
     .finally(() => {
-        // Restaurar botón
         btn.disabled = false;
-        btn.innerHTML = 'Exportar Excel';
+        btn.innerHTML = 'Exportar Excel masivo';
     });
 }
 </script>

@@ -631,6 +631,8 @@ Route::prefix('exportar')->group(function () {
 Route::get('/tracking/delivery-links', [TrackingDeliveryLinksController::class, 'index']);
 Route::post('/reports/tracking/search', [TrackingDeliveryLinksController::class, 'search']);
 Route::post('/reports/tracking/export', [TrackingDeliveryLinksController::class, 'export']);
+Route::post('/reports/tracking/search-batch', [TrackingDeliveryLinksController::class, 'searchBatch']);
+Route::post('/reports/tracking/export-batch', [TrackingDeliveryLinksController::class, 'exportBatch']);
 
 
 
