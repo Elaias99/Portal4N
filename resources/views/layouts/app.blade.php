@@ -198,7 +198,7 @@
                             </a>
                         </li>
 
-                        @role('admin')
+                        {{-- @role('admin')
                         <li class="list-group-item">
                             <a href="#submenuProveedores" class="text-decoration-none" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="submenuProveedores">
                                 <i class="fas fa-building me-2"></i> Gestión de Proveedores
@@ -233,7 +233,7 @@
                                 </ul>
                             </div>
                         </li>
-                        @endrole
+                        @endrole --}}
 
                         @role('admin')
                         <li class="list-group-item">
@@ -263,10 +263,28 @@
 
 
 
+                        <li class="list-group-item">
+                            <a class="text-decoration-none dropdown-toggle" data-bs-toggle="collapse" href="#informacionTracking" role="button" aria-expanded="false" aria-controls="informacionTracking">
+                                <i class="fas fa-truck-moving me-2"></i> Seguimiento Tracking
+                            </a>
+                            <div class="collapse" id="informacionTracking">
+                                <ul class="list-group">
+                                    <li class="list-group-item">
+                                        <a href="{{ url('/tracking/delivery-links') }}" class="text-decoration-none">
+                                            <i class="fas fa-search-location me-2"></i> Tracking
+                                        </a>
+
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+
+
                     @endrole
 
                     <!-- Gestión de Bultos (disponible también para trabajadores con área asignada) -->
-                    @auth
+                    {{-- @auth
                     @if (
                         auth()->user()->hasRole(['admin', 'jefe']) ||
                         (
@@ -315,10 +333,10 @@
                         </div>
                     </li>
                     @endif
-                    @endauth
+                    @endauth --}}
 
 
-                    @auth
+                    {{-- @auth
                     @if (
                         auth()->user()->hasRole(['admin', 'jefe']) ||
                         (
@@ -333,7 +351,7 @@
                             </a>
                         </li>
                     @endif
-                    @endauth
+                    @endauth --}}
 
 
 
