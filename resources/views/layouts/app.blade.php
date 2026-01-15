@@ -1,3 +1,9 @@
+@php
+    $trackingOnlyUsers = [4, 8, 22, 30, 36];
+    $isTrackingOnlyUser = auth()->check() && in_array(auth()->id(), $trackingOnlyUsers);
+@endphp
+
+
 <!doctype html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
@@ -39,12 +45,20 @@
             <div class="container">
                 <!-- Off-canvas Sidebar Menu Button (only for roles admin and jefe) -->
                 @auth
-                    @if (auth()->user()->hasRole(['admin', 'jefe']) || (auth()->user()->trabajador && auth()->user()->trabajador->area_id))
-                        <button class="btn btn-outline-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#menuSidebar" aria-controls="menuSidebar">
+                    @if (
+                        auth()->user()->hasRole(['admin', 'jefe']) ||
+                        (auth()->user()->trabajador && auth()->user()->trabajador->area_id) ||
+                        $isTrackingOnlyUser
+                    )
+                        <button class="btn btn-outline-light" type="button"
+                                data-bs-toggle="offcanvas"
+                                data-bs-target="#menuSidebar"
+                                aria-controls="menuSidebar">
                             <i class="fas fa-bars"></i> Menú
                         </button>
                     @endif
                 @endauth
+
 
 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="{{ __('Toggle navigation') }}">
@@ -116,7 +130,12 @@
 
         <!-- Offcanvas Sidebar (only for roles admin and jefe) -->
         @auth
-        @if (auth()->user()->hasRole(['admin', 'jefe']) || (auth()->user()->trabajador && auth()->user()->trabajador->area_id))
+        @if (
+                auth()->user()->hasRole(['admin', 'jefe']) ||
+                (auth()->user()->trabajador && auth()->user()->trabajador->area_id) ||
+                $isTrackingOnlyUser
+            )
+
         <div class="offcanvas offcanvas-start" tabindex="-1" id="menuSidebar" aria-labelledby="menuSidebarLabel">
             <div class="offcanvas-header">
                 <h5 class="offcanvas-title" id="menuSidebarLabel">Navegación Rápida</h5>
@@ -198,43 +217,6 @@
                             </a>
                         </li>
 
-                        {{-- @role('admin')
-                        <li class="list-group-item">
-                            <a href="#submenuProveedores" class="text-decoration-none" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="submenuProveedores">
-                                <i class="fas fa-building me-2"></i> Gestión de Proveedores
-                            </a>
-                            <div class="collapse ps-4" id="submenuProveedores">
-                                <ul class="list-unstyled">
-                                    <li class="my-2">
-                                        <a href="{{ route('proveedores.index') }}" class="text-decoration-none">
-                                            <i class="fas fa-list me-2"></i> Ver Proveedores
-                                        </a>
-                                    </li>
-                                    <li class="my-2">
-                                        <a href="{{ route('proveedores.create') }}" class="text-decoration-none">
-                                            <i class="fas fa-plus me-2"></i> Crear Proveedor
-                                        </a>
-                                    </li>
-                                    <li class="my-2">
-                                        <a href="{{ route('compras.index') }}" class="text-decoration-none">
-                                            <i class="fa-solid fa-store me-2"></i> Compras
-                                        </a>
-                                    </li>
-                                    <li class="my-2">
-                                        <a href="{{ route('compras.create') }}" class="text-decoration-none">
-                                            <i class="fa-solid fa-cart-plus me-2"></i> Crear Compra
-                                        </a>
-                                    </li>
-                                    <li class="my-2">
-                                        <a href="{{ route('pagos.index') }}" class="text-decoration-none">
-                                            <i class="fas fa-money-check-alt me-2"></i> Pagos
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </li>
-                        @endrole --}}
-
                         @role('admin')
                         <li class="list-group-item">
                             <a class="text-decoration-none" href="{{ route('admin.index') }}">
@@ -263,98 +245,35 @@
 
 
 
-                        <li class="list-group-item">
-                            <a class="text-decoration-none dropdown-toggle" data-bs-toggle="collapse" href="#informacionTracking" role="button" aria-expanded="false" aria-controls="informacionTracking">
-                                <i class="fas fa-truck-moving me-2"></i> Seguimiento Tracking
-                            </a>
-                            <div class="collapse" id="informacionTracking">
-                                <ul class="list-group">
-                                    <li class="list-group-item">
-                                        <a href="{{ url('/tracking/delivery-links') }}" class="text-decoration-none">
-                                            <i class="fas fa-search-location me-2"></i> Tracking
-                                        </a>
 
-                                    </li>
-                                </ul>
-                            </div>
-                        </li>
 
 
 
                     @endrole
 
-                    <!-- Gestión de Bultos (disponible también para trabajadores con área asignada) -->
-                    {{-- @auth
-                    @if (
-                        auth()->user()->hasRole(['admin', 'jefe']) ||
-                        (
-                            auth()->user()->trabajador &&
-                            auth()->user()->trabajador->area_id &&
-                            auth()->user()->trabajador->area_id !== 5
-                        )
-                    )
-                    <!-- Gestión de Bultos -->
-                    <li class="list-group-item">
-                        <a class="text-decoration-none dropdown-toggle" data-bs-toggle="collapse" href="#gestionBultos" role="button" aria-expanded="false" aria-controls="gestionBultos">
-                            <i class="fas fa-boxes me-2"></i> Gestión de Bultos
-                        </a>
-                        <div class="collapse" id="gestionBultos">
-                            <ul class="list-group">
-                                <li class="list-group-item">
-                                    <a href="{{ route('bultos.index') }}" class="text-decoration-none">
-                                        <i class="fas fa-search me-2"></i> Buscar Bulto
-                                    </a>
-                                </li>
-                                <li class="list-group-item">
-                                    <a class="text-decoration-none dropdown-toggle" data-bs-toggle="collapse" href="#gestionReclamos" role="button" aria-expanded="false" aria-controls="gestionReclamos">
-                                        <i class="fas fa-clipboard-list me-2"></i> Reclamos
-                                    </a>
-                                    <div class="collapse ps-3" id="gestionReclamos">
-                                        <ul class="list-group">
-                                            <li class="list-group-item">
-                                                <a href="{{ route('reclamos.index') }}" class="text-decoration-none">
-                                                    <i class="fas fa-tasks me-2"></i> Pendientes
-                                                </a>
-                                            </li>
-                                            <li class="list-group-item">
-                                                <a href="{{ route('perfiles.reclamos.area') }}" class="text-decoration-none">
-                                                    <i class="fas fa-comments me-2"></i> Conversaciones de Área
-                                                </a>
-                                            </li>
-                                            <li class="list-group-item">
-                                                <a href="{{ route('reclamos.mios') }}" class="text-decoration-none">
-                                                    <i class="fas fa-user-check me-2"></i> Mis Reclamos
-                                                </a>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </li>
-                            </ul>
-                        </div>
-                    </li>
-                    @endif
-                    @endauth --}}
 
+                        @if ($isTrackingOnlyUser)
+                            <li class="list-group-item">
+                                <a class="text-decoration-none dropdown-toggle"
+                                data-bs-toggle="collapse"
+                                href="#informacionTracking"
+                                role="button"
+                                aria-expanded="false"
+                                aria-controls="informacionTracking">
+                                    <i class="fas fa-truck-moving me-2"></i> Seguimiento Tracking
+                                </a>
 
-                    {{-- @auth
-                    @if (
-                        auth()->user()->hasRole(['admin', 'jefe']) ||
-                        (
-                            auth()->user()->trabajador &&
-                            auth()->user()->trabajador->area_id
-                        )
-                    )
-                        <!-- Opción: Seguimiento de Productos -->
-                        <li class="list-group-item">
-                            <a href="{{ url('/tracking-productos') }}" class="text-decoration-none">
-                                <i class="fas fa-map-marker-alt me-2"></i> Seguimiento de Productos
-                            </a>
-                        </li>
-                    @endif
-                    @endauth --}}
-
-
-
+                                <div class="collapse" id="informacionTracking">
+                                    <ul class="list-group">
+                                        <li class="list-group-item">
+                                            <a href="{{ url('/tracking/delivery-links') }}" class="text-decoration-none">
+                                                <i class="fas fa-search-location me-2"></i> Tracking
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </li>
+                        @endif
 
                     
                 </ul>
@@ -375,11 +294,6 @@
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     
-
-
-
-
-
     <script>
         function cargarNotificaciones() {
             $.get('{{ url('notificaciones/recientes') }}', function(data) {
