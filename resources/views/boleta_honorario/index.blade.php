@@ -40,16 +40,52 @@
                 <p><strong>RUT:</strong> {{ $preview['rut_contribuyente'] }}</p>
                 <p><strong>Año:</strong> {{ $preview['anio'] }}</p>
 
-                @include('boleta_honorario.partials.tabla_resumen', [
-                    'resumen' => $preview['resumen_mensual'],
-                    'totales' => $preview['totales'] ?? null
-                ])
+                {{-- TABLA PREVIEW --}}
+                <table class="table table-sm table-bordered mt-3">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Mes</th>
+                            <th class="text-end">Folio Inicial</th>
+                            <th class="text-end">Folio Final</th>
+                            <th class="text-end">Vigentes</th>
+                            <th class="text-end">Nulas</th>
+                            <th class="text-end">Bruto</th>
+                            <th class="text-end">Retenciones</th>
+                            <th class="text-end">Líquido</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($preview['resumen_mensual'] as $r)
+                            <tr>
+                                <td>{{ $r['mes_nombre'] }}</td>
+                                <td class="text-end">{{ $r['folio_inicial'] }}</td>
+                                <td class="text-end">{{ $r['folio_final'] }}</td>
+                                <td class="text-end">{{ $r['boletas_vigentes'] }}</td>
+                                <td class="text-end">{{ $r['boletas_nulas'] }}</td>
+                                <td class="text-end">{{ $r['honorario_bruto'] }}</td>
+                                <td class="text-end">{{ $r['retenciones'] }}</td>
+                                <td class="text-end">{{ $r['total_liquido'] }}</td>
+                            </tr>
+                        @endforeach
+
+                        @if(isset($preview['totales']))
+                        <tr class="table-secondary fw-bold">
+                            <td colspan="5">Totales</td>
+                            <td class="text-end">{{ $preview['totales']['bruto'] }}</td>
+                            <td class="text-end">{{ $preview['totales']['retenido'] }}</td>
+                            <td class="text-end">{{ $preview['totales']['liquido'] }}</td>
+                        </tr>
+                        @endif
+
+                    </tbody>
+                </table>
 
                 <form action="{{ route('honorarios.resumen.store') }}" method="POST" class="mt-3">
                     @csrf
                     <input type="hidden" name="data" value="{{ base64_encode(json_encode($preview)) }}">
                     <button class="btn btn-success">Confirmar importación</button>
                 </form>
+
             </div>
         </div>
     @endif
@@ -78,12 +114,50 @@
                             — {{ $rut }} — Año {{ $anio }}
                         </h5>
 
-                        @include('boleta_honorario.partials.tabla_resumen', [
-                            'resumen' => $meses,
-                            'totales' => \App\Models\HonorarioResumenAnualTotal::where('rut_contribuyente', $rut)
+                        @php
+                            $totales = \App\Models\HonorarioResumenAnualTotal::where('rut_contribuyente', $rut)
                                 ->where('anio', $anio)
-                                ->first()
-                        ])
+                                ->first();
+                        @endphp
+
+                        {{-- TABLA GUARDADOS --}}
+                        <table class="table table-sm table-bordered mt-3">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Mes</th>
+                                    <th class="text-end">Folio Inicial</th>
+                                    <th class="text-end">Folio Final</th>
+                                    <th class="text-end">Vigentes</th>
+                                    <th class="text-end">Nulas</th>
+                                    <th class="text-end">Bruto</th>
+                                    <th class="text-end">Retenciones</th>
+                                    <th class="text-end">Líquido</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($meses as $r)
+                                    <tr>
+                                        <td>{{ $r->mes_nombre }}</td>
+                                        <td class="text-end">{{ $r->folio_inicial }}</td>
+                                        <td class="text-end">{{ $r->folio_final }}</td>
+                                        <td class="text-end">{{ $r->boletas_vigentes }}</td>
+                                        <td class="text-end">{{ $r->boletas_nulas }}</td>
+                                        <td class="text-end">{{ $r->honorario_bruto }}</td>
+                                        <td class="text-end">{{ $r->retenciones }}</td>
+                                        <td class="text-end">{{ $r->total_liquido }}</td>
+                                    </tr>
+                                @endforeach
+
+                                @if($totales)
+                                    <tr class="table-secondary fw-bold">
+                                        <td colspan="5">Totales</td>
+                                        <td class="text-end">{{ $totales->honorario_bruto }}</td>
+                                        <td class="text-end">{{ $totales->retenciones }}</td>
+                                        <td class="text-end">{{ $totales->total_liquido }}</td>
+                                    </tr>
+                                @endif
+                            </tbody>
+                        </table>
 
                     @endforeach
                 @endforeach

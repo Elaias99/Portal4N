@@ -367,63 +367,7 @@ class DocumentoFinancieroController extends Controller
             abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
         }
 
-        $query = \App\Models\DocumentoFinanciero::with(['empresa', 'tipoDocumento', 'movimientos.user']);
-
-        // 🔍 Filtros dinámicos según el formulario
-        if ($request->filled('q')) {
-            $q = $request->input('q');
-            $query->where(function ($sub) use ($q) {
-                $sub->where('folio', 'like', "%$q%")
-                    ->orWhere('razon_social', 'like', "%$q%")
-                    ->orWhere('rut_cliente', 'like', "%$q%");
-            });
-        }
-
-        if ($request->filled('rut')) {
-            $query->where('rut_cliente', 'like', "%{$request->rut}%");
-        }
-
-        if ($request->filled('estado')) {
-            $estado = $request->estado;
-            $query->where(function ($sub) use ($estado) {
-                $sub->where('status', $estado)
-                    ->orWhere('status', $estado);
-            });
-        }
-
-
-        if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
-            $query->whereBetween('fecha_docto', [$request->fecha_inicio, $request->fecha_fin]);
-        } elseif ($request->filled('fecha_inicio')) {
-            $query->whereDate('fecha_docto', '>=', $request->fecha_inicio);
-        } elseif ($request->filled('fecha_fin')) {
-            $query->whereDate('fecha_docto', '<=', $request->fecha_fin);
-        }
-
-        // === FILTRO FECHA DE VENCIMIENTO ===
-        if ($request->filled('vencimiento_inicio') && $request->filled('vencimiento_fin')) {
-            $query->whereBetween('fecha_vencimiento', [$request->vencimiento_inicio, $request->vencimiento_fin]);
-        } elseif ($request->filled('vencimiento_inicio')) {
-            $query->whereDate('fecha_vencimiento', '>=', $request->vencimiento_inicio);
-        } elseif ($request->filled('vencimiento_fin')) {
-            $query->whereDate('fecha_vencimiento', '<=', $request->vencimiento_fin);
-        }
-
-
-        // 🔹 Si hay filtros, traer los resultados; si no, solo mostrar vista vacía
-        $documentos = null;
-        if ($request->hasAny(['q', 'rut', 'estado', 'fecha_inicio', 'fecha_fin', 'vencimiento_inicio', 'vencimiento_fin'])) {
-            $documentos = $query->orderByDesc('fecha_docto')->limit(30)->get();
-        }
-
-        // 🔹 Si hay un documento específico seleccionado
-        $documentoSeleccionado = null;
-        if ($request->filled('documento_id')) {
-            $documentoSeleccionado = \App\Models\DocumentoFinanciero::with(['empresa', 'tipoDocumento', 'movimientos.user'])
-                ->find($request->documento_id);
-        }
-
-        return view('cobranzas.general', compact('documentos', 'documentoSeleccionado'));
+        return view('cobranzas.general');
     }
 
 

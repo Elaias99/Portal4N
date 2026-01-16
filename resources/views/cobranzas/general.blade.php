@@ -43,6 +43,35 @@
             </a>
         </div>
 
+
+        {{-- === Boletas de Honorarios (REC / BTE) === --}}
+        {{-- === Honorarios (REC / BTE) === --}}
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 honorarios-split-card">
+
+                {{-- REC Mensual --}}
+                <a href="{{ route('honorarios.mensual.index') }}"
+                class="split-link split-left">
+                    <div class="split-content split-bottom-left">
+                        <h6 class="fw-bold mb-0">REC Mensual</h6>
+                        <small class="text-muted">Honorarios recibidos</small>
+                    </div>
+                </a>
+
+                {{-- BTE --}}
+                <a href="{{ route('honorarios.resumen.index') }}"
+                class="split-link split-right">
+                    <div class="split-content split-top-right">
+                        <h6 class="fw-bold mb-0">BTE</h6>
+                        <small class="text-muted">Resumen anual</small>
+                    </div>
+                </a>
+
+            </div>
+        </div>
+
+
+
     </div>
 
 

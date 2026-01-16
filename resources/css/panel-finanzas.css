@@ -361,3 +361,69 @@
         color: var(--text-muted);
     }
 
+
+/* ===== TARJETA HONORARIOS PARTIDA ===== */
+.honorarios-split-card{
+    position: relative;
+    overflow: hidden;
+    min-height: 140px;
+}
+
+/* Links ocupan toda la tarjeta */
+.honorarios-split-card .split-link{
+    position: absolute;
+    inset: 0;
+    text-decoration: none;
+    color: inherit;
+    transition: transform .15s ease;
+}
+
+/* División diagonal */
+.split-left{
+    clip-path: polygon(0 0, 60% 0, 40% 100%, 0 100%);
+    background: #ffffff;
+}
+
+.split-right{
+    clip-path: polygon(60% 0, 100% 0, 100% 100%, 40% 100%);
+    background: #f8f9fa;
+}
+
+/* Línea diagonal */
+/* .honorarios-split-card::after{
+    content:"";
+    position:absolute;
+    top:-25%;
+    left:50%;
+    width:2px;
+    height:150%;
+    background: rgba(0,0,0,0.06);
+    transform: rotate(18deg);
+    pointer-events:none;
+} */
+
+/* CONTENIDO */
+.split-content{
+    position:absolute;
+    max-width: 70%;
+}
+
+/* Posiciones CLARAS */
+.split-bottom-left{
+    bottom: 16px;
+    left: 16px;
+    text-align: left;
+}
+
+.split-top-right{
+    top: 16px;
+    right: 16px;
+    text-align: right;
+}
+
+/* Hover SOLO en la mitad */
+.split-left:hover,
+.split-right:hover{
+    transform: translateY(-4px);
+}
+
