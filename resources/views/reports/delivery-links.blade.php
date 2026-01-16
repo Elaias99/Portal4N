@@ -162,8 +162,9 @@ function buscarTrackingMasivo() {
                                 <a href="${url}" target="_blank">
                                     <img
                                         src="${url}"
-                                        style="width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #ddd;"
+                                        style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #ccc;"
                                     >
+
                                 </a>
                                 <div style="font-size:12px;color:#666;">
                                     Foto ${idx + 1}
