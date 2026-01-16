@@ -134,14 +134,20 @@ function buscarTrackingMasivo() {
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-striped mb-0">
+
+
                             <thead>
                                 <tr>
                                     <th>Tracking</th>
                                     <th>Estado</th>
                                     <th>Fotos</th>
+                                    <th>Vista POD</th>
                                     <th>Links POD</th>
                                 </tr>
                             </thead>
+
+
+
                             <tbody>
         `;
 
@@ -159,14 +165,55 @@ function buscarTrackingMasivo() {
                 ).join(' | ');
             }
 
+
+            let thumbnail = '—';
+
+            if (photos.length) {
+                const maxThumbs = 3;
+
+                thumbnail = `
+                    <div style="
+                        display: flex;
+                        gap: 6px;
+                        align-items: center;
+                    ">
+                        ${photos.slice(0, maxThumbs).map(url => `
+                            <a href="${url}" target="_blank">
+                                <img
+                                    src="${url}"
+                                    alt="POD"
+                                    style="
+                                        width: 50px;
+                                        height: 50px;
+                                        object-fit: cover;
+                                        border-radius: 6px;
+                                        border: 1px solid #ddd;
+                                    "
+                                >
+                            </a>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+
+
+
+
+
+
+
+
             html += `
                 <tr>
                     <td>${item.tracking}</td>
                     <td><span class="badge bg-${badge}">${state}</span></td>
                     <td>${photos.length}</td>
+                    <td>${thumbnail}</td>
                     <td style="white-space:nowrap;">${links}</td>
                 </tr>
             `;
+
         });
 
         html += `
