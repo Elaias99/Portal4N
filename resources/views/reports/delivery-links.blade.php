@@ -66,6 +66,10 @@
 </div>
 
 <script>
+
+// Guarda el último resultado del batch
+let lastBatchResults = [];
+
 /* ================= TRADUCCIÓN DE ESTADOS ================= */
 const estadosES = {
     pending: 'Pendiente',
@@ -81,6 +85,10 @@ function getBatchRawInput() {
     return document.getElementById('trackingBatchInput').value || '';
 }
 
+
+
+
+
 /* ================= BUSCAR MASIVO ================= */
 function buscarTrackingMasivo() {
     const raw = getBatchRawInput();
@@ -95,143 +103,89 @@ function buscarTrackingMasivo() {
     btn.disabled = true;
     btn.innerHTML = '⏳ Procesando...';
 
-    result.innerHTML = `
-        <div class="card">
-            <div class="card-body">
-                ⏳ Procesando tracking(s) en modo masivo...
-            </div>
-        </div>
-    `;
-
     fetch('/reports/tracking/search-batch', {
         method: 'POST',
-        credentials: 'same-origin', // 👈 CLAVE
+        credentials: 'same-origin',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
         },
         body: JSON.stringify({ trackings: raw })
     })
-
     .then(r => r.json())
     .then(res => {
         if (!res.success) {
-            result.innerHTML = `
-                <div class="alert alert-danger">
-                    ❌ Error en la búsqueda masiva
-                </div>
-            `;
+            result.innerHTML = `<div class="alert alert-danger">Error</div>`;
             return;
         }
 
-        const rows = res.results || [];
+        lastBatchResults = res.results || [];
 
         let html = `
-            <div class="card">
-                <div class="card-header">
-                    Resultados (${rows.length})
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-striped mb-0">
-
-
-                            <thead>
-                                <tr>
-                                    <th>Tracking</th>
-                                    <th>Estado</th>
-                                    <th>Fotos</th>
-                                    <th>Vista POD</th>
-                                    <th>Links POD</th>
-                                </tr>
-                            </thead>
-
-
-
-                            <tbody>
+        <div class="card">
+            <div class="card-header">Resultados</div>
+            <div class="card-body p-0">
+                <table class="table table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>Tracking</th>
+                            <th>Estado</th>
+                            <th>Fotos</th>
+                            <th>Vista POD (selecciona imágenes)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
         `;
 
-        rows.forEach(item => {
+        lastBatchResults.forEach(item => {
             const rawState = item.delivery_state || 'unknown';
             const state = estadosES[rawState] || rawState;
             const badge = rawState === 'delivered' ? 'success' : 'warning';
             const photos = item.photos || [];
 
-            let links = '—';
+            let photosHtml = '—';
 
             if (photos.length) {
-                links = photos.map((url, i) =>
-                    `<a href="${url}" target="_blank">Foto ${i + 1}</a>`
-                ).join(' | ');
-            }
-
-
-            let thumbnail = '—';
-
-            if (photos.length) {
-                const maxThumbs = 3;
-
-                thumbnail = `
-                    <div style="
-                        display: flex;
-                        gap: 6px;
-                        align-items: center;
-                    ">
-                        ${photos.slice(0, maxThumbs).map(url => `
-                            <a href="${url}" target="_blank">
-                                <img
-                                    src="${url}"
-                                    alt="POD"
-                                    style="
-                                        width: 50px;
-                                        height: 50px;
-                                        object-fit: cover;
-                                        border-radius: 6px;
-                                        border: 1px solid #ddd;
-                                    "
+                photosHtml = `
+                    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                        ${photos.map((url, idx) => `
+                            <div style="text-align:center;">
+                                <input
+                                    type="checkbox"
+                                    class="photo-checkbox"
+                                    data-tracking="${item.tracking}"
+                                    data-state="${rawState}"
+                                    data-url="${url}"
+                                    style="margin-bottom:6px;"
                                 >
-                            </a>
+                                <br>
+                                <a href="${url}" target="_blank">
+                                    <img
+                                        src="${url}"
+                                        style="width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #ddd;"
+                                    >
+                                </a>
+                                <div style="font-size:12px;color:#666;">
+                                    Foto ${idx + 1}
+                                </div>
+                            </div>
                         `).join('')}
                     </div>
                 `;
             }
-
-
-
-
-
-
-
-
 
             html += `
                 <tr>
                     <td>${item.tracking}</td>
                     <td><span class="badge bg-${badge}">${state}</span></td>
                     <td>${photos.length}</td>
-                    <td>${thumbnail}</td>
-                    <td style="white-space:nowrap;">${links}</td>
+                    <td>${photosHtml}</td>
                 </tr>
             `;
-
         });
 
-        html += `
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        `;
-
+        html += `</tbody></table></div></div>`;
         result.innerHTML = html;
-    })
-    .catch(() => {
-        result.innerHTML = `
-            <div class="alert alert-danger">
-                ❌ Error al consultar el servicio
-            </div>
-        `;
     })
     .finally(() => {
         btn.disabled = false;
@@ -239,33 +193,43 @@ function buscarTrackingMasivo() {
     });
 }
 
+
+
+
+
+
+
+
 /* ================= EXPORTAR EXCEL MASIVO ================= */
 function exportarExcelMasivo() {
-    const raw = getBatchRawInput();
     const btn = document.getElementById('batchExportBtn');
 
-    if (!raw.trim()) {
-        alert('Pega al menos un tracking antes de exportar.');
+    const checked = Array.from(document.querySelectorAll('.photo-checkbox:checked'));
+
+    if (!checked.length) {
+        alert('Selecciona al menos una imagen para exportar.');
         return;
     }
 
     btn.disabled = true;
     btn.innerHTML = '⏳ Exportando...';
 
+    const items = checked.map(cb => ({
+        tracking: cb.dataset.tracking,
+        state: cb.dataset.state,
+        url: cb.dataset.url
+    }));
+
     fetch('/reports/tracking/export-batch', {
         method: 'POST',
-        credentials: 'same-origin', // 👈 CLAVE
+        credentials: 'same-origin',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
         },
-        body: JSON.stringify({ trackings: raw })
+        body: JSON.stringify({ items })
     })
-
-    .then(res => {
-        if (!res.ok) throw new Error();
-        return res.blob();
-    })
+    .then(res => res.blob())
     .then(blob => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -274,13 +238,16 @@ function exportarExcelMasivo() {
         a.click();
         window.URL.revokeObjectURL(url);
     })
-    .catch(() => {
-        alert('Error al exportar Excel masivo');
-    })
     .finally(() => {
         btn.disabled = false;
         btn.innerHTML = 'Exportar Excel masivo';
     });
 }
 </script>
+
+
+
+
+
+
 @endsection

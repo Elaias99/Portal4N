@@ -295,40 +295,34 @@ class TrackingDeliveryLinksController extends Controller
 
 
     // Exportación masiva
-
     public function exportBatch(Request $request)
     {
-        Log::info('Tracking batch export requested');
+        Log::info('Tracking batch export requested (by photo)', [
+            'payload' => $request->all(),
+        ]);
 
-        // 🔹 Tomamos los resultados ya calculados
-        $results = session('tracking_batch_results');
-
-        if (!$results || !is_array($results)) {
-            abort(400, 'No existen resultados para exportar. Ejecuta la búsqueda primero.');
-        }
+        $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.tracking' => 'required|string',
+            'items.*.state'    => 'nullable|string',
+            'items.*.url'      => 'required|url',
+        ]);
 
         $rows = [];
 
-        foreach ($results as $item) {
-
-            if (empty($item['photos'])) {
-                continue;
-            }
-
-            foreach ($item['photos'] as $photoUrl) {
-                $rows[] = [
-                    'tracking' => $item['tracking'],
-                    'state'    => $item['delivery_state'] ?? '-',
-                    'url'      => $photoUrl,
-                ];
-            }
+        foreach ($request->items as $item) {
+            $rows[] = [
+                'tracking' => $item['tracking'],
+                'state'    => $item['state'] ?? '-',
+                'url'      => $item['url'],
+            ];
         }
 
         if (empty($rows)) {
-            abort(404, 'No existen pruebas de entrega para exportar');
+            abort(404, 'No existen imágenes seleccionadas para exportar');
         }
 
-        Log::info('Tracking batch export ready', [
+        Log::info('Tracking batch export ready (by photo)', [
             'rows' => count($rows),
         ]);
 
@@ -337,6 +331,8 @@ class TrackingDeliveryLinksController extends Controller
             'tracking_batch_pod.xlsx'
         );
     }
+
+
 
 
 
