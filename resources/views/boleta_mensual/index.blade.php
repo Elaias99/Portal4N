@@ -167,17 +167,34 @@
                                 <td>{{ $r->fecha_emision->format('d-m-Y') }}</td>
                                 <td>{{ $r->estado }}</td>
                                 <td>{{ $r->razon_social_emisor }}</td>
-                                <td>{{ number_format($r->monto_bruto, 0, ',', '.') }}</td>
-                                <td>{{ number_format($r->monto_retenido, 0, ',', '.') }}</td>
-                                <td>{{ number_format($r->monto_pagado, 0, ',', '.') }}</td>
+                                <td class="text-end">{{ number_format($r->monto_bruto, 0, ',', '.') }}</td>
+                                <td class="text-end">{{ number_format($r->monto_retenido, 0, ',', '.') }}</td>
+                                <td class="text-end">{{ number_format($r->monto_pagado, 0, ',', '.') }}</td>
                             </tr>
                         @endforeach
+
+                        {{-- FILA DE TOTALES GUARDADOS --}}
+                        @if(isset($total))
+                            <tr class="table-secondary fw-bold">
+                                <td colspan="6">Totales</td>
+                                <td class="text-end">
+                                    {{ number_format($total->monto_bruto, 0, ',', '.') }}
+                                </td>
+                                <td class="text-end">
+                                    {{ number_format($total->monto_retenido, 0, ',', '.') }}
+                                </td>
+                                <td class="text-end">
+                                    {{ number_format($total->monto_pagado, 0, ',', '.') }}
+                                </td>
+                            </tr>
+                        @endif
                     </tbody>
                 </table>
             @endif
 
         </div>
     </div>
+
 
 </div>
 @endsection

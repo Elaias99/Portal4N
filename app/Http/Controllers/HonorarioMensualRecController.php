@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\HonorarioMensualRec;
 use App\Services\Sii\HonorarioMensualRecParser;
+use App\Models\HonorarioMensualRecTotal;
 
 use Illuminate\Support\Facades\Log;
 
@@ -17,8 +18,13 @@ class HonorarioMensualRecController extends Controller
             ->orderBy('fecha_emision')
             ->get();
 
-        return view('boleta_mensual.index', compact('registros'));
+        $total = HonorarioMensualRecTotal::orderBy('anio', 'desc')
+            ->orderBy('mes', 'desc')
+            ->first();
+
+        return view('boleta_mensual.index', compact('registros', 'total'));
     }
+
 
     public function import(Request $request)
     {
@@ -66,27 +72,49 @@ class HonorarioMensualRecController extends Controller
         $meta      = $data['meta'];
         $registros = $data['registros'];
 
+        // =========================
+        // GUARDAR BOLETAS
+        // =========================
         foreach ($registros as $r) {
 
             HonorarioMensualRec::updateOrCreate(
                 [
-                    // Clave única lógica
                     'rut_contribuyente' => $meta['rut_contribuyente'],
                     'anio'              => $meta['anio'],
                     'mes'               => $meta['mes'],
                     'folio'             => $r['folio'],
                 ],
                 [
-                    'razon_social'          => $meta['razon_social'],
-                    'fecha_emision'         => $r['fecha_emision'],
-                    'estado'                => $r['estado'],
-                    'fecha_anulacion'       => $r['fecha_anulacion'],
-                    'rut_emisor'            => $r['rut_emisor'],
-                    'razon_social_emisor'   => $r['razon_social_emisor'],
-                    'sociedad_profesional'  => $r['sociedad_profesional'],
-                    'monto_bruto'           => $r['monto_bruto'],
-                    'monto_retenido'        => $r['monto_retenido'],
-                    'monto_pagado'          => $r['monto_pagado'],
+                    'razon_social'         => $meta['razon_social'],
+                    'fecha_emision'        => $r['fecha_emision'],
+                    'estado'               => $r['estado'],
+                    'fecha_anulacion'      => $r['fecha_anulacion'],
+                    'rut_emisor'           => $r['rut_emisor'],
+                    'razon_social_emisor'  => $r['razon_social_emisor'],
+                    'sociedad_profesional' => $r['sociedad_profesional'],
+                    'monto_bruto'          => $r['monto_bruto'],
+                    'monto_retenido'       => $r['monto_retenido'],
+                    'monto_pagado'         => $r['monto_pagado'],
+                ]
+            );
+        }
+
+        // =========================
+        // GUARDAR TOTALES MENSUALES
+        // =========================
+        if (!empty($data['totales'])) {
+
+            HonorarioMensualRecTotal::updateOrCreate(
+                [
+                    'rut_contribuyente' => $meta['rut_contribuyente'],
+                    'anio'              => $meta['anio'],
+                    'mes'               => $meta['mes'],
+                ],
+                [
+                    'razon_social'   => $meta['razon_social'],
+                    'monto_bruto'    => $data['totales']['bruto'],
+                    'monto_retenido' => $data['totales']['retenido'],
+                    'monto_pagado'   => $data['totales']['pagado'],
                 ]
             );
         }
@@ -95,5 +123,6 @@ class HonorarioMensualRecController extends Controller
             ->route('honorarios.mensual.index')
             ->with('success', 'Honorarios mensuales guardados correctamente.');
     }
+
 
 }

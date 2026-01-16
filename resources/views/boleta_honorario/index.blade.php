@@ -3,106 +3,94 @@
 @section('content')
 <div class="container">
 
-    <h1>Resumen Honorarios (bte_indiv_cons4)</h1>
+    <h1 class="mb-4">Resumen Honorarios (bte_indiv_cons4)</h1>
 
     {{-- =========================
-        FORMULARIO IMPORTACIÓN
+        1️⃣ FORMULARIO IMPORTACIÓN
     ========================== --}}
-    <form action="{{ route('honorarios.resumen.import') }}" method="POST" enctype="multipart/form-data">
-        @csrf
-
-        <div class="mb-3">
-            <label for="archivo" class="form-label">
-                Archivo SII (bte_indiv_cons4)
-            </label>
-            <input type="file" name="archivo" id="archivo" class="form-control" required>
+    <div class="card mb-4">
+        <div class="card-header">
+            Importar archivo SII
         </div>
+        <div class="card-body">
+            <form action="{{ route('honorarios.resumen.import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
 
-        <button type="submit" class="btn btn-primary">
-            Importar
-        </button>
-    </form>
+                <div class="mb-3">
+                    <label class="form-label">Archivo SII (bte_indiv_cons4)</label>
+                    <input type="file" name="archivo" class="form-control" required>
+                </div>
+
+                <button class="btn btn-primary">Importar y previsualizar</button>
+            </form>
+        </div>
+    </div>
 
     {{-- =========================
-        PREVISUALIZACIÓN
+        2️⃣ PREVISUALIZACIÓN
     ========================== --}}
     @if(isset($preview))
-        <hr>
+        <div class="card mb-5 border-warning">
+            <div class="card-header bg-warning">
+                <strong>Previsualización del archivo (sin guardar)</strong>
+            </div>
+            <div class="card-body">
 
-        <h3 class="mt-4">Previsualización archivo SII</h3>
+                <p><strong>Contribuyente:</strong> {{ $preview['razon_social'] }}</p>
+                <p><strong>RUT:</strong> {{ $preview['rut_contribuyente'] }}</p>
+                <p><strong>Año:</strong> {{ $preview['anio'] }}</p>
 
-        <p><strong>Contribuyente:</strong> {{ $preview['razon_social'] }}</p>
-        <p><strong>RUT:</strong> {{ $preview['rut_contribuyente'] }}</p>
-        <p><strong>Año:</strong> {{ $preview['anio'] }}</p>
+                @include('boleta_honorario.partials.tabla_resumen', [
+                    'resumen' => $preview['resumen_mensual'],
+                    'totales' => $preview['totales'] ?? null
+                ])
 
-        {{-- TABLA RESUMEN MENSUAL --}}
-        <table class="table table-sm table-bordered mt-3">
-            <thead class="table-light">
-                <tr>
-                    <th>Mes</th>
-                    <th class="text-end">Folio Inicial</th>
-                    <th class="text-end">Folio Final</th>
-                    <th class="text-end">Vigentes</th>
-                    <th class="text-end">Nulas</th>
-                    <th class="text-end">Honorario Bruto</th>
-                    <th class="text-end">Retenciones</th>
-                    <th class="text-end">Total Líquido</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @foreach($preview['resumen_mensual'] as $r)
-                    <tr>
-                        <td>{{ $r['mes_nombre'] }}</td>
-                        <td class="text-end">{{ $r['folio_inicial'] }}</td>
-                        <td class="text-end">{{ $r['folio_final'] }}</td>
-                        <td class="text-end">{{ $r['boletas_vigentes'] }}</td>
-                        <td class="text-end">{{ $r['boletas_nulas'] }}</td>
-                        <td class="text-end">
-                            {{ number_format($r['honorario_bruto'], 0, ',', '.') }}
-                        </td>
-                        <td class="text-end">
-                            {{ number_format($r['retenciones'], 0, ',', '.') }}
-                        </td>
-                        <td class="text-end">
-                            {{ number_format($r['total_liquido'], 0, ',', '.') }}
-                        </td>
-                    </tr>
-                @endforeach
-
-                {{-- FILA TOTALES --}}
-                @if(isset($preview['totales']))
-                    <tr class="table-secondary fw-bold">
-                        <td colspan="5">Totales</td>
-                        <td class="text-end">
-                            {{ number_format($preview['totales']['bruto'], 0, ',', '.') }}
-                        </td>
-                        <td class="text-end">
-                            {{ number_format($preview['totales']['retenido'], 0, ',', '.') }}
-                        </td>
-                        <td class="text-end">
-                            {{ number_format($preview['totales']['liquido'], 0, ',', '.') }}
-                        </td>
-                    </tr>
-                @endif
-            </tbody>
-        </table>
-
-        <small class="text-muted">
-            (*) Los valores totales no consideran los montos de las boletas anuladas.
-        </small>
-
-        {{-- =========================
-            CONFIRMAR IMPORTACIÓN
-        ========================== --}}
-        <form action="{{ route('honorarios.resumen.store') }}" method="POST" class="mt-3">
-            @csrf
-            <input type="hidden" name="data" value="{{ base64_encode(json_encode($preview)) }}">
-            <button type="submit" class="btn btn-success">
-                Confirmar importación
-            </button>
-        </form>
+                <form action="{{ route('honorarios.resumen.store') }}" method="POST" class="mt-3">
+                    @csrf
+                    <input type="hidden" name="data" value="{{ base64_encode(json_encode($preview)) }}">
+                    <button class="btn btn-success">Confirmar importación</button>
+                </form>
+            </div>
+        </div>
     @endif
+
+    {{-- =========================
+        3️⃣ REGISTROS ALMACENADOS
+    ========================== --}}
+    <div class="card">
+        <div class="card-header">
+            Resúmenes almacenados
+        </div>
+        <div class="card-body">
+
+            @if($registros->isEmpty())
+                <p>No hay registros cargados.</p>
+            @else
+                @php
+                    $agrupados = $registros->groupBy(['rut_contribuyente', 'anio']);
+                @endphp
+
+                @foreach($agrupados as $rut => $porAnio)
+                    @foreach($porAnio as $anio => $meses)
+
+                        <h5 class="mt-4">
+                            {{ $meses->first()->razon_social }}
+                            — {{ $rut }} — Año {{ $anio }}
+                        </h5>
+
+                        @include('boleta_honorario.partials.tabla_resumen', [
+                            'resumen' => $meses,
+                            'totales' => \App\Models\HonorarioResumenAnualTotal::where('rut_contribuyente', $rut)
+                                ->where('anio', $anio)
+                                ->first()
+                        ])
+
+                    @endforeach
+                @endforeach
+            @endif
+
+        </div>
+    </div>
 
 </div>
 @endsection

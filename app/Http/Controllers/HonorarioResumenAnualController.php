@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 use App\Models\HonorarioResumenAnual;
 use Illuminate\Http\Request;
 use App\Services\Sii\BteResumenAnualParser;
+use App\Models\HonorarioResumenAnualTotal;
+
 
 class HonorarioResumenAnualController extends Controller
 {
@@ -43,6 +45,9 @@ class HonorarioResumenAnualController extends Controller
         $razon = $data['razon_social'];
         $anio  = $data['anio'];
 
+        // =========================
+        // GUARDAR RESUMEN MENSUAL
+        // =========================
         foreach ($data['resumen_mensual'] as $mes) {
 
             HonorarioResumenAnual::updateOrCreate(
@@ -65,10 +70,34 @@ class HonorarioResumenAnualController extends Controller
             );
         }
 
+        // =========================
+        // GUARDAR TOTALES ANUALES
+        // =========================
+        if (!empty($data['totales'])) {
+
+            HonorarioResumenAnualTotal::updateOrCreate(
+                [
+                    'rut_contribuyente' => $rut,
+                    'anio'              => $anio,
+                ],
+                [
+                    'razon_social'     => $razon,
+                    'folio_inicial'    => $data['totales']['folio_inicial'],
+                    'folio_final'      => $data['totales']['folio_final'],
+                    'boletas_vigentes' => $data['totales']['vigentes'],
+                    'boletas_nulas'    => $data['totales']['nulas'],
+                    'honorario_bruto'  => $data['totales']['bruto'],
+                    'retenciones'      => $data['totales']['retenido'],
+                    'total_liquido'    => $data['totales']['liquido'],
+                ]
+            );
+        }
+
         return redirect()
             ->route('honorarios.resumen.index')
             ->with('success', 'Resumen anual importado correctamente.');
     }
+
 
 
 
