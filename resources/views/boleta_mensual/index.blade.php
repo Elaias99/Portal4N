@@ -153,6 +153,7 @@
                             <th>Fecha</th>
                             <th>Estado</th>
                             <th>Emisor</th>
+                            <th>Rut</th>
                             <th>Bruto</th>
                             <th>Retenido</th>
                             <th>Pagado</th>
@@ -167,6 +168,7 @@
                                 <td>{{ $r->fecha_emision->format('d-m-Y') }}</td>
                                 <td>{{ $r->estado }}</td>
                                 <td>{{ $r->razon_social_emisor }}</td>
+                                <td>{{ $r->rut_emisor }}</td>
                                 <td class="text-end">{{ number_format($r->monto_bruto, 0, ',', '.') }}</td>
                                 <td class="text-end">{{ number_format($r->monto_retenido, 0, ',', '.') }}</td>
                                 <td class="text-end">{{ number_format($r->monto_pagado, 0, ',', '.') }}</td>
@@ -176,7 +178,7 @@
                         {{-- FILA DE TOTALES GUARDADOS --}}
                         @if(isset($total))
                             <tr class="table-secondary fw-bold">
-                                <td colspan="6">Totales</td>
+                                <td colspan="7">Totales</td>
                                 <td class="text-end">
                                     {{ number_format($total->monto_bruto, 0, ',', '.') }}
                                 </td>

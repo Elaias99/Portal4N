@@ -46,7 +46,7 @@
 
         {{-- === Boletas de Honorarios (REC / BTE) === --}}
         {{-- === Honorarios (REC / BTE) === --}}
-        {{-- <div class="col-md-3">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm rounded-4 h-100 honorarios-split-card">
 
     
@@ -68,7 +68,7 @@
                 </a>
 
             </div>
-        </div> --}}
+        </div>
 
 
 
