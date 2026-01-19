@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\HonorarioMensualRec;
 use App\Services\Sii\HonorarioMensualRecParser;
 use App\Models\HonorarioMensualRecTotal;
-
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class HonorarioMensualRecController extends Controller
@@ -122,6 +122,21 @@ class HonorarioMensualRecController extends Controller
         return redirect()
             ->route('honorarios.mensual.index')
             ->with('success', 'Honorarios mensuales guardados correctamente.');
+    }
+
+
+    public function panel(Request $request)
+    {
+
+        // Restricción de acceso solo para usuario 405
+        $usuariosFinanzas = [1, 405];
+
+        if (!in_array(Auth::id(), $usuariosFinanzas)) {
+            abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
+        }
+
+        return view('boleta_mensual.panel_acceso.panel');
+
     }
 
 

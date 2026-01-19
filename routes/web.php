@@ -575,8 +575,16 @@ Route::post(
     [HonorarioMensualRecController::class, 'store']
 )->name('honorarios.mensual.store');
 
+Route::get(
+    '/honorarios/panel',
+    [HonorarioMensualRecController::class, 'panel']
+)->name('honorarios.mensual.panel');
 
 
+Route::get(
+        '/boleta-mensual/panel',
+        [HonorarioMensualRecController::class, 'panel']
+    )->name('boleta.mensual.panel');
 
 
 // rEPORTE TRACKING 

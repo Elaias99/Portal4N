@@ -166,5 +166,13 @@
         </div>
     </div>
 
+
+
+    <div class="text-center mt-4">
+        <a href="{{ route('boleta.mensual.panel') }}" class="btn btn-outline-primary px-4 py-2 rounded-pill">
+            <- Ir a Panel Boletas honorarios
+        </a>
+    </div>
+
 </div>
 @endsection
