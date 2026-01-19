@@ -36,6 +36,12 @@
         btn.disabled = true;
         btn.innerHTML = '⏳ Procesando...';
 
+        const selectAll = document.getElementById('selectAllPhotos');
+        if (selectAll) {
+            selectAll.checked = false;
+        }
+
+
         fetch('/reports/tracking/search-batch', {
             method: 'POST',
             credentials: 'same-origin',
@@ -63,8 +69,23 @@
                             <tr>
                                 <th>Tracking</th>
                                 <th>Estado</th>
-                                <th>Fotos</th>
-                                <th>Vista POD (selecciona imágenes)</th>
+                                <th>Fotos</th>´
+
+
+                                <th>
+                                    Vista POD (selecciona imágenes)
+                                    <div style="margin-top:6px;">
+                                        <input
+                                            type="checkbox"
+                                            id="selectAllPhotos"
+                                            onclick="toggleSelectAllPhotos(this)"
+                                        >
+                                        <label style="font-size:12px; cursor:pointer;">
+                                            Seleccionar todo
+                                        </label>
+                                    </div>
+                                </th>
+
                             </tr>
                         </thead>
                         <tbody>
@@ -133,13 +154,6 @@
         });
     }
 
-
-
-
-
-
-
-
     /* ================= EXPORTAR EXCEL MASIVO ================= */
     function exportarExcelMasivo() {
         const btn = document.getElementById('batchExportBtn');
@@ -184,6 +198,21 @@
         });
     }
 
+    /* ================= SELECCIONAR TODAS LAS IMÁGENES ================= */
+    function toggleSelectAllPhotos(masterCheckbox) {
+        const allPhotoCheckboxes = document.querySelectorAll('.photo-checkbox');
+
+        allPhotoCheckboxes.forEach(cb => {
+            cb.checked = masterCheckbox.checked;
+        });
+    }
+
+
+
+
+
+
 // Exponer funciones al scope global para uso en Blade (onclick)
 window.buscarTrackingMasivo = buscarTrackingMasivo;
 window.exportarExcelMasivo = exportarExcelMasivo;
+window.toggleSelectAllPhotos = toggleSelectAllPhotos;

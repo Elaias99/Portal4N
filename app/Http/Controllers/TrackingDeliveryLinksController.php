@@ -261,7 +261,7 @@ class TrackingDeliveryLinksController extends Controller
     public function exportBatch(Request $request)
     {
         Log::info('Tracking batch export requested (by photo)', [
-            'payload' => $request->all(),
+            'items_count' => count($request->items ?? []),
         ]);
 
         $request->validate([
@@ -271,27 +271,30 @@ class TrackingDeliveryLinksController extends Controller
             'items.*.url'      => 'required|url',
         ]);
 
-        $rows = [];
-
-        foreach ($request->items as $item) {
-            $rows[] = [
-                'tracking' => $item['tracking'],
-                'state'    => $item['state'] ?? '-',
-                'url'      => $item['url'],
-            ];
-        }
+        // Normalizar y limpiar filas
+        $rows = collect($request->items)
+            ->map(function ($item) {
+                return [
+                    'tracking' => trim($item['tracking']),
+                    'state'    => $item['state'] ?? '-',
+                    'url'      => trim($item['url']),
+                ];
+            })
+            ->filter(fn ($row) => !empty($row['url']))
+            ->values()
+            ->toArray();
 
         if (empty($rows)) {
             abort(404, 'No existen imágenes seleccionadas para exportar');
         }
 
-        Log::info('Tracking batch export ready (by photo)', [
+        Log::info('Tracking batch export ready', [
             'rows' => count($rows),
         ]);
 
         return Excel::download(
             new TrackingBatchExport($rows),
-            'tracking_batch_pod.xlsx'
+            'tracking_batch_pod_' . now()->format('Ymd_His') . '.xlsx'
         );
     }
 
