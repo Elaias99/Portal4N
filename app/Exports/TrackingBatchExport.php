@@ -4,8 +4,13 @@ namespace App\Exports;
 
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Cell\Hyperlink;
+use Maatwebsite\Excel\Concerns\WithEvents;
 
-class TrackingBatchExport implements FromArray, WithHeadings
+
+
+class TrackingBatchExport implements FromArray, WithHeadings, WithEvents
 {
     protected array $rows;
 
@@ -24,6 +29,7 @@ class TrackingBatchExport implements FromArray, WithHeadings
             ];
         }, $this->rows);
     }
+
 
     public function headings(): array
     {
@@ -45,5 +51,25 @@ class TrackingBatchExport implements FromArray, WithHeadings
             default => $state,
         };
     }
+
+    public function registerEvents(): array
+    {
+        return [
+            AfterSheet::class => function (AfterSheet $event) {
+
+                foreach ($this->rows as $index => $row) {
+                    // +2 porque:
+                    // fila 1 = headers
+                    // Excel empieza en 1
+                    $rowNumber = $index + 2;
+
+                    $event->sheet
+                        ->getCell("C{$rowNumber}")
+                        ->setHyperlink(new Hyperlink($row['url']));
+                }
+            },
+        ];
+    }
+
 }
 

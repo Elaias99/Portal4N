@@ -196,9 +196,16 @@ class TrackingDeliveryLinksController extends Controller
 
                 $data = $json['data'] ?? [];
 
+
+
                 $photos = collect($data['delivery_proof']['photos'] ?? [])
-                    ->pluck('url')
-                    ->filter()
+                    ->map(function ($photo) {
+                        return [
+                            'url' => $photo['url'] ?? null,
+                            'preview_url' => $photo['preview_url'] ?? null,
+                        ];
+                    })
+                    ->filter(fn ($photo) => !empty($photo['url']))
                     ->values()
                     ->toArray();
 

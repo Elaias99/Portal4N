@@ -74,37 +74,43 @@
                 const rawState = item.delivery_state || 'unknown';
                 const state = estadosES[rawState] || rawState;
                 const badge = rawState === 'delivered' ? 'success' : 'warning';
+
                 const photos = item.photos || [];
 
                 let photosHtml = '—';
 
                 if (photos.length) {
                     photosHtml = `
+
+
                         <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                            ${photos.map((url, idx) => `
+                            ${photos.map((photo, idx) => `
                                 <div style="text-align:center;">
                                     <input
                                         type="checkbox"
                                         class="photo-checkbox"
                                         data-tracking="${item.tracking}"
                                         data-state="${rawState}"
-                                        data-url="${url}"
+                                        data-url="${photo.url}"
                                         style="margin-bottom:6px;"
                                     >
                                     <br>
-                                    <a href="${url}" target="_blank">
+                                    <a href="${photo.url}" target="_blank">
                                         <img
-                                            src="${url}"
+                                            src="${photo.preview_url || photo.url}"
                                             style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #ccc;"
                                         >
-
                                     </a>
                                     <div style="font-size:12px;color:#666;">
                                         Foto ${idx + 1}
                                     </div>
                                 </div>
                             `).join('')}
+
                         </div>
+
+
+
                     `;
                 }
 
