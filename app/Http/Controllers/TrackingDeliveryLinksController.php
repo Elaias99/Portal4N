@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Log;
 use App\Exports\TrackingPhotosExport;
 use App\Exports\TrackingBatchExport;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Http;
+
 
 class TrackingDeliveryLinksController extends Controller
 {
@@ -92,10 +94,6 @@ class TrackingDeliveryLinksController extends Controller
         | 1️⃣ Ver qué llega desde la vista
         |--------------------------------------------------------------------------
         */
-        Log::info('Tracking batch raw input', [
-            'payload' => $request->all(),
-        ]);
-
         $request->validate([
             'trackings' => 'required|string',
         ]);
@@ -108,12 +106,6 @@ class TrackingDeliveryLinksController extends Controller
         |--------------------------------------------------------------------------
         */
         $lines = preg_split('/\r\n|\r|\n/', $rawInput);
-
-        Log::info('Tracking batch lines (raw)', [
-            'lines' => $lines,
-            'count' => count($lines),
-        ]);
-
         /*
         |--------------------------------------------------------------------------
         | 3️⃣ Limpieza: trim, quitar vacíos, unique
@@ -125,130 +117,94 @@ class TrackingDeliveryLinksController extends Controller
             ->unique()
             ->values();
 
-        Log::info('Tracking batch normalized', [
-            'trackings' => $trackings->toArray(),
-            'count'     => $trackings->count(),
-        ]);
-
         /*
         |--------------------------------------------------------------------------
-        | ⚠️ DEPURACIÓN DURA (opcional)
-        |--------------------------------------------------------------------------
-        | Descomenta SOLO si quieres detener ejecución y ver datos
-        */
-        // dd($trackings->toArray());
-
-        /*
-        |--------------------------------------------------------------------------
-        | 4️⃣ Procesar cada tracking
+        | 4️⃣ Procesar cada tracking (PARALELO)
         |--------------------------------------------------------------------------
         */
         $results = [];
 
-        foreach ($trackings as $tracking) {
+        /**
+         * Ejecutamos todas las consultas en paralelo
+         */
+        $responses = Http::pool(function ($pool) use ($trackings) {
+            foreach ($trackings as $tracking) {
+                $pool->get('https://4nlogistica.cl/tracking-proxy.php', [
+                    'tracking' => $tracking,
+                ]);
+            }
+        });
 
-            Log::info('Processing tracking', [
+        /**
+         * Procesamos las respuestas manteniendo el orden
+         */
+        foreach ($responses as $index => $response) {
+
+            $tracking = $trackings[$index];
+
+            Log::info('Processing tracking (parallel)', [
                 'tracking' => $tracking,
             ]);
 
-            try {
-                $url = 'https://4nlogistica.cl/tracking-proxy.php?tracking=' . urlencode($tracking);
-
-                Log::info('Calling tracking proxy', [
+            if ($response->failed()) {
+                Log::warning('Request failed', [
                     'tracking' => $tracking,
-                    'url'      => $url,
-                ]);
-
-                $response = file_get_contents($url);
-
-                if (!$response) {
-                    Log::warning('Empty response from proxy', [
-                        'tracking' => $tracking,
-                    ]);
-
-                    $results[] = [
-                        'tracking' => $tracking,
-                        'success'  => false,
-                        'message'  => 'Sin respuesta del servicio',
-                        'delivery_state' => null,
-                        'photos'   => [],
-                    ];
-                    continue;
-                }
-
-                $json = json_decode($response, true);
-
-                Log::info('Proxy response decoded', [
-                    'tracking' => $tracking,
-                    'success'  => $json['success'] ?? null,
-                ]);
-
-                if (empty($json['success'])) {
-                    $results[] = [
-                        'tracking' => $tracking,
-                        'success'  => false,
-                        'message'  => $json['message'] ?? 'Tracking no encontrado',
-                        'delivery_state' => null,
-                        'photos'   => [],
-                    ];
-                    continue;
-                }
-
-                $data = $json['data'] ?? [];
-
-
-
-                $photos = collect($data['delivery_proof']['photos'] ?? [])
-                    ->map(function ($photo) {
-                        return [
-                            'url' => $photo['url'] ?? null,
-                            'preview_url' => $photo['preview_url'] ?? null,
-                        ];
-                    })
-                    ->filter(fn ($photo) => !empty($photo['url']))
-                    ->values()
-                    ->toArray();
-
-                Log::info('Tracking processed successfully', [
-                    'tracking' => $tracking,
-                    'state'    => $data['delivery_state'] ?? null,
-                    'photos'   => count($photos),
-                ]);
-
-                $results[] = [
-                    'tracking' => $tracking,
-                    'success'  => true,
-                    'delivery_state' => $data['delivery_state'] ?? null,
-                    'photos'   => $photos,
-                ];
-
-            } catch (\Throwable $e) {
-
-                Log::error('Error processing tracking', [
-                    'tracking' => $tracking,
-                    'error'    => $e->getMessage(),
+                    'status'   => $response->status(),
                 ]);
 
                 $results[] = [
                     'tracking' => $tracking,
                     'success'  => false,
-                    'message'  => 'Error interno al consultar tracking',
+                    'message'  => 'Error al consultar el servicio',
                     'delivery_state' => null,
                     'photos'   => [],
                 ];
+                continue;
             }
+
+            $json = $response->json();
+
+            if (empty($json['success'])) {
+                $results[] = [
+                    'tracking' => $tracking,
+                    'success'  => false,
+                    'message'  => $json['message'] ?? 'Tracking no encontrado',
+                    'delivery_state' => null,
+                    'photos'   => [],
+                ];
+                continue;
+            }
+
+            $data = $json['data'] ?? [];
+
+            $photos = collect($data['delivery_proof']['photos'] ?? [])
+                ->map(function ($photo) {
+                    return [
+                        'url' => $photo['url'] ?? null,
+                        'preview_url' => $photo['preview_url'] ?? null,
+                    ];
+                })
+                ->filter(fn ($photo) => !empty($photo['url']))
+                ->values()
+                ->toArray();
+
+            Log::info('Tracking processed successfully (parallel)', [
+                'tracking' => $tracking,
+                'state'    => $data['delivery_state'] ?? null,
+                'photos'   => count($photos),
+            ]);
+
+            $results[] = [
+                'tracking' => $tracking,
+                'success'  => true,
+                'delivery_state' => $data['delivery_state'] ?? null,
+                'photos'   => $photos,
+            ];
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | 5️⃣ Respuesta final
-        |--------------------------------------------------------------------------
-        */
-        Log::info('Tracking batch completed', [
-            'total' => $trackings->count(),
-            'ok'    => collect($results)->where('success', true)->count(),
-            'fail'  => collect($results)->where('success', false)->count(),
-        ]);
+
+
+
 
         session([
             'tracking_batch_results' => $results
