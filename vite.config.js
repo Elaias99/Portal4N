@@ -16,7 +16,9 @@ export default defineConfig({
                 'resources/css/panel-finanzas.css',
                 'resources/css/cuentas-cobrar.css',
                 'resources/sass/app.scss',
-                'resources/js/app.js',  // Mantén el archivo JS si lo usas
+                'resources/js/app.js',
+                'resources/js/reports/delivery-links.js',
+
             ],
             refresh: true,
         }),
