@@ -147,6 +147,7 @@
                 <table class="table table-sm table-bordered">
                     <thead>
                         <tr>
+                            <th>Empresa</th>
                             <th>Año</th>
                             <th>Mes</th>
                             <th>Folio</th>
@@ -162,6 +163,10 @@
                     <tbody>
                         @foreach($registros as $r)
                             <tr>
+                                <td>
+                                    <strong>{{ $r->empresa->Nombre }}</strong><br>
+                                    <small class="text-muted">{{ $r->empresa->rut }}</small>
+                                </td>
                                 <td>{{ $r->anio }}</td>
                                 <td>{{ $r->mes }}</td>
                                 <td>{{ $r->folio }}</td>
@@ -178,7 +183,7 @@
                         {{-- FILA DE TOTALES GUARDADOS --}}
                         @if(isset($total))
                             <tr class="table-secondary fw-bold">
-                                <td colspan="7">Totales</td>
+                                <td colspan="8">Totales</td>
                                 <td class="text-end">
                                     {{ number_format($total->monto_bruto, 0, ',', '.') }}
                                 </td>
@@ -196,6 +201,7 @@
 
         </div>
     </div>
+
 
 
     <div class="text-center mt-4">

@@ -23,6 +23,7 @@ class HonorarioMensualRec extends Model
         'rut_emisor',
         'razon_social_emisor',
         'sociedad_profesional',
+        'empresa_id',
 
         'monto_bruto',
         'monto_retenido',
@@ -33,5 +34,11 @@ class HonorarioMensualRec extends Model
         'fecha_emision'   => 'date',
         'fecha_anulacion' => 'date',
     ];
+
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class);
+    }
+
 
 }

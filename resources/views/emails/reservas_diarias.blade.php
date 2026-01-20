@@ -91,6 +91,7 @@
                 <tr><td>SCL CALAMA</td><td>10</td><td>NN</td><td>---</td><td>CARGA GENERAL</td></tr>
                 <tr><td>SCL PUNTA ARENAS</td><td>10</td><td>NN</td><td>---</td><td>CARGA GENERAL</td></tr>
                 <tr><td>SCL BALMACEDA</td><td>10</td><td>NN</td><td>---</td><td>CARGA GENERAL</td></tr>
+                <tr><td>SCL ISLA DE PASCUA</td><td>10</td><td>NN</td><td>---</td><td>CARGA GENERAL</td></tr>
             </tbody>
         </table>
 

@@ -36,6 +36,12 @@ class Empresa extends Model
         return $this->hasMany(DocumentoFinanciero::class);
     }
 
+    public function honorariosMensualesRec()
+    {
+        return $this->hasMany(HonorarioMensualRec::class);
+    }
+
+
 
 
 }
