@@ -28,6 +28,14 @@ class HonorarioMensualRec extends Model
         'monto_bruto',
         'monto_retenido',
         'monto_pagado',
+
+        'estado_financiero_inicial',
+        'estado_financiero',
+        'fecha_estado_financiero',
+        'saldo_pendiente',
+        'cobranza_compra_id',
+
+
     ];
 
     protected $casts = [
@@ -39,6 +47,12 @@ class HonorarioMensualRec extends Model
     {
         return $this->belongsTo(Empresa::class);
     }
+
+    public function cobranzaCompra()
+    {
+        return $this->belongsTo(CobranzaCompra::class, 'cobranza_compra_id');
+    }
+
 
 
 }

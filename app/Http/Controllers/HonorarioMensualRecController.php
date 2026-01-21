@@ -9,13 +9,17 @@ use App\Models\HonorarioMensualRecTotal;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Empresa;
 use Illuminate\Support\Facades\Log;
+use App\Models\CobranzaCompra;
+use Carbon\Carbon;
+
+
 
 class HonorarioMensualRecController extends Controller
 {
     
     public function index(Request $request)
     {
-        $query = HonorarioMensualRec::with('empresa');
+        $query = HonorarioMensualRec::with('empresa','cobranzaCompra',);
 
         // =========================
         // FILTRO: EMPRESA
@@ -165,7 +169,36 @@ class HonorarioMensualRecController extends Controller
         // =========================
         // GUARDAR DETALLE (ÚNICA RELACIÓN CON EMPRESA)
         // =========================
+
+
         foreach ($registros as $r) {
+
+            $rutEmisor = $r['rut_emisor'] ?? null;
+
+            // Buscar proveedor en cobranza_compras
+            $cobranza = $rutEmisor
+                ? CobranzaCompra::where('rut_cliente', $rutEmisor)->first()
+                : null;
+
+            // =========================
+            // ESTADO FINANCIERO INICIAL
+            // =========================
+            $estadoFinancieroInicial = null;
+
+            if ($cobranza && $cobranza->creditos !== null) {
+
+                $fechaEmision = $r['fecha_emision']
+                    ? Carbon::parse($r['fecha_emision'])
+                    : null;
+
+                if ($fechaEmision) {
+                    $fechaVencimiento = $fechaEmision->copy()->addDays((int) $cobranza->creditos);
+
+                    $estadoFinancieroInicial = $fechaVencimiento->isPast()
+                        ? 'Vencido'
+                        : 'Al día';
+                }
+            }
 
             HonorarioMensualRec::updateOrCreate(
                 [
@@ -173,25 +206,32 @@ class HonorarioMensualRecController extends Controller
                     'rut_contribuyente' => $meta['rut_contribuyente'],
                     'anio'              => $meta['anio'],
                     'mes'               => $meta['mes'],
-                    'rut_emisor'        => $r['rut_emisor'],
+                    'rut_emisor'        => $rutEmisor,
                     'folio'             => $r['folio'],
                 ],
                 [
                     'razon_social'         => $meta['razon_social'],
                     'fecha_emision'        => $r['fecha_emision'],
-                    'estado'               => $r['estado'],
+                    'estado'               => $r['estado'], // estado SII
                     'fecha_anulacion'      => $r['fecha_anulacion'],
                     'razon_social_emisor'  => $r['razon_social_emisor'],
                     'sociedad_profesional' => $r['sociedad_profesional'],
+
                     'monto_bruto'          => $r['monto_bruto'],
                     'monto_retenido'       => $r['monto_retenido'],
                     'monto_pagado'         => $r['monto_pagado'],
+
+                    // ✅ Finanzas
+                    'saldo_pendiente'           => $r['monto_pagado'],
+                    'estado_financiero_inicial' => $estadoFinancieroInicial,
+
+                    // ✅ Relación proveedor (si existe)
+                    'cobranza_compra_id'        => $cobranza?->id,
                 ]
             );
-
-
-
         }
+
+
 
         // =========================
         // GUARDAR TOTALES (SIN empresa_id)
@@ -220,29 +260,32 @@ class HonorarioMensualRecController extends Controller
             ->with('success', 'Honorarios mensuales guardados correctamente.');
     }
 
-    public function detalle($empresa, $anio, $mes)
-    {
-        // Obtener registros del período seleccionado
-        $registros = HonorarioMensualRec::with('empresa')
-            ->where('empresa_id', $empresa)
-            ->where('anio', $anio)
-            ->where('mes', $mes)
-            ->orderBy('fecha_emision')
-            ->get();
 
-        // Obtener totales (si existen)
-        $totales = HonorarioMensualRecTotal::where('anio', $anio)
-            ->where('mes', $mes)
-            ->where('rut_contribuyente', optional($registros->first())->rut_contribuyente)
-            ->first();
 
-        return view('boleta_mensual.partials.detalle', compact(
-            'registros',
-            'totales',
-            'anio',
-            'mes'
-        ));
-    }
+
+    // public function detalle($empresa, $anio, $mes)
+    // {
+    //     // Obtener registros del período seleccionado
+    //     $registros = HonorarioMensualRec::with('empresa')
+    //         ->where('empresa_id', $empresa)
+    //         ->where('anio', $anio)
+    //         ->where('mes', $mes)
+    //         ->orderBy('fecha_emision')
+    //         ->get();
+
+    //     // Obtener totales (si existen)
+    //     $totales = HonorarioMensualRecTotal::where('anio', $anio)
+    //         ->where('mes', $mes)
+    //         ->where('rut_contribuyente', optional($registros->first())->rut_contribuyente)
+    //         ->first();
+
+    //     return view('boleta_mensual.partials.detalle', compact(
+    //         'registros',
+    //         'totales',
+    //         'anio',
+    //         'mes'
+    //     ));
+    // }
 
 
 
