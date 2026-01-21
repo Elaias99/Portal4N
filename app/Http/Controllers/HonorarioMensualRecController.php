@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 
 class HonorarioMensualRecController extends Controller
 {
+    
     public function index()
     {
         $registros = HonorarioMensualRec::orderBy('anio', 'desc')
@@ -23,8 +24,16 @@ class HonorarioMensualRecController extends Controller
             ->orderBy('mes', 'desc')
             ->first();
 
-        return view('boleta_mensual.index', compact('registros', 'total'));
+        $periodos = HonorarioMensualRec::with('empresa')
+            ->select('empresa_id', 'anio', 'mes')
+            ->groupBy('empresa_id', 'anio', 'mes')
+            ->orderBy('anio', 'desc')
+            ->orderBy('mes', 'desc')
+            ->get();
+
+        return view('boleta_mensual.index', compact('periodos','registros', 'total'));
     }
+
 
 
     public function import(Request $request)
@@ -32,8 +41,6 @@ class HonorarioMensualRecController extends Controller
         $request->validate([
             'archivo' => 'required|file',
         ]);
-
-        Log::info('[IMPORT] Inicio importación');
 
         $parser = new HonorarioMensualRecParser(
             $request->file('archivo')
@@ -44,8 +51,6 @@ class HonorarioMensualRecController extends Controller
         // =========================
         // META DESDE SII
         // =========================
-        Log::info('[IMPORT] Meta recibida desde SII', $preview['meta']);
-
         // =========================
         // NORMALIZAR RUT CONTRIBUYENTE
         // =========================
@@ -61,29 +66,15 @@ class HonorarioMensualRecController extends Controller
 
         $rutFormateado = number_format($cuerpo, 0, '', '.') . '-' . $dv;
 
-        Log::info('[IMPORT] RUT normalizado', [
-            'rut_archivo'    => $rutArchivo,
-            'rut_formateado' => $rutFormateado,
-        ]);
-
         // =========================
         // BUSCAR EMPRESA
         // =========================
         $empresa = Empresa::where('rut', $rutFormateado)->first();
-
         if (!$empresa) {
-            Log::error('[IMPORT] Empresa no encontrada', [
-                'rut_formateado' => $rutFormateado,
-            ]);
 
             abort(422, 'Empresa no encontrada para el RUT informado por el SII.');
         }
 
-        Log::info('[IMPORT] Empresa encontrada', [
-            'empresa_id' => $empresa->id,
-            'nombre'     => $empresa->Nombre,
-            'rut'        => $empresa->rut,
-        ]);
 
         // =========================
         // ADJUNTAR EMPRESA A PREVIEW
@@ -113,21 +104,12 @@ class HonorarioMensualRecController extends Controller
 
         $preview['totales'] = $totales;
 
-        Log::info('[IMPORT] Importación OK, redirigiendo a index');
 
         return redirect()
             ->route('honorarios.mensual.index')
             ->with('preview', $preview)
             ->with('info', 'Archivo analizado correctamente. Revisa la previsualización.');
     }
-
-
-
-
-
-
-
-
 
     public function store(Request $request)
     {
@@ -158,6 +140,7 @@ class HonorarioMensualRecController extends Controller
                     'rut_contribuyente' => $meta['rut_contribuyente'],
                     'anio'              => $meta['anio'],
                     'mes'               => $meta['mes'],
+                    'rut_emisor'        => $r['rut_emisor'],
                     'folio'             => $r['folio'],
                 ],
                 [
@@ -165,7 +148,6 @@ class HonorarioMensualRecController extends Controller
                     'fecha_emision'        => $r['fecha_emision'],
                     'estado'               => $r['estado'],
                     'fecha_anulacion'      => $r['fecha_anulacion'],
-                    'rut_emisor'           => $r['rut_emisor'],
                     'razon_social_emisor'  => $r['razon_social_emisor'],
                     'sociedad_profesional' => $r['sociedad_profesional'],
                     'monto_bruto'          => $r['monto_bruto'],
@@ -173,6 +155,9 @@ class HonorarioMensualRecController extends Controller
                     'monto_pagado'         => $r['monto_pagado'],
                 ]
             );
+
+
+
         }
 
         // =========================
@@ -201,6 +186,31 @@ class HonorarioMensualRecController extends Controller
             ->route('honorarios.mensual.index')
             ->with('success', 'Honorarios mensuales guardados correctamente.');
     }
+
+    public function detalle($empresa, $anio, $mes)
+    {
+        // Obtener registros del período seleccionado
+        $registros = HonorarioMensualRec::with('empresa')
+            ->where('empresa_id', $empresa)
+            ->where('anio', $anio)
+            ->where('mes', $mes)
+            ->orderBy('fecha_emision')
+            ->get();
+
+        // Obtener totales (si existen)
+        $totales = HonorarioMensualRecTotal::where('anio', $anio)
+            ->where('mes', $mes)
+            ->where('rut_contribuyente', optional($registros->first())->rut_contribuyente)
+            ->first();
+
+        return view('boleta_mensual.partials.detalle', compact(
+            'registros',
+            'totales',
+            'anio',
+            'mes'
+        ));
+    }
+
 
 
 

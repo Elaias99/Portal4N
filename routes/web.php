@@ -587,6 +587,14 @@ Route::get(
     )->name('boleta.mensual.panel');
 
 
+// Detalle Honorarios Mensuales Recibidos (por empresa y periodo)
+Route::get(
+    '/honorarios/mensual-rec/detalle/{empresa}/{anio}/{mes}',
+    [HonorarioMensualRecController::class, 'detalle']
+)->name('honorarios.mensual.detalle');
+
+
+
 // rEPORTE TRACKING 
 
 Route::get('/report/tracking/{year}/{month}', [TrackingReportController::class, 'monthly']);

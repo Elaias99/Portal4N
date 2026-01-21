@@ -6,7 +6,7 @@
     <h1 class="mb-4">Honorarios Mensuales Recibidos</h1>
 
     {{-- =========================
-        1️⃣ FORMULARIO IMPORTACIÓN
+        IMPORTAR ARCHIVO SII
     ========================== --}}
     <div class="card mb-4">
         <div class="card-header">
@@ -15,22 +15,18 @@
         <div class="card-body">
             <form action="{{ route('honorarios.mensual.import') }}" method="POST" enctype="multipart/form-data">
                 @csrf
-
                 <div class="mb-3">
-                    <label for="archivo" class="form-label">
-                        Archivo SII (file_informeMensualREC)
-                    </label>
-                    <input type="file" name="archivo" id="archivo" class="form-control" required>
+                    <label class="form-label">Archivo SII (file_informeMensualREC)</label>
+                    <input type="file" name="archivo" class="form-control" required>
                 </div>
-
-                <button type="submit" class="btn btn-primary">
-                    Importar y previsualizar
-                </button>
+                <button class="btn btn-primary">Importar y previsualizar</button>
             </form>
         </div>
     </div>
 
-    {{-- =========================
+
+
+        {{-- =========================
         MENSAJES
     ========================== --}}
     @if(session('info'))
@@ -56,7 +52,9 @@
                 <p><strong>RUT:</strong> {{ $preview['meta']['rut_contribuyente'] }}</p>
                 <p>
                     <strong>Periodo:</strong>
-                    {{ $preview['meta']['mes'] }} / {{ $preview['meta']['anio'] }}
+                    {{ \Carbon\Carbon::create()->month($preview['meta']['mes'])->translatedFormat('F') }}
+                    {{ $preview['meta']['anio'] }}
+
                 </p>
 
                 {{-- Tabla registros --}}
@@ -66,6 +64,7 @@
                             <th>Folio</th>
                             <th>Fecha</th>
                             <th>Estado</th>
+                            <th>Fecha Anulación</th>
                             <th>Rut Emisor</th>
                             <th>Razón Social</th>
                             <th>Soc. Prof.</th>
@@ -80,6 +79,7 @@
                                 <td>{{ $r['folio'] }}</td>
                                 <td>{{ $r['fecha_emision'] }}</td>
                                 <td>{{ $r['estado'] }}</td>
+                                <td>{{ $r['fecha_anulacion'] }}</td>
                                 <td>{{ $r['rut_emisor'] }}</td>
                                 <td>{{ $r['razon_social_emisor'] }}</td>
                                 <td>{{ $r['sociedad_profesional'] ? 'SI' : 'NO' }}</td>
@@ -101,7 +101,7 @@
 
                         {{-- FILA DE TOTALES (estilo Excel) --}}
                         <tr class="table-light fw-bold">
-                            <td colspan="6">Totales</td>
+                            <td colspan="7">Totales</td>
                             <td class="text-end">
                                 {{ number_format($preview['totales']['bruto'], 0, ',', '.') }}
                             </td>
@@ -132,76 +132,86 @@
         </div>
     @endif
 
+
+
+
     {{-- =========================
-        3️⃣ REGISTROS GUARDADOS
+        TARJETAS POR PERÍODO
     ========================== --}}
-    <div class="card">
-        <div class="card-header">
-            Registros almacenados
-        </div>
-        <div class="card-body">
+    <div id="vista-tarjetas">
+        <div class="row">
 
-            @if($registros->isEmpty())
-                <p>No hay registros cargados.</p>
-            @else
-                <table class="table table-sm table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Empresa</th>
-                            <th>Año</th>
-                            <th>Mes</th>
-                            <th>Folio</th>
-                            <th>Fecha</th>
-                            <th>Estado</th>
-                            <th>Emisor</th>
-                            <th>Rut</th>
-                            <th>Bruto</th>
-                            <th>Retenido</th>
-                            <th>Pagado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($registros as $r)
-                            <tr>
-                                <td>
-                                    <strong>{{ $r->empresa->Nombre }}</strong><br>
-                                    <small class="text-muted">{{ $r->empresa->rut }}</small>
-                                </td>
-                                <td>{{ $r->anio }}</td>
-                                <td>{{ $r->mes }}</td>
-                                <td>{{ $r->folio }}</td>
-                                <td>{{ $r->fecha_emision->format('d-m-Y') }}</td>
-                                <td>{{ $r->estado }}</td>
-                                <td>{{ $r->razon_social_emisor }}</td>
-                                <td>{{ $r->rut_emisor }}</td>
-                                <td class="text-end">{{ number_format($r->monto_bruto, 0, ',', '.') }}</td>
-                                <td class="text-end">{{ number_format($r->monto_retenido, 0, ',', '.') }}</td>
-                                <td class="text-end">{{ number_format($r->monto_pagado, 0, ',', '.') }}</td>
-                            </tr>
-                        @endforeach
+            @forelse($periodos as $p)
+                <div class="col-lg-3 col-md-4 col-sm-6 col-12 mb-4">
+                    <div class="card shadow-sm text-center h-100" style="border-radius: 12px;">
 
-                        {{-- FILA DE TOTALES GUARDADOS --}}
-                        @if(isset($total))
-                            <tr class="table-secondary fw-bold">
-                                <td colspan="8">Totales</td>
-                                <td class="text-end">
-                                    {{ number_format($total->monto_bruto, 0, ',', '.') }}
-                                </td>
-                                <td class="text-end">
-                                    {{ number_format($total->monto_retenido, 0, ',', '.') }}
-                                </td>
-                                <td class="text-end">
-                                    {{ number_format($total->monto_pagado, 0, ',', '.') }}
-                                </td>
-                            </tr>
-                        @endif
-                    </tbody>
-                </table>
-            @endif
+                        <div class="card-body d-flex flex-column justify-content-center">
+
+                            {{-- Logo empresa --}}
+                            <div style="
+                                width: 120px;
+                                height: 60px;
+                                margin: 0 auto;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            ">
+                                @if($p->empresa && $p->empresa->logo)
+                                    <img src="{{ url($p->empresa->logo) }}"
+                                        alt="Logo {{ $p->empresa->Nombre }}"
+                                        style="
+                                            max-width: 100%;
+                                            max-height: 100%;
+                                            object-fit: contain;
+                                        ">
+                                @endif
+                            </div>
+
+
+                            {{-- Periodo --}}
+                            <span class="text-muted">
+                                {{ \Carbon\Carbon::create()->month($p->mes)->translatedFormat('F') }}
+                                {{ $p->anio }}
+                            </span>
+
+                            {{-- Acción (placeholder) --}}
+                            <div class="mt-3">
+
+
+
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-primary btn-sm btn-ver-detalle"
+                                    data-empresa="{{ $p->empresa_id }}"
+                                    data-anio="{{ $p->anio }}"
+                                    data-mes="{{ $p->mes }}"
+                                >
+                                    Ver detalles
+                                </button>
+
+
+
+
+
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <p class="text-muted">No hay honorarios importados.</p>
+            @endforelse
 
         </div>
     </div>
 
+    <div id="vista-detalle" style="display: none;">
+
+        <div id="contenedor-detalle">
+            
+        </div>
+
+    </div>
 
 
     <div class="text-center mt-4">
@@ -212,4 +222,60 @@
 
 
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    document.addEventListener('click', function (e) {
+
+        if (e.target && e.target.id === 'btn-volver-tarjetas') {
+
+            document.getElementById('vista-detalle').style.display = 'none';
+            document.getElementById('vista-tarjetas').style.display = 'block';
+        }
+
+    });
+
+
+
+
+    const botonesDetalle = document.querySelectorAll('.btn-ver-detalle');
+
+    botonesDetalle.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+
+            const empresa = btn.dataset.empresa;
+            const anio    = btn.dataset.anio;
+            const mes     = btn.dataset.mes;
+
+            // Ocultar tarjetas
+            document.getElementById('vista-tarjetas').style.display = 'none';
+
+            // Mostrar detalle
+            document.getElementById('vista-detalle').style.display = 'block';
+
+            // Cargar detalle real
+            fetch(`/honorarios/mensual-rec/detalle/${empresa}/${anio}/${mes}`)
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('contenedor-detalle').innerHTML = html;
+                })
+                .catch(error => {
+                    document.getElementById('contenedor-detalle').innerHTML =
+                        '<div class="alert alert-danger">Error al cargar el detalle.</div>';
+                });
+        });
+    });
+
+
+
+
+
+
+
+
+});
+</script>
+
+
 @endsection
