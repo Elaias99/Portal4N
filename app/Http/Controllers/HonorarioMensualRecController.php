@@ -13,26 +13,59 @@ use Illuminate\Support\Facades\Log;
 class HonorarioMensualRecController extends Controller
 {
     
-    public function index()
+    public function index(Request $request)
     {
-        $registros = HonorarioMensualRec::orderBy('anio', 'desc')
-            ->orderBy('mes', 'desc')
-            ->orderBy('fecha_emision')
-            ->get();
+        $query = HonorarioMensualRec::with('empresa');
 
-        $total = HonorarioMensualRecTotal::orderBy('anio', 'desc')
-            ->orderBy('mes', 'desc')
-            ->first();
+        // =========================
+        // FILTRO: EMPRESA
+        // =========================
+        if ($request->filled('empresa_id')) {
+            $query->where('empresa_id', $request->empresa_id);
+        }
 
-        $periodos = HonorarioMensualRec::with('empresa')
-            ->select('empresa_id', 'anio', 'mes')
-            ->groupBy('empresa_id', 'anio', 'mes')
+        // =========================
+        // FILTRO: AÑO
+        // =========================
+        if ($request->filled('anio')) {
+            $query->where('anio', $request->anio);
+        }
+
+        // =========================
+        // FILTRO: MES
+        // =========================
+        if ($request->filled('mes')) {
+            $query->where('mes', $request->mes);
+        }
+
+        // =========================
+        // ORDEN + PAGINACIÓN
+        // =========================
+        $registros = $query
             ->orderBy('anio', 'desc')
             ->orderBy('mes', 'desc')
-            ->get();
+            ->orderBy('fecha_emision', 'desc')
+            ->paginate(10)
+            ->appends($request->query()); // 🔹 mantiene filtros al paginar
 
-        return view('boleta_mensual.index', compact('periodos','registros', 'total'));
+        // =========================
+        // DATOS PARA SELECTORES
+        // =========================
+        $empresas = \App\Models\Empresa::orderBy('Nombre')->get();
+
+        $anios = HonorarioMensualRec::select('anio')
+            ->distinct()
+            ->orderBy('anio', 'desc')
+            ->pluck('anio');
+
+        return view('boleta_mensual.index', compact(
+            'registros',
+            'empresas',
+            'anios'
+        ));
     }
+
+
 
 
 

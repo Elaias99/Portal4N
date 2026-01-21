@@ -3,30 +3,124 @@
 @section('content')
 <div class="container">
 
+
+    
+
     <h1 class="mb-4">Honorarios Mensuales Recibidos</h1>
 
+
+
     {{-- =========================
-        IMPORTAR ARCHIVO SII
+    FILTROS + IMPORTACIÓN
     ========================== --}}
     <div class="card mb-4">
         <div class="card-header">
-            Importar archivo SII
+            <strong>Filtros y carga de archivo SII</strong>
         </div>
+
         <div class="card-body">
-            <form action="{{ route('honorarios.mensual.import') }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                <div class="mb-3">
-                    <label class="form-label">Archivo SII (file_informeMensualREC)</label>
-                    <input type="file" name="archivo" class="form-control" required>
+
+            {{-- =========================
+                FILTROS
+            ========================== --}}
+            <form method="GET" action="{{ route('honorarios.mensual.index') }}">
+                <div class="row g-2 align-items-end">
+
+                    {{-- Empresa --}}
+                    <div class="col-md-4">
+                        <label class="form-label">Empresa</label>
+                        <select name="empresa_id" class="form-select">
+                            <option value="">Todas</option>
+                            @foreach($empresas as $empresa)
+                                <option value="{{ $empresa->id }}"
+                                    {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
+                                    {{ $empresa->Nombre }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Año --}}
+                    <div class="col-md-2">
+                        <label class="form-label">Año</label>
+                        <select name="anio" class="form-select">
+                            <option value="">Todos</option>
+                            @foreach($anios as $anio)
+                                <option value="{{ $anio }}"
+                                    {{ request('anio') == $anio ? 'selected' : '' }}>
+                                    {{ $anio }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Mes --}}
+                    <div class="col-md-3">
+                        <label class="form-label">Mes</label>
+                        <select name="mes" class="form-select">
+                            <option value="">Todos</option>
+                            @for($m = 1; $m <= 12; $m++)
+                                <option value="{{ $m }}"
+                                    {{ request('mes') == $m ? 'selected' : '' }}>
+                                    {{ \Carbon\Carbon::create()->month($m)->translatedFormat('F') }}
+                                </option>
+                            @endfor
+                        </select>
+                    </div>
+
+                    {{-- Botones filtros --}}
+                    <div class="col-md-3 d-flex gap-2">
+                        <button class="btn btn-primary">Filtrar</button>
+                        <a href="{{ route('honorarios.mensual.index') }}"
+                        class="btn btn-outline-secondary">
+                            Limpiar
+                        </a>
+                    </div>
+
                 </div>
-                <button class="btn btn-primary">Importar y previsualizar</button>
             </form>
+
+            <hr>
+
+            {{-- =========================
+                IMPORTAR ARCHIVO SII
+            ========================== --}}
+            <form action="{{ route('honorarios.mensual.import') }}"
+                method="POST"
+                enctype="multipart/form-data"
+                class="mt-2">
+
+                @csrf
+
+                <div class="row g-2 align-items-end">
+
+                    <div class="col-md-9">
+                        <label class="form-label">
+                            Archivo SII (file_informeMensualREC)
+                        </label>
+                        <input type="file"
+                            name="archivo"
+                            class="form-control"
+                            required>
+                    </div>
+
+                    <div class="col-md-3">
+                        <button class="btn btn-success w-100">
+                            Importar y previsualizar
+                        </button>
+                    </div>
+
+                </div>
+            </form>
+
         </div>
     </div>
 
 
 
-        {{-- =========================
+
+
+    {{-- =========================
         MENSAJES
     ========================== --}}
     @if(session('info'))
@@ -135,83 +229,95 @@
 
 
 
+
     {{-- =========================
-        TARJETAS POR PERÍODO
+    REPORTE HONORARIOS MENSUALES
     ========================== --}}
-    <div id="vista-tarjetas">
-        <div class="row">
-
-            @forelse($periodos as $p)
-                <div class="col-lg-3 col-md-4 col-sm-6 col-12 mb-4">
-                    <div class="card shadow-sm text-center h-100" style="border-radius: 12px;">
-
-                        <div class="card-body d-flex flex-column justify-content-center">
-
-                            {{-- Logo empresa --}}
-                            <div style="
-                                width: 120px;
-                                height: 60px;
-                                margin: 0 auto;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                            ">
-                                @if($p->empresa && $p->empresa->logo)
-                                    <img src="{{ url($p->empresa->logo) }}"
-                                        alt="Logo {{ $p->empresa->Nombre }}"
-                                        style="
-                                            max-width: 100%;
-                                            max-height: 100%;
-                                            object-fit: contain;
-                                        ">
-                                @endif
-                            </div>
-
-
-                            {{-- Periodo --}}
-                            <span class="text-muted">
-                                {{ \Carbon\Carbon::create()->month($p->mes)->translatedFormat('F') }}
-                                {{ $p->anio }}
-                            </span>
-
-                            {{-- Acción (placeholder) --}}
-                            <div class="mt-3">
-
-
-
-                                <button
-                                    type="button"
-                                    class="btn btn-outline-primary btn-sm btn-ver-detalle"
-                                    data-empresa="{{ $p->empresa_id }}"
-                                    data-anio="{{ $p->anio }}"
-                                    data-mes="{{ $p->mes }}"
-                                >
-                                    Ver detalles
-                                </button>
+    <div class="card mt-4">
 
 
 
 
 
-                            </div>
 
-                        </div>
-                    </div>
+        <div class="card-header">
+            <strong>Reporte Honorarios Mensuales</strong>
+        </div>
+
+        <div class="card-body p-0">
+
+            @if($registros->isEmpty())
+                <div class="p-3">
+                    <p class="text-muted mb-0">No hay honorarios registrados.</p>
                 </div>
-            @empty
-                <p class="text-muted">No hay honorarios importados.</p>
-            @endforelse
+            @else
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered mb-0">
+
+                        <thead class="table-light">
+                            <tr>
+                                <th>Empresa</th>
+                                <th>Año</th>
+                                <th>Mes</th>
+                                <th>Folio</th>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th>Rut Emisor</th>
+                                <th>Razón Social Emisor</th>
+                                <th class="text-end">Monto Bruto</th>
+                                <th class="text-end">Monto Retenido</th>
+                                <th class="text-end">Monto Pagado</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach($registros as $r)
+                                <tr>
+                                    <td>
+                                        <strong>{{ $r->empresa->Nombre ?? '-' }}</strong><br>
+                                        <small class="text-muted">{{ $r->empresa->rut ?? '' }}</small>
+                                    </td>
+                                    <td>{{ $r->anio }}</td>
+                                    <td>
+                                        {{ \Carbon\Carbon::create()->month($r->mes)->translatedFormat('F') }}
+                                    </td>
+                                    <td>{{ $r->folio }}</td>
+                                    <td>{{ optional($r->fecha_emision)->format('d-m-Y') }}</td>
+                                    <td>{{ $r->estado }}</td>
+                                    <td>{{ $r->rut_emisor }}</td>
+                                    <td>{{ $r->razon_social_emisor }}</td>
+                                    <td class="text-end">
+                                        {{ number_format($r->monto_bruto, 0, ',', '.') }}
+                                    </td>
+                                    <td class="text-end">
+                                        {{ number_format($r->monto_retenido, 0, ',', '.') }}
+                                    </td>
+                                    <td class="text-end">
+                                        {{ number_format($r->monto_pagado, 0, ',', '.') }}
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+
+                    </table>
+
+
+                    {{-- PAGINACIÓN --}}
+                    <div class="mt-3 d-flex justify-content-center">
+                        {{ $registros->links('pagination::bootstrap-4') }}
+                    </div>
+
+                </div>
+            @endif
 
         </div>
     </div>
 
-    <div id="vista-detalle" style="display: none;">
 
-        <div id="contenedor-detalle">
-            
-        </div>
 
-    </div>
+
+
+
 
 
     <div class="text-center mt-4">
@@ -222,60 +328,5 @@
 
 
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-    document.addEventListener('click', function (e) {
-
-        if (e.target && e.target.id === 'btn-volver-tarjetas') {
-
-            document.getElementById('vista-detalle').style.display = 'none';
-            document.getElementById('vista-tarjetas').style.display = 'block';
-        }
-
-    });
-
-
-
-
-    const botonesDetalle = document.querySelectorAll('.btn-ver-detalle');
-
-    botonesDetalle.forEach(function (btn) {
-        btn.addEventListener('click', function () {
-
-            const empresa = btn.dataset.empresa;
-            const anio    = btn.dataset.anio;
-            const mes     = btn.dataset.mes;
-
-            // Ocultar tarjetas
-            document.getElementById('vista-tarjetas').style.display = 'none';
-
-            // Mostrar detalle
-            document.getElementById('vista-detalle').style.display = 'block';
-
-            // Cargar detalle real
-            fetch(`/honorarios/mensual-rec/detalle/${empresa}/${anio}/${mes}`)
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById('contenedor-detalle').innerHTML = html;
-                })
-                .catch(error => {
-                    document.getElementById('contenedor-detalle').innerHTML =
-                        '<div class="alert alert-danger">Error al cargar el detalle.</div>';
-                });
-        });
-    });
-
-
-
-
-
-
-
-
-});
-</script>
-
 
 @endsection
