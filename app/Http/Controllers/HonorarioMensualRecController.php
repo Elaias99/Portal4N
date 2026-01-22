@@ -17,6 +17,27 @@ use Carbon\Carbon;
 class HonorarioMensualRecController extends Controller
 {
     
+
+    // =========================
+    // PANEL DE ACCESO A LOS DOS MÓDULOS DE BOLETA
+    // =========================
+
+    public function panel(Request $request)
+    {
+
+        // Restricción de acceso solo para usuario 405
+        $usuariosFinanzas = [1, 405];
+
+        if (!in_array(Auth::id(), $usuariosFinanzas)) {
+            abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
+        }
+
+        return view('boleta_mensual.panel_acceso.panel');
+
+    }
+
+
+
     public function index(Request $request)
     {
         $query = HonorarioMensualRec::with('empresa','cobranzaCompra',);
@@ -262,49 +283,189 @@ class HonorarioMensualRecController extends Controller
 
 
 
+    // GUARDADO DE LOS ESTADOS MANUALES
 
-    // public function detalle($empresa, $anio, $mes)
-    // {
-    //     // Obtener registros del período seleccionado
-    //     $registros = HonorarioMensualRec::with('empresa')
-    //         ->where('empresa_id', $empresa)
-    //         ->where('anio', $anio)
-    //         ->where('mes', $mes)
-    //         ->orderBy('fecha_emision')
-    //         ->get();
-
-    //     // Obtener totales (si existen)
-    //     $totales = HonorarioMensualRecTotal::where('anio', $anio)
-    //         ->where('mes', $mes)
-    //         ->where('rut_contribuyente', optional($registros->first())->rut_contribuyente)
-    //         ->first();
-
-    //     return view('boleta_mensual.partials.detalle', compact(
-    //         'registros',
-    //         'totales',
-    //         'anio',
-    //         'mes'
-    //     ));
-    // }
-
-
-
-
-
-
-    public function panel(Request $request)
+    public function storeAbono(Request $request, HonorarioMensualRec $honorario)
     {
+        $request->validate([
+            'monto' => 'required|integer|min:1',
+            'fecha_abono' => 'required|date|before_or_equal:today',
+        ], [
+            'fecha_abono.before_or_equal' => 'La fecha del abono no debe ser futura.',
+            'fecha_abono.required' => 'La fecha del abono es obligatoria.',
+        ]);
 
-        // Restricción de acceso solo para usuario 405
-        $usuariosFinanzas = [1, 405];
+        // 1️⃣ Obtener saldo actual (desde BD)
+        $saldoPendiente = $honorario->saldo_pendiente;
 
-        if (!in_array(Auth::id(), $usuariosFinanzas)) {
-            abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
+        // 2️⃣ Validar monto
+        if ($request->monto > $saldoPendiente) {
+            return back()
+                ->withErrors(['monto' => 'El abono no puede ser mayor al saldo pendiente actual.'])
+                ->withInput();
         }
 
-        return view('boleta_mensual.panel_acceso.panel');
+        // 3️⃣ Registrar el abono
+        $honorario->abonos()->create([
+            'monto' => $request->monto,
+            'fecha_abono' => $request->fecha_abono,
+        ]);
 
+        // 4️⃣ Recalcular saldo pendiente
+        $honorario->recalcularSaldoPendiente();
+
+        // 5️⃣ Actualizar estado financiero
+        $honorario->update([
+            'estado_financiero' => 'Abono',
+            'fecha_estado_financiero' => now(),
+        ]);
+
+        return back()->with('success', 'Abono registrado correctamente.');
     }
+
+
+
+
+    public function storeCruce(Request $request, HonorarioMensualRec $honorario)
+    {
+        $request->validate([
+            'monto' => 'required|integer|min:1',
+            'fecha_cruce' => 'required|date|before_or_equal:today',
+            'cobranza_compra_id' => 'required|exists:cobranza_compras,id',
+        ], [
+            'fecha_cruce.before_or_equal' => 'La fecha del cruce no debe ser futura.',
+            'fecha_cruce.required' => 'La fecha del cruce es obligatoria.',
+            'cobranza_compra_id.required' => 'Debe seleccionar un proveedor.',
+            'cobranza_compra_id.exists' => 'El proveedor seleccionado no es válido.',
+        ]);
+
+        // 1️⃣ Saldo actual
+        $saldoPendiente = $honorario->saldo_pendiente;
+
+        // 2️⃣ Validar monto
+        if ($request->monto > $saldoPendiente) {
+            return back()
+                ->withErrors(['monto' => 'El cruce no puede ser mayor al saldo pendiente actual.'])
+                ->withInput();
+        }
+
+        // 3️⃣ Registrar cruce
+        $honorario->cruces()->create([
+            'monto' => $request->monto,
+            'fecha_cruce' => $request->fecha_cruce,
+            'cobranza_compra_id' => $request->cobranza_compra_id,
+        ]);
+
+        // 4️⃣ Recalcular saldo
+        $honorario->recalcularSaldoPendiente();
+
+        // 5️⃣ Actualizar estado financiero
+        $honorario->update([
+            'estado_financiero' => 'Cruce',
+            'fecha_estado_financiero' => now(),
+        ]);
+
+        return back()->with('success', 'Cruce registrado correctamente.');
+    }
+
+
+
+    public function storePago(Request $request, HonorarioMensualRec $honorario)
+    {
+        $request->validate([
+            'fecha_pago' => 'required|date|before_or_equal:today',
+        ], [
+            'fecha_pago.before_or_equal' => 'La fecha del pago no debe ser futura.',
+            'fecha_pago.required' => 'La fecha del pago es obligatoria.',
+        ]);
+
+        // 🚫 Evitar duplicar pagos
+        if ($honorario->pagos()->exists()) {
+            return back()->withErrors([
+                'fecha_pago' => 'Este honorario ya tiene un pago registrado.'
+            ]);
+        }
+
+        // 1️⃣ Registrar el pago
+        $honorario->pagos()->create([
+            'fecha_pago' => $request->fecha_pago,
+            'user_id' => Auth::id(),
+        ]);
+
+        // 2️⃣ Cerrar financieramente el honorario
+        $honorario->update([
+            'estado_financiero' => 'Pago',
+            'fecha_estado_financiero' => now(),
+            'saldo_pendiente' => 0,
+        ]);
+
+        return back()->with('success', 'Pago registrado correctamente.');
+    }
+
+
+
+
+    public function storeProntoPago(Request $request, HonorarioMensualRec $honorario)
+    {
+        $request->validate([
+            'fecha_pronto_pago' => 'required|date|before_or_equal:today',
+        ], [
+            'fecha_pronto_pago.before_or_equal' => 'La fecha del pronto pago no debe ser futura.',
+            'fecha_pronto_pago.required' => 'La fecha del pronto pago es obligatoria.',
+        ]);
+
+        // 🚫 Evitar duplicados
+        if ($honorario->prontoPagos()->exists()) {
+            return back()->withErrors([
+                'fecha_pronto_pago' => 'Este honorario ya tiene un pronto pago registrado.'
+            ]);
+        }
+
+        // 1️⃣ Registrar pronto pago
+        $honorario->prontoPagos()->create([
+            'fecha_pronto_pago' => $request->fecha_pronto_pago,
+            'user_id' => Auth::id(),
+        ]);
+
+        // 2️⃣ Cerrar financieramente el honorario
+        $honorario->update([
+            'estado_financiero' => 'Pronto pago',
+            'fecha_estado_financiero' => now(),
+            'saldo_pendiente' => 0,
+        ]);
+
+        return back()->with('success', 'Pronto pago registrado correctamente.');
+    }
+
+
+
+    public function storeEstado(Request $request)
+    {
+        $honorario = HonorarioMensualRec::findOrFail($request->honorario_id);
+
+        switch ($request->estado_financiero) {
+
+            case 'Abono':
+                return $this->storeAbono($request, $honorario);
+
+            case 'Cruce':
+                return $this->storeCruce($request, $honorario);
+
+            case 'Pago':
+                return $this->storePago($request, $honorario);
+
+            case 'Pronto pago':
+                return $this->storeProntoPago($request, $honorario);
+        }
+
+        return back()->withErrors('Estado no válido');
+    }
+
+
+
+
+
+
 
 
 }

@@ -3,32 +3,122 @@
 @section('content')
 <div class="container">
 
+
+    
+
     <h1 class="mb-4">Honorarios Mensuales Recibidos</h1>
 
+
+
     {{-- =========================
-        1️⃣ FORMULARIO IMPORTACIÓN
+    FILTROS + IMPORTACIÓN
     ========================== --}}
     <div class="card mb-4">
         <div class="card-header">
-            Importar archivo SII
+            <strong>Filtros y carga de archivo SII</strong>
         </div>
+
         <div class="card-body">
-            <form action="{{ route('honorarios.mensual.import') }}" method="POST" enctype="multipart/form-data">
+
+            {{-- =========================
+                FILTROS
+            ========================== --}}
+            <form method="GET" action="{{ route('honorarios.mensual.index') }}">
+                <div class="row g-2 align-items-end">
+
+                    {{-- Empresa --}}
+                    <div class="col-md-4">
+                        <label class="form-label">Empresa</label>
+                        <select name="empresa_id" class="form-select">
+                            <option value="">Todas</option>
+                            @foreach($empresas as $empresa)
+                                <option value="{{ $empresa->id }}"
+                                    {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
+                                    {{ $empresa->Nombre }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Año --}}
+                    <div class="col-md-2">
+                        <label class="form-label">Año</label>
+                        <select name="anio" class="form-select">
+                            <option value="">Todos</option>
+                            @foreach($anios as $anio)
+                                <option value="{{ $anio }}"
+                                    {{ request('anio') == $anio ? 'selected' : '' }}>
+                                    {{ $anio }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Mes --}}
+                    <div class="col-md-3">
+                        <label class="form-label">Mes</label>
+                        <select name="mes" class="form-select">
+                            <option value="">Todos</option>
+                            @for($m = 1; $m <= 12; $m++)
+                                <option value="{{ $m }}"
+                                    {{ request('mes') == $m ? 'selected' : '' }}>
+                                    {{ \Carbon\Carbon::create()->month($m)->translatedFormat('F') }}
+                                </option>
+                            @endfor
+                        </select>
+                    </div>
+
+                    {{-- Botones filtros --}}
+                    <div class="col-md-3 d-flex gap-2">
+                        <button class="btn btn-primary">Filtrar</button>
+                        <a href="{{ route('honorarios.mensual.index') }}"
+                        class="btn btn-outline-secondary">
+                            Limpiar
+                        </a>
+                    </div>
+
+                </div>
+            </form>
+
+            <hr>
+
+            {{-- =========================
+                IMPORTAR ARCHIVO SII
+            ========================== --}}
+            <form action="{{ route('honorarios.mensual.import') }}"
+                method="POST"
+                enctype="multipart/form-data"
+                class="mt-2">
+
                 @csrf
 
-                <div class="mb-3">
-                    <label for="archivo" class="form-label">
-                        Archivo SII (file_informeMensualREC)
-                    </label>
-                    <input type="file" name="archivo" id="archivo" class="form-control" required>
-                </div>
+                <div class="row g-2 align-items-end">
 
-                <button type="submit" class="btn btn-primary">
-                    Importar y previsualizar
-                </button>
+                    <div class="col-md-9">
+                        <label class="form-label">
+                            Archivo SII (file_informeMensualREC)
+                        </label>
+                        <input type="file"
+                            name="archivo"
+                            class="form-control"
+                            required>
+                    </div>
+
+                    <div class="col-md-3">
+                        <button class="btn btn-success w-100">
+                            Importar y previsualizar
+                        </button>
+                    </div>
+
+                </div>
             </form>
+
         </div>
     </div>
+
+
+
+
 
     {{-- =========================
         MENSAJES
@@ -43,7 +133,12 @@
         2️⃣ PREVISUALIZACIÓN
     ========================== --}}
     @if(session('preview'))
-        @php($preview = session('preview'))
+
+
+        @php
+            $preview = session('preview');
+        @endphp
+
 
         <div class="card mb-5 border-warning">
             <div class="card-header bg-warning">
@@ -56,7 +151,9 @@
                 <p><strong>RUT:</strong> {{ $preview['meta']['rut_contribuyente'] }}</p>
                 <p>
                     <strong>Periodo:</strong>
-                    {{ $preview['meta']['mes'] }} / {{ $preview['meta']['anio'] }}
+                    {{ \Carbon\Carbon::create()->month($preview['meta']['mes'])->translatedFormat('F') }}
+                    {{ $preview['meta']['anio'] }}
+
                 </p>
 
                 {{-- Tabla registros --}}
@@ -66,6 +163,7 @@
                             <th>Folio</th>
                             <th>Fecha</th>
                             <th>Estado</th>
+                            <th>Fecha Anulación</th>
                             <th>Rut Emisor</th>
                             <th>Razón Social</th>
                             <th>Soc. Prof.</th>
@@ -80,6 +178,7 @@
                                 <td>{{ $r['folio'] }}</td>
                                 <td>{{ $r['fecha_emision'] }}</td>
                                 <td>{{ $r['estado'] }}</td>
+                                <td>{{ $r['fecha_anulacion'] }}</td>
                                 <td>{{ $r['rut_emisor'] }}</td>
                                 <td>{{ $r['razon_social_emisor'] }}</td>
                                 <td>{{ $r['sociedad_profesional'] ? 'SI' : 'NO' }}</td>
@@ -101,7 +200,7 @@
 
                         {{-- FILA DE TOTALES (estilo Excel) --}}
                         <tr class="table-light fw-bold">
-                            <td colspan="6">Totales</td>
+                            <td colspan="7">Totales</td>
                             <td class="text-end">
                                 {{ number_format($preview['totales']['bruto'], 0, ',', '.') }}
                             </td>
@@ -132,102 +231,126 @@
         </div>
     @endif
 
+
+
+
+
     {{-- =========================
-        3️⃣ REGISTROS GUARDADOS
+    REPORTE HONORARIOS MENSUALES
     ========================== --}}
-    <div class="card">
+    <div class="card mt-4">
+
         <div class="card-header">
-            Registros almacenados
+            <strong>Reporte Honorarios Mensuales</strong>
         </div>
-        <div class="card-body">
+
+        <div class="card-body p-0">
 
             @if($registros->isEmpty())
-                <p>No hay registros cargados.</p>
+                <div class="p-3">
+                    <p class="text-muted mb-0">No hay honorarios registrados.</p>
+                </div>
             @else
-                <table class="table table-sm table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Empresa</th>
-                            <th>Año</th>
-                            <th>Mes</th>
-                            <th>Folio</th>
-                            <th>Fecha</th>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered mb-0">
 
-                            <th>Estado SII</th>
-                            <th>Estado financiero</th>
+                        <thead>
+                            <tr>
+                                {{-- <th>Empresa</th> --}}
 
-                            <th>Emisor</th>
-                            <th>Rut</th>
+                                {{-- <th>Fecha</th> --}}
 
-                            <th>Bruto</th>
-                            <th>Retenido</th>
-                            <th>Pagado</th>
-                            <th>Saldo pendiente</th>
+                                <th>Estado SII</th>
+                                <th>Estado financiero</th>
 
-                            <th>Cobranza</th>
-                        </tr>
-                    </thead>
+                                <th>Emisor</th>
 
-                    <tbody>
-                    @foreach($registros as $r)
-                        <tr>
-                            <td>
-                                <strong>{{ $r->empresa->Nombre }}</strong><br>
-                                <small class="text-muted">{{ $r->empresa->rut }}</small>
-                            </td>
+                                <th>Saldo pendiente</th>
 
-                            <td>{{ $r->anio }}</td>
-                            <td>{{ $r->mes }}</td>
-                            <td>{{ $r->folio }}</td>
-                            <td>{{ $r->fecha_emision?->format('d-m-Y') }}</td>
+                                <th>Cobranza</th>
+                            </tr>
+                        </thead>
 
-                            {{-- Estado SII --}}
-                            <td>
-                                <span class="{{ $r->estado === 'ANULADA' ? 'text-danger' : 'text-success' }}">
-                                    {{ $r->estado }}
-                                </span>
-                            </td>
 
-                            {{-- Estado financiero inicial --}}
-                            <td>
-                                @if ($r->estado_financiero_inicial)
-                                    <span class="{{ $r->estado_financiero_inicial === 'Vencido' ? 'text-danger' : 'text-success' }}">
-                                        {{ $r->estado_financiero_inicial }}
+                        <tbody>
+                        @foreach($registros as $r)
+                            <tr>
+                                {{-- <td>
+                                    <strong>{{ $r->empresa->Nombre }}</strong><br>
+                                    <small class="text-muted">{{ $r->empresa->rut }}</small>
+                                </td> --}}
+
+                                {{-- <td>{{ $r->fecha_emision?->format('d-m-Y') }}</td> --}}
+
+                                {{-- Estado SII --}}
+                                <td>
+                                    <span class="{{ $r->estado === 'ANULADA' ? 'text-danger' : 'text-success' }}">
+                                        {{ $r->estado }}
                                     </span>
-                                @else
-                                    <span class="text-muted">Sin definir</span>
-                                @endif
-                            </td>
+                                </td>
 
-                            <td>{{ $r->razon_social_emisor }}</td>
-                            <td>{{ $r->rut_emisor }}</td>
+                                {{-- Estado financiero inicial --}}
+                                <td>
+                                    @php
+                                        $estadoActual = $r->estado_financiero ?? $r->estado_financiero_inicial;
+                                    @endphp
 
-                            <td class="text-end">{{ number_format($r->monto_bruto, 0, ',', '.') }}</td>
-                            <td class="text-end">{{ number_format($r->monto_retenido, 0, ',', '.') }}</td>
-                            <td class="text-end">{{ number_format($r->monto_pagado, 0, ',', '.') }}</td>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-secondary btn-estado-honorario"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalEstadoHonorario"
+                                            data-id="{{ $r->id }}"
+                                            data-emisor="{{ $r->razon_social_emisor }}"
+                                            data-estado="{{ $r->estado_financiero ?? $r->estado_financiero_inicial }}"
+                                            data-saldo="{{ number_format($r->saldo_pendiente ?? 0, 0, ',', '.') }}">
+                                        {{ $r->estado_financiero ?? $r->estado_financiero_inicial }}
+                                    </button>
 
-                            {{-- Saldo pendiente --}}
-                            <td class="text-end fw-bold">
-                                {{ number_format($r->saldo_pendiente ?? 0, 0, ',', '.') }}
-                            </td>
+                                </td>
 
-                            {{-- Cobranza --}}
-                            <td>
-                                @if ($r->cobranzaCompra)
-                                    {{ $r->cobranzaCompra->razon_social }}
-                                @else
-                                    <span class="text-muted">Sin proveedor</span>
-                                @endif
-                            </td>
-                        </tr>
-                    @endforeach
-                    </tbody>
 
-                </table>
+
+
+                                <td>{{ $r->razon_social_emisor }}</td>
+
+
+                                {{-- Saldo pendiente --}}
+                                <td class="text-end fw-bold">
+                                    {{ number_format($r->saldo_pendiente ?? 0, 0, ',', '.') }}
+                                </td>
+
+                                {{-- Cobranza --}}
+                                <td>
+                                    @if ($r->cobranzaCompra)
+                                        {{ $r->cobranzaCompra->razon_social }}
+                                    @else
+                                        <span class="text-muted">Sin proveedor</span>
+                                    @endif
+                                </td>
+                            </tr>
+                         @endforeach
+                        </tbody>
+
+
+                    </table>
+
+
+                    {{-- PAGINACIÓN --}}
+                    <div class="mt-3 d-flex justify-content-center">
+                        {{ $registros->links('pagination::bootstrap-4') }}
+                    </div>
+
+                </div>
             @endif
 
         </div>
+
     </div>
+
+
+
+
+
 
 
 
@@ -239,4 +362,65 @@
 
 
 </div>
+
+
+
+
+
+
+
+<script>
+    document.addEventListener('click', function (e) {
+
+        const btn = e.target.closest('.btn-estado-honorario');
+        if (!btn) return;
+
+        document.getElementById('modal-emisor').value = btn.dataset.emisor;
+        document.getElementById('modal-estado-actual').value = btn.dataset.estado;
+        document.getElementById('modal-saldo').value = btn.dataset.saldo;
+
+        //  ESTO FALTABA
+        document.getElementById('modal-honorario-id').value = btn.dataset.id;
+    });
+
+</script>
+
+
+<script>
+    document.addEventListener('change', function (e) {
+
+        if (e.target.id !== 'modal-nuevo-estado') return;
+
+        const estado = e.target.value;
+
+        // Bloques
+        const camposMonto      = document.getElementById('modal-campos-monto');
+        const campoCobranza    = document.getElementById('modal-campo-cobranza');
+        const campoFechaPago   = document.getElementById('modal-campo-fecha-pago');
+
+        // Resetear todo
+        camposMonto.classList.add('d-none');
+        campoCobranza.classList.add('d-none');
+        campoFechaPago.classList.add('d-none');
+
+        // Mostrar según estado
+        if (estado === 'Abono') {
+            camposMonto.classList.remove('d-none');
+        }
+
+        if (estado === 'Cruce') {
+            camposMonto.classList.remove('d-none');
+            campoCobranza.classList.remove('d-none');
+        }
+
+        if (estado === 'Pago' || estado === 'Pronto pago') {
+            campoFechaPago.classList.remove('d-none');
+        }
+    });
+</script>
+
+
+@include('boleta_mensual._modal_estado_financiero')
+
+
 @endsection

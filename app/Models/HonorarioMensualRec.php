@@ -43,6 +43,10 @@ class HonorarioMensualRec extends Model
         'fecha_anulacion' => 'date',
     ];
 
+    // =========================
+    // RELACIONES FINANCIERAS
+    // =========================
+
     public function empresa()
     {
         return $this->belongsTo(Empresa::class);
@@ -52,6 +56,77 @@ class HonorarioMensualRec extends Model
     {
         return $this->belongsTo(CobranzaCompra::class, 'cobranza_compra_id');
     }
+
+    public function abonos()
+    {
+        return $this->hasMany(Abono::class, 'honorario_mensual_rec_id');
+    }
+
+    public function cruces()
+    {
+        return $this->hasMany(Cruce::class, 'honorario_mensual_rec_id');
+    }
+
+    public function pagos()
+    {
+        return $this->hasMany(Pago::class, 'honorario_mensual_rec_id');
+    }
+
+    public function prontoPagos()
+    {
+        return $this->hasMany(ProntoPago::class, 'honorario_mensual_rec_id');
+    }
+
+
+
+    // =========================
+    // SALDO PENDIENTE
+    // =========================
+
+    public function recalcularSaldoPendiente()
+    {
+        // 1️⃣ Si tiene pago o pronto pago → saldo 0
+        if ($this->pagos()->exists() || $this->prontoPagos()->exists()) {
+            $this->update(['saldo_pendiente' => 0]);
+            return 0;
+        }
+
+        // 2️⃣ Monto base: monto pagado informado por SII
+        $saldo = $this->monto_pagado ?? 0;
+
+        // 3️⃣ Descontar abonos
+        $saldo -= $this->abonos()->sum('monto');
+
+        // 4️⃣ Descontar cruces
+        $saldo -= $this->cruces()->sum('monto');
+
+        // 5️⃣ Nunca negativo
+        $saldo = max($saldo, 0);
+
+        // 6️⃣ Persistir
+        $this->update(['saldo_pendiente' => $saldo]);
+
+        return $saldo;
+    }
+
+
+    // =========================
+    // ESTADO FINANCIERO FINAL
+    // =========================
+
+    public function getEstadoFinancieroFinalAttribute()
+    {
+        // Si hay estado manual → prevalece
+        if ($this->estado_financiero) {
+            return $this->estado_financiero;
+        }
+
+        // Si no, usar el inicial (Al día / Vencido)
+        return $this->estado_financiero_inicial;
+    }
+
+
+
 
 
 

@@ -16,6 +16,7 @@ class Pago extends Model
         'documento_compra_id',
         'fecha_pago',
         'user_id',
+        'honorario_mensual_rec_id',
 
     ];
 

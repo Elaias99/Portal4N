@@ -593,6 +593,35 @@ Route::get(
     [HonorarioMensualRecController::class, 'detalle']
 )->name('honorarios.mensual.detalle');
 
+Route::post(
+    '/honorarios/mensual-rec/{honorario}/abono',
+    [HonorarioMensualRecController::class, 'storeAbono']
+)->name('honorarios.mensual.abono.store');
+
+Route::post(
+    '/honorarios/mensual-rec/{honorario}/cruce',
+    [HonorarioMensualRecController::class, 'storeCruce']
+)->name('honorarios.mensual.cruce.store');
+
+Route::post(
+    '/honorarios/mensual-rec/{honorario}/pago',
+    [HonorarioMensualRecController::class, 'storePago']
+)->name('honorarios.mensual.pago.store');
+
+Route::post(
+    '/honorarios/mensual-rec/{honorario}/pronto-pago',
+    [HonorarioMensualRecController::class, 'storeProntoPago']
+)->name('honorarios.mensual.prontopago.store');
+
+Route::post(
+    '/honorarios/mensual-rec/estado',
+    [HonorarioMensualRecController::class, 'storeEstado']
+)->name('honorarios.mensual.estado.store');
+
+
+
+
+
 
 
 // rEPORTE TRACKING 

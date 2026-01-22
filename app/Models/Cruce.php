@@ -12,6 +12,7 @@ class Cruce extends Model
     protected $fillable = [
         'documento_financiero_id',
         'documento_compra_id',
+        'honorario_mensual_rec_id',
         'cobranza_id',
         'cobranza_compra_id',
         'monto',

@@ -16,6 +16,7 @@ class ProntoPago extends Model
         'documento_compra_id',
         'fecha_pronto_pago',
         'user_id',
+        'honorario_mensual_rec_id',
 
     ];
 

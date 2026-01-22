@@ -9,7 +9,7 @@ class Abono extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['documento_financiero_id', 'documento_compra_id' ,'monto' , 'fecha_abono'];
+    protected $fillable = ['documento_financiero_id', 'documento_compra_id','monto' , 'fecha_abono','honorario_mensual_rec_id'];
 
     public function documento()
     {
