@@ -287,12 +287,21 @@ class HonorarioMensualRecController extends Controller
 
     public function storeAbono(Request $request, HonorarioMensualRec $honorario)
     {
+        Log::info('[storeAbono] Entrando', $request->all());
+
         $request->validate([
             'monto' => 'required|integer|min:1',
             'fecha_abono' => 'required|date|before_or_equal:today',
         ], [
             'fecha_abono.before_or_equal' => 'La fecha del abono no debe ser futura.',
             'fecha_abono.required' => 'La fecha del abono es obligatoria.',
+        ]);
+
+
+        Log::info('[storeAbono] Validación OK', [
+            'monto'              => $request->monto,
+            'fecha_cruce'        => $request->fecha_cruce,
+            'cobranza_compra_id' => $request->cobranza_compra_id,
         ]);
 
         // 1️⃣ Obtener saldo actual (desde BD)
@@ -328,15 +337,21 @@ class HonorarioMensualRecController extends Controller
 
     public function storeCruce(Request $request, HonorarioMensualRec $honorario)
     {
+        Log::info('[storeCruce] Entrando', $request->all());
+
+
         $request->validate([
             'monto' => 'required|integer|min:1',
             'fecha_cruce' => 'required|date|before_or_equal:today',
-            'cobranza_compra_id' => 'required|exists:cobranza_compras,id',
         ], [
             'fecha_cruce.before_or_equal' => 'La fecha del cruce no debe ser futura.',
             'fecha_cruce.required' => 'La fecha del cruce es obligatoria.',
-            'cobranza_compra_id.required' => 'Debe seleccionar un proveedor.',
-            'cobranza_compra_id.exists' => 'El proveedor seleccionado no es válido.',
+        ]);
+
+        Log::info('[storeCruce] Validación OK', [
+            'monto'              => $request->monto,
+            'fecha_cruce'        => $request->fecha_cruce,
+            'cobranza_compra_id' => $request->cobranza_compra_id,
         ]);
 
         // 1️⃣ Saldo actual
@@ -407,12 +422,21 @@ class HonorarioMensualRecController extends Controller
 
     public function storeProntoPago(Request $request, HonorarioMensualRec $honorario)
     {
+        Log::info('[storeProntoPago] Entrando', $request->all());
+
         $request->validate([
             'fecha_pronto_pago' => 'required|date|before_or_equal:today',
         ], [
             'fecha_pronto_pago.before_or_equal' => 'La fecha del pronto pago no debe ser futura.',
             'fecha_pronto_pago.required' => 'La fecha del pronto pago es obligatoria.',
         ]);
+
+
+        Log::info('[storeProntoPago] Validación OK', [
+            'fecha_pronto_pago' => $request->fecha_pronto_pago,
+        ]);
+
+
 
         // 🚫 Evitar duplicados
         if ($honorario->prontoPagos()->exists()) {
@@ -441,7 +465,15 @@ class HonorarioMensualRecController extends Controller
 
     public function storeEstado(Request $request)
     {
+
+        Log::info('[storeEstado] Request recibido', $request->all());
+
+
         $honorario = HonorarioMensualRec::findOrFail($request->honorario_id);
+
+        Log::info('[storeEstado] Estado financiero', [
+            'estado_financiero' => $request->estado_financiero,
+        ]);
 
         switch ($request->estado_financiero) {
 

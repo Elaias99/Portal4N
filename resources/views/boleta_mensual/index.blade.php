@@ -256,18 +256,24 @@
 
                         <thead>
                             <tr>
-                                {{-- <th>Empresa</th> --}}
 
-                                {{-- <th>Fecha</th> --}}
+                                <th>Empresa</th>
 
-                                <th>Estado SII</th>
-                                <th>Estado financiero</th>
+                                <th>Estado</th>
 
+                                <th>Rut</th>
                                 <th>Emisor</th>
-
+                                <th>Folio</th>
+                                <th>Fecha Emisión</th>
+                               
+                                <th>Estado SII</th>
+                                <th>Fecha Anulación</th>
+                                <th>Monto Pagado</th>
                                 <th>Saldo pendiente</th>
 
-                                <th>Cobranza</th>
+                                <th>Fecha Cambio Estado</th>
+
+                                
                             </tr>
                         </thead>
 
@@ -275,19 +281,9 @@
                         <tbody>
                         @foreach($registros as $r)
                             <tr>
-                                {{-- <td>
-                                    <strong>{{ $r->empresa->Nombre }}</strong><br>
-                                    <small class="text-muted">{{ $r->empresa->rut }}</small>
-                                </td> --}}
 
-                                {{-- <td>{{ $r->fecha_emision?->format('d-m-Y') }}</td> --}}
+                                <td>{{ $r->empresa->Nombre }}</td>
 
-                                {{-- Estado SII --}}
-                                <td>
-                                    <span class="{{ $r->estado === 'ANULADA' ? 'text-danger' : 'text-success' }}">
-                                        {{ $r->estado }}
-                                    </span>
-                                </td>
 
                                 {{-- Estado financiero inicial --}}
                                 <td>
@@ -308,25 +304,47 @@
 
                                 </td>
 
+                                <td>
+
+                                    {{ $r->rut_emisor }}
+
+                                </td>
+
+                                {{-- Cobranza --}}
+                                <td> @if ($r->cobranzaCompra) {{ $r->cobranzaCompra->razon_social }} @else <span class="text-muted">Sin proveedor</span> @endif </td>
+
+                                <td> {{ $r->folio }} </td>
+
+                                <td> {{ $r->fecha_emision }} </td>
 
 
 
-                                <td>{{ $r->razon_social_emisor }}</td>
+                                <td>
+                                    <span class="{{ $r->estado === 'ANULADA' ? 'text-danger' : 'text-success' }}">
+                                        {{ $r->estado }}
+                                    </span>
+                                </td>
 
+                                <td> {{ $r->fecha_anulacion }} </td>
+
+
+                                {{-- Saldo pendiente --}}
+                                <td class="text-end fw-bold">
+                                    {{ number_format($r->monto_pagado ?? 0, 0, ',', '.') }}
+                                </td>
 
                                 {{-- Saldo pendiente --}}
                                 <td class="text-end fw-bold">
                                     {{ number_format($r->saldo_pendiente ?? 0, 0, ',', '.') }}
                                 </td>
 
-                                {{-- Cobranza --}}
-                                <td>
-                                    @if ($r->cobranzaCompra)
-                                        {{ $r->cobranzaCompra->razon_social }}
-                                    @else
-                                        <span class="text-muted">Sin proveedor</span>
-                                    @endif
-                                </td>
+                                <td> {{ $r->fecha_estado_financiero }} </td>
+                                
+
+
+
+
+
                             </tr>
                          @endforeach
                         </tbody>
@@ -375,15 +393,23 @@
         const btn = e.target.closest('.btn-estado-honorario');
         if (!btn) return;
 
-        document.getElementById('modal-emisor').value = btn.dataset.emisor;
+        document.getElementById('modal-emisor').value         = btn.dataset.emisor;
         document.getElementById('modal-estado-actual').value = btn.dataset.estado;
-        document.getElementById('modal-saldo').value = btn.dataset.saldo;
+        document.getElementById('modal-saldo').value          = btn.dataset.saldo;
+        document.getElementById('modal-honorario-id').value   = btn.dataset.id;
 
-        //  ESTO FALTABA
-        document.getElementById('modal-honorario-id').value = btn.dataset.id;
+        // Reset selector
+        document.getElementById('modal-nuevo-estado').value = '';
+
+        // Ocultar TODOS los bloques
+        document.getElementById('modal-campo-abono').classList.add('d-none');
+        document.getElementById('modal-campo-cruce').classList.add('d-none');
+        document.getElementById('modal-campo-pago').classList.add('d-none');
+        document.getElementById('modal-campo-pronto-pago').classList.add('d-none');
     });
-
 </script>
+
+
 
 
 <script>
@@ -393,31 +419,38 @@
 
         const estado = e.target.value;
 
-        // Bloques
-        const camposMonto      = document.getElementById('modal-campos-monto');
-        const campoCobranza    = document.getElementById('modal-campo-cobranza');
-        const campoFechaPago   = document.getElementById('modal-campo-fecha-pago');
+        const campoAbono   = document.getElementById('modal-campo-abono');
+        const campoCruce   = document.getElementById('modal-campo-cruce');
+        const campoPago    = document.getElementById('modal-campo-pago');
+        const campoPronto  = document.getElementById('modal-campo-pronto-pago');
 
-        // Resetear todo
-        camposMonto.classList.add('d-none');
-        campoCobranza.classList.add('d-none');
-        campoFechaPago.classList.add('d-none');
+        // Ocultar todo
+        campoAbono.classList.add('d-none');
+        campoCruce.classList.add('d-none');
+        campoPago.classList.add('d-none');
+        campoPronto.classList.add('d-none');
 
         // Mostrar según estado
         if (estado === 'Abono') {
-            camposMonto.classList.remove('d-none');
+            campoAbono.classList.remove('d-none');
         }
 
         if (estado === 'Cruce') {
-            camposMonto.classList.remove('d-none');
-            campoCobranza.classList.remove('d-none');
+            campoCruce.classList.remove('d-none');
         }
 
-        if (estado === 'Pago' || estado === 'Pronto pago') {
-            campoFechaPago.classList.remove('d-none');
+        if (estado === 'Pago') {
+            campoPago.classList.remove('d-none');
+        }
+
+        if (estado === 'Pronto pago') {
+            campoPronto.classList.remove('d-none');
         }
     });
 </script>
+
+
+
 
 
 @include('boleta_mensual._modal_estado_financiero')
