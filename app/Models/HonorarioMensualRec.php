@@ -35,12 +35,15 @@ class HonorarioMensualRec extends Model
         'saldo_pendiente',
         'cobranza_compra_id',
 
+        'fecha_vencimiento',
+
 
     ];
 
     protected $casts = [
         'fecha_emision'   => 'date',
         'fecha_anulacion' => 'date',
+        'fecha_vencimiento' => 'date',
     ];
 
     // =========================

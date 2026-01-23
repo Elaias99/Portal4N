@@ -61,7 +61,7 @@
                         <div class="mb-3">
                             <label class="form-label">Monto</label>
                             <input type="number"
-                                   name="monto"
+                                   name="monto_abono"
                                    class="form-control"
                                    min="1">
                         </div>
@@ -83,7 +83,7 @@
                         <div class="mb-3">
                             <label class="form-label">Monto</label>
                             <input type="number"
-                                   name="monto"
+                                   name="monto_cruce"
                                    class="form-control"
                                    min="1">
                         </div>

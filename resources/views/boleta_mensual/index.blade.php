@@ -77,6 +77,13 @@
                         </a>
                     </div>
 
+                    <div class="col-md-3 mt-3">
+
+                        <a href="{{ route('cobranzas-compras.index') }}" class="btn btn-outline-secondary btn-sm">
+                            Detalle Proveedor
+                        </a>
+                    </div>
+
                 </div>
             </form>
 
@@ -109,6 +116,8 @@
                             Importar y previsualizar
                         </button>
                     </div>
+
+
 
                 </div>
             </form>
@@ -265,6 +274,8 @@
                                 <th>Emisor</th>
                                 <th>Folio</th>
                                 <th>Fecha Emisión</th>
+
+                                <th>Fecha Vencimiento</th>
                                
                                 <th>Estado SII</th>
                                 <th>Fecha Anulación</th>
@@ -284,25 +295,32 @@
 
                                 <td>{{ $r->empresa->Nombre }}</td>
 
-
-                                {{-- Estado financiero inicial --}}
+                                {{-- Estado financiero --}}
                                 <td>
                                     @php
                                         $estadoActual = $r->estado_financiero ?? $r->estado_financiero_inicial;
+
+                                        // Determinar si está vencido por fecha
+                                        $estaVencido = $r->fecha_vencimiento && $r->fecha_vencimiento->isPast();
+
+                                        // Clase Bootstrap según condición
+                                        $claseEstado = $estaVencido
+                                            ? 'btn-outline-danger'
+                                            : 'btn-outline-success';
                                     @endphp
 
                                     <button type="button"
-                                            class="btn btn-sm btn-outline-secondary btn-estado-honorario"
+                                            class="btn btn-sm {{ $claseEstado }} btn-estado-honorario"
                                             data-bs-toggle="modal"
                                             data-bs-target="#modalEstadoHonorario"
                                             data-id="{{ $r->id }}"
                                             data-emisor="{{ $r->razon_social_emisor }}"
-                                            data-estado="{{ $r->estado_financiero ?? $r->estado_financiero_inicial }}"
+                                            data-estado="{{ $estadoActual }}"
                                             data-saldo="{{ number_format($r->saldo_pendiente ?? 0, 0, ',', '.') }}">
-                                        {{ $r->estado_financiero ?? $r->estado_financiero_inicial }}
+                                        {{ $estadoActual }}
                                     </button>
-
                                 </td>
+
 
                                 <td>
 
@@ -313,9 +331,17 @@
                                 {{-- Cobranza --}}
                                 <td> @if ($r->cobranzaCompra) {{ $r->cobranzaCompra->razon_social }} @else <span class="text-muted">Sin proveedor</span> @endif </td>
 
-                                <td> {{ $r->folio }} </td>
+                                <td>
+                                    <a href="{{ route('honorarios.mensual.show', $r->id) }}"
+                                    class="fw-bold text-decoration-none">
+                                        {{ $r->folio }}
+                                    </a>
+                                </td>
 
-                                <td> {{ $r->fecha_emision }} </td>
+
+                                <td>{{ $r->fecha_emision?->format('Y-m-d') }}</td>
+
+                                <td>{{ $r->fecha_vencimiento?->format('Y-m-d') }}</td>
 
 
 
@@ -334,9 +360,11 @@
                                 </td>
 
                                 {{-- Saldo pendiente --}}
-                                <td class="text-end fw-bold">
+                                <td class="text-end fw-bold
+                                    {{ ($r->saldo_pendiente ?? 0) == 0 ? 'text-success' : 'text-danger' }}">
                                     {{ number_format($r->saldo_pendiente ?? 0, 0, ',', '.') }}
                                 </td>
+
 
                                 <td> {{ $r->fecha_estado_financiero }} </td>
                                 
@@ -388,66 +416,72 @@
 
 
 <script>
-    document.addEventListener('click', function (e) {
+document.addEventListener('click', function (e) {
 
-        const btn = e.target.closest('.btn-estado-honorario');
-        if (!btn) return;
+    const btn = e.target.closest('.btn-estado-honorario');
+    if (!btn) return;
 
-        document.getElementById('modal-emisor').value         = btn.dataset.emisor;
-        document.getElementById('modal-estado-actual').value = btn.dataset.estado;
-        document.getElementById('modal-saldo').value          = btn.dataset.saldo;
-        document.getElementById('modal-honorario-id').value   = btn.dataset.id;
+    // Reset completo del formulario
+    const form = document.querySelector('#modalEstadoHonorario form');
+    if (form) form.reset();
 
-        // Reset selector
-        document.getElementById('modal-nuevo-estado').value = '';
+    // Cargar datos del botón
+    document.getElementById('modal-emisor').value         = btn.dataset.emisor;
+    document.getElementById('modal-estado-actual').value = btn.dataset.estado;
+    document.getElementById('modal-saldo').value          = btn.dataset.saldo;
+    document.getElementById('modal-honorario-id').value   = btn.dataset.id;
 
-        // Ocultar TODOS los bloques
-        document.getElementById('modal-campo-abono').classList.add('d-none');
-        document.getElementById('modal-campo-cruce').classList.add('d-none');
-        document.getElementById('modal-campo-pago').classList.add('d-none');
-        document.getElementById('modal-campo-pronto-pago').classList.add('d-none');
-    });
+    // Reset selector
+    document.getElementById('modal-nuevo-estado').value = '';
+
+    // Ocultar todos los bloques y deshabilitar inputs
+    ['modal-campo-abono', 'modal-campo-cruce', 'modal-campo-pago', 'modal-campo-pronto-pago']
+        .forEach(id => {
+            const bloque = document.getElementById(id);
+            if (!bloque) return;
+
+            bloque.classList.add('d-none');
+            bloque.querySelectorAll('input, select').forEach(el => el.disabled = true);
+        });
+});
 </script>
+
 
 
 
 
 <script>
-    document.addEventListener('change', function (e) {
+document.addEventListener('change', function (e) {
 
-        if (e.target.id !== 'modal-nuevo-estado') return;
+    if (e.target.id !== 'modal-nuevo-estado') return;
 
-        const estado = e.target.value;
+    const estado = e.target.value;
 
-        const campoAbono   = document.getElementById('modal-campo-abono');
-        const campoCruce   = document.getElementById('modal-campo-cruce');
-        const campoPago    = document.getElementById('modal-campo-pago');
-        const campoPronto  = document.getElementById('modal-campo-pronto-pago');
+    const bloques = {
+        'Abono': 'modal-campo-abono',
+        'Cruce': 'modal-campo-cruce',
+        'Pago': 'modal-campo-pago',
+        'Pronto pago': 'modal-campo-pronto-pago',
+    };
 
-        // Ocultar todo
-        campoAbono.classList.add('d-none');
-        campoCruce.classList.add('d-none');
-        campoPago.classList.add('d-none');
-        campoPronto.classList.add('d-none');
+    // Ocultar todos
+    Object.values(bloques).forEach(id => {
+        const bloque = document.getElementById(id);
+        if (!bloque) return;
 
-        // Mostrar según estado
-        if (estado === 'Abono') {
-            campoAbono.classList.remove('d-none');
-        }
-
-        if (estado === 'Cruce') {
-            campoCruce.classList.remove('d-none');
-        }
-
-        if (estado === 'Pago') {
-            campoPago.classList.remove('d-none');
-        }
-
-        if (estado === 'Pronto pago') {
-            campoPronto.classList.remove('d-none');
-        }
+        bloque.classList.add('d-none');
+        bloque.querySelectorAll('input, select').forEach(el => el.disabled = true);
     });
+
+    // Mostrar el bloque correspondiente
+    if (bloques[estado]) {
+        const bloque = document.getElementById(bloques[estado]);
+        bloque.classList.remove('d-none');
+        bloque.querySelectorAll('input, select').forEach(el => el.disabled = false);
+    }
+});
 </script>
+
 
 
 

@@ -92,6 +92,24 @@ class HonorarioMensualRecController extends Controller
 
 
 
+    public function show(HonorarioMensualRec $honorario)
+    {
+        // Cargar relaciones financieras necesarias para el detalle
+        $honorario->load([
+            'empresa',
+            'cobranzaCompra',
+            'abonos',
+            'cruces',
+            'pagos.user',
+            'prontoPagos.user',
+        ]);
+
+        return view('boleta_mensual.show', compact('honorario'));
+    }
+
+
+
+
 
 
     public function import(Request $request)
@@ -180,17 +198,9 @@ class HonorarioMensualRecController extends Controller
         $registros = $data['registros'];
         $empresaId = $data['empresa']['id'];
 
-        Log::info('[STORE] Guardando honorarios', [
-            'empresa_id' => $empresaId,
-            'rut'        => $meta['rut_contribuyente'],
-            'periodo'    => "{$meta['mes']}-{$meta['anio']}",
-            'registros'  => count($registros),
-        ]);
-
         // =========================
         // GUARDAR DETALLE (ÚNICA RELACIÓN CON EMPRESA)
         // =========================
-
 
         foreach ($registros as $r) {
 
@@ -202,9 +212,10 @@ class HonorarioMensualRecController extends Controller
                 : null;
 
             // =========================
-            // ESTADO FINANCIERO INICIAL
+            // ESTADO FINANCIERO INICIAL + FECHA VENCIMIENTO
             // =========================
             $estadoFinancieroInicial = null;
+            $fechaVencimiento = null;
 
             if ($cobranza && $cobranza->creditos !== null) {
 
@@ -213,7 +224,10 @@ class HonorarioMensualRecController extends Controller
                     : null;
 
                 if ($fechaEmision) {
-                    $fechaVencimiento = $fechaEmision->copy()->addDays((int) $cobranza->creditos);
+
+                    $fechaVencimiento = $fechaEmision
+                        ->copy()
+                        ->addDays((int) $cobranza->creditos);
 
                     $estadoFinancieroInicial = $fechaVencimiento->isPast()
                         ? 'Vencido'
@@ -221,35 +235,38 @@ class HonorarioMensualRecController extends Controller
                 }
             }
 
-            HonorarioMensualRec::updateOrCreate(
-                [
-                    'empresa_id'        => $empresaId,
-                    'rut_contribuyente' => $meta['rut_contribuyente'],
-                    'anio'              => $meta['anio'],
-                    'mes'               => $meta['mes'],
-                    'rut_emisor'        => $rutEmisor,
-                    'folio'             => $r['folio'],
-                ],
-                [
-                    'razon_social'         => $meta['razon_social'],
-                    'fecha_emision'        => $r['fecha_emision'],
-                    'estado'               => $r['estado'], // estado SII
-                    'fecha_anulacion'      => $r['fecha_anulacion'],
-                    'razon_social_emisor'  => $r['razon_social_emisor'],
-                    'sociedad_profesional' => $r['sociedad_profesional'],
 
-                    'monto_bruto'          => $r['monto_bruto'],
-                    'monto_retenido'       => $r['monto_retenido'],
-                    'monto_pagado'         => $r['monto_pagado'],
+                    HonorarioMensualRec::updateOrCreate(
+                        [
+                            'empresa_id'        => $empresaId,
+                            'rut_contribuyente' => $meta['rut_contribuyente'],
+                            'anio'              => $meta['anio'],
+                            'mes'               => $meta['mes'],
+                            'rut_emisor'        => $rutEmisor,
+                            'folio'             => $r['folio'],
+                        ],
+                        [
+                            'razon_social'         => $meta['razon_social'],
+                            'fecha_emision'        => $r['fecha_emision'],
+                            'estado'               => $r['estado'],
+                            'fecha_anulacion'      => $r['fecha_anulacion'],
+                            'razon_social_emisor'  => $r['razon_social_emisor'],
+                            'sociedad_profesional' => $r['sociedad_profesional'],
 
-                    // ✅ Finanzas
-                    'saldo_pendiente'           => $r['monto_pagado'],
-                    'estado_financiero_inicial' => $estadoFinancieroInicial,
+                            'monto_bruto'          => $r['monto_bruto'],
+                            'monto_retenido'       => $r['monto_retenido'],
+                            'monto_pagado'         => $r['monto_pagado'],
 
-                    // ✅ Relación proveedor (si existe)
-                    'cobranza_compra_id'        => $cobranza?->id,
-                ]
-            );
+                            // ✅ Finanzas
+                            'saldo_pendiente'           => $r['monto_pagado'],
+                            'estado_financiero_inicial' => $estadoFinancieroInicial,
+                            'fecha_vencimiento'         => $fechaVencimiento, // 👈 NUEVO
+
+                            // ✅ Relación proveedor
+                            'cobranza_compra_id'        => $cobranza?->id,
+                        ]
+                    );
+
         }
 
 
@@ -274,8 +291,6 @@ class HonorarioMensualRecController extends Controller
             );
         }
 
-        Log::info('[STORE] Honorarios guardados correctamente en BD');
-
         return redirect()
             ->route('honorarios.mensual.index')
             ->with('success', 'Honorarios mensuales guardados correctamente.');
@@ -290,33 +305,35 @@ class HonorarioMensualRecController extends Controller
         Log::info('[storeAbono] Entrando', $request->all());
 
         $request->validate([
-            'monto' => 'required|integer|min:1',
+            'monto_abono' => 'required|integer|min:1',
             'fecha_abono' => 'required|date|before_or_equal:today',
         ], [
             'fecha_abono.before_or_equal' => 'La fecha del abono no debe ser futura.',
             'fecha_abono.required' => 'La fecha del abono es obligatoria.',
         ]);
 
+        $montoAbono = (int) $request->monto_abono;
 
         Log::info('[storeAbono] Validación OK', [
-            'monto'              => $request->monto,
-            'fecha_cruce'        => $request->fecha_cruce,
-            'cobranza_compra_id' => $request->cobranza_compra_id,
+            'monto_abono' => $montoAbono,
+            'fecha_abono' => $request->fecha_abono,
         ]);
 
-        // 1️⃣ Obtener saldo actual (desde BD)
+        // 1️⃣ Obtener saldo actual
         $saldoPendiente = $honorario->saldo_pendiente;
 
         // 2️⃣ Validar monto
-        if ($request->monto > $saldoPendiente) {
+        if ($montoAbono > $saldoPendiente) {
             return back()
-                ->withErrors(['monto' => 'El abono no puede ser mayor al saldo pendiente actual.'])
+                ->withErrors([
+                    'monto_abono' => 'El abono no puede ser mayor al saldo pendiente actual.'
+                ])
                 ->withInput();
         }
 
         // 3️⃣ Registrar el abono
         $honorario->abonos()->create([
-            'monto' => $request->monto,
+            'monto'       => $montoAbono,
             'fecha_abono' => $request->fecha_abono,
         ]);
 
@@ -325,7 +342,7 @@ class HonorarioMensualRecController extends Controller
 
         // 5️⃣ Actualizar estado financiero
         $honorario->update([
-            'estado_financiero' => 'Abono',
+            'estado_financiero'       => 'Abono',
             'fecha_estado_financiero' => now(),
         ]);
 
@@ -335,21 +352,23 @@ class HonorarioMensualRecController extends Controller
 
 
 
+
     public function storeCruce(Request $request, HonorarioMensualRec $honorario)
     {
         Log::info('[storeCruce] Entrando', $request->all());
 
-
         $request->validate([
-            'monto' => 'required|integer|min:1',
+            'monto_cruce' => 'required|integer|min:1',
             'fecha_cruce' => 'required|date|before_or_equal:today',
         ], [
             'fecha_cruce.before_or_equal' => 'La fecha del cruce no debe ser futura.',
             'fecha_cruce.required' => 'La fecha del cruce es obligatoria.',
         ]);
 
+        $montoCruce = (int) $request->monto_cruce;
+
         Log::info('[storeCruce] Validación OK', [
-            'monto'              => $request->monto,
+            'monto_cruce'        => $montoCruce,
             'fecha_cruce'        => $request->fecha_cruce,
             'cobranza_compra_id' => $request->cobranza_compra_id,
         ]);
@@ -358,17 +377,19 @@ class HonorarioMensualRecController extends Controller
         $saldoPendiente = $honorario->saldo_pendiente;
 
         // 2️⃣ Validar monto
-        if ($request->monto > $saldoPendiente) {
+        if ($montoCruce > $saldoPendiente) {
             return back()
-                ->withErrors(['monto' => 'El cruce no puede ser mayor al saldo pendiente actual.'])
+                ->withErrors([
+                    'monto_cruce' => 'El cruce no puede ser mayor al saldo pendiente actual.'
+                ])
                 ->withInput();
         }
 
         // 3️⃣ Registrar cruce
         $honorario->cruces()->create([
-            'monto' => $request->monto,
-            'fecha_cruce' => $request->fecha_cruce,
-            'cobranza_compra_id' => $request->cobranza_compra_id,
+            'monto'               => $montoCruce,
+            'fecha_cruce'         => $request->fecha_cruce,
+            'cobranza_compra_id'  => $request->cobranza_compra_id,
         ]);
 
         // 4️⃣ Recalcular saldo
@@ -376,12 +397,13 @@ class HonorarioMensualRecController extends Controller
 
         // 5️⃣ Actualizar estado financiero
         $honorario->update([
-            'estado_financiero' => 'Cruce',
+            'estado_financiero'       => 'Cruce',
             'fecha_estado_financiero' => now(),
         ]);
 
         return back()->with('success', 'Cruce registrado correctamente.');
     }
+
 
 
 

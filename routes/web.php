@@ -618,6 +618,11 @@ Route::post(
     [HonorarioMensualRecController::class, 'storeEstado']
 )->name('honorarios.mensual.estado.store');
 
+Route::get(
+    'honorarios/mensual-rec/{honorario}',
+    [\App\Http\Controllers\HonorarioMensualRecController::class, 'show']
+)->name('honorarios.mensual.show');
+
 
 
 
