@@ -565,6 +565,12 @@ Route::get(
     [HonorarioMensualRecController::class, 'index']
 )->name('honorarios.mensual.index');
 
+
+Route::get(
+    'honorarios/mensual-rec/historial',
+    [HonorarioMensualRecController::class, 'historial']
+)->name('honorarios.mensual.historial');
+
 Route::post(
     '/honorarios/mensual-rec/import',
     [HonorarioMensualRecController::class, 'import']
@@ -622,6 +628,8 @@ Route::get(
     'honorarios/mensual-rec/{honorario}',
     [\App\Http\Controllers\HonorarioMensualRecController::class, 'show']
 )->name('honorarios.mensual.show');
+
+
 
 
 

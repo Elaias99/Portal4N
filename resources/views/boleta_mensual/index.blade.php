@@ -84,6 +84,16 @@
                         </a>
                     </div>
 
+
+                    <div class="col-md">
+                        <a href="{{ route('honorarios.mensual.historial') }}"
+                        class="btn btn-outline-secondary btn-sm">
+                            Movimientos
+                        </a>
+                    </div>
+
+
+
                 </div>
             </form>
 

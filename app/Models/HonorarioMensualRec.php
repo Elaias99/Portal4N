@@ -80,6 +80,14 @@ class HonorarioMensualRec extends Model
         return $this->hasMany(ProntoPago::class, 'honorario_mensual_rec_id');
     }
 
+    public function movimientos()
+    {
+        return $this->hasMany(
+            MovimientoHonorarioMensualRec::class,
+            'honorario_mensual_rec_id');
+    }
+
+
 
 
     // =========================

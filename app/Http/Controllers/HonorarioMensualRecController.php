@@ -8,6 +8,7 @@ use App\Services\Sii\HonorarioMensualRecParser;
 use App\Models\HonorarioMensualRecTotal;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Empresa;
+use App\Models\MovimientoHonorarioMensualRec;
 use Illuminate\Support\Facades\Log;
 use App\Models\CobranzaCompra;
 use Carbon\Carbon;
@@ -302,48 +303,55 @@ class HonorarioMensualRecController extends Controller
 
     public function storeAbono(Request $request, HonorarioMensualRec $honorario)
     {
-        Log::info('[storeAbono] Entrando', $request->all());
-
         $request->validate([
             'monto_abono' => 'required|integer|min:1',
             'fecha_abono' => 'required|date|before_or_equal:today',
-        ], [
-            'fecha_abono.before_or_equal' => 'La fecha del abono no debe ser futura.',
-            'fecha_abono.required' => 'La fecha del abono es obligatoria.',
         ]);
 
         $montoAbono = (int) $request->monto_abono;
 
-        Log::info('[storeAbono] Validación OK', [
-            'monto_abono' => $montoAbono,
-            'fecha_abono' => $request->fecha_abono,
-        ]);
+        // 📌 Snapshot previo
+        $estadoAnterior = $honorario->estado_financiero_final;
+        $saldoAnterior  = $honorario->saldo_pendiente;
 
-        // 1️⃣ Obtener saldo actual
-        $saldoPendiente = $honorario->saldo_pendiente;
-
-        // 2️⃣ Validar monto
-        if ($montoAbono > $saldoPendiente) {
-            return back()
-                ->withErrors([
-                    'monto_abono' => 'El abono no puede ser mayor al saldo pendiente actual.'
-                ])
-                ->withInput();
+        if ($montoAbono > $saldoAnterior) {
+            return back()->withErrors([
+                'monto_abono' => 'El abono no puede ser mayor al saldo pendiente actual.'
+            ]);
         }
 
-        // 3️⃣ Registrar el abono
+        // 1️⃣ Registrar abono
         $honorario->abonos()->create([
             'monto'       => $montoAbono,
             'fecha_abono' => $request->fecha_abono,
         ]);
 
-        // 4️⃣ Recalcular saldo pendiente
+        // 2️⃣ Recalcular saldo
         $honorario->recalcularSaldoPendiente();
 
-        // 5️⃣ Actualizar estado financiero
+        // 3️⃣ Actualizar estado
         $honorario->update([
             'estado_financiero'       => 'Abono',
             'fecha_estado_financiero' => now(),
+        ]);
+
+        $honorario->refresh();
+
+        // 4️⃣ Registrar movimiento
+        $honorario->movimientos()->create([
+            'usuario_id'      => Auth::id(),
+            'estado_anterior' => $estadoAnterior,
+            'nuevo_estado'    => 'Abono',
+            'fecha_cambio'    => now(),
+            'tipo_movimiento' => 'Registro de abono',
+            'descripcion'     => "Se registró un abono de {$montoAbono}.",
+            'datos_anteriores'=> [
+                'saldo' => $saldoAnterior,
+            ],
+            'datos_nuevos'    => [
+                'monto_abono' => $montoAbono,
+                'saldo'       => $honorario->saldo_pendiente,
+            ],
         ]);
 
         return back()->with('success', 'Abono registrado correctamente.');
@@ -353,52 +361,54 @@ class HonorarioMensualRecController extends Controller
 
 
 
+
     public function storeCruce(Request $request, HonorarioMensualRec $honorario)
     {
-        Log::info('[storeCruce] Entrando', $request->all());
-
         $request->validate([
             'monto_cruce' => 'required|integer|min:1',
             'fecha_cruce' => 'required|date|before_or_equal:today',
-        ], [
-            'fecha_cruce.before_or_equal' => 'La fecha del cruce no debe ser futura.',
-            'fecha_cruce.required' => 'La fecha del cruce es obligatoria.',
         ]);
 
         $montoCruce = (int) $request->monto_cruce;
 
-        Log::info('[storeCruce] Validación OK', [
-            'monto_cruce'        => $montoCruce,
+        $estadoAnterior = $honorario->estado_financiero_final;
+        $saldoAnterior  = $honorario->saldo_pendiente;
+
+        if ($montoCruce > $saldoAnterior) {
+            return back()->withErrors([
+                'monto_cruce' => 'El cruce no puede ser mayor al saldo pendiente actual.'
+            ]);
+        }
+
+        $honorario->cruces()->create([
+            'monto'              => $montoCruce,
             'fecha_cruce'        => $request->fecha_cruce,
             'cobranza_compra_id' => $request->cobranza_compra_id,
         ]);
 
-        // 1️⃣ Saldo actual
-        $saldoPendiente = $honorario->saldo_pendiente;
-
-        // 2️⃣ Validar monto
-        if ($montoCruce > $saldoPendiente) {
-            return back()
-                ->withErrors([
-                    'monto_cruce' => 'El cruce no puede ser mayor al saldo pendiente actual.'
-                ])
-                ->withInput();
-        }
-
-        // 3️⃣ Registrar cruce
-        $honorario->cruces()->create([
-            'monto'               => $montoCruce,
-            'fecha_cruce'         => $request->fecha_cruce,
-            'cobranza_compra_id'  => $request->cobranza_compra_id,
-        ]);
-
-        // 4️⃣ Recalcular saldo
         $honorario->recalcularSaldoPendiente();
 
-        // 5️⃣ Actualizar estado financiero
         $honorario->update([
             'estado_financiero'       => 'Cruce',
             'fecha_estado_financiero' => now(),
+        ]);
+
+        $honorario->refresh();
+
+        $honorario->movimientos()->create([
+            'usuario_id'      => Auth::id(),
+            'estado_anterior' => $estadoAnterior,
+            'nuevo_estado'    => 'Cruce',
+            'fecha_cambio'    => now(),
+            'tipo_movimiento' => 'Registro de cruce',
+            'descripcion'     => "Se registró un cruce de {$montoCruce}.",
+            'datos_anteriores'=> [
+                'saldo' => $saldoAnterior,
+            ],
+            'datos_nuevos'    => [
+                'monto_cruce' => $montoCruce,
+                'saldo'       => $honorario->saldo_pendiente,
+            ],
         ]);
 
         return back()->with('success', 'Cruce registrado correctamente.');
@@ -407,33 +417,48 @@ class HonorarioMensualRecController extends Controller
 
 
 
+
     public function storePago(Request $request, HonorarioMensualRec $honorario)
     {
         $request->validate([
             'fecha_pago' => 'required|date|before_or_equal:today',
-        ], [
-            'fecha_pago.before_or_equal' => 'La fecha del pago no debe ser futura.',
-            'fecha_pago.required' => 'La fecha del pago es obligatoria.',
         ]);
 
-        // 🚫 Evitar duplicar pagos
         if ($honorario->pagos()->exists()) {
             return back()->withErrors([
                 'fecha_pago' => 'Este honorario ya tiene un pago registrado.'
             ]);
         }
 
-        // 1️⃣ Registrar el pago
+        $estadoAnterior = $honorario->estado_financiero_final;
+        $saldoAnterior  = $honorario->saldo_pendiente;
+
         $honorario->pagos()->create([
             'fecha_pago' => $request->fecha_pago,
-            'user_id' => Auth::id(),
+            'user_id'    => Auth::id(),
         ]);
 
-        // 2️⃣ Cerrar financieramente el honorario
         $honorario->update([
-            'estado_financiero' => 'Pago',
+            'estado_financiero'       => 'Pago',
             'fecha_estado_financiero' => now(),
-            'saldo_pendiente' => 0,
+            'saldo_pendiente'         => 0,
+        ]);
+
+        $honorario->refresh();
+
+        $honorario->movimientos()->create([
+            'usuario_id'      => Auth::id(),
+            'estado_anterior' => $estadoAnterior,
+            'nuevo_estado'    => 'Pago',
+            'fecha_cambio'    => now(),
+            'tipo_movimiento' => 'Registro de pago',
+            'descripcion'     => "Se registró el pago total del honorario.",
+            'datos_anteriores'=> [
+                'saldo' => $saldoAnterior,
+            ],
+            'datos_nuevos'    => [
+                'saldo' => 0,
+            ],
         ]);
 
         return back()->with('success', 'Pago registrado correctamente.');
@@ -442,42 +467,48 @@ class HonorarioMensualRecController extends Controller
 
 
 
+
     public function storeProntoPago(Request $request, HonorarioMensualRec $honorario)
     {
-        Log::info('[storeProntoPago] Entrando', $request->all());
-
         $request->validate([
             'fecha_pronto_pago' => 'required|date|before_or_equal:today',
-        ], [
-            'fecha_pronto_pago.before_or_equal' => 'La fecha del pronto pago no debe ser futura.',
-            'fecha_pronto_pago.required' => 'La fecha del pronto pago es obligatoria.',
         ]);
 
-
-        Log::info('[storeProntoPago] Validación OK', [
-            'fecha_pronto_pago' => $request->fecha_pronto_pago,
-        ]);
-
-
-
-        // 🚫 Evitar duplicados
         if ($honorario->prontoPagos()->exists()) {
             return back()->withErrors([
                 'fecha_pronto_pago' => 'Este honorario ya tiene un pronto pago registrado.'
             ]);
         }
 
-        // 1️⃣ Registrar pronto pago
+        $estadoAnterior = $honorario->estado_financiero_final;
+        $saldoAnterior  = $honorario->saldo_pendiente;
+
         $honorario->prontoPagos()->create([
             'fecha_pronto_pago' => $request->fecha_pronto_pago,
-            'user_id' => Auth::id(),
+            'user_id'           => Auth::id(),
         ]);
 
-        // 2️⃣ Cerrar financieramente el honorario
         $honorario->update([
-            'estado_financiero' => 'Pronto pago',
+            'estado_financiero'       => 'Pronto pago',
             'fecha_estado_financiero' => now(),
-            'saldo_pendiente' => 0,
+            'saldo_pendiente'         => 0,
+        ]);
+
+        $honorario->refresh();
+
+        $honorario->movimientos()->create([
+            'usuario_id'      => Auth::id(),
+            'estado_anterior' => $estadoAnterior,
+            'nuevo_estado'    => 'Pronto pago',
+            'fecha_cambio'    => now(),
+            'tipo_movimiento' => 'Registro de pronto pago',
+            'descripcion'     => "Se registró el pronto pago del honorario.",
+            'datos_anteriores'=> [
+                'saldo' => $saldoAnterior,
+            ],
+            'datos_nuevos'    => [
+                'saldo' => 0,
+            ],
         ]);
 
         return back()->with('success', 'Pronto pago registrado correctamente.');
@@ -488,14 +519,8 @@ class HonorarioMensualRecController extends Controller
     public function storeEstado(Request $request)
     {
 
-        Log::info('[storeEstado] Request recibido', $request->all());
-
-
+    
         $honorario = HonorarioMensualRec::findOrFail($request->honorario_id);
-
-        Log::info('[storeEstado] Estado financiero', [
-            'estado_financiero' => $request->estado_financiero,
-        ]);
 
         switch ($request->estado_financiero) {
 
@@ -514,6 +539,20 @@ class HonorarioMensualRecController extends Controller
 
         return back()->withErrors('Estado no válido');
     }
+
+
+    public function historial()
+    {
+        $movimientos = MovimientoHonorarioMensualRec::with([
+            'user',
+            'honorario.empresa',
+        ])
+        ->orderBy('fecha_cambio', 'desc')
+        ->paginate(30);
+
+        return view('boleta_mensual.historial', compact('movimientos'));
+    }
+
 
 
 
