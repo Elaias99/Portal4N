@@ -480,6 +480,8 @@ Route::get(
 
 
 Route::match(['get', 'post'], '/labels/excel', [LabelController::class, 'uploadExcel']);
+Route::get('/labels/excel/template', [LabelController::class, 'downloadTemplate']);
+
 
 
 

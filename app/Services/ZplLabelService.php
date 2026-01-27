@@ -32,8 +32,11 @@ class ZplLabelService
      */
     private function zplText(string $text): string
     {
-        // Evita romper el ^FD...^FS con caracteres reservados
-        // (simple y suficiente para comenzar)
-        return str_replace(['^', '~'], [' ', ' '], trim($text));
+        $text = trim($text);
+        $text = preg_replace("/\r|\n|\t/", ' ', $text);
+        $text = str_replace(['^', '~'], ' ', $text);
+
+        return $text;
     }
+
 }
