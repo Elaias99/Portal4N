@@ -12,7 +12,7 @@ use App\Http\Controllers\FacturaController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\ProveedorImportController;
 use App\Http\Controllers\CompraController;
-use App\Http\Controllers\PanelFinanzaController;
+use App\Http\Controllers\LabelController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\AsistenciaController;
 use App\Models\User;
@@ -475,37 +475,7 @@ Route::get(
 
 
 
-use App\Services\ZplLabelService;
 
-Route::get('/test-zpl', function (ZplLabelService $svc) {
-    $zpl = $svc->makeLabel([
-        'QR' => '4N202601193152-431',
-        'Atencion' => 'Juan Pérez',
-        'Direccion' => 'Av. Providencia 1234',
-        'Comuna' => 'Providencia',
-    ]);
-
-    return response($zpl, 200)->header('Content-Type', 'text/plain; charset=utf-8');
-});
-
-
-use App\Http\Controllers\LabelController;
-
-Route::get('/labels/download', [LabelController::class, 'download']);
-
-
-
-use App\Imports\LabelsImport;
-use Maatwebsite\Excel\Facades\Excel;
-
-
-Route::post('/test-excel', function (Request $request) {
-    $import = new LabelsImport();
-
-    Excel::import($import, $request->file('file'));
-
-    return response()->json($import->rows);
-});
 
 
 
