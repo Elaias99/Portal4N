@@ -23,6 +23,8 @@ if (!function_exists('getAdminPerfilMappings')) {
             'hansdelabarra@4nlogistica.cl' => 'h.delabarra.b@4nlogistica.cl',
             'Marcelo@4nlogistica.cl'       => 'o.godoy.s@4nlogistica.cl',
             'eliascorreap@gmail.com'       => 'e.correa.p@4nlogistica.cl',
+            'NataliaLeyton@4nlogistica.cl'       => 'n.leyton.c@4nlogistica.cl',
+
         ];
     }
 }
