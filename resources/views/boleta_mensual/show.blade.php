@@ -196,18 +196,38 @@
                         <tr>
                             <th>Fecha</th>
                             <th class="text-end">Monto</th>
+                            <th class="text-center">Acción</th>
                         </tr>
                     </thead>
+
                     <tbody>
-                        @foreach($honorario->abonos as $abono)
-                            <tr>
-                                <td>{{ $abono->fecha_abono }}</td>
-                                <td class="text-end">
-                                    ${{ number_format($abono->monto, 0, ',', '.') }}
-                                </td>
-                            </tr>
-                        @endforeach
+                    @foreach($honorario->abonos as $abono)
+                        <tr>
+                            <td>{{ $abono->fecha_abono }}</td>
+
+                            <td class="text-end">
+                                ${{ number_format($abono->monto, 0, ',', '.') }}
+                            </td>
+
+                            <td class="text-center">
+                                <form method="POST"
+                                    action="{{ route('honorarios.mensual.abono.revertir', $abono->id) }}"
+                                    onsubmit="return confirm('¿Estás seguro de eliminar este abono?');"
+                                    class="d-inline">
+                                    @csrf
+                                    @method('DELETE')
+
+                                    <button type="submit"
+                                            class="btn btn-outline-danger btn-sm">
+                                        Eliminar
+                                    </button>
+                                </form>
+
+                            </td>
+                        </tr>
+                    @endforeach
                     </tbody>
+
                 </table>
             @endif
         </div>

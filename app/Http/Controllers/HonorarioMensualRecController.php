@@ -13,6 +13,11 @@ use Illuminate\Support\Facades\Log;
 use App\Models\CobranzaCompra;
 use Carbon\Carbon;
 
+use App\Models\Abono;
+use App\Models\Cruce;
+use App\Models\Pago;
+use App\Models\ProntoPago;
+
 
 
 class HonorarioMensualRecController extends Controller
@@ -552,6 +557,106 @@ class HonorarioMensualRecController extends Controller
 
         return view('boleta_mensual.historial', compact('movimientos'));
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // Eliminación de estados manuales y reversión de cambios
+
+
+    public function revertirAbono(int $abonoId)
+    {
+        
+        // =========================
+        // OBTENER ABONO (SIN BINDING)
+        // =========================
+        $abono = Abono::withoutGlobalScopes()->findOrFail($abonoId);
+
+        // =========================
+        // OBTENER HONORARIO ASOCIADO
+        // =========================
+        $honorario = $abono->honorarioMensualRec;
+
+        if (!$honorario) {
+            abort(404, 'Honorario asociado no encontrado.');
+        }
+
+        // =========================
+        // SNAPSHOT PREVIO
+        // =========================
+        $estadoAnterior = $honorario->estado_financiero_final;
+        $saldoAnterior  = $honorario->saldo_pendiente;
+
+        $montoAbono = $abono->monto;
+        $fechaAbono = $abono->fecha_abono;
+
+        // =========================
+        // ELIMINAR ABONO
+        // =========================
+        $abono->delete();
+
+        // =========================
+        // RECALCULAR SALDO
+        // =========================
+        $honorario->recalcularSaldoPendiente();
+
+        // =========================
+        // RECALCULAR ESTADO FINANCIERO
+        // =========================
+        // Si no quedan operaciones financieras manuales,
+        // volver al estado financiero inicial
+        if (
+            !$honorario->abonos()->exists() &&
+            !$honorario->cruces()->exists() &&
+            !$honorario->pagos()->exists() &&
+            !$honorario->prontoPagos()->exists()
+        ) {
+            $honorario->update([
+                'estado_financiero'       => null,
+                'fecha_estado_financiero' => null,
+            ]);
+        }
+
+
+        $honorario->refresh();
+
+        // =========================
+        // REGISTRAR MOVIMIENTO
+        // =========================
+        $honorario->movimientos()->create([
+            'usuario_id'      => Auth::id(),
+            'estado_anterior' => $estadoAnterior,
+            'nuevo_estado'    => $honorario->estado_financiero_final,
+            'fecha_cambio'    => now(),
+            'tipo_movimiento' => 'Eliminación de abono',
+            'descripcion'     => "Se eliminó un abono de {$montoAbono} registrado el {$fechaAbono}.",
+            'datos_anteriores'=> [
+                'saldo'       => $saldoAnterior,
+                'monto_abono' => $montoAbono,
+                'fecha_abono' => $fechaAbono,
+            ],
+            'datos_nuevos'    => [
+                'saldo' => $honorario->saldo_pendiente,
+            ],
+        ]);
+
+        return back()->with('success', 'Abono eliminado correctamente.');
+    }
+
 
 
 

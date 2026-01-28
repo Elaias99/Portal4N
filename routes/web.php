@@ -639,6 +639,12 @@ Route::get(
     [\App\Http\Controllers\HonorarioMensualRecController::class, 'show']
 )->name('honorarios.mensual.show');
 
+// Revetir cambios y eliminar estados manuales
+Route::delete(
+    '/honorarios/mensual-rec/abonos/{abonoId}/revertir',
+    [HonorarioMensualRecController::class, 'revertirAbono']
+)->name('honorarios.mensual.abono.revertir');
+
 
 
 
