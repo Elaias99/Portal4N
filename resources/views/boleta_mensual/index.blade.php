@@ -306,30 +306,24 @@
                                 <td>{{ $r->empresa->Nombre }}</td>
 
                                 {{-- Estado financiero --}}
+                                @php
+                                    $estadoActual = $r->estado_financiero ?? $r->estado_financiero_inicial;
+
+                                    $estaVencido = $r->fecha_vencimiento && $r->fecha_vencimiento->isPast();
+
+                                    $claseEstado = $estaVencido
+                                        ? 'badge bg-danger'
+                                        : 'badge bg-success';
+                                @endphp
+
+
+
                                 <td>
-                                    @php
-                                        $estadoActual = $r->estado_financiero ?? $r->estado_financiero_inicial;
-
-                                        // Determinar si está vencido por fecha
-                                        $estaVencido = $r->fecha_vencimiento && $r->fecha_vencimiento->isPast();
-
-                                        // Clase Bootstrap según condición
-                                        $claseEstado = $estaVencido
-                                            ? 'btn-outline-danger'
-                                            : 'btn-outline-success';
-                                    @endphp
-
-                                    <button type="button"
-                                            class="btn btn-sm {{ $claseEstado }} btn-estado-honorario"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#modalEstadoHonorario"
-                                            data-id="{{ $r->id }}"
-                                            data-emisor="{{ $r->razon_social_emisor }}"
-                                            data-estado="{{ $estadoActual }}"
-                                            data-saldo="{{ number_format($r->saldo_pendiente ?? 0, 0, ',', '.') }}">
+                                    <span class="{{ $claseEstado }}">
                                         {{ $estadoActual }}
-                                    </button>
+                                    </span>
                                 </td>
+
 
 
                                 <td>
@@ -425,7 +419,7 @@
 
 
 
-<script>
+{{-- <script>
 document.addEventListener('click', function (e) {
 
     const btn = e.target.closest('.btn-estado-honorario');
@@ -455,9 +449,6 @@ document.addEventListener('click', function (e) {
         });
 });
 </script>
-
-
-
 
 
 <script>
@@ -493,11 +484,7 @@ document.addEventListener('change', function (e) {
 </script>
 
 
-
-
-
-
-@include('boleta_mensual._modal_estado_financiero')
+@include('boleta_mensual._modal_estado_financiero') --}}
 
 
 @endsection

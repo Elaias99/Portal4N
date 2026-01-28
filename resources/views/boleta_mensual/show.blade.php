@@ -3,7 +3,17 @@
 @section('content')
 <div class="container">
 
-    <h2 class="mb-4">Detalle del Honorario</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Detalle del Honorario</h2>
+
+        <button type="button"
+                class="btn btn-outline-secondary btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#modalEstadoHonorario"
+                id="btn-editar-honorario">
+            Editar
+        </button>
+    </div>
 
 
 
@@ -17,6 +27,9 @@
         <div class="card-header">
             <strong>Información general</strong>
         </div>
+
+
+
 
         <div class="card-body">
             <div class="row mb-2">
@@ -245,4 +258,72 @@
     </div>
 
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+        const btn = document.getElementById('btn-editar-honorario');
+        if (!btn) return;
+
+        btn.addEventListener('click', function () {
+
+            document.getElementById('modal-honorario-id').value = '{{ $honorario->id }}';
+            document.getElementById('modal-emisor').value = '{{ $honorario->razon_social_emisor }}';
+            document.getElementById('modal-estado-actual').value =
+                '{{ $honorario->estado_financiero ?? $honorario->estado_financiero_inicial }}';
+            document.getElementById('modal-saldo').value =
+                '{{ number_format($honorario->saldo_pendiente ?? 0, 0, ",", ".") }}';
+
+            // reset selector
+            document.getElementById('modal-nuevo-estado').value = '';
+
+            // ocultar bloques
+            ['modal-campo-abono','modal-campo-cruce','modal-campo-pago','modal-campo-pronto-pago']
+                .forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.classList.add('d-none');
+                    el.querySelectorAll('input, select').forEach(i => i.disabled = true);
+                });
+        });
+    });
+</script>
+
+
+<script>
+    document.addEventListener('change', function (e) {
+
+        if (e.target.id !== 'modal-nuevo-estado') return;
+
+        const estado = e.target.value;
+
+        const bloques = {
+            'Abono': 'modal-campo-abono',
+            'Cruce': 'modal-campo-cruce',
+            'Pago': 'modal-campo-pago',
+            'Pronto pago': 'modal-campo-pronto-pago',
+        };
+
+        // Ocultar todos
+        Object.values(bloques).forEach(id => {
+            const bloque = document.getElementById(id);
+            if (!bloque) return;
+
+            bloque.classList.add('d-none');
+            bloque.querySelectorAll('input, select').forEach(el => el.disabled = true);
+        });
+
+        // Mostrar el bloque correspondiente
+        if (bloques[estado]) {
+            const bloque = document.getElementById(bloques[estado]);
+            bloque.classList.remove('d-none');
+            bloque.querySelectorAll('input, select').forEach(el => el.disabled = false);
+        }
+    });
+</script>
+
+
+@include('boleta_mensual._modal_estado_financiero')
+
+
 @endsection
