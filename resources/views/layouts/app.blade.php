@@ -260,14 +260,22 @@
                                 role="button"
                                 aria-expanded="false"
                                 aria-controls="informacionTracking">
-                                    <i class="fas fa-truck-moving me-2"></i> Seguimiento Tracking
+                                    <i class="fas fa-truck-moving me-2"></i> Tracking
                                 </a>
 
                                 <div class="collapse" id="informacionTracking">
                                     <ul class="list-group">
                                         <li class="list-group-item">
                                             <a href="{{ url('/tracking/delivery-links') }}" class="text-decoration-none">
-                                                <i class="fas fa-search-location me-2"></i> Tracking
+                                                <i class="fas fa-search-location me-2"></i> Seguimiento Tracking
+                                            </a>
+                                        </li>
+                                    </ul>
+
+                                    <ul class="list-group">
+                                        <li class="list-group-item">
+                                            <a href="{{ url('/labels') }}" class="text-decoration-none">
+                                                <i class="fas fa-search-location me-2"></i> Etiquetas Zebra
                                             </a>
                                         </li>
                                     </ul>

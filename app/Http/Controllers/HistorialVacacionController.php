@@ -64,38 +64,47 @@ class HistorialVacacionController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Obtener los feriados desde la API pública
-        $response = Http::get('https://apis.digital.gob.cl/fl/feriados');
-        $feriados = $response->successful()
-            ? collect($response->json())->pluck('fecha')
-            : collect();
+        // Calcular los días laborales para cada solicitud reciente (lunes a viernes)
+        $solicitudesAprobadas->each(function ($solicitud) {
 
-        // Calcular los días laborales para cada solicitud reciente
-        $solicitudesAprobadas->each(function ($solicitud) use ($feriados) {
+            if (!$solicitud->vacacion) {
+                $solicitud->dias_tomados = 0;
+                $solicitud->dias_descontados = 0;
+                return;
+            }
+
             $fechaInicio = \Carbon\Carbon::parse($solicitud->vacacion->fecha_inicio);
             $fechaFin = \Carbon\Carbon::parse($solicitud->vacacion->fecha_fin);
 
             $diasLaborales = 0;
-            while ($fechaInicio <= $fechaFin) {
-                if ($fechaInicio->isWeekday() && !$feriados->contains($fechaInicio->toDateString())) {
+
+            while ($fechaInicio->lte($fechaFin)) {
+                if ($fechaInicio->isWeekday()) {
                     $diasLaborales++;
                 }
                 $fechaInicio->addDay();
             }
 
             $solicitud->dias_tomados = $diasLaborales;
-            $solicitud->dias_descontados = ($solicitud->tipo_dia === 'vacaciones') ? $diasLaborales : 0;
+            $solicitud->dias_descontados =
+                ($solicitud->tipo_dia === 'vacaciones')
+                    ? $diasLaborales
+                    : 0;
         });
 
         // Calcular los días descontados para cada registro histórico
         $historialVacaciones->each(function ($historial) {
-            $historial->dias_descontados = ($historial->tipo_dia === 'vacaciones')
-                ? $historial->dias_laborales
-                : 0;
+            $historial->dias_descontados =
+                ($historial->tipo_dia === 'vacaciones')
+                    ? $historial->dias_laborales
+                    : 0;
         });
 
         // Pasar las solicitudes e historial a la vista
-        return view('historial_vacacion.index', compact('historialVacaciones', 'solicitudesAprobadas', 'trabajador'));
+        return view(
+            'historial_vacacion.index',
+            compact('historialVacaciones', 'solicitudesAprobadas', 'trabajador')
+        );
     }
 
 

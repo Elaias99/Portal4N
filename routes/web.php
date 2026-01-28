@@ -478,8 +478,9 @@ Route::get(
 
 
 
-
+Route::get('/labels', [LabelController::class, 'panel']);
 Route::match(['get', 'post'], '/labels/excel', [LabelController::class, 'uploadExcel']);
+Route::match(['get', 'post'], '/labels/grande', [LabelController::class, 'uploadEtiquetaGrande']);
 Route::get('/labels/excel/template', [LabelController::class, 'downloadTemplate']);
 
 
