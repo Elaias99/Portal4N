@@ -645,8 +645,20 @@ Route::delete(
     [HonorarioMensualRecController::class, 'revertirAbono']
 )->name('honorarios.mensual.abono.revertir');
 
+Route::delete(
+    '/honorarios/mensual-rec/cruces/{cruceId}/revertir',
+    [HonorarioMensualRecController::class, 'revertirCruce']
+)->name('honorarios.mensual.cruce.revertir');
 
+Route::delete(
+    '/honorarios/mensual-rec/pagos/{pagoId}/revertir',
+    [HonorarioMensualRecController::class, 'revertirPago']
+)->name('honorarios.mensual.pago.revertir');
 
+Route::delete(
+    '/honorarios/mensual-rec/pronto-pagos/{prontoPagoId}/revertir',
+    [HonorarioMensualRecController::class, 'revertirProntoPago']
+)->name('honorarios.mensual.prontopago.revertir');
 
 
 

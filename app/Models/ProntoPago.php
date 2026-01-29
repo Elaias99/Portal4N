@@ -44,6 +44,14 @@ class ProntoPago extends Model
         );
     }
 
+    public function honorarioMensualRec()
+    {
+        return $this->belongsTo(
+            HonorarioMensualRec::class,
+            'honorario_mensual_rec_id'
+        );
+    }
+
 
 
 

@@ -74,6 +74,9 @@
                 </div>
             </div>
 
+
+            
+
             <div class="row">
                 <div class="col-md-6">
                     <strong>Estado SII:</strong>
@@ -169,6 +172,51 @@
                 @endforeach
             </ul>
 
+
+            <div class="row mb-2">
+                <div class="col-md-6">
+                    <strong>Estado actual:</strong>
+                    {{ $honorario->estado_financiero ?? $honorario->estado_financiero_inicial }}
+                </div>
+
+                <div class="col-md-6 text-end">
+
+                    {{-- ELIMINAR PAGO --}}
+                    @if($honorario->pagos->isNotEmpty())
+                        <form method="POST"
+                            action="{{ route('honorarios.mensual.pago.revertir', $honorario->pagos->first()->id) }}"
+                            onsubmit="return confirm('¿Estás seguro de eliminar el pago? Esto reabrirá el honorario.');"
+                            class="d-inline">
+                            @csrf
+                            @method('DELETE')
+
+                            <button type="submit"
+                                    class="btn btn-outline-danger btn-sm">
+                                Eliminar pago
+                            </button>
+                        </form>
+
+                    {{-- ELIMINAR PRONTO PAGO --}}
+                    @elseif($honorario->prontoPagos->isNotEmpty())
+                        <form method="POST"
+                            action="{{ route('honorarios.mensual.prontopago.revertir', $honorario->prontoPagos->first()->id) }}"
+                            onsubmit="return confirm('¿Estás seguro de eliminar el pronto pago? Esto reabrirá el honorario.');"
+                            class="d-inline">
+                            @csrf
+                            @method('DELETE')
+
+                            <button type="submit"
+                                    class="btn btn-outline-danger btn-sm">
+                                Eliminar pronto pago
+                            </button>
+                        </form>
+                    @endif
+
+                </div>
+
+            </div>
+
+
             <p class="fw-bold">
                 Saldo pendiente final:
                 <span class="{{ $honorario->saldo_pendiente == 0 ? 'text-success' : 'text-danger' }}">
@@ -259,6 +307,28 @@
                                 <td class="text-end">
                                     ${{ number_format($cruce->monto, 0, ',', '.') }}
                                 </td>
+
+
+                            <td class="text-center">
+                                <form method="POST"
+                                    action="{{ route('honorarios.mensual.cruce.revertir', $cruce->id) }}"
+                                    onsubmit="return confirm('¿Estás seguro de eliminar este cruce?');"
+                                    class="d-inline">
+                                    @csrf
+                                    @method('DELETE')
+
+                                    <button type="submit"
+                                            class="btn btn-outline-danger btn-sm">
+                                        Eliminar
+                                    </button>
+                                </form>
+
+                            </td>
+
+
+
+
+
                             </tr>
                         @endforeach
                     </tbody>

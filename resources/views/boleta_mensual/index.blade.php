@@ -82,17 +82,14 @@
                         <a href="{{ route('cobranzas-compras.index') }}" class="btn btn-outline-secondary btn-sm">
                             Detalle Proveedor
                         </a>
-                    </div>
 
-
-                    <div class="col-md">
-                        <a href="{{ route('honorarios.mensual.historial') }}"
-                        class="btn btn-outline-secondary btn-sm">
+                        <a href="{{ route('honorarios.mensual.historial') }}" class="btn btn-outline-secondary btn-sm">
                             Movimientos
                         </a>
+
+
+
                     </div>
-
-
 
                 </div>
             </form>

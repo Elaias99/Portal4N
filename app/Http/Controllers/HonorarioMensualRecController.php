@@ -617,19 +617,27 @@ class HonorarioMensualRecController extends Controller
         // =========================
         // RECALCULAR ESTADO FINANCIERO
         // =========================
-        // Si no quedan operaciones financieras manuales,
-        // volver al estado financiero inicial
-        if (
-            !$honorario->abonos()->exists() &&
-            !$honorario->cruces()->exists() &&
-            !$honorario->pagos()->exists() &&
-            !$honorario->prontoPagos()->exists()
-        ) {
-            $honorario->update([
-                'estado_financiero'       => null,
-                'fecha_estado_financiero' => null,
-            ]);
+        if ($honorario->pagos()->exists() || $honorario->prontoPagos()->exists()) {
+            $nuevoEstado = 'Pago';
+
+        } elseif ($honorario->abonos()->exists()) {
+            $nuevoEstado = 'Abono';
+
+        } elseif ($honorario->cruces()->exists()) {
+            $nuevoEstado = 'Cruce';
+
+        } else {
+            // Estado automático según vencimiento
+            $nuevoEstado = $honorario->fecha_vencimiento &&
+                        $honorario->fecha_vencimiento->isPast()
+                ? 'Vencido'
+                : 'Al día';
         }
+
+        $honorario->update([
+            'estado_financiero'       => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
+            'fecha_estado_financiero' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
+        ]);
 
 
         $honorario->refresh();
@@ -656,6 +664,270 @@ class HonorarioMensualRecController extends Controller
 
         return back()->with('success', 'Abono eliminado correctamente.');
     }
+
+
+
+
+    public function revertirCruce(int $cruceId)
+    {
+        
+        // =========================
+        // OBTENER CRUCE (SIN BINDING)
+        // =========================
+        $cruce = Cruce::withoutGlobalScopes()->findOrFail($cruceId);
+
+        // =========================
+        // OBTENER HONORARIO ASOCIADO
+        // =========================
+        $honorario = $cruce->honorarioMensualRec;
+
+        if (!$honorario) {
+            abort(404, 'Honorario asociado no encontrado.');
+        }
+
+        // =========================
+        // SNAPSHOT PREVIO
+        // =========================
+        $estadoAnterior = $honorario->estado_financiero_final;
+        $saldoAnterior  = $honorario->saldo_pendiente;
+
+        $montoCruce = $cruce->monto;
+        $fechaCruce = $cruce->fecha_cruce;
+
+        // =========================
+        // ELIMINAR CRUCE
+        // =========================
+        $cruce->delete();
+
+        // =========================
+        // RECALCULAR SALDO
+        // =========================
+        $honorario->recalcularSaldoPendiente();
+
+        // =========================
+        // RECALCULAR ESTADO FINANCIERO
+        // =========================
+        if ($honorario->pagos()->exists() || $honorario->prontoPagos()->exists()) {
+            $nuevoEstado = 'Pago';
+
+        } elseif ($honorario->abonos()->exists()) {
+            $nuevoEstado = 'Abono';
+
+        } elseif ($honorario->cruces()->exists()) {
+            $nuevoEstado = 'Cruce';
+
+        } else {
+            // Estado automático según vencimiento
+            $nuevoEstado = $honorario->fecha_vencimiento &&
+                        $honorario->fecha_vencimiento->isPast()
+                ? 'Vencido'
+                : 'Al día';
+        }
+
+        $honorario->update([
+            'estado_financiero'       => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
+            'fecha_estado_financiero' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
+        ]);
+
+
+
+        $honorario->refresh();
+
+        // =========================
+        // REGISTRAR MOVIMIENTO
+        // =========================
+        $honorario->movimientos()->create([
+            'usuario_id'      => Auth::id(),
+            'estado_anterior' => $estadoAnterior,
+            'nuevo_estado'    => $honorario->estado_financiero_final,
+            'fecha_cambio'    => now(),
+            'tipo_movimiento' => 'Eliminación de cruce',
+            'descripcion'     => "Se eliminó un cruce de {$montoCruce} registrado el {$fechaCruce}.",
+            'datos_anteriores'=> [
+                'saldo'       => $saldoAnterior,
+                'monto_cruce' => $montoCruce,
+                'fecha_cruce' => $fechaCruce,
+            ],
+            'datos_nuevos'    => [
+                'saldo' => $honorario->saldo_pendiente,
+            ],
+        ]);
+
+        return back()->with('success', 'Cruce eliminado correctamente.');
+    }
+
+
+    public function revertirPago(int $pagoId)
+    {
+        // =========================
+        // OBTENER PAGO
+        // =========================
+        $pago = Pago::withoutGlobalScopes()->findOrFail($pagoId);
+
+        // =========================
+        // OBTENER HONORARIO
+        // =========================
+        $honorario = $pago->honorarioMensualRec;
+
+        if (!$honorario) {
+            abort(404, 'Honorario asociado no encontrado.');
+        }
+
+        // =========================
+        // SNAPSHOT PREVIO
+        // =========================
+        $estadoAnterior = $honorario->estado_financiero_final;
+        $saldoAnterior  = $honorario->saldo_pendiente;
+
+        $montoPago = $saldoAnterior;
+        $fechaPago = $pago->fecha_pago;
+
+        // =========================
+        // ELIMINAR PAGO
+        // =========================
+        $pago->delete();
+
+        // =========================
+        // RECALCULAR SALDO
+        // =========================
+        $honorario->recalcularSaldoPendiente();
+
+        // =========================
+        // RECALCULAR ESTADO FINANCIERO
+        // =========================
+        if ($honorario->pagos()->exists() || $honorario->prontoPagos()->exists()) {
+            // No debería pasar, pero se protege
+            $nuevoEstado = 'Pago';
+
+        } elseif ($honorario->abonos()->exists()) {
+            $nuevoEstado = 'Abono';
+
+        } elseif ($honorario->cruces()->exists()) {
+            $nuevoEstado = 'Cruce';
+
+        } else {
+            // Volver a estado automático por fecha
+            $nuevoEstado = $honorario->fecha_vencimiento &&
+                        $honorario->fecha_vencimiento->isPast()
+                ? 'Vencido'
+                : 'Al día';
+        }
+
+        $honorario->update([
+            'estado_financiero'       => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
+            'fecha_estado_financiero' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
+        ]);
+
+
+        $honorario->refresh();
+
+        // =========================
+        // REGISTRAR MOVIMIENTO
+        // =========================
+        $honorario->movimientos()->create([
+            'usuario_id'      => Auth::id(),
+            'estado_anterior' => $estadoAnterior,
+            'nuevo_estado'    => $honorario->estado_financiero_final,
+            'fecha_cambio'    => now(),
+            'tipo_movimiento' => 'Eliminación de pago',
+            'descripcion'     => "Se eliminó el pago total registrado el {$fechaPago}.",
+            'datos_anteriores'=> [
+                'saldo' => $saldoAnterior,
+            ],
+            'datos_nuevos'    => [
+                'saldo' => $honorario->saldo_pendiente,
+            ],
+        ]);
+
+        return back()->with('success', 'Pago eliminado correctamente.');
+    }
+
+    public function revertirProntoPago(int $prontoPagoId)
+    {
+        // =========================
+        // OBTENER PRONTO PAGO
+        // =========================
+        $prontoPago = ProntoPago::withoutGlobalScopes()->findOrFail($prontoPagoId);
+
+        // =========================
+        // OBTENER HONORARIO
+        // =========================
+        $honorario = $prontoPago->honorarioMensualRec;
+
+        if (!$honorario) {
+            abort(404, 'Honorario asociado no encontrado.');
+        }
+
+        // =========================
+        // SNAPSHOT PREVIO
+        // =========================
+        $estadoAnterior = $honorario->estado_financiero_final;
+        $saldoAnterior  = $honorario->saldo_pendiente;
+
+        $montoProntoPago = $saldoAnterior;
+        $fechaProntoPago = $prontoPago->fecha_pronto_pago;
+
+        // =========================
+        // ELIMINAR PRONTO PAGO
+        // =========================
+        $prontoPago->delete();
+
+        // =========================
+        // RECALCULAR SALDO
+        // =========================
+        $honorario->recalcularSaldoPendiente();
+
+        // =========================
+        // RECALCULAR ESTADO FINANCIERO
+        // =========================
+        if ($honorario->pagos()->exists() || $honorario->prontoPagos()->exists()) {
+            // No debería ocurrir tras eliminar, pero se protege
+            $nuevoEstado = 'Pago';
+
+        } elseif ($honorario->abonos()->exists()) {
+            $nuevoEstado = 'Abono';
+
+        } elseif ($honorario->cruces()->exists()) {
+            $nuevoEstado = 'Cruce';
+
+        } else {
+            // Volver a estado automático según fecha
+            $nuevoEstado = $honorario->fecha_vencimiento &&
+                        $honorario->fecha_vencimiento->isPast()
+                ? 'Vencido'
+                : 'Al día';
+        }
+
+        $honorario->update([
+            'estado_financiero'       => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
+            'fecha_estado_financiero' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
+        ]);
+
+
+        $honorario->refresh();
+
+        // =========================
+        // REGISTRAR MOVIMIENTO
+        // =========================
+        $honorario->movimientos()->create([
+            'usuario_id'      => Auth::id(),
+            'estado_anterior' => $estadoAnterior,
+            'nuevo_estado'    => $honorario->estado_financiero_final,
+            'fecha_cambio'    => now(),
+            'tipo_movimiento' => 'Eliminación de pronto pago',
+            'descripcion'     => "Se eliminó el pronto pago registrado el {$fechaProntoPago}.",
+            'datos_anteriores'=> [
+                'saldo' => $saldoAnterior,
+            ],
+            'datos_nuevos'    => [
+                'saldo' => $honorario->saldo_pendiente,
+            ],
+        ]);
+
+        return back()->with('success', 'Pronto pago eliminado correctamente.');
+    }
+
+
 
 
 

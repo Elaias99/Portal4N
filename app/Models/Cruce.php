@@ -46,12 +46,19 @@ class Cruce extends Model
         return $this->belongsTo(CobranzaCompra::class, 'cobranza_compra_id');
     }
 
-
     public function movimientos()
     {
         return $this->morphMany(
             MovimientoDocumento::class,
             'origen'
+        );
+    }
+
+    public function honorarioMensualRec()
+    {
+        return $this->belongsTo(
+            HonorarioMensualRec::class,
+            'honorario_mensual_rec_id'
         );
     }
 
