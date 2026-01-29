@@ -624,6 +624,19 @@ Route::post(
     [HonorarioMensualRecController::class, 'storePago']
 )->name('honorarios.mensual.pago.store');
 
+
+Route::post(
+    'honorarios/mensual/pago-masivo',
+    [HonorarioMensualRecController::class, 'storePagoMasivo']
+)->name('honorarios.mensual.pago.masivo');
+
+
+Route::get(
+    'honorarios/mensual/buscar',
+    [HonorarioMensualRecController::class, 'buscarHonorarios']
+)->name('honorarios.mensual.buscar');
+
+
 Route::post(
     '/honorarios/mensual-rec/{honorario}/pronto-pago',
     [HonorarioMensualRecController::class, 'storeProntoPago']

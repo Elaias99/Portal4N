@@ -12,7 +12,7 @@ use App\Models\MovimientoHonorarioMensualRec;
 use Illuminate\Support\Facades\Log;
 use App\Models\CobranzaCompra;
 use Carbon\Carbon;
-
+use Illuminate\Support\Facades\DB;
 use App\Models\Abono;
 use App\Models\Cruce;
 use App\Models\Pago;
@@ -468,6 +468,110 @@ class HonorarioMensualRecController extends Controller
 
         return back()->with('success', 'Pago registrado correctamente.');
     }
+
+
+
+
+    public function storePagoMasivo(Request $request)
+    {
+        $request->validate([
+            'honorarios'   => 'required|array|min:1',
+            'honorarios.*' => 'integer|exists:honorarios_mensuales_rec,id',
+            'fecha_pago'   => 'required|date|before_or_equal:today',
+        ]);
+
+        DB::transaction(function () use ($request) {
+
+            foreach ($request->honorarios as $honorarioId) {
+
+                $honorario = HonorarioMensualRec::find($honorarioId);
+
+                if (!$honorario) {
+                    continue;
+                }
+
+                // 🔒 Si ya tiene pago, se ignora
+                if ($honorario->pagos()->exists()) {
+                    continue;
+                }
+
+                $estadoAnterior = $honorario->estado_financiero_final;
+                $saldoAnterior  = $honorario->saldo_pendiente;
+
+                // =========================
+                // CREAR PAGO
+                // =========================
+                $honorario->pagos()->create([
+                    'fecha_pago' => $request->fecha_pago,
+                    'user_id'    => Auth::id(),
+                ]);
+
+                // =========================
+                // ACTUALIZAR HONORARIO
+                // =========================
+                $honorario->update([
+                    'estado_financiero'       => 'Pago',
+                    'fecha_estado_financiero' => now(),
+                    'saldo_pendiente'         => 0,
+                ]);
+
+                // =========================
+                // REGISTRAR MOVIMIENTO
+                // =========================
+                $honorario->movimientos()->create([
+                    'usuario_id'      => Auth::id(),
+                    'estado_anterior' => $estadoAnterior,
+                    'nuevo_estado'    => 'Pago',
+                    'fecha_cambio'    => now(),
+                    'tipo_movimiento' => 'Pago masivo',
+                    'descripcion'     => 'Pago registrado mediante operación masiva.',
+                    'datos_anteriores'=> [
+                        'saldo' => $saldoAnterior,
+                    ],
+                    'datos_nuevos'    => [
+                        'saldo' => 0,
+                    ],
+                ]);
+            }
+        });
+
+        return redirect()
+            ->route('honorarios.mensual.index')
+            ->with('success', 'Pago masivo registrado correctamente.');
+    }
+
+
+
+
+    public function buscarHonorarios(Request $request)
+    {
+        $q = trim($request->get('q'));
+
+        if ($q === '') {
+            return response()->json([]);
+        }
+
+        $resultados = HonorarioMensualRec::query()
+            ->where('saldo_pendiente', '>', 0)
+            ->where(function ($q2) use ($q) {
+                $q2->where('folio', 'like', "%{$q}%")
+                ->orWhere('rut_emisor', 'like', "%{$q}%")
+                ->orWhere('razon_social_emisor', 'like', "%{$q}%");
+            })
+            ->limit(10)
+            ->get([
+                'id',
+                'folio',
+                'rut_emisor',
+                'razon_social_emisor',
+                'saldo_pendiente',
+            ]);
+
+
+        return response()->json($resultados);
+    }
+
+
 
 
 

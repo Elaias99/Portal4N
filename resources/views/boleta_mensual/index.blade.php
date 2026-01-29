@@ -87,6 +87,14 @@
                             Movimientos
                         </a>
 
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalPagoMasivo">
+                            Pagos Masivos
+                        </button>
+
+
 
 
                     </div>
@@ -280,6 +288,9 @@
                                 <th>Rut</th>
                                 <th>Emisor</th>
                                 <th>Folio</th>
+
+                                <th>Servicio</th>
+
                                 <th>Fecha Emisión</th>
 
                                 <th>Fecha Vencimiento</th>
@@ -338,6 +349,8 @@
                                         {{ $r->folio }}
                                     </a>
                                 </td>
+
+                                <td> @if ($r->cobranzaCompra) {{ $r->cobranzaCompra->servicio }} @else <span class="text-muted">Sin Servicio</span> @endif </td>
 
 
                                 <td>{{ $r->fecha_emision?->format('Y-m-d') }}</td>
@@ -482,6 +495,9 @@ document.addEventListener('change', function (e) {
 
 
 @include('boleta_mensual._modal_estado_financiero') --}}
+
+@include('boleta_mensual._modal_pago_masivo')
+
 
 
 @endsection
