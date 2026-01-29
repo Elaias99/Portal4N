@@ -1033,6 +1033,33 @@ class HonorarioMensualRecController extends Controller
 
 
 
+    public function updateServicio(Request $request, HonorarioMensualRec $honorario)
+    {
+        // Validación básica
+        $request->validate([
+            'servicio_manual' => 'required|string|max:255',
+        ]);
+
+        // Regla de negocio
+        if (
+            !$honorario->cobranzaCompra ||
+            $honorario->cobranzaCompra->servicio !== 'Otro'
+        ) {
+            abort(403, 'Este honorario no permite definir servicio manual.');
+        }
+
+        $honorario->update([
+            'servicio_manual' => $request->servicio_manual,
+        ]);
+
+        // (Luego aquí registraremos movimiento)
+
+        return back()->with('success', 'Servicio definido correctamente.');
+    }
+
+
+
+
 
 
 

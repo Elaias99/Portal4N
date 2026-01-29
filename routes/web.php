@@ -673,6 +673,13 @@ Route::delete(
     [HonorarioMensualRecController::class, 'revertirProntoPago']
 )->name('honorarios.mensual.prontopago.revertir');
 
+// Actualizar servicio cuado es otro
+Route::patch(
+    '/honorarios-mensuales/{honorario}/servicio',
+    [HonorarioMensualRecController::class, 'updateServicio']
+)->name('honorarios.mensual.servicio.update');
+
+
 
 
 

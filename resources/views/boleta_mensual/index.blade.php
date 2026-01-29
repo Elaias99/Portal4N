@@ -290,6 +290,7 @@
                                 <th>Folio</th>
 
                                 <th>Servicio</th>
+                                <th>Servicio Final</th>
 
                                 <th>Fecha Emisión</th>
 
@@ -352,6 +353,33 @@
 
                                 <td> @if ($r->cobranzaCompra) {{ $r->cobranzaCompra->servicio }} @else <span class="text-muted">Sin Servicio</span> @endif </td>
 
+                                <td>
+                                    @if($r->cobranzaCompra && $r->cobranzaCompra->servicio === 'Otro')
+
+                                        @if($r->servicio_manual)
+                                            <span class="badge bg-info">
+                                                {{ $r->servicio_manual }}
+                                            </span>
+                                        @else
+                                            <span class="text-muted">Otro</span>
+                                        @endif
+
+                                        <br>
+
+                                        <button
+                                            class="btn btn-sm btn-outline-primary mt-1"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalServicio{{ $r->id }}">
+                                            Definir servicio
+                                        </button>
+
+                                    @else
+                                        {{ $r->servicio_final ?? '—' }}
+                                    @endif
+                                </td>
+
+
+
 
                                 <td>{{ $r->fecha_emision?->format('Y-m-d') }}</td>
 
@@ -388,11 +416,59 @@
 
 
                             </tr>
+
+
+                                {{-- MODAL --}}
+
+
+                                <div class="modal fade" id="modalServicio{{ $r->id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <form method="POST"
+                                            action="{{ route('honorarios.mensual.servicio.update', $r->id) }}">
+                                            @csrf
+                                            @method('PATCH')
+
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">
+                                                        Definir servicio – Folio {{ $r->folio }}
+                                                    </h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+
+                                                <div class="modal-body">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Servicio</label>
+                                                        <input type="text"
+                                                            name="servicio_manual"
+                                                            class="form-control"
+                                                            required
+                                                            value="{{ $r->servicio_manual }}">
+                                                    </div>
+                                                </div>
+
+                                                <div class="modal-footer">
+                                                    <button class="btn btn-secondary" data-bs-dismiss="modal">
+                                                        Cancelar
+                                                    </button>
+                                                    <button class="btn btn-primary">
+                                                        Guardar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
                          @endforeach
                         </tbody>
 
 
                     </table>
+
+
+
+
+
 
 
                     {{-- PAGINACIÓN --}}
@@ -424,77 +500,6 @@
 </div>
 
 
-
-
-
-
-
-{{-- <script>
-document.addEventListener('click', function (e) {
-
-    const btn = e.target.closest('.btn-estado-honorario');
-    if (!btn) return;
-
-    // Reset completo del formulario
-    const form = document.querySelector('#modalEstadoHonorario form');
-    if (form) form.reset();
-
-    // Cargar datos del botón
-    document.getElementById('modal-emisor').value         = btn.dataset.emisor;
-    document.getElementById('modal-estado-actual').value = btn.dataset.estado;
-    document.getElementById('modal-saldo').value          = btn.dataset.saldo;
-    document.getElementById('modal-honorario-id').value   = btn.dataset.id;
-
-    // Reset selector
-    document.getElementById('modal-nuevo-estado').value = '';
-
-    // Ocultar todos los bloques y deshabilitar inputs
-    ['modal-campo-abono', 'modal-campo-cruce', 'modal-campo-pago', 'modal-campo-pronto-pago']
-        .forEach(id => {
-            const bloque = document.getElementById(id);
-            if (!bloque) return;
-
-            bloque.classList.add('d-none');
-            bloque.querySelectorAll('input, select').forEach(el => el.disabled = true);
-        });
-});
-</script>
-
-
-<script>
-document.addEventListener('change', function (e) {
-
-    if (e.target.id !== 'modal-nuevo-estado') return;
-
-    const estado = e.target.value;
-
-    const bloques = {
-        'Abono': 'modal-campo-abono',
-        'Cruce': 'modal-campo-cruce',
-        'Pago': 'modal-campo-pago',
-        'Pronto pago': 'modal-campo-pronto-pago',
-    };
-
-    // Ocultar todos
-    Object.values(bloques).forEach(id => {
-        const bloque = document.getElementById(id);
-        if (!bloque) return;
-
-        bloque.classList.add('d-none');
-        bloque.querySelectorAll('input, select').forEach(el => el.disabled = true);
-    });
-
-    // Mostrar el bloque correspondiente
-    if (bloques[estado]) {
-        const bloque = document.getElementById(bloques[estado]);
-        bloque.classList.remove('d-none');
-        bloque.querySelectorAll('input, select').forEach(el => el.disabled = false);
-    }
-});
-</script>
-
-
-@include('boleta_mensual._modal_estado_financiero') --}}
 
 @include('boleta_mensual._modal_pago_masivo')
 

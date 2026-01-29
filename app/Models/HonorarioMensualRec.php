@@ -37,6 +37,8 @@ class HonorarioMensualRec extends Model
 
         'fecha_vencimiento',
 
+        'servicio_manual',
+
 
     ];
 
@@ -135,6 +137,29 @@ class HonorarioMensualRec extends Model
         // Si no, usar el inicial (Al día / Vencido)
         return $this->estado_financiero_inicial;
     }
+
+
+
+    // =========================
+    // SERVICIO FINAL
+    // =========================
+
+    public function getServicioFinalAttribute()
+    {
+        // 1️⃣ Si hay servicio manual → prevalece
+        if (!empty($this->servicio_manual)) {
+            return $this->servicio_manual;
+        }
+
+        // 2️⃣ Si hay proveedor asociado → usar su servicio
+        if ($this->cobranzaCompra) {
+            return $this->cobranzaCompra->servicio;
+        }
+
+        // 3️⃣ Fallback explícito
+        return null;
+    }
+
 
 
 

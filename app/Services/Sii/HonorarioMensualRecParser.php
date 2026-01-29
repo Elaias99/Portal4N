@@ -14,8 +14,6 @@ class HonorarioMensualRecParser
     {
         $this->archivo = $archivo;
 
-        Log::info('[REC] Iniciando parser HonorarioMensualRec');
-
         $this->cargarContenidoCrudo();
     }
 
@@ -31,10 +29,6 @@ class HonorarioMensualRecParser
             'UTF-8',
             ['ISO-8859-1', 'Windows-1252', 'UTF-8']
         );
-
-        Log::info('[REC] Archivo cargado y normalizado', [
-            'bytes' => strlen($this->contenido),
-        ]);
     }
 
     /**
@@ -42,7 +36,6 @@ class HonorarioMensualRecParser
      */
     public function parse(): array
     {
-        Log::info('[REC] Parseo HTML iniciado');
 
         $filas = $this->extraerFilasHtml();
 
@@ -70,11 +63,6 @@ class HonorarioMensualRecParser
             }
         }
 
-        Log::info('[REC] Parseo finalizado', [
-            'registros' => count($datos),
-            'totales'   => $totales !== null,
-        ]);
-
         return [
             'meta'      => $meta,
             'registros' => $datos,
@@ -101,10 +89,6 @@ class HonorarioMensualRecParser
                 );
             }
         }
-
-        Log::info('[REC] Filas HTML extraídas', [
-            'total' => count($filas),
-        ]);
 
         return $filas;
     }
