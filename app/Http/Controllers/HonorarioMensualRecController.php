@@ -242,16 +242,19 @@ class HonorarioMensualRecController extends Controller
             }
 
 
-                    HonorarioMensualRec::updateOrCreate(
-                        [
-                            'empresa_id'        => $empresaId,
-                            'rut_contribuyente' => $meta['rut_contribuyente'],
-                            'anio'              => $meta['anio'],
-                            'mes'               => $meta['mes'],
-                            'rut_emisor'        => $rutEmisor,
-                            'folio'             => $r['folio'],
-                        ],
-                        [
+                    $honorario = HonorarioMensualRec::where([
+                        'empresa_id'        => $empresaId,
+                        'rut_contribuyente' => $meta['rut_contribuyente'],
+                        'anio'              => $meta['anio'],
+                        'mes'               => $meta['mes'],
+                        'rut_emisor'        => $rutEmisor,
+                        'folio'             => $r['folio'],
+                    ])->first();
+
+                    if ($honorario) {
+
+                        // 🔁 EXISTE → solo actualizar datos SII
+                        $honorario->update([
                             'razon_social'         => $meta['razon_social'],
                             'fecha_emision'        => $r['fecha_emision'],
                             'estado'               => $r['estado'],
@@ -259,19 +262,49 @@ class HonorarioMensualRecController extends Controller
                             'razon_social_emisor'  => $r['razon_social_emisor'],
                             'sociedad_profesional' => $r['sociedad_profesional'],
 
-                            'monto_bruto'          => $r['monto_bruto'],
-                            'monto_retenido'       => $r['monto_retenido'],
-                            'monto_pagado'         => $r['monto_pagado'],
+                            'monto_bruto'    => $r['monto_bruto'],
+                            'monto_retenido' => $r['monto_retenido'],
+                            'monto_pagado'   => $r['monto_pagado'],
 
-                            // ✅ Finanzas
+                            'cobranza_compra_id' => $cobranza?->id,
+
+                            // ❌ NO tocar:
+                            // saldo_pendiente
+                            // estado_financiero
+                            // servicio_manual
+                        ]);
+
+                    } else {
+
+                        // 🆕 NUEVO → inicializar capa financiera
+                        HonorarioMensualRec::create([
+                            'empresa_id'        => $empresaId,
+                            'rut_contribuyente' => $meta['rut_contribuyente'],
+                            'anio'              => $meta['anio'],
+                            'mes'               => $meta['mes'],
+                            'rut_emisor'        => $rutEmisor,
+                            'folio'             => $r['folio'],
+
+                            'razon_social'         => $meta['razon_social'],
+                            'fecha_emision'        => $r['fecha_emision'],
+                            'estado'               => $r['estado'],
+                            'fecha_anulacion'      => $r['fecha_anulacion'],
+                            'razon_social_emisor'  => $r['razon_social_emisor'],
+                            'sociedad_profesional' => $r['sociedad_profesional'],
+
+                            'monto_bruto'    => $r['monto_bruto'],
+                            'monto_retenido' => $r['monto_retenido'],
+                            'monto_pagado'   => $r['monto_pagado'],
+
+                            // ✅ SOLO AQUÍ
                             'saldo_pendiente'           => $r['monto_pagado'],
                             'estado_financiero_inicial' => $estadoFinancieroInicial,
-                            'fecha_vencimiento'         => $fechaVencimiento, // 👈 NUEVO
+                            'fecha_vencimiento'         => $fechaVencimiento,
 
-                            // ✅ Relación proveedor
-                            'cobranza_compra_id'        => $cobranza?->id,
-                        ]
-                    );
+                            'cobranza_compra_id' => $cobranza?->id,
+                        ]);
+                    }
+
 
         }
 
