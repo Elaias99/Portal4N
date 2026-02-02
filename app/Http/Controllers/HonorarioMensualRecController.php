@@ -46,7 +46,7 @@ class HonorarioMensualRecController extends Controller
 
     public function index(Request $request)
     {
-        $query = HonorarioMensualRec::with('empresa','cobranzaCompra',);
+        $query = HonorarioMensualRec::with('empresa', 'cobranzaCompra');
 
         // =========================
         // FILTRO: EMPRESA
@@ -70,6 +70,99 @@ class HonorarioMensualRecController extends Controller
         }
 
         // =========================
+        // FILTRO: RAZÓN SOCIAL EMISOR
+        // =========================
+        if ($request->filled('razon_social_emisor')) {
+            $query->where(
+                'razon_social_emisor',
+                'like',
+                '%' . $request->razon_social_emisor . '%'
+            );
+        }
+
+        // =========================
+        // FILTRO: RUT EMISOR
+        // =========================
+        if ($request->filled('rut_emisor')) {
+            $query->where(
+                'rut_emisor',
+                'like',
+                '%' . $request->rut_emisor . '%'
+            );
+        }
+
+        // =========================
+        // FILTRO: FOLIO
+        // =========================
+        if ($request->filled('folio')) {
+            $query->where('folio', $request->folio);
+            //exacto; cambia a like si lo quieres parcial
+        }
+
+
+
+        // =========================
+        // FILTRO: FECHA DOCUMENTO (fecha_emision)
+        // =========================
+        if ($request->filled('fecha_emision_desde')) {
+            $query->whereDate(
+                'fecha_emision',
+                '>=',
+                $request->fecha_emision_desde
+            );
+        }
+
+        if ($request->filled('fecha_emision_hasta')) {
+            $query->whereDate(
+                'fecha_emision',
+                '<=',
+                $request->fecha_emision_hasta
+            );
+        }
+
+        // =========================
+        // FILTRO: FECHA VENCIMIENTO (fecha_vencimiento)
+        // =========================
+        if ($request->filled('fecha_vencimiento_desde')) {
+            $query->whereDate(
+                'fecha_vencimiento',
+                '>=',
+                $request->fecha_vencimiento_desde
+            );
+        }
+
+        if ($request->filled('fecha_vencimiento_hasta')) {
+            $query->whereDate(
+                'fecha_vencimiento',
+                '<=',
+                $request->fecha_vencimiento_hasta
+            );
+        }
+
+
+        // =========================
+        // FILTRO: SALDO
+        // =========================
+        if ($request->filled('saldo_tipo') && $request->filled('saldo_monto')) {
+
+            $monto = (int) $request->saldo_monto;
+
+            if ($request->saldo_tipo === 'pendiente') {
+                $query->where('saldo_pendiente', '>=', $monto);
+            }
+
+            if ($request->saldo_tipo === 'original') {
+                $query->where('monto_pagado', '>=', $monto);
+            }
+        }
+
+
+
+
+
+
+
+        // =========================
         // ORDEN + PAGINACIÓN
         // =========================
         $registros = $query
@@ -77,7 +170,7 @@ class HonorarioMensualRecController extends Controller
             ->orderBy('mes', 'desc')
             ->orderBy('fecha_emision', 'desc')
             ->paginate(10)
-            ->appends($request->query()); // 🔹 mantiene filtros al paginar
+            ->appends($request->query());
 
         // =========================
         // DATOS PARA SELECTORES
@@ -95,6 +188,7 @@ class HonorarioMensualRecController extends Controller
             'anios'
         ));
     }
+
 
 
 
