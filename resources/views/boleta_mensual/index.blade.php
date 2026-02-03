@@ -255,7 +255,7 @@
         ])->filter(fn($v) => $v !== null && $v !== '')->count();
     @endphp
 
-    <details details class="hm-filters mb-3" open>
+    <details class="hm-filters mb-3" open>
         <summary>
             <div class="hm-summary-left">
                 <span class="fw-semibold">Filtros de búsqueda</span>
@@ -267,6 +267,10 @@
         </summary>
 
         <div class="hm-filters-body">
+
+            {{-- =====================
+                FORM 1: FILTROS (GET)
+            ====================== --}}
             <form method="GET" action="{{ route('honorarios.mensual.index') }}">
                 <div class="row g-3 align-items-end">
 
@@ -276,7 +280,8 @@
                         <select name="empresa_id" class="form-select">
                             <option value="">Todas</option>
                             @foreach($empresas as $empresa)
-                                <option value="{{ $empresa->id }}" {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
+                                <option value="{{ $empresa->id }}"
+                                    {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
                                     {{ $empresa->Nombre }}
                                 </option>
                             @endforeach
@@ -289,7 +294,8 @@
                         <select name="anio" class="form-select">
                             <option value="">Todos</option>
                             @foreach($anios as $anio)
-                                <option value="{{ $anio }}" {{ request('anio') == $anio ? 'selected' : '' }}>
+                                <option value="{{ $anio }}"
+                                    {{ request('anio') == $anio ? 'selected' : '' }}>
                                     {{ $anio }}
                                 </option>
                             @endforeach
@@ -302,7 +308,8 @@
                         <select name="mes" class="form-select">
                             <option value="">Todos</option>
                             @for($m = 1; $m <= 12; $m++)
-                                <option value="{{ $m }}" {{ request('mes') == $m ? 'selected' : '' }}>
+                                <option value="{{ $m }}"
+                                    {{ request('mes') == $m ? 'selected' : '' }}>
                                     {{ \Carbon\Carbon::create()->month($m)->translatedFormat('F') }}
                                 </option>
                             @endfor
@@ -312,31 +319,46 @@
                     {{-- Razón Social --}}
                     <div class="col-12 col-md-5 col-lg-3">
                         <label class="form-label">Razón social emisor</label>
-                        <input type="text" name="razon_social_emisor" class="form-control" value="{{ request('razon_social_emisor') }}">
+                        <input type="text"
+                            name="razon_social_emisor"
+                            class="form-control"
+                            value="{{ request('razon_social_emisor') }}">
                     </div>
 
                     {{-- RUT --}}
                     <div class="col-12 col-md-3 col-lg-2">
                         <label class="form-label">RUT emisor</label>
-                        <input type="text" name="rut_emisor" class="form-control" value="{{ request('rut_emisor') }}">
+                        <input type="text"
+                            name="rut_emisor"
+                            class="form-control"
+                            value="{{ request('rut_emisor') }}">
                     </div>
 
                     {{-- Folio --}}
                     <div class="col-12 col-md-3 col-lg-2">
                         <label class="form-label">Folio</label>
-                        <input type="text" name="folio" class="form-control" value="{{ request('folio') }}">
+                        <input type="text"
+                            name="folio"
+                            class="form-control"
+                            value="{{ request('folio') }}">
                     </div>
 
                     {{-- Fecha Documento --}}
                     <div class="col-12 col-md-3 col-lg-2">
                         <label class="form-label">Fecha documento</label>
-                        <input type="date" name="fecha_emision_desde" class="form-control" value="{{ request('fecha_emision_desde') }}">
+                        <input type="date"
+                            name="fecha_emision_desde"
+                            class="form-control"
+                            value="{{ request('fecha_emision_desde') }}">
                     </div>
 
                     {{-- Fecha Vencimiento --}}
                     <div class="col-12 col-md-3 col-lg-2">
                         <label class="form-label">Fecha vencimiento</label>
-                        <input type="date" name="fecha_vencimiento_desde" class="form-control" value="{{ request('fecha_vencimiento_desde') }}">
+                        <input type="date"
+                            name="fecha_vencimiento_desde"
+                            class="form-control"
+                            value="{{ request('fecha_vencimiento_desde') }}">
                     </div>
 
                     {{-- Saldo --}}
@@ -344,38 +366,77 @@
                         <label class="form-label">Saldo</label>
                         <select name="saldo_tipo" class="form-select">
                             <option value="">Buscar saldo por</option>
-                            <option value="pendiente" {{ request('saldo_tipo') === 'pendiente' ? 'selected' : '' }}>Saldo pendiente</option>
-                            <option value="original" {{ request('saldo_tipo') === 'original' ? 'selected' : '' }}>Monto original</option>
+                            <option value="pendiente" {{ request('saldo_tipo') === 'pendiente' ? 'selected' : '' }}>
+                                Saldo pendiente
+                            </option>
+                            <option value="original" {{ request('saldo_tipo') === 'original' ? 'selected' : '' }}>
+                                Monto original
+                            </option>
                         </select>
                     </div>
 
                     {{-- Monto --}}
                     <div class="col-12 col-md-3 col-lg-2">
                         <label class="form-label">Monto</label>
-                        <input type="number" name="saldo_monto" class="form-control" value="{{ request('saldo_monto') }}">
+                        <input type="number"
+                            name="saldo_monto"
+                            class="form-control"
+                            value="{{ request('saldo_monto') }}">
                     </div>
 
-                    {{-- Botones del formulario (solo búsqueda) --}}
-                    <div class="col-12 col-lg-4">
-                        <div class="d-flex gap-2 justify-content-lg-end">
+                    {{-- Acciones filtros --}}
+                    <div class="col-12 col-lg-4 d-flex justify-content-lg-end align-items-end">
+                        <div class="d-flex gap-2">
                             <button class="btn btn-primary px-4">
                                 Buscar
                             </button>
 
-                            <a href="{{ route('honorarios.mensual.index') }}" class="btn btn-outline-secondary px-4">
+                            <a href="{{ route('honorarios.mensual.index') }}"
+                            class="btn btn-outline-secondary px-4">
                                 Limpiar
-                            </a>
-
-                            <a href="{{ route('honorarios.mensual.import') }}" class="btn btn-outline-secondary px-4">
-                                Importar
                             </a>
                         </div>
                     </div>
 
                 </div>
             </form>
+
+            {{-- =====================
+                IMPORTADOR (POST)
+            ====================== --}}
+            <hr class="my-4">
+
+            <form action="{{ route('honorarios.mensual.import') }}"
+                method="POST"
+                enctype="multipart/form-data">
+
+                @csrf
+
+                <div class="row g-3 align-items-end">
+
+                    <div class="col-12 col-md-9">
+                        <label class="form-label fw-semibold">
+                            Importar archivo SII (file_informeMensualREC)
+                        </label>
+
+                        <input type="file"
+                            name="archivo"
+                            class="form-control"
+                            required>
+                    </div>
+
+                    <div class="col-12 col-md-3">
+                        <button class="btn btn-success w-100">
+                            Importar
+                        </button>
+                    </div>
+
+                </div>
+            </form>
+
         </div>
     </details>
+
 
     {{-- =========================
         3) MENSAJES + PREVIEW (sin cards)
