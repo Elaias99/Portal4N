@@ -197,6 +197,16 @@
                 margin: 0 0 10px;
             }
 
+            .hm-link-editable {
+                text-decoration: none;
+                color: inherit;
+            }
+
+            .hm-link-editable:hover {
+                text-decoration: none;
+            }
+
+
     </style>
 
     {{-- =========================
@@ -354,6 +364,10 @@
 
                             <a href="{{ route('honorarios.mensual.index') }}" class="btn btn-outline-secondary px-4">
                                 Limpiar
+                            </a>
+
+                            <a href="{{ route('honorarios.mensual.import') }}" class="btn btn-outline-secondary px-4">
+                                Importar
                             </a>
                         </div>
                     </div>
@@ -561,30 +575,31 @@
                                 {{-- Servicio Final --}}
                                 <td class="hm-nowrap">
                                     @if($esServicioOtro)
-                                        @if($r->servicio_manual)
-                                            <span class="hm-chip hm-chip-info" title="{{ $r->servicio_manual }}">
-                                                {{ $r->servicio_manual }}
-                                            </span>
-                                        @else
-                                            <span class="text-muted">Otro</span>
-                                        @endif
 
-                                        <div class="mt-1">
-                                            {{-- Un solo modal reutilizable: pasamos datos por data-* --}}
-                                            <button type="button"
-                                                    class="btn btn-sm btn-outline-primary"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#modalServicio"
-                                                    data-update-url="{{ route('honorarios.mensual.servicio.update', $r->id) }}"
-                                                    data-folio="{{ $r->folio }}"
-                                                    data-servicio="{{ $r->servicio_manual ?? '' }}">
-                                                Definir servicio
-                                            </button>
-                                        </div>
+                                        <a href="#"
+                                        class="hm-link-editable"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalServicio"
+                                        data-update-url="{{ route('honorarios.mensual.servicio.update', $r->id) }}"
+                                        data-folio="{{ $r->folio }}"
+                                        data-servicio="{{ $r->servicio_manual ?? '' }}"
+                                        title="Definir servicio">
+
+                                            @if($r->servicio_manual)
+                                                <span class="hm-chip hm-chip-info">
+                                                    {{ $r->servicio_manual }}
+                                                </span>
+                                            @else
+                                                <span class="text-muted">Otro</span>
+                                            @endif
+
+                                        </a>
+
                                     @else
                                         {{ $r->servicio_final ?? '—' }}
                                     @endif
                                 </td>
+
 
                                 {{-- Fechas --}}
                                 <td class="hm-nowrap">{{ $r->fecha_emision?->format('Y-m-d') }}</td>
