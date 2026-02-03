@@ -275,7 +275,7 @@
                 <div class="row g-3 align-items-end">
 
                     {{-- Empresa --}}
-                    <div class="col-12 col-md-3 col-lg-2">
+                    <div class="col-12 col-md-3 col-lg-1">
                         <label class="form-label">Empresa</label>
                         <select name="empresa_id" class="form-select">
                             <option value="">Todas</option>
@@ -317,7 +317,7 @@
                     </div>
 
                     {{-- Razón Social --}}
-                    <div class="col-12 col-md-5 col-lg-3">
+                    <div class="col-12 col-md-5 col-lg-2">
                         <label class="form-label">Razón social emisor</label>
                         <input type="text"
                             name="razon_social_emisor"
@@ -326,7 +326,7 @@
                     </div>
 
                     {{-- RUT --}}
-                    <div class="col-12 col-md-3 col-lg-2">
+                    <div class="col-12 col-md-3 col-lg-1">
                         <label class="form-label">RUT emisor</label>
                         <input type="text"
                             name="rut_emisor"
@@ -335,7 +335,7 @@
                     </div>
 
                     {{-- Folio --}}
-                    <div class="col-12 col-md-3 col-lg-2">
+                    <div class="col-12 col-md-3 col-lg-1">
                         <label class="form-label">Folio</label>
                         <input type="text"
                             name="folio"
@@ -351,6 +351,51 @@
                             class="form-control"
                             value="{{ request('fecha_emision_desde') }}">
                     </div>
+
+                    {{-- Servicio --}}
+                    <div class="col-12 col-md-3 col-lg-2">
+                        <label class="form-label">Servicio</label>
+
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary w-100 dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown">
+                                Buscar servicio por
+                            </button>
+
+                            <div class="dropdown-menu p-3" style="min-width: 260px;">
+
+                                {{-- Tipo --}}
+                                <div class="mb-2">
+                                    <label class="form-label">Tipo</label>
+                                    <select name="servicio_tipo" class="form-select">
+                                        <option value="">Seleccione</option>
+                                        <option value="proveedor"
+                                            {{ request('servicio_tipo') === 'proveedor' ? 'selected' : '' }}>
+                                            Servicio proveedor
+                                        </option>
+                                        <option value="manual"
+                                            {{ request('servicio_tipo') === 'manual' ? 'selected' : '' }}>
+                                            Servicio manual
+                                        </option>
+                                    </select>
+                                </div>
+
+                                {{-- Valor --}}
+                                <div>
+                                    <label class="form-label">Servicio</label>
+                                    <input type="text"
+                                        name="servicio_valor"
+                                        class="form-control"
+                                        placeholder="Ej: Agencias, Courier…"
+                                        value="{{ request('servicio_valor') }}">
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+
 
                     {{-- Fecha Vencimiento --}}
                     <div class="col-12 col-md-3 col-lg-2">
@@ -674,7 +719,7 @@
                                 </td>
 
                                 {{-- Fecha Anulación --}}
-                                <td class="hm-nowrap">{{ $r->fecha_anulacion }}</td>
+                                <td class="hm-nowrap">{{ $r->fecha_anulacion?->format('Y-m-d') }}</td>
 
                                 {{-- Monto Pagado --}}
                                 <td class="hm-nowrap text-end fw-semibold">

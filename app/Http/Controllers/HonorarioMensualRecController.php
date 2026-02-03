@@ -157,6 +157,34 @@ class HonorarioMensualRecController extends Controller
         }
 
 
+        // =========================
+        // FILTRO: SERVICIO (EXPLÍCITO)
+        // =========================
+        if ($request->filled('servicio_tipo') && $request->filled('servicio_valor')) {
+
+            $tipo   = $request->servicio_tipo;
+            $valor  = $request->servicio_valor;
+
+            if ($tipo === 'manual') {
+
+                // Buscar SOLO en servicio_manual
+                $query->where('servicio_manual', 'like', '%' . $valor . '%');
+
+            }
+
+            if ($tipo === 'proveedor') {
+
+                // Buscar SOLO en cobranzaCompra->servicio
+                $query->whereHas('cobranzaCompra', function ($q) use ($valor) {
+                    $q->where('servicio', 'like', '%' . $valor . '%');
+                });
+
+            }
+        }
+
+
+
+
 
 
 

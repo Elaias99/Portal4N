@@ -46,6 +46,8 @@ class HonorarioMensualRec extends Model
         'fecha_emision'   => 'date',
         'fecha_anulacion' => 'date',
         'fecha_vencimiento' => 'date',
+        'fecha_anulacion' => 'date',
+
     ];
 
     // =========================
