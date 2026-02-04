@@ -268,6 +268,21 @@
 
         <div class="hm-filters-body">
 
+
+            @php
+                $serviciosProveedor = [
+                    'SERVICIOS BOLETAS HONORARIOS',
+                    'COLABORADOR',
+                    'SUSCRIPCIONES',
+                    'AGENCIAS',
+                    'CONSERVADOR DE BIENES RAICES',
+                    'MANTENCION EDIFICIO',
+                    'MANTENCION VEHICULOS',
+                    'COURIER',
+                ];
+            @endphp
+
+
             {{-- =====================
                 FORM 1: FILTROS (GET)
             ====================== --}}
@@ -384,12 +399,29 @@
                                 {{-- Valor --}}
                                 <div>
                                     <label class="form-label">Servicio</label>
+
+                                    {{-- Select proveedor --}}
+                                    <select name="servicio_valor"
+                                            id="servicioProveedorSelect"
+                                            class="form-select d-none">
+                                        <option value="">Seleccione servicio</option>
+                                        @foreach($serviciosProveedor as $servicio)
+                                            <option value="{{ $servicio }}"
+                                                {{ request('servicio_valor') === $servicio ? 'selected' : '' }}>
+                                                {{ $servicio }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+
+                                    {{-- Input manual --}}
                                     <input type="text"
                                         name="servicio_valor"
-                                        class="form-control"
+                                        id="servicioManualInput"
+                                        class="form-control d-none"
                                         placeholder="Ej: Agencias, Courier…"
                                         value="{{ request('servicio_valor') }}">
                                 </div>
+
 
                             </div>
                         </div>
@@ -829,4 +861,43 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const tipoSelect = document.querySelector('select[name="servicio_tipo"]');
+    const selectProveedor = document.getElementById('servicioProveedorSelect');
+    const inputManual = document.getElementById('servicioManualInput');
+
+    function toggleServicioInput() {
+        const tipo = tipoSelect.value;
+
+        // Reset visual
+        selectProveedor.classList.add('d-none');
+        inputManual.classList.add('d-none');
+
+        // 🔴 Reset funcional
+        selectProveedor.disabled = true;
+        inputManual.disabled = true;
+
+        if (tipo === 'proveedor') {
+            selectProveedor.classList.remove('d-none');
+            selectProveedor.disabled = false;
+        }
+
+        if (tipo === 'manual') {
+            inputManual.classList.remove('d-none');
+            inputManual.disabled = false;
+        }
+    }
+
+    // Inicial (cuando vuelve con filtros activos)
+    toggleServicioInput();
+
+    tipoSelect.addEventListener('change', toggleServicioInput);
+});
+</script>
+
+
 @endsection
