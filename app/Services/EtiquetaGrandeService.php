@@ -84,7 +84,7 @@ class EtiquetaGrandeService
         $zpl .= "^FO50,360^A0N,24,24^FB520,2,4,L^FD{$this->zplText($dptoDestino)}^FS\n";
 
         // Comuna destino (destacada)
-        $zpl .= "^FO550,280^A0N,48,48^FD{$this->zplText($comuna)}^FS\n";
+        $zpl .= "^FO600,280^A0N,48,48^FD{$this->zplText($comuna)}^FS\n";
 
 
         // Campaña
