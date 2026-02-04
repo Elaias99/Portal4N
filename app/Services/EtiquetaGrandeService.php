@@ -11,12 +11,14 @@ class EtiquetaGrandeService
         $row = $rows->first();
 
         // Campos
+        $idEtiqueta    = (string) ($row['id'] ?? '');
         $idBulto       = (string) ($row['id_bulto'] ?? '');
         $direccion     = (string) ($row['direccion'] ?? '');
         $numeroDestino = (string) ($row['numero_destino'] ?? '');
-        $dptoDestino   = (string) ($row['dpto_destino'] ?? '');
-        $campana       = (string) ($row['campana'] ?? '');
-        $comuna        = (string) ($row['comuna'] ?? '');
+        $dptoDestino   = (string) ($row['depto_destino'] ?? '');
+        $comuna        = (string) ($row['comuna_destino'] ?? '');
+        $campana       = (string) ($row['nombre_campana'] ?? '');
+
 
         $totalRevistas = $rows->count();
 
@@ -65,9 +67,15 @@ class EtiquetaGrandeService
         $zpl .= "^LL1200\n";
         $zpl .= "^CI28\n";
 
+        // ID etiqueta (correlativo)
+        $zpl .= "^FO50,40^A0N,28,28^FDID: {$this->zplText($idEtiqueta)}^FS\n";
+
+
         // ZONA A – QR
         $zpl .= "^FO600,40^BQN,2,7\n";
         $zpl .= "^FDLA,{$this->zplText($idBulto)}^FS\n";
+        // Texto ID Bulto debajo del QR (fallback manual)
+        $zpl .= "^FO600,220^A0N,28,28^FDID: {$this->zplText($idBulto)}^FS\n";
 
         // ZONA B – DESTINO
         $zpl .= "^FO50,200^A0N,30,30^FDDestino^FS\n";
@@ -75,8 +83,9 @@ class EtiquetaGrandeService
         $zpl .= "^FO50,300^A0N,24,24^FB520,2,4,L^FD{$this->zplText($numeroDestino)}^FS\n";
         $zpl .= "^FO50,360^A0N,24,24^FB520,2,4,L^FD{$this->zplText($dptoDestino)}^FS\n";
 
-        // Comuna
-        $zpl .= "^FO600,240^A0N,36,36^FD{$this->zplText($comuna)}^FS\n";
+        // Comuna destino (destacada)
+        $zpl .= "^FO550,280^A0N,48,48^FD{$this->zplText($comuna)}^FS\n";
+
 
         // Campaña
         $zpl .= "^FO50,430^A0N,24,24^FB700,2,4,L^FD{$this->zplText($campana)}^FS\n";
@@ -109,9 +118,11 @@ class EtiquetaGrandeService
                     break;
                 }
 
+                $grado  = $rows[$rowIndex]['grado'] ?? '';
                 $nombre = $rows[$rowIndex]['nombre'] ?? '';
 
-                $texto = $index . '. ' . $nombre;
+                $texto = $index . '. ' . trim($grado . ' ' . $nombre);
+
 
                 $zpl .= "^FO{$x},{$y}";
                 $zpl .= "^A0N,{$fontSize},{$fontSize}";

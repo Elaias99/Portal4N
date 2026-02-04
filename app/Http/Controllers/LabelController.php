@@ -8,6 +8,9 @@ use App\Exports\LabelsTemplateExport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\EtiquetaGrandeImport;
 use App\Services\EtiquetaGrandeService;
+use ZipArchive;
+use Illuminate\Support\Str;
+
 
 class LabelController extends Controller
 {
@@ -99,22 +102,49 @@ class LabelController extends Controller
         $import = new EtiquetaGrandeImport();
         Excel::import($import, $request->file('file'));
 
-        $rows = $import->rows ?? collect();
+        $rows = ($import->rows ?? collect())->values();
 
-        // Con WithHeadingRow, normalmente los encabezados quedan en minúscula: id, id_bulto, etc.
-        $groups = $rows->groupBy('id');
+        // 1️⃣ Agrupar TODAS las filas por ID (una etiqueta = un ID)
+        $etiquetas = $rows->groupBy('id')->values();
 
-        $zpl = '';
+        // 2️⃣ Partir en bloques de 95 etiquetas
+        $lotes = $etiquetas->chunk(95);
 
-        foreach ($groups as $group) {
-            $zpl .= $service->makeLabel($group);
+        $zipName = 'etiquetas_' . now()->format('Ymd_His') . '.zip';
+        $zipPath = storage_path('app/temp/' . $zipName);
+
+        if (!is_dir(dirname($zipPath))) {
+            mkdir(dirname($zipPath), 0777, true);
         }
 
-        return response($zpl, 200, [
-            'Content-Type'        => 'application/octet-stream',
-            'Content-Disposition' => 'attachment; filename="etiquetas_grandes_' . now()->format('Ymd_His') . '.zpl"',
-        ]);
+        $zip = new \ZipArchive();
+        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            abort(500, 'No se pudo crear el ZIP');
+        }
+
+        foreach ($lotes as $index => $loteEtiquetas) {
+
+            $zpl = '';
+
+            foreach ($loteEtiquetas as $etiquetaRows) {
+                // Cada $etiquetaRows contiene TODAS las filas de un ID
+                $zpl .= $service->makeLabel($etiquetaRows);
+            }
+
+            // lote_1.zpl, lote_2.zpl, etc.
+            $filenameInZip = 'lote_' . ($index + 1) . '.zpl';
+            $zip->addFromString($filenameInZip, $zpl);
+        }
+
+        $zip->close();
+
+        return response()->download($zipPath, $zipName, [
+            'Content-Type' => 'application/zip',
+        ])->deleteFileAfterSend(true);
     }
+
+
+
 
 
 
