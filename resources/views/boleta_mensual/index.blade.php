@@ -675,7 +675,7 @@
                                     <span class="hm-chip {{ $estaVencido ? 'hm-chip-bad' : 'hm-chip-ok' }}">
                                         {{ $estadoActual }}
                                         @if($estaVencido)
-                                            <span class="hm-subtle" style="color:inherit;">(vencido)</span>
+                                            <span class="hm-subtle" style="color:inherit;"></span>
                                         @endif
                                     </span>
                                 </td>
