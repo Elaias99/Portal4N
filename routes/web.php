@@ -631,6 +631,15 @@ Route::post(
 )->name('honorarios.mensual.pago.masivo');
 
 
+Route::post(
+    'honorarios/mensual/pago-masivo/exportar',
+    [HonorarioMensualRecController::class, 'storePagoMasivoExport']
+)->name('honorarios.mensual.pago.masivo.exportar');
+
+
+
+
+
 Route::get(
     'honorarios/mensual/buscar',
     [HonorarioMensualRecController::class, 'buscarHonorarios']
