@@ -472,6 +472,17 @@
                             class="btn btn-outline-secondary px-4">
                                 Limpiar
                             </a>
+
+                            {{-- Nuevo botón Pagar --}}
+                            <button
+                                type="button"
+                                id="btn-pagar-seleccionados"
+                                class="btn btn-success">
+                                Pagar
+                            </button>
+
+
+
                         </div>
                     </div>
 
@@ -630,6 +641,10 @@
 
                     <thead>
                         <tr>
+                            {{-- Checkbox --}}
+                            <th class="hm-nowrap text-center">
+                                <input type="checkbox" id="check-all-honorarios">
+                            </th>
                             <th class="hm-nowrap">Empresa</th>
                             <th class="hm-nowrap">Estado</th>
                             <th class="hm-nowrap">RUT</th>
@@ -663,6 +678,24 @@
                             @endphp
 
                             <tr>
+
+                                {{-- Checkbox --}}
+                                <td class="hm-nowrap text-center">
+                                    @if($saldoPendiente > 0)
+                                        <input type="checkbox"
+                                            class="chk-honorario"
+                                            value="{{ $r->id }}"
+                                            data-id="{{ $r->id }}"
+                                            data-folio="{{ $r->folio }}"
+                                            data-rut="{{ $r->rut_emisor }}"
+                                            data-emisor="{{ $r->razon_social_emisor }}"
+                                            data-saldo="{{ $saldoPendiente }}">
+                                    @else
+                                        <input type="checkbox" disabled>
+                                    @endif
+                                </td>
+
+
                                 {{-- Empresa --}}
                                 <td class="hm-nowrap">
                                     <span class="hm-ellipsis-sm" title="{{ $r->empresa->Nombre }}">
@@ -836,6 +869,8 @@
 
 @include('boleta_mensual._modal_pago_masivo')
 
+
+
 {{-- Script mínimo para el modal reutilizable --}}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -898,6 +933,10 @@ document.addEventListener('DOMContentLoaded', () => {
     tipoSelect.addEventListener('change', toggleServicioInput);
 });
 </script>
+
+
+@vite('resources/js/index.js')
+
 
 
 @endsection

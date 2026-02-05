@@ -19,6 +19,8 @@ use App\Models\Pago;
 use App\Models\ProntoPago;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\HonorariosPagoMasivoExport;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 
 
@@ -521,9 +523,6 @@ class HonorarioMensualRecController extends Controller
 
 
 
-
-
-
     public function storeCruce(Request $request, HonorarioMensualRec $honorario)
     {
         $request->validate([
@@ -577,9 +576,6 @@ class HonorarioMensualRecController extends Controller
     }
 
 
-
-
-
     public function storePago(Request $request, HonorarioMensualRec $honorario)
     {
         $request->validate([
@@ -627,8 +623,6 @@ class HonorarioMensualRecController extends Controller
     }
 
 
-
-
     public function storePagoMasivo(Request $request)
     {
         $request->validate([
@@ -647,11 +641,16 @@ class HonorarioMensualRecController extends Controller
                     continue;
                 }
 
-                // 🔒 Si ya tiene pago, se ignora
-                if ($honorario->pagos()->exists()) {
+                // ❌ NO elegible para pago masivo
+                if (
+                    $honorario->pagos()->exists() ||
+                    $honorario->prontoPagos()->exists() ||
+                    $honorario->saldo_pendiente <= 0
+                ) {
                     continue;
                 }
 
+                // 📸 Snapshot previo
                 $estadoAnterior = $honorario->estado_financiero_final;
                 $saldoAnterior  = $honorario->saldo_pendiente;
 
@@ -696,6 +695,7 @@ class HonorarioMensualRecController extends Controller
             ->route('honorarios.mensual.index')
             ->with('success', 'Pago masivo registrado correctamente.');
     }
+
 
 
 
@@ -750,16 +750,16 @@ class HonorarioMensualRecController extends Controller
                 // REGISTRAR MOVIMIENTO
                 // =========================
                 $honorario->movimientos()->create([
-                    'usuario_id'      => Auth::id(),
-                    'estado_anterior' => $estadoAnterior,
-                    'nuevo_estado'    => 'Pago',
-                    'fecha_cambio'    => now(),
-                    'tipo_movimiento' => 'Pago masivo con exportación',
-                    'descripcion'     => 'Pago registrado mediante operación masiva con exportación.',
-                    'datos_anteriores'=> [
+                    'usuario_id'       => Auth::id(),
+                    'estado_anterior'  => $estadoAnterior,
+                    'nuevo_estado'     => 'Pago',
+                    'fecha_cambio'     => now(),
+                    'tipo_movimiento'  => 'Pago masivo con exportación',
+                    'descripcion'      => 'Pago registrado mediante operación masiva con exportación.',
+                    'datos_anteriores' => [
                         'saldo' => $saldoAnterior,
                     ],
-                    'datos_nuevos'    => [
+                    'datos_nuevos'     => [
                         'saldo' => 0,
                     ],
                 ]);
@@ -770,10 +770,36 @@ class HonorarioMensualRecController extends Controller
         });
 
         // =========================
-        // EXPORTAR EXCEL
+        // GENERAR TOKEN + CACHE
         // =========================
-        return \Maatwebsite\Excel\Facades\Excel::download(
-            new \App\Exports\HonorariosPagoMasivoExport($honorariosProcesados),
+        $token = (string) Str::uuid();
+
+        Cache::put(
+            "pago_masivo_excel:$token",
+            $honorariosProcesados,
+            now()->addMinutes(5)
+        );
+
+        // =========================
+        // RESPUESTA AJAX
+        // =========================
+        return response()->json([
+            'success' => true,
+            'download_url' => route('honorarios.mensual.pago.masivo.descargar', $token),
+        ]);
+    }
+
+
+    public function downloadPagoMasivoExcel(string $token)
+    {
+        $honorariosProcesados = Cache::get("pago_masivo_excel:$token");
+
+        abort_if(!$honorariosProcesados, 404, 'Exportación no disponible o expirada.');
+
+        Cache::forget("pago_masivo_excel:$token"); // opcional: que sea de 1 uso
+
+        return Excel::download(
+            new HonorariosPagoMasivoExport($honorariosProcesados),
             'honorarios_pago_masivo.xlsx'
         );
     }
@@ -1023,9 +1049,6 @@ class HonorarioMensualRecController extends Controller
 
         return back()->with('success', 'Abono eliminado correctamente.');
     }
-
-
-
 
     public function revertirCruce(int $cruceId)
     {

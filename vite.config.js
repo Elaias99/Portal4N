@@ -18,6 +18,7 @@ export default defineConfig({
                 'resources/sass/app.scss',
                 'resources/js/app.js',
                 'resources/js/reports/delivery-links.js',
+                'resources/js/index.js',
 
             ],
             refresh: true,
