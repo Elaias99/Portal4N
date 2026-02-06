@@ -228,12 +228,12 @@
                 Movimientos
             </a>
 
-            <button type="button"
+            {{-- <button type="button"
                     class="btn btn-outline-secondary"
                     data-bs-toggle="modal"
                     data-bs-target="#modalPagoMasivo">
                 Pagos Masivos
-            </button>
+            </button> --}}
         </div>
     </div>
 
