@@ -46,47 +46,60 @@ class HonorariosPagoMasivoExport implements
 
         $cobranza = $honorario->cobranzaCompra;
 
-        // Cuenta origen
+        // =========================
+        // CUENTA ORIGEN
+        // =========================
         $cuentaOrigen = '0';
-        $moneda = 'CLP';
+        $moneda       = 'CLP';
 
-        // Cuenta destino
-        $cuentaDestino = $cobranza->numero_cuenta ?? '';
+        // =========================
+        // CUENTA DESTINO
+        // =========================
+        $cuentaDestino = $cobranza?->numero_cuenta ?? '';
 
-        // Código banco (2 dígitos)
+        // =========================
+        // BANCO
+        // =========================
         $codigoBanco = $cobranza?->banco_id
             ? str_pad($cobranza->banco_id, 2, '0', STR_PAD_LEFT)
             : '';
 
-        // Beneficiario
+        // =========================
+        // BENEFICIARIO
+        // =========================
         $rutBeneficiario = $cobranza?->rut_cliente
             ? preg_replace('/[^0-9kK]/', '', $cobranza->rut_cliente)
             : '';
 
-        $nombreBeneficiario = $cobranza->razon_social ?? '';
+        $nombreBeneficiario = $cobranza?->razon_social ?? '';
 
-        // Monto
+        // =========================
+        // MONTO
+        // =========================
         $monto = (int) $honorario->monto_pagado;
 
-        // Glosa
-        $glosa = "Pago honorario folio {$honorario->folio}";
+        // =========================
+        // GLOSA (ÚNICA FUENTE)
+        // =========================
+        $glosa = "Pago honorario {$rutBeneficiario} folio {$honorario->folio}";
 
         return [
-            $cuentaOrigen,
-            $moneda,
-            $cuentaDestino,
-            $moneda,
-            $codigoBanco,
-            $rutBeneficiario,
-            $nombreBeneficiario,
-            $monto,
-            $glosa,
-            null,
-            null,
-            $glosa,
-            null,
+            $cuentaOrigen,        // Cuenta origen
+            $moneda,              // Moneda origen
+            $cuentaDestino,       // Cuenta destino
+            $moneda,              // Moneda destino
+            $codigoBanco,         // Código banco destino
+            $rutBeneficiario,     // RUT beneficiario
+            $nombreBeneficiario,  // Nombre beneficiario
+            $monto,               // Monto transferencia
+            $glosa,               // Glosa personalizada transferencia
+            null,                 // Correo beneficiario
+            null,                 // Mensaje correo beneficiario
+            $glosa,               // Glosa cartola originador
+            $glosa,               // Glosa cartola beneficiario (MISMA glosa)
         ];
     }
+
 
     /**
      * Encabezados (idénticos al archivo del otro sistema)
