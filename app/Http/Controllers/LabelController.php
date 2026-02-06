@@ -142,6 +142,9 @@ class LabelController extends Controller
                 'lote_' . ($index + 1) . '.pdf',
                 $pdfBinary
             );
+            
+            // PAUSA PARA EVITAR RATE LIMIT DE LABELARY
+            sleep(1);
         }
 
         $zip->close();
