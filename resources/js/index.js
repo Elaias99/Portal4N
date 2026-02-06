@@ -22,9 +22,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =========================
-    // ESTADO INTERNO
+    // STORAGE (FUENTE DE VERDAD)
     // =========================
-    const seleccionados = new Map(); // id => data
+    const STORAGE_KEY = 'honorarios_seleccionados';
+
+    function loadSeleccionados() {
+        try {
+            const raw = sessionStorage.getItem(STORAGE_KEY);
+            if (!raw) return new Map();
+            return new Map(Object.entries(JSON.parse(raw)));
+        } catch (e) {
+            console.error('Error cargando seleccionados', e);
+            return new Map();
+        }
+    }
+
+    function saveSeleccionados(map) {
+        const obj = Object.fromEntries(map);
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+    }
+
+    function clearSeleccionados() {
+        sessionStorage.removeItem(STORAGE_KEY);
+    }
+
+    // =========================
+    // ESTADO INTERNO (PERSISTENTE)
+    // =========================
+    const seleccionados = loadSeleccionados();
+
+    // =========================
+    // REHIDRATAR CHECKBOXES
+    // =========================
+    document.querySelectorAll('.chk-honorario').forEach(chk => {
+        if (seleccionados.has(chk.value)) {
+            chk.checked = true;
+        }
+    });
 
     // =========================
     // CHECKBOXES INDIVIDUALES
@@ -48,6 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
             seleccionados.delete(id);
             checkAll.checked = false;
         }
+
+        saveSeleccionados(seleccionados);
     });
 
     // =========================
@@ -73,6 +109,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         });
+
+        saveSeleccionados(seleccionados);
     });
 
     // =========================
@@ -85,7 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Bootstrap 4 → jQuery
         $('#modalPagoMasivo').modal('show');
     });
 
@@ -102,7 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         seleccionados.forEach(h => {
 
-            // Visual
             const div = document.createElement('div');
             div.className = 'border rounded p-2 mb-2 bg-light';
 
@@ -115,7 +151,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             bloqueResumen.appendChild(div);
 
-            // Hidden input
             const input = document.createElement('input');
             input.type  = 'hidden';
             input.name  = 'honorarios[]';
@@ -126,21 +161,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =========================
-    // AL CERRAR MODAL: LIMPIAR TODO
+    // AL CERRAR MODAL (SIN CONFIRMAR)
     // =========================
     $('#modalPagoMasivo').on('hidden.bs.modal', function () {
 
         bloqueBuscador.style.display = '';
         inputsWrap.innerHTML = '';
         bloqueResumen.innerHTML = '';
-        seleccionados.clear();
 
-        document.querySelectorAll('.chk-honorario').forEach(chk => {
-            chk.checked = false;
-        });
-
-        checkAll.checked = false;
+        // 👉 AQUÍ es donde corresponde limpiar y refrescar
+        sessionStorage.removeItem('honorarios_seleccionados');
+        location.reload();
     });
+
 
 });
 
@@ -165,27 +198,26 @@ $('#form-pago-masivo').on('submit', function (e) {
                 return;
             }
 
-            // 1️⃣ Cerrar modal
-            $('#modalPagoMasivo').modal('hide');
-
-            // 2️⃣ Refrescar vista para ver cambios
-            setTimeout(() => {
-                location.reload();
-            }, 300);
-
-            // 3️⃣ Descargar Excel
+            // 1️⃣ Descargar Excel
             if (response.download_url) {
                 window.location.href = response.download_url;
             }
-        },
 
-        error(xhr) {
-            console.error(xhr);
-            alert('Ocurrió un error al procesar el pago masivo.');
+            // 2️⃣ Feedback visual (opcional pero recomendado)
+            const footer = document.querySelector('#modalPagoMasivo .modal-footer');
+
+            if (!document.getElementById('msg-pago-exitoso')) {
+                const msg = document.createElement('div');
+                msg.id = 'msg-pago-exitoso';
+                msg.className = 'alert alert-success w-100 mt-2';
+                msg.innerText = 'Pagos registrados correctamente. El archivo Excel fue generado.';
+                footer.prepend(msg);
+            }
+
+            // ❌ NO cerrar modal
+            // ❌ NO limpiar sessionStorage aquí
+            // ❌ NO refrescar la vista aquí
         }
+
     });
 });
-
-
-
-
