@@ -10,6 +10,7 @@ use App\Imports\EtiquetaGrandeImport;
 use App\Services\EtiquetaGrandeService;
 use ZipArchive;
 use Illuminate\Support\Str;
+use App\Services\ZplToPdfService;
 
 
 class LabelController extends Controller
@@ -89,7 +90,7 @@ class LabelController extends Controller
 
 
 
-    public function uploadEtiquetaGrande(Request $request, EtiquetaGrandeService $service)
+    public function uploadEtiquetaGrande(Request $request, EtiquetaGrandeService $service ,ZplToPdfService $zplToPdfService)
     {
         if ($request->isMethod('get')) {
             return view('labels.etiqueta-grande');
@@ -132,8 +133,15 @@ class LabelController extends Controller
             }
 
             // lote_1.zpl, lote_2.zpl, etc.
-            $filenameInZip = 'lote_' . ($index + 1) . '.zpl';
-            $zip->addFromString($filenameInZip, $zpl);
+            $zip->addFromString('lote_' . ($index + 1) . '.zpl', $zpl);
+            
+            
+            $pdfBinary = $zplToPdfService->convert($zpl);
+
+            $zip->addFromString(
+                'lote_' . ($index + 1) . '.pdf',
+                $pdfBinary
+            );
         }
 
         $zip->close();
