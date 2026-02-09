@@ -4,578 +4,423 @@
 
             {{-- === HEADER === --}}
             <div class="modal-header">
-                <h5 class="modal-title fw-bold" id="modalPagosMasivosLabel">
-                    Pagos Masivos — Selección de Documentos
-                </h5>
+                <div>
+                    <h5 class="modal-title fw-bold" id="modalPagosMasivosLabel">
+                        Pagos Masivos — Resumen de documentos seleccionados
+                    </h5>
+                    <div class="small text-muted">
+                        Seleccionados: <span id="pm-count">0</span>
+                    </div>
+                </div>
+
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
 
             {{-- === BODY === --}}
             <div class="modal-body">
-                {{-- Búsqueda --}}
-                <form id="form-busqueda-pagos" method="GET" onsubmit="buscarDocumentosMasivos(event)">
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-5">
-                            <input type="text" id="filtro" name="filtro" class="form-control form-control-sm"
-                                placeholder="Buscar por folio o razón social..." required>
-                        </div>
-                        <div class="col-md-3">
-                            <button type="submit" class="btn btn-primary btn-sm w-100">
-                                <i class="bi bi-search"></i> Buscar
-                            </button>
-                        </div>
-                    </div>
-                </form>
 
+                {{-- Mensaje cuando no hay selección --}}
+                <div id="pm-sin-seleccion" class="alert alert-warning d-none mb-3">
+                    No hay documentos seleccionados en la tabla. Marca al menos uno y vuelve a abrir el pago masivo.
+                </div>
 
-
-
-
-
-
-                {{-- Resultados de búsqueda --}}
+                {{-- Form POST al controlador --}}
                 <form id="form-pagos-masivos" action="{{ route('documentos.pagos.masivo') }}" method="POST">
-
-
-
-
                     @csrf
 
-                    <div id="tabla-resultados" class="table-responsive mb-3" style="display:none;">
+                    <div class="table-responsive mb-3">
                         <table class="table table-sm table-hover align-middle">
-                            <thead>
+                            <thead class="table-light">
                                 <tr>
-                                    <th><input type="checkbox" id="checkAll" onclick="toggleSelectAll(this)"></th>
                                     <th>Folio</th>
                                     <th>Razón Social</th>
                                     <th>RUT</th>
-                                    <th>Monto Total</th>
-                                    <th>Operación</th>
-                                    <th>Monto a pagar</th>
-                                    <th>Saldo Pendiente</th>
+                                    <th class="text-end">Monto Total</th>
+                                    <th style="width:160px;">Operación</th>
+                                    <th style="width:180px;">Monto a pagar</th>
+                                    <th class="text-end">Saldo Pendiente</th>
+                                    <th style="width:70px;" class="text-center">Quitar</th>
                                 </tr>
                             </thead>
-                            <tbody id="resultados-body">
-                                {{-- Aquí se insertarán las filas vía JS --}}
+
+                            <tbody id="pm-body">
+                                {{-- filas por JS --}}
                             </tbody>
                         </table>
                     </div>
 
-
-
-                    {{-- Documentos seleccionados --}}
-                    <div id="contenedor-seleccionados" class="card mb-3" style="display:none;">
-                        <div class="card-header fw-bold small">
-                            Documentos seleccionados para pago
-                        </div>
-                        <div class="card-body p-2">
-                            <ul id="lista-seleccionados" class="list-group list-group-flush"></ul>
-                        </div>
-                    </div>
-
-
-
-
-
-
-
                     {{-- Fecha de pago --}}
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Fecha de pago</label>
-                        <input type="date" name="fecha_pago" class="form-control form-control-sm" required>
-                    </div>
-
-                    <div class="text-end">
-
-
-                        <button type="submit" id="btn-registrar-pagos" class="btn btn-success btn-sm">
-                            <i class="bi bi-check-circle"></i> Registrar Pagos Seleccionados
-                        </button>
-
-
+                        <input type="date" name="fecha_pago" id="pm-fecha-pago" class="form-control form-control-sm" required>
                     </div>
 
                     <div id="contenedor-montos-hidden"></div>
+
+                    <div class="text-end">
+                        <button type="submit" id="btn-registrar-pagos" class="btn btn-success btn-sm">
+                            <i class="bi bi-check-circle"></i> Registrar Pagos Seleccionados
+                        </button>
+                    </div>
                 </form>
 
-                
-
-
-                {{-- Mensaje cuando no hay resultados --}}
-                <div id="sin-resultados" class="text-center text-muted mt-3" style="display:none;">
-                    <i class="bi bi-inbox"></i> No se encontraron documentos.
-                </div>
             </div>
         </div>
     </div>
 </div>
 
-{{-- === SCRIPT === --}}
+{{-- =========================
+     SCRIPT (NUEVO)
+========================= --}}
 <script>
+(() => {
 
+    // Estado interno
+    let documentosSeleccionados = {};
 
-let documentosSeleccionados = {};
+    // Helpers
+    const $ = (sel, root = document) => root.querySelector(sel);
+    const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-/**
- * Buscar documentos pendientes para pagos masivos.
- * Se ejecuta al enviar el formulario dentro del modal.
- */
-function buscarDocumentosMasivos(e) {
-    e.preventDefault();
+    function escapeHtml(str) {
+        return String(str ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
 
-    const filtro = document.getElementById('filtro').value.trim();
-    const tbody = document.getElementById('resultados-body');
-    const tabla = document.getElementById('tabla-resultados');
-    const vacio = document.getElementById('sin-resultados');
-    const spinner = document.getElementById('spinner-busqueda');
+    function fmtCLP(n) {
+        const num = Number(n || 0);
+        return '$' + num.toLocaleString('es-CL');
+    }
 
-    // 🔹 Limpiar resultados anteriores
-    tbody.innerHTML = '';
-    tabla.style.display = 'none';
-    vacio.style.display = 'none';
+    function upsertHiddenDocumento(id) {
+        const cont = $('#contenedor-montos-hidden');
+        if (!cont) return;
 
-    if (!filtro) return;
+        // documentos[] (array)
+        if (!cont.querySelector(`input[name="documentos[]"][value="${id}"]`)) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'documentos[]';
+            input.value = id;
+            cont.appendChild(input);
+        }
+    }
 
-    // 🔹 Mostrar indicador de carga
-    if (spinner) spinner.style.display = 'block';
+    function upsertHiddenOperacion(id, valor) {
+        const cont = $('#contenedor-montos-hidden');
+        if (!cont) return;
 
-    fetch(`/api/documentos/buscar?filtro=${encodeURIComponent(filtro)}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Error HTTP ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Ocultar spinner
-            if (spinner) spinner.style.display = 'none';
+        let input = cont.querySelector(`input[name="operaciones[${id}]"]`);
+        if (!input) {
+            input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = `operaciones[${id}]`;
+            cont.appendChild(input);
+        }
+        input.value = valor;
+    }
 
-            if (!Array.isArray(data) || data.length === 0) {
-                vacio.style.display = 'block';
-                return;
-            }
+    function upsertHiddenMonto(id, valor) {
+        const cont = $('#contenedor-montos-hidden');
+        if (!cont) return;
 
-            tabla.style.display = 'table';
-            vacio.style.display = 'none';
+        let input = cont.querySelector(`input[name="montos[${id}]"]`);
+        if (!input) {
+            input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = `montos[${id}]`;
+            cont.appendChild(input);
+        }
+        input.value = valor;
+    }
 
-            data.forEach(doc => {
+    function removeHiddenFor(id) {
+        const cont = $('#contenedor-montos-hidden');
+        if (!cont) return;
 
+        cont.querySelector(`input[name="documentos[]"][value="${id}"]`)?.remove();
+        cont.querySelector(`input[name="operaciones[${id}]"]`)?.remove();
+        cont.querySelector(`input[name="montos[${id}]"]`)?.remove();
+    }
 
+    // Tomar selección desde la tabla principal
+    function collectFromMainTable() {
+        documentosSeleccionados = {};
 
-            const fila = `
-            <tr>
+        const checks = $$('.check-documento:checked');
+        checks.forEach(cb => {
+            const id = String(cb.dataset.id || cb.value);
+
+            const folio = cb.dataset.folio || '';
+            const razon = cb.dataset.razon || '';
+            const rut   = cb.dataset.rut || ''; // opcional
+            const saldo = Number(cb.dataset.saldo || 0);
+            const total = Number(cb.dataset.total || 0);
+
+            // Default: pago total
+            documentosSeleccionados[id] = {
+                id,
+                folio,
+                razon,
+                rut,
+                saldoInicial: saldo,
+                montoTotal: total,
+                operacion: 'pago',
+                monto: saldo
+            };
+        });
+    }
+
+    function renderResumen() {
+        const tbody = $('#pm-body');
+        const countEl = $('#pm-count');
+        const alertaSin = $('#pm-sin-seleccion');
+        const btn = $('#btn-registrar-pagos');
+        const hidden = $('#contenedor-montos-hidden');
+
+        if (!tbody || !countEl || !alertaSin || !btn || !hidden) return;
+
+        tbody.innerHTML = '';
+        hidden.innerHTML = '';
+
+        const ids = Object.keys(documentosSeleccionados);
+        countEl.textContent = String(ids.length);
+
+        if (ids.length === 0) {
+            alertaSin.classList.remove('d-none');
+            btn.disabled = true;
+            return;
+        }
+
+        alertaSin.classList.add('d-none');
+        btn.disabled = false;
+
+        ids.forEach(id => {
+            const doc = documentosSeleccionados[id];
+
+            // Hidden base
+            upsertHiddenDocumento(id);
+            upsertHiddenOperacion(id, doc.operacion);
+            upsertHiddenMonto(id, doc.monto);
+
+            const tr = document.createElement('tr');
+
+            tr.innerHTML = `
+                <td class="fw-semibold">${escapeHtml(doc.folio)}</td>
+                <td class="text-start">${escapeHtml(doc.razon)}</td>
+                <td>${escapeHtml(doc.rut)}</td>
+                <td class="text-end">${fmtCLP(doc.montoTotal)}</td>
+
                 <td>
-                    <input type="checkbox"
-                        onchange="toggleDocumento(this)"
-                        data-id="${doc.id}"
-                        data-folio="${doc.folio}"
-                        data-razon="${doc.razon_social}"
-                        data-saldo="${doc.saldo_pendiente}">
-                </td>
-
-                <td>${doc.folio ?? ''}</td>
-                <td>${doc.razon_social ?? ''}</td>
-                <td>${doc.rut_proveedor ?? ''}</td>
-
-                <td>$${Number(doc.monto_total || 0).toLocaleString('es-CL')}</td>
-
-                <!-- ✅ NUEVO: selector de operación por documento -->
-                <td style="width:160px;">
-                    <select class="form-select form-select-sm op-doc"
-                        data-id="${doc.id}"
-                        onchange="onOperacionChange(this)"
-                        disabled>
+                    <select class="form-select form-select-sm pm-op" data-id="${id}">
                         <option value="pago" selected>Pago total</option>
                         <option value="abono">Abono</option>
                     </select>
                 </td>
 
-                <td style="width:160px;">
+                <td>
                     <input type="number"
-                        class="form-control form-control-sm monto-abono"
+                        class="form-control form-control-sm pm-monto"
+                        data-id="${id}"
                         min="1"
-                        max="${doc.saldo_pendiente}"
+                        max="${doc.saldoInicial}"
                         step="1"
-                        data-id="${doc.id}"
-                        value="${doc.saldo_pendiente}"
-                        disabled>
+                        value="${doc.monto}"
+                        disabled
+                    >
                 </td>
 
-                <td>$${Number(doc.saldo_pendiente || 0).toLocaleString('es-CL')}</td>
-            </tr>
+                <td class="text-end">${fmtCLP(doc.saldoInicial)}</td>
+
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger pm-quitar" data-id="${id}">
+                        ✕
+                    </button>
+                </td>
             `;
 
+            tbody.appendChild(tr);
+        });
+    }
 
-
-
-
-
-
-                tbody.insertAdjacentHTML('beforeend', fila);
-            });
-        })
-
-
-}
-
-/**
- * Seleccionar o deseleccionar todos los checkboxes de la tabla.
- */
-function toggleSelectAll(source) {
-    const checkboxes = document.querySelectorAll('#resultados-body input[type="checkbox"]');
-
-    checkboxes.forEach(cb => {
-        cb.checked = source.checked;
-        toggleDocumento(cb);
-    });
-}
-
-
-
-function toggleDocumento(checkbox) {
-    const id = checkbox.dataset.id;
-
-    const inputMonto = document.querySelector(`.monto-abono[data-id="${id}"]`);
-    const selectOp  = document.querySelector(`.op-doc[data-id="${id}"]`);
-
-    if (checkbox.checked) {
-
-
-
-        const saldoInicial = Number(checkbox.dataset.saldo || 0);
-        const operacionActual = selectOp?.value || 'pago';
-        const montoActual =
-            operacionActual === 'abono'
-                ? Number(inputMonto?.value || 0)
-                : saldoInicial;
-
-        documentosSeleccionados[id] = {
-            id,
-            folio: checkbox.dataset.folio,
-            razon: checkbox.dataset.razon,
-            saldoInicial,
-            operacion: operacionActual,
-            monto: montoActual
-        };
-
-
-
-
-
-        // habilitar select operación
-        if (selectOp) {
-            selectOp.disabled = false;
-            upsertHiddenOperacion(id, selectOp.value);
-        }
-
-        // habilitar monto solo si es abono
-        if (inputMonto) {
-            inputMonto.disabled = selectOp?.value !== 'abono';
-
-            if (selectOp?.value === 'abono') {
-                upsertHiddenMonto(id, inputMonto.value);
-            }
-        }
-
-
-    } else {
-        // ❌ quitar selección
+    function quitarDocumento(id) {
+        // eliminar interno
         delete documentosSeleccionados[id];
-
-        // eliminar hidden inputs
-        document
-            .querySelector(`#contenedor-montos-hidden input[name="montos[${id}]"]`)
-            ?.remove();
-
-        document
-            .querySelector(`#contenedor-montos-hidden input[name="operaciones[${id}]"]`)
-            ?.remove();
-
-        // deshabilitar inputs visibles
-        if (inputMonto) inputMonto.disabled = true;
-        if (selectOp)  selectOp.disabled  = true;
-    }
-
-
-    renderSeleccionados();
-}
-
-
-
-
-
-
-function onOperacionChange(select) {
-    const id = select.dataset.id;
-    const op = select.value; // "pago" | "abono"
-
-    const checkbox = document.querySelector(
-        `#resultados-body input[type="checkbox"][data-id="${id}"]`
-    );
-    const inputMonto = document.querySelector(
-        `.monto-abono[data-id="${id}"]`
-    );
-
-    // Guardar operación en hidden
-    upsertHiddenOperacion(id, op);
-
-    // Si el documento no está seleccionado, no hacemos nada más
-    if (!checkbox?.checked || !documentosSeleccionados[id]) {
-        return;
-    }
-
-    documentosSeleccionados[id].operacion = op;
-
-    if (op === 'pago') {
-        const saldo = documentosSeleccionados[id].saldoInicial;
-
-        // Estado interno
-        documentosSeleccionados[id].monto = saldo;
-
-        // Input visible
-        if (inputMonto) {
-            inputMonto.value = saldo;
-            inputMonto.disabled = true;
-        }
-
-        // Hidden
-        upsertHiddenMonto(id, saldo);
-
-    } else { // abono
-        const monto = Number(inputMonto?.value || 0);
-
-        documentosSeleccionados[id].monto = monto;
-
-        if (inputMonto) {
-            inputMonto.disabled = false;
-        }
-
-        upsertHiddenMonto(id, monto);
-    }
-
-    renderSeleccionados();
-}
-
-
-
-
-
-function renderSeleccionados() {
-    const contenedor = document.getElementById('contenedor-seleccionados');
-    const lista = document.getElementById('lista-seleccionados');
-
-    lista.innerHTML = '';
-
-    const ids = Object.keys(documentosSeleccionados);
-
-    if (ids.length === 0) {
-        contenedor.style.display = 'none';
-        return;
-    }
-
-    contenedor.style.display = 'block';
-
-    ids.forEach(id => {
-        const doc = documentosSeleccionados[id];
-
-        const operacionTexto =
-            doc.operacion === 'abono' ? 'Abono' : 'Pago';
-
-        const monto = doc.monto;
-        const saldoFinal =
-            doc.operacion === 'pago'
-                ? 0
-                : Math.max(doc.saldoInicial - monto, 0);
-
-        const li = document.createElement('li');
-        li.className =
-            'list-group-item d-flex justify-content-between align-items-start small';
-
-        li.innerHTML = `
-            <div>
-                <div class="fw-semibold">
-                    ${doc.folio} — ${doc.razon}
-                </div>
-                <div class="text-muted">
-                    ${operacionTexto}
-                    | $${monto.toLocaleString('es-CL')}
-                    | Saldo: $${doc.saldoInicial.toLocaleString('es-CL')}
-                    → $${saldoFinal.toLocaleString('es-CL')}
-                </div>
-            </div>
-
-            <button type="button"
-                class="btn btn-sm btn-outline-danger"
-                onclick="quitarDocumento(${id})">
-                ✕
-            </button>
-
-            <input type="hidden" name="documentos[]" value="${id}">
-        `;
-
-        lista.appendChild(li);
-    });
-}
-
-
-
-
-function quitarDocumento(id) {
-    delete documentosSeleccionados[id];
-
-    document.querySelectorAll(
-        `input[type="checkbox"][data-id="${id}"]`
-    ).forEach(cb => cb.checked = false);
-
-    const inputMonto = document.querySelector(`.monto-abono[data-id="${id}"]`);
-    if (inputMonto) {
-        inputMonto.disabled = true;
-    }
-
-    renderSeleccionados();
-}
-
-function upsertHiddenMonto(id, valor) {
-    const contenedor = document.getElementById('contenedor-montos-hidden');
-
-    let input = contenedor.querySelector(`input[name="montos[${id}]"]`);
-
-    if (!input) {
-        input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = `montos[${id}]`;
-        contenedor.appendChild(input);
-    }
-
-    input.value = valor;
-}
-
-
-function upsertHiddenOperacion(id, valor) {
-    const contenedor = document.getElementById('contenedor-montos-hidden');
-
-    let input = contenedor.querySelector(`input[name="operaciones[${id}]"]`);
-
-    if (!input) {
-        input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = `operaciones[${id}]`;
-        contenedor.appendChild(input);
-    }
-
-    input.value = valor;
-}
-
-
-
-document.addEventListener('input', function (e) {
-    if (!e.target.classList.contains('monto-abono')) return;
-
-    const id = e.target.dataset.id; // 👈 ESTA LÍNEA FALTABA
-    const valor = Number(e.target.value || 0);
-
-    upsertHiddenMonto(id, valor);
-
-    if (documentosSeleccionados[id]) {
-        documentosSeleccionados[id].monto = valor;
-    }
-
-    renderSeleccionados();
-});
-
-
-
-
-
-
-
-
-
-
-</script>
-
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-    const form = document.getElementById('form-pagos-masivos');
-    const btn  = document.getElementById('btn-registrar-pagos');
-
-    if (!form) return;
-
-    form.addEventListener('submit', function (e) {
-        e.preventDefault(); // detener submit normal
-
-        renderSeleccionados();
-
-        btn.disabled = true;
-        btn.innerHTML = 'Procesando pagos...';
-
-        const formData = new FormData(form);
-
-        // 1️⃣ Registrar pagos (POST)
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(res => {
-            if (!res.ok) throw new Error('Error registrando pagos');
-            return res.json();
-        })
-
-
-        .then(data => {
-            if (!data.ok) {
-                throw new Error('Respuesta inválida');
-            }
-
-            // ✅ NUEVO: descargar un archivo por empresa
-            if (Array.isArray(data.downloads)) {
-                data.downloads.forEach((item, index) => {
-                    setTimeout(() => {
-                        window.location.href = item.url;
-                    }, index * 800); // pequeño delay para evitar colisiones
-                });
-            }
-
-            // Feedback visual
-            if (!document.getElementById('msg-pagos-ok')) {
-                const msg = document.createElement('div');
-                msg.id = 'msg-pagos-ok';
-                msg.className = 'alert alert-success mt-3';
-                msg.innerText =
-                    'Pagos procesados correctamente. Se generaron los archivos por empresa.';
-                form.prepend(msg);
-            }
-
-            btn.disabled = false;
-            btn.innerHTML = 'Registrar Pagos Seleccionados';
+        removeHiddenFor(id);
+
+        // desmarcar checkbox en tabla principal (si está visible)
+        $$('.check-documento').forEach(cb => {
+            const cbId = String(cb.dataset.id || cb.value);
+            if (cbId === String(id)) cb.checked = false;
         });
 
+        renderResumen();
+    }
 
+    // Events del modal
+    document.addEventListener('DOMContentLoaded', () => {
+        const modalEl = $('#modalPagosMasivos');
+        const form = $('#form-pagos-masivos');
+        const btn  = $('#btn-registrar-pagos');
+        const fecha = $('#pm-fecha-pago');
 
+        if (!modalEl) return;
+
+        // Al abrir modal: cargar selección desde la tabla y renderizar
+        modalEl.addEventListener('show.bs.modal', () => {
+            // set fecha hoy por defecto si está vacío
+            if (fecha && !fecha.value) {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                fecha.value = `${yyyy}-${mm}-${dd}`;
+            }
+
+            collectFromMainTable();
+            renderResumen();
+
+            // reset mensaje success anterior si existe
+            $('#msg-pagos-ok')?.remove();
+            $('#msg-pagos-error')?.remove();
+
+            if (btn) {
+                btn.disabled = Object.keys(documentosSeleccionados).length === 0;
+                btn.innerHTML = '<i class="bi bi-check-circle"></i> Registrar Pagos Seleccionados';
+            }
+        });
+
+        // Delegación: cambio operación / monto / quitar
+        modalEl.addEventListener('change', (e) => {
+            const opSel = e.target.closest('.pm-op');
+            if (opSel) {
+                const id = opSel.dataset.id;
+                const op = opSel.value;
+
+                if (!documentosSeleccionados[id]) return;
+
+                documentosSeleccionados[id].operacion = op;
+                upsertHiddenOperacion(id, op);
+
+                const inputMonto = modalEl.querySelector(`.pm-monto[data-id="${id}"]`);
+                if (!inputMonto) return;
+
+                if (op === 'pago') {
+                    documentosSeleccionados[id].monto = documentosSeleccionados[id].saldoInicial;
+                    inputMonto.value = documentosSeleccionados[id].saldoInicial;
+                    inputMonto.disabled = true;
+                    upsertHiddenMonto(id, documentosSeleccionados[id].saldoInicial);
+                } else {
+                    inputMonto.disabled = false;
+                    const v = Number(inputMonto.value || 0);
+                    documentosSeleccionados[id].monto = v;
+                    upsertHiddenMonto(id, v);
+                }
+            }
+        });
+
+        modalEl.addEventListener('input', (e) => {
+            const montoInp = e.target.closest('.pm-monto');
+            if (!montoInp) return;
+
+            const id = montoInp.dataset.id;
+            if (!documentosSeleccionados[id]) return;
+
+            let v = Number(montoInp.value || 0);
+
+            // clamp básico por UX
+            const max = Number(montoInp.max || 0);
+            if (max > 0 && v > max) v = max;
+            if (v < 1) v = 1;
+
+            montoInp.value = v;
+
+            documentosSeleccionados[id].monto = v;
+            upsertHiddenMonto(id, v);
+        });
+
+        modalEl.addEventListener('click', (e) => {
+            const btnQ = e.target.closest('.pm-quitar');
+            if (btnQ) {
+                quitarDocumento(btnQ.dataset.id);
+                return;
+            }
+        });
+
+        // Submit por fetch (igual que antes)
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                if (!btn) return;
+
+                // Si no hay docs, no enviar
+                if (Object.keys(documentosSeleccionados).length === 0) return;
+
+                btn.disabled = true;
+                btn.innerHTML = 'Procesando pagos...';
+
+                const formData = new FormData(form);
+
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(res => {
+                    if (!res.ok) throw new Error('Error registrando pagos');
+                    return res.json();
+                })
+                .then(data => {
+                    if (!data.ok) throw new Error('Respuesta inválida');
+
+                    // descargar x empresa
+                    if (Array.isArray(data.downloads)) {
+                        data.downloads.forEach((item, index) => {
+                            setTimeout(() => {
+                                window.location.href = item.url;
+                            }, index * 800);
+                        });
+                    }
+
+                    // feedback
+                    if (!$('#msg-pagos-ok')) {
+                        const msg = document.createElement('div');
+                        msg.id = 'msg-pagos-ok';
+                        msg.className = 'alert alert-success mt-3';
+                        msg.innerText = 'Pagos procesados correctamente. Se generaron los archivos por empresa.';
+                        form.prepend(msg);
+                    }
+
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-check-circle"></i> Registrar Pagos Seleccionados';
+                })
+                .catch(err => {
+                    $('#msg-pagos-ok')?.remove();
+
+                    if (!$('#msg-pagos-error')) {
+                        const msg = document.createElement('div');
+                        msg.id = 'msg-pagos-error';
+                        msg.className = 'alert alert-danger mt-3';
+                        msg.innerText = err?.message || 'Error procesando pagos.';
+                        form.prepend(msg);
+                    }
+
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-check-circle"></i> Registrar Pagos Seleccionados';
+                });
+            });
+        }
+
+        // Reload al cerrar (igual que antes)
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            window.location.reload();
+        });
     });
 
-});
+})();
 </script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-    const modalEl = document.getElementById('modalPagosMasivos');
-
-    if (!modalEl) return;
-
-    modalEl.addEventListener('hidden.bs.modal', function () {
-        // 🔁 Refrescar solo cuando el usuario cierra el modal
-        window.location.reload();
-    });
-
-});
-</script>
-
-
-

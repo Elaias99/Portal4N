@@ -342,7 +342,8 @@ class PagoDocumentoController extends Controller
 
 
                 $exportPorEmpresa[$empresaId]['empresa'] ??=
-                    optional($documento->empresa)->razon_social ?? 'Empresa';
+                    optional($documento->empresa)->Nombre ?? 'Empresa';
+
 
 
                 $exportPorEmpresa[$empresaId]['items'][] = [

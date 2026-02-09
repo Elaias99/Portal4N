@@ -307,7 +307,7 @@
                 </button>
 
 
-                @if (Auth::id() != 375)
+                {{-- @if (Auth::id() != 375)
                     <button type="button"
                                     class="btn btn-outline-primary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
                                     data-bs-toggle="modal"
@@ -315,7 +315,14 @@
                         <i class="bi bi-cash-stack"></i>
                         <span>Pagos Masivos</span>
                     </button>
-                @endif 
+                @endif --}}
+                
+                
+                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalPagosMasivos">
+                    Pagar
+                </button>
+
+
                 
 
 
@@ -350,6 +357,11 @@
                         
                         <thead class="table-light text-uppercase align-middle">
                             <tr class="small">
+
+                                <th class="text-center" style="width:40px;">
+                                    <input type="checkbox" id="check-all-documentos">
+                                </th>
+
 
                                 {{-- 🏢 Empresa --}}
                                 @include('cobranzas.partials.filtros_compras', [
@@ -473,6 +485,24 @@
 
 
                                 <tr class="small">
+
+
+                                    <td class="text-center">
+                                        @if($doc->saldo_pendiente > 0 && $doc->tipo_documento_id != 61)
+                                            <input type="checkbox"
+                                                class="check-documento"
+                                                value="{{ $doc->id }}"
+                                                data-id="{{ $doc->id }}"
+                                                data-folio="{{ $doc->folio }}"
+                                                data-razon="{{ $doc->razon_social }}"
+                                                data-saldo="{{ $doc->saldo_pendiente }}"
+                                                data-total="{{ $doc->monto_total }}"
+                                            >
+                                        @endif
+                                    </td>
+
+
+
                                     <td>{{ $doc->empresa?->Nombre ?? '—' }}</td>
                                     
                                     <td>
@@ -562,6 +592,31 @@
 
 
 </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const checkAll = document.getElementById('check-all-documentos');
+
+    checkAll?.addEventListener('change', function () {
+        document.querySelectorAll('.check-documento').forEach(cb => {
+            cb.checked = this.checked;
+        });
+    });
+
+    document.addEventListener('change', function (e) {
+        if (!e.target.classList.contains('check-documento')) return;
+
+        if (!e.target.checked && checkAll) {
+            checkAll.checked = false;
+        }
+    });
+
+});
+</script>
+
+
 
 
 <script>
