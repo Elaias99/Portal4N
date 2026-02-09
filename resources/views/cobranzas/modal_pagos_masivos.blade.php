@@ -532,28 +532,50 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error('Respuesta inválida');
             }
 
-            //Descargar Excel (GET)
-            window.location.href = "{{ route('documentos.pagos.masivo.export') }}";
+            // ✅ NUEVO: descargar un archivo por empresa
+            if (Array.isArray(data.downloads)) {
+                data.downloads.forEach((item, index) => {
+                    setTimeout(() => {
+                        window.location.href = item.url;
+                    }, index * 800); // pequeño delay para evitar colisiones
+                });
+            }
 
-            // Cerrar modal y refrescar después
-            setTimeout(() => {
+            // Feedback visual
+            if (!document.getElementById('msg-pagos-ok')) {
+                const msg = document.createElement('div');
+                msg.id = 'msg-pagos-ok';
+                msg.className = 'alert alert-success mt-3';
+                msg.innerText =
+                    'Pagos procesados correctamente. Se generaron los archivos por empresa.';
+                form.prepend(msg);
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = 'Registrar Pagos Seleccionados';
+        });
 
 
-                const modalEl = document.getElementById('modalPagosMasivos');
-
-                if (modalEl) {
-                    const modal = new bootstrap.Modal(modalEl);
-                    modal.hide();
-                }
-
-
-                window.location.reload();
-            }, 2500);
-        })
 
     });
 
 });
 </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const modalEl = document.getElementById('modalPagosMasivos');
+
+    if (!modalEl) return;
+
+    modalEl.addEventListener('hidden.bs.modal', function () {
+        // 🔁 Refrescar solo cuando el usuario cierra el modal
+        window.location.reload();
+    });
+
+});
+</script>
+
 
 

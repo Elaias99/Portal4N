@@ -709,10 +709,6 @@ class HonorarioMensualRecController extends Controller
             'fecha_pago'   => 'required|date|before_or_equal:today',
         ]);
 
-        Log::info('[PAGO MASIVO] IDs recibidos', [
-            'honorarios' => $request->honorarios,
-            'total'      => count($request->honorarios),
-        ]);
 
         /**
          * Estructura:
@@ -727,13 +723,6 @@ class HonorarioMensualRecController extends Controller
             foreach ($request->honorarios as $honorarioId) {
 
                 $honorario = HonorarioMensualRec::with('empresa')->find($honorarioId);
-
-                Log::info('[PAGO MASIVO] Honorario cargado', [
-                    'honorario_id' => $honorario->id,
-                    'empresa_id'   => $honorario->empresa_id,
-                    'empresa'      => optional($honorario->empresa)->Nombre,
-                ]);
-
 
                 if (!$honorario) {
                     continue;
@@ -799,13 +788,6 @@ class HonorarioMensualRecController extends Controller
                     $honorario->fresh()
                 );
 
-
-                Log::info('[PAGO MASIVO] Honorario agrupado', [
-                    'empresa_id' => $empresaId,
-                    'empresa'    => optional($honorario->empresa)->Nombre,
-                    'total_en_empresa' => $honorariosPorEmpresa[$empresaId]->count(),
-                ]);
-
             }
         });
 
@@ -813,13 +795,6 @@ class HonorarioMensualRecController extends Controller
         // GENERAR TOKENS POR EMPRESA
         // =========================
         $downloads = [];
-
-
-        Log::info('[PAGO MASIVO] Resumen agrupación', [
-            'empresas_detectadas' => $honorariosPorEmpresa->keys()->all(),
-            'total_empresas'     => $honorariosPorEmpresa->count(),
-        ]);
-
 
         foreach ($honorariosPorEmpresa as $empresaId => $honorarios) {
 

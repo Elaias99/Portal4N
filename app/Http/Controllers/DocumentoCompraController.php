@@ -221,9 +221,6 @@ class DocumentoCompraController extends Controller
     }
 
 
-
-
-
     public function filtrar(Request $request)
     {
         // === 1️⃣ Validación de parámetros ===
@@ -367,9 +364,6 @@ class DocumentoCompraController extends Controller
             'totalSaldoPendiente'
         ));
     }
-
-
-
 
     /**
      * Importa el archivo Excel RCV_COMPRAS
@@ -523,9 +517,6 @@ class DocumentoCompraController extends Controller
             ->with('error', 'No se encontraron registros válidos para importar.');
     }
 
-
-
-
     public function asignarReferencia(Request $request)
     {
         $request->validate([
@@ -545,8 +536,6 @@ class DocumentoCompraController extends Controller
         return redirect()->route('finanzas_compras.index')
             ->with('success', 'Referencia asignada correctamente.');
     }
-
-
 
     public function asignarReferencias(Request $request)
     {
@@ -576,11 +565,6 @@ class DocumentoCompraController extends Controller
 
         return response()->json(['success' => true]);
     }
-
-
-
-    
-
 
 
     public function export(Request $request)
@@ -713,9 +697,6 @@ class DocumentoCompraController extends Controller
         );
     }
 
-
-
-
     public function exportAll(Request $request)
     {
         // === 1️⃣ Query base ===
@@ -843,12 +824,6 @@ class DocumentoCompraController extends Controller
         );
     }
 
-
-
-
-
-
-
     public function updateEstado(Request $request, $id)
     {
         // 🧩 Validación básica
@@ -893,10 +868,6 @@ class DocumentoCompraController extends Controller
             ->with('success', 'Estado actualizado correctamente.');
     }
 
-
-
-
-
     public function show(DocumentoCompra $documento)
     {
         // Cargar relaciones necesarias para mostrar los detalles del documento
@@ -925,8 +896,6 @@ class DocumentoCompraController extends Controller
         return view('cobranzas.finanzas_compras.detalles', compact('documento', 'proveedores',
     'cobranzasCompras'));
     }
-
-
 
 
 
@@ -996,9 +965,6 @@ class DocumentoCompraController extends Controller
     }
 
 
-
-
-
     public function storeCruce(Request $request, DocumentoCompra $documento)
     {
         // ✅ Validación usando cobranza_compras
@@ -1064,19 +1030,6 @@ class DocumentoCompraController extends Controller
 
         return back()->with('success', 'Cruce registrado correctamente.');
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

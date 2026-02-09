@@ -472,6 +472,12 @@ Route::get(
     [App\Http\Controllers\PagoDocumentoController::class, 'exportPagosMasivos']
 )->name('documentos.pagos.masivo.export');
 
+Route::get(
+    'documentos/pagos/masivo/empresa/{token}',
+    [App\Http\Controllers\PagoDocumentoController::class, 'downloadPagosMasivosEmpresa']
+)->name('documentos.pagos.masivo.empresa.descargar');
+
+
 
 
 

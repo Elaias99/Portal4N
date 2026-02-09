@@ -36,7 +36,7 @@ class PagosMasivosDocumentoCompraExport implements
     /**
      * Colección base del export
      */
-    public function collection()
+    public function collection(): Collection
     {
         Log::info('[PAGOS_MASIVOS] Export collection()', [
             'cantidad_operaciones' => $this->operaciones->count(),
@@ -46,11 +46,10 @@ class PagosMasivosDocumentoCompraExport implements
     }
 
     /**
-     * Mapeo fila por fila (UNA FILA = UNA OPERACIÓN)
+     * Mapeo: 1 fila = 1 operación (pago o abono)
      */
     public function map($op): array
     {
-        // Validación defensiva
         if (!isset($op['documento_id'])) {
             Log::warning('[PAGOS_MASIVOS] Operación sin documento_id', [
                 'operacion' => $op,
@@ -60,18 +59,10 @@ class PagosMasivosDocumentoCompraExport implements
 
         $documento = DocumentoCompra::with([
             'cobranzaCompra.banco',
-            'cobranzaCompra.tipoCuenta',
         ])->find($op['documento_id']);
 
-        if (!$documento) {
-            Log::warning('[PAGOS_MASIVOS] Documento no encontrado en export', [
-                'documento_id' => $op['documento_id'],
-            ]);
-            return [];
-        }
-
-        if (!$documento->cobranzaCompra) {
-            Log::warning('[PAGOS_MASIVOS] Documento sin cobranza asociada en export', [
+        if (!$documento || !$documento->cobranzaCompra) {
+            Log::warning('[PAGOS_MASIVOS] Documento inválido para export', [
                 'documento_id' => $op['documento_id'],
             ]);
             return [];
@@ -79,54 +70,66 @@ class PagosMasivosDocumentoCompraExport implements
 
         $cobranza = $documento->cobranzaCompra;
 
-        // Cuenta origen
+        // =========================
+        // CUENTA ORIGEN
+        // =========================
         $cuentaOrigen = '0';
-        $moneda = 'CLP';
+        $moneda       = 'CLP';
 
-        // Destino
+        // =========================
+        // CUENTA DESTINO
+        // =========================
         $cuentaDestino = $cobranza->numero_cuenta ?? '';
+
+        // =========================
+        // BANCO
+        // =========================
         $codigoBanco = $cobranza->banco_id
             ? str_pad($cobranza->banco_id, 2, '0', STR_PAD_LEFT)
             : '';
 
-        // Beneficiario
+        // =========================
+        // BENEFICIARIO
+        // =========================
         $rutBeneficiario = $cobranza->rut_cliente
             ? preg_replace('/[^0-9kK]/', '', $cobranza->rut_cliente)
             : '';
 
         $nombreBeneficiario = $cobranza->razon_social ?? '';
 
-        // Monto REAL (pago o abono)
+        // =========================
+        // MONTO REAL
+        // =========================
         $monto = (int) ($op['monto'] ?? 0);
 
-        // Glosa
-        $tipo = ($op['tipo'] ?? '') === 'abono' ? 'Abono' : 'Pago';
-        $glosa = "{$tipo} documento {$documento->folio}";
+        // =========================
+        // GLOSA ÚNICA (MISMA PARA TODO)
+        // =========================
+        $tipo  = ($op['tipo'] ?? '') === 'abono' ? 'Abono' : 'Pago';
+        $glosa = "{$tipo} documento {$documento->folio} RUT {$rutBeneficiario}";
 
         return [
-            $cuentaOrigen,
-            $moneda,
-            $cuentaDestino,
-            $moneda,
-            $codigoBanco,
-            $rutBeneficiario,
-            $nombreBeneficiario,
-            $monto,
-            $glosa,
-            null,
-            null,
-            $glosa,
-            null,
+            $cuentaOrigen,        // Cuenta origen
+            $moneda,              // Moneda origen
+            $cuentaDestino,       // Cuenta destino
+            $moneda,              // Moneda destino
+            $codigoBanco,         // Código banco destino
+            $rutBeneficiario,     // RUT beneficiario
+            $nombreBeneficiario,  // Nombre beneficiario
+            $monto,               // Monto transferencia
+            $glosa,               // Glosa personalizada transferencia
+            null,                 // Correo beneficiario
+            null,                 // Mensaje correo beneficiario
+            $glosa,               // Glosa cartola originador
+            $glosa,               // ✅ Glosa cartola beneficiario (CORREGIDO)
         ];
     }
 
     /**
-     * Encabezados del Excel
+     * Encabezados (idénticos a honorarios)
      */
     public function headings(): array
     {
-        Log::info('[PAGOS_MASIVOS] Export headings()');
-
         return [
             'Cuenta origen',
             'Moneda origen',
@@ -149,23 +152,21 @@ class PagosMasivosDocumentoCompraExport implements
      */
     public function styles(Worksheet $sheet)
     {
-        Log::info('[PAGOS_MASIVOS] Export styles()');
-
         return [
             1 => [
                 'font' => [
-                    'bold' => true,
+                    'bold'  => true,
                     'color' => ['rgb' => 'FFFFFF'],
                 ],
                 'fill' => [
-                    'fillType' => 'solid',
+                    'fillType'   => 'solid',
                     'startColor' => ['rgb' => '1F2937'],
                 ],
             ],
             'A:Z' => [
                 'alignment' => [
                     'horizontal' => 'center',
-                    'vertical' => 'center',
+                    'vertical'   => 'center',
                 ],
             ],
         ];
