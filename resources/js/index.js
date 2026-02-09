@@ -198,10 +198,23 @@ $('#form-pago-masivo').on('submit', function (e) {
                 return;
             }
 
-            // 1️⃣ Descargar Excel
-            if (response.download_url) {
-                window.location.href = response.download_url;
+            if (Array.isArray(response.downloads)) {
+
+                response.downloads.forEach(file => {
+
+                    const link = document.createElement('a');
+                    link.href = file.download_url;
+                    link.download = '';
+                    document.body.appendChild(link);
+
+                    link.click();
+
+                    document.body.removeChild(link);
+                });
+
             }
+
+
 
             // 2️⃣ Feedback visual (opcional pero recomendado)
             const footer = document.querySelector('#modalPagoMasivo .modal-footer');

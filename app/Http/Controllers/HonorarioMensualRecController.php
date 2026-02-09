@@ -709,20 +709,42 @@ class HonorarioMensualRecController extends Controller
             'fecha_pago'   => 'required|date|before_or_equal:today',
         ]);
 
-        $honorariosProcesados = collect();
+        Log::info('[PAGO MASIVO] IDs recibidos', [
+            'honorarios' => $request->honorarios,
+            'total'      => count($request->honorarios),
+        ]);
 
-        DB::transaction(function () use ($request, &$honorariosProcesados) {
+        /**
+         * Estructura:
+         * [
+         *   empresa_id => Collection<HonorarioMensualRec>
+         * ]
+         */
+        $honorariosPorEmpresa = collect();
+
+        DB::transaction(function () use ($request, &$honorariosPorEmpresa) {
 
             foreach ($request->honorarios as $honorarioId) {
 
-                $honorario = HonorarioMensualRec::find($honorarioId);
+                $honorario = HonorarioMensualRec::with('empresa')->find($honorarioId);
+
+                Log::info('[PAGO MASIVO] Honorario cargado', [
+                    'honorario_id' => $honorario->id,
+                    'empresa_id'   => $honorario->empresa_id,
+                    'empresa'      => optional($honorario->empresa)->Nombre,
+                ]);
+
 
                 if (!$honorario) {
                     continue;
                 }
 
-                // 🔒 Si ya tiene pago, se ignora
-                if ($honorario->pagos()->exists()) {
+                // 🔒 No elegible
+                if (
+                    $honorario->pagos()->exists() ||
+                    $honorario->prontoPagos()->exists() ||
+                    $honorario->saldo_pendiente <= 0
+                ) {
                     continue;
                 }
 
@@ -764,45 +786,109 @@ class HonorarioMensualRecController extends Controller
                     ],
                 ]);
 
-                // 🔹 Guardar para exportar
-                $honorariosProcesados->push($honorario->fresh());
+                // =========================
+                // AGRUPAR POR EMPRESA
+                // =========================
+                $empresaId = $honorario->empresa_id;
+
+                if (!$honorariosPorEmpresa->has($empresaId)) {
+                    $honorariosPorEmpresa[$empresaId] = collect();
+                }
+
+                $honorariosPorEmpresa[$empresaId]->push(
+                    $honorario->fresh()
+                );
+
+
+                Log::info('[PAGO MASIVO] Honorario agrupado', [
+                    'empresa_id' => $empresaId,
+                    'empresa'    => optional($honorario->empresa)->Nombre,
+                    'total_en_empresa' => $honorariosPorEmpresa[$empresaId]->count(),
+                ]);
+
             }
         });
 
         // =========================
-        // GENERAR TOKEN + CACHE
+        // GENERAR TOKENS POR EMPRESA
         // =========================
-        $token = (string) Str::uuid();
+        $downloads = [];
 
-        Cache::put(
-            "pago_masivo_excel:$token",
-            $honorariosProcesados,
-            now()->addMinutes(5)
-        );
+
+        Log::info('[PAGO MASIVO] Resumen agrupación', [
+            'empresas_detectadas' => $honorariosPorEmpresa->keys()->all(),
+            'total_empresas'     => $honorariosPorEmpresa->count(),
+        ]);
+
+
+        foreach ($honorariosPorEmpresa as $empresaId => $honorarios) {
+
+            $token = (string) Str::uuid();
+
+            Cache::put(
+                "pago_masivo_excel:$token",
+                $honorarios,
+                now()->addMinutes(5)
+            );
+
+            $downloads[] = [
+                'empresa_id'   => $empresaId,
+                'empresa'      => optional($honorarios->first()->empresa)->Nombre,
+                'download_url' => route(
+                    'honorarios.mensual.pago.masivo.descargar',
+                    $token
+                ),
+            ];
+        }
 
         // =========================
         // RESPUESTA AJAX
         // =========================
         return response()->json([
-            'success' => true,
-            'download_url' => route('honorarios.mensual.pago.masivo.descargar', $token),
+            'success'   => true,
+            'downloads' => $downloads,
         ]);
     }
+
 
 
     public function downloadPagoMasivoExcel(string $token)
     {
         $honorariosProcesados = Cache::get("pago_masivo_excel:$token");
 
-        abort_if(!$honorariosProcesados, 404, 'Exportación no disponible o expirada.');
+        abort_if(!$honorariosProcesados || $honorariosProcesados->isEmpty(), 404, 'Exportación no disponible o expirada.');
 
-        Cache::forget("pago_masivo_excel:$token"); // opcional: que sea de 1 uso
+        // 🔒 One-shot (opcional)
+        Cache::forget("pago_masivo_excel:$token");
+
+        // =========================
+        // OBTENER EMPRESA
+        // =========================
+        $honorario = $honorariosProcesados->first();
+        $honorario->loadMissing('empresa');
+
+        $nombreEmpresa = $honorario->empresa?->Nombre ?? 'Empresa';
+
+        // Normalizar nombre empresa para archivo
+        $nombreEmpresaArchivo = str_replace(
+            ' ',
+            '_',
+            preg_replace('/[^A-Za-z0-9\s]/', '', $nombreEmpresa)
+        );
+
+        // =========================
+        // NOMBRE ARCHIVO
+        // =========================
+        $fecha = now()->format('Y-m-d');
+
+        $nombreArchivo = "{$nombreEmpresaArchivo}_honorarios_pago_masivo_{$fecha}.xlsx";
 
         return Excel::download(
             new HonorariosPagoMasivoExport($honorariosProcesados),
-            'honorarios_pago_masivo.xlsx'
+            $nombreArchivo
         );
     }
+
 
 
 
