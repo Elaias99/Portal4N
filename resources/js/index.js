@@ -180,57 +180,57 @@ document.addEventListener('DOMContentLoaded', () => {
 // =========================
 // SUBMIT PAGO MASIVO (AJAX)
 // =========================
-$('#form-pago-masivo').on('submit', function (e) {
-    e.preventDefault();
+// $('#form-pago-masivo').on('submit', function (e) {
+//     e.preventDefault();
 
-    const form = $(this);
+//     const form = $(this);
 
-    $.ajax({
-        url: form.attr('action'),
-        method: 'POST',
-        data: form.serialize(),
-        dataType: 'json',
+//     $.ajax({
+//         url: form.attr('action'),
+//         method: 'POST',
+//         data: form.serialize(),
+//         dataType: 'json',
 
-        success(response) {
+//         success(response) {
 
-            if (!response.success) {
-                alert('No se pudo procesar el pago masivo.');
-                return;
-            }
+//             if (!response.success) {
+//                 alert('No se pudo procesar el pago masivo.');
+//                 return;
+//             }
 
-            if (Array.isArray(response.downloads)) {
+//             if (Array.isArray(response.downloads)) {
 
-                response.downloads.forEach(file => {
+//                 response.downloads.forEach(file => {
 
-                    const link = document.createElement('a');
-                    link.href = file.download_url;
-                    link.download = '';
-                    document.body.appendChild(link);
+//                     const link = document.createElement('a');
+//                     link.href = file.download_url;
+//                     link.download = '';
+//                     document.body.appendChild(link);
 
-                    link.click();
+//                     link.click();
 
-                    document.body.removeChild(link);
-                });
+//                     document.body.removeChild(link);
+//                 });
 
-            }
+//             }
 
 
 
-            // 2️⃣ Feedback visual (opcional pero recomendado)
-            const footer = document.querySelector('#modalPagoMasivo .modal-footer');
+//             // 2️⃣ Feedback visual (opcional pero recomendado)
+//             const footer = document.querySelector('#modalPagoMasivo .modal-footer');
 
-            if (!document.getElementById('msg-pago-exitoso')) {
-                const msg = document.createElement('div');
-                msg.id = 'msg-pago-exitoso';
-                msg.className = 'alert alert-success w-100 mt-2';
-                msg.innerText = 'Pagos registrados correctamente. El archivo Excel fue generado.';
-                footer.prepend(msg);
-            }
+//             if (!document.getElementById('msg-pago-exitoso')) {
+//                 const msg = document.createElement('div');
+//                 msg.id = 'msg-pago-exitoso';
+//                 msg.className = 'alert alert-success w-100 mt-2';
+//                 msg.innerText = 'Pagos registrados correctamente. El archivo Excel fue generado.';
+//                 footer.prepend(msg);
+//             }
 
-            // ❌ NO cerrar modal
-            // ❌ NO limpiar sessionStorage aquí
-            // ❌ NO refrescar la vista aquí
-        }
+//             // ❌ NO cerrar modal
+//             // ❌ NO limpiar sessionStorage aquí
+//             // ❌ NO refrescar la vista aquí
+//         }
 
-    });
-});
+//     });
+// });

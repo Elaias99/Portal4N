@@ -21,6 +21,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\HonorariosPagoMasivoExport;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use ZipArchive;
 
 
 
@@ -709,15 +710,16 @@ class HonorarioMensualRecController extends Controller
             'fecha_pago'   => 'required|date|before_or_equal:today',
         ]);
 
-
         /**
-         * Estructura:
          * [
          *   empresa_id => Collection<HonorarioMensualRec>
          * ]
          */
         $honorariosPorEmpresa = collect();
 
+        // =========================
+        // TRANSACCIÓN: PAGOS + AGRUPACIÓN
+        // =========================
         DB::transaction(function () use ($request, &$honorariosPorEmpresa) {
 
             foreach ($request->honorarios as $honorarioId) {
@@ -787,42 +789,58 @@ class HonorarioMensualRecController extends Controller
                 $honorariosPorEmpresa[$empresaId]->push(
                     $honorario->fresh()
                 );
-
             }
         });
 
         // =========================
-        // GENERAR TOKENS POR EMPRESA
+        // GENERAR ZIP EN TEMPORAL
         // =========================
-        $downloads = [];
+        $zipPath = tempnam(sys_get_temp_dir(), 'pago_masivo_');
+        $zip = new ZipArchive();
+
+        if ($zip->open($zipPath, ZipArchive::OVERWRITE) !== true) {
+            abort(500, 'No se pudo crear el archivo ZIP.');
+        }
 
         foreach ($honorariosPorEmpresa as $empresaId => $honorarios) {
 
-            $token = (string) Str::uuid();
+            $empresa = $honorarios->first()->empresa;
+            $nombreEmpresa = $empresa?->Nombre ?? 'Empresa';
 
-            Cache::put(
-                "pago_masivo_excel:$token",
-                $honorarios,
-                now()->addMinutes(5)
+            $nombreEmpresaArchivo = str_replace(
+                ' ',
+                '_',
+                preg_replace('/[^A-Za-z0-9\s]/', '', $nombreEmpresa)
             );
 
-            $downloads[] = [
-                'empresa_id'   => $empresaId,
-                'empresa'      => optional($honorarios->first()->empresa)->Nombre,
-                'download_url' => route(
-                    'honorarios.mensual.pago.masivo.descargar',
-                    $token
-                ),
-            ];
+            $fecha = now()->format('Y-m-d');
+
+            $nombreExcel = "{$nombreEmpresaArchivo}_honorarios_pago_masivo_{$fecha}.xlsx";
+
+            // Archivo Excel temporal
+            $excelTempName = 'honorarios_pago_masivo_' . uniqid() . '.xlsx';
+
+            Excel::store(
+                new HonorariosPagoMasivoExport($honorarios),
+                $excelTempName,
+                'local'
+            );
+
+            $excelRealPath = storage_path('app/' . $excelTempName);
+
+            $zip->addFile($excelRealPath, $nombreExcel);
+
         }
 
+        $zip->close();
+
         // =========================
-        // RESPUESTA AJAX
+        // DESCARGA ÚNICA (ZIP)
         // =========================
-        return response()->json([
-            'success'   => true,
-            'downloads' => $downloads,
-        ]);
+        $fecha = now()->format('Y-m-d');
+        $nombreZip = "honorarios_pago_masivo_{$fecha}.zip";
+
+        return response()->download($zipPath, $nombreZip)->deleteFileAfterSend(true);
     }
 
 
