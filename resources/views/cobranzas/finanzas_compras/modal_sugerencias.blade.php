@@ -1,14 +1,3 @@
-{{-- DEBUG --}}
-@php
-    \Log::info('🧪 RENDER MODAL', [
-        'session_existe' => session()->has('sugerencias_notas_compras'),
-        'count' => session()->has('sugerencias_notas_compras')
-            ? count(session('sugerencias_notas_compras'))
-            : 0
-    ]);
-@endphp
-
-
 
 @if(session('sugerencias_notas_compras') && count(session('sugerencias_notas_compras')) > 0)
 <div class="modal fade" id="modalSugerenciasNotas" tabindex="-1" aria-labelledby="modalSugerenciasNotasLabel" aria-hidden="true">

@@ -255,19 +255,11 @@ class CotizadorController extends Controller
 
         $perfil = $request->perfil;
 
-        Log::info('Coordenadas enviadas a ORS', [
-            'origen'  => $coords[0],
-            'destino' => $coords[1],
-            'perfil'  => $perfil,
-        ]);
-
         $response = Http::withHeaders([
             'Authorization' => config('services.ors.key'),
         ])->post("https://api.openrouteservice.org/v2/directions/{$perfil}", [
             'coordinates' => $coords,
         ]);
-
-        Log::info('Respuesta ORS:', $response->json());
 
         if ($response->successful()) {
             return response()->json(
@@ -331,10 +323,7 @@ class CotizadorController extends Controller
         ]);
 
         if (!$resp->successful()) {
-            Log::warning('Geocodificación ORS fallida', [
-                'status' => $resp->status(),
-                'body'   => $resp->body()
-            ]);
+
             return response()->json(['error' => 'No se pudo geocodificar la dirección.'], 422);
         }
 

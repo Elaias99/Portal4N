@@ -75,7 +75,7 @@ class CompraController extends Controller
             });
         }
 
-        // 🔎 Filtro por rango de fechas (fecha_documento)
+        // Filtro por rango de fechas (fecha_documento)
         if ($request->filled('fecha_desde') && $request->filled('fecha_hasta')) {
             $query->whereBetween('fecha_documento', [$request->fecha_desde, $request->fecha_hasta]);
         } elseif ($request->filled('fecha_desde')) {
@@ -84,7 +84,7 @@ class CompraController extends Controller
             $query->whereDate('fecha_documento', '<=', $request->fecha_hasta);
         }
 
-        // 🔎 Filtro por rango de fechas (fecha_vencimiento)
+        //Filtro por rango de fechas (fecha_vencimiento)
         if ($request->filled('vencimiento_desde') && $request->filled('vencimiento_hasta')) {
             $query->whereBetween('fecha_vencimiento', [$request->vencimiento_desde, $request->vencimiento_hasta]);
         } elseif ($request->filled('vencimiento_desde')) {
@@ -100,7 +100,7 @@ class CompraController extends Controller
             ->orderBy('año', 'desc')
             ->orderByRaw("FIELD(mes, 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre') DESC")
             ->paginate(10)
-            ->appends($request->query()); // 👈 asegura mantener los filtros
+            ->appends($request->query());
 
         $camposOpcionales = [
             'empresa' => 'Empresa',
@@ -164,7 +164,7 @@ class CompraController extends Controller
         $empresas = Empresa::all();
         $centrosCosto = CentroCosto::all();
         $tiposPagos = TipoDocumento::all();
-        $formasPago = FormaPago::all(); // 🔹 Obtener las formas de pago
+        $formasPago = FormaPago::all();
 
         return view('compras.create', compact('proveedores', 'empresas', 'tiposPagos', 'centrosCosto', 'formasPago', 'plazosPago'));
     }
@@ -212,10 +212,10 @@ class CompraController extends Controller
             'tipo_pago_id' => 'required|exists:tipo_documentos,id',
 
 
-            'status' => 'required|in:Pendiente,Pagado,Abonado,No Pagar', // ✅ Agregado
+            'status' => 'required|in:Pendiente,Pagado,Abonado,No Pagar',
         ]);
 
-        // 🔐 Validación de duplicado
+        //Validación de duplicado
         $existe = Compra::where('tipo_pago_id', $validatedData['tipo_pago_id'])
         ->where('numero_documento', $validatedData['numero_documento'])
         ->exists();
@@ -306,7 +306,7 @@ class CompraController extends Controller
         $empresas = Empresa::all();
         $centrosCosto = CentroCosto::all();
         $tiposPagos = TipoDocumento::all();
-        $formasPago = FormaPago::all(); // 🔹 Obtener las formas de pago
+        $formasPago = FormaPago::all();
 
         return view('compras.edit', compact('compra', 'proveedores', 'empresas', 'tiposPagos', 'centrosCosto', 'formasPago','plazosPago'));
     }
@@ -355,7 +355,7 @@ class CompraController extends Controller
             'tipo_pago_id' => 'required|exists:tipo_documentos,id',
 
 
-            'status' => 'required|in:Pendiente,Pagado,Abonado,No Pagar', // ✅ Agregado
+            'status' => 'required|in:Pendiente,Pagado,Abonado,No Pagar'
         ]);
 
         // Manejar los archivos adjuntos
@@ -457,7 +457,7 @@ class CompraController extends Controller
                 $row['empresa_status'] !== '✅ OK' ||
                 $row['proveedor_status'] !== '✅ OK' ||
                 $row['centro_costo_status'] !== '✅ OK' ||
-                $row['tipo_de_documento_status'] !== '✅ OK' || // <- corregido aquí
+                $row['tipo_de_documento_status'] !== '✅ OK' ||
                 $row['plazo_pago_status'] !== '✅ OK' ||
                 $row['forma_pago_status'] !== '✅ OK' ||
                 $row['duplicado_status'] !== '✅ OK'
@@ -489,56 +489,25 @@ class CompraController extends Controller
 
             $contador++;
 
-            // 👇 Guardar solo proveedor y número de doc
+            // Guardar solo proveedor y número de doc
             $comprasExitosas[] = [
                 'proveedor' => $row['proveedor'],
                 'numero_documento' => $row['numero_documento'],
             ];
 
-
         }
-
 
         if (!empty($import->proveedoresFaltantes)) {
             session()->put('proveedores_faltantes_excel', $import->proveedoresFaltantes);
         }
 
-        // 🔎 Log para depuración de sesión/flash
-        Log::info('Debug flash después de importar', [
-            'flash' => session()->get('_flash'),
-            'all'   => session()->all(),
-        ]);
-
-        // 🔎 Log para depuración
-        Log::info('📦 Importación de compras finalizada', [
-            'insertadas' => $contador,
-            'faltantes' => count($import->proveedoresFaltantes),
-            'session_id' => session()->getId(),
-            'flash_keys' => [
-                'success' => "Importación completada.",
-                'compras_importadas' => $contador,
-                'errorsFK' => count($import->errorMessages['fk']),
-                'errorsDuplicados' => count($import->errorMessages['duplicados']),
-            ],
-        ]);
-
-        
-        Log::info('Redirect con flashes', [
-            'flash' => session()->get('_flash')
-        ]);
-
-
-
         return redirect()
             ->route('compras.index')
             ->with('success', "Importación completada.")
             ->with('compras_importadas', $contador)
-            ->with('compras_exitosas', $comprasExitosas) // 👈 guardamos detalle reducido
+            ->with('compras_exitosas', $comprasExitosas)
             ->with('errorsFK', $import->errorMessages['fk'])
             ->with('errorsDuplicados', $import->errorMessages['duplicados']);
-
-        
-
 
     }
 
@@ -556,7 +525,7 @@ class CompraController extends Controller
         // Descargar Excel
         $response = Excel::download(new ProveedoresFaltantesExport($proveedores), 'proveedores_faltantes.xlsx');
 
-        // ✅ Limpiar después de la respuesta
+        //Limpiar después de la respuesta
         session()->forget('proveedores_faltantes_excel');
 
         return $response;
@@ -622,8 +591,8 @@ class CompraController extends Controller
         try {
             return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\PlantillaComprasExport, 'plantilla_compras.xlsx');
         } catch (\Throwable $e) {
-            Log::error('❌ Error al generar la plantilla: ' . $e->getMessage());
-            return response('Error al generar la plantilla. Revisa los logs.', 500);
+          
+            return response('Error al generar la plantilla.', 500);
         }
     }
 

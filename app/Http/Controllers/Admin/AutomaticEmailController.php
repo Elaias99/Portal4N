@@ -95,9 +95,6 @@ class AutomaticEmailController extends Controller
 
     public function test(AutomaticEmail $automatic_email, AutomaticEmailService $service)
     {
-        Log::info("🧪 Test manual iniciado", [
-            'email_id' => $automatic_email->id
-        ]);
 
         $ahora = Carbon::now();
 
@@ -121,11 +118,6 @@ public function simulate(
 ) {
     $ahora = Carbon::now();
 
-    Log::info("🧪 Simulación automática iniciada", [
-        'email_id' => $automatic_email->id,
-        'hora_actual' => $ahora->format('H:i'),
-        'dia' => $ahora->dayOfWeek
-    ]);
 
     // Usamos la MISMA lógica del scheduler,
     // pero solo para este correo

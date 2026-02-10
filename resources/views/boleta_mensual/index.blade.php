@@ -708,7 +708,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectProveedor.classList.add('d-none');
         inputManual.classList.add('d-none');
 
-        // 🔴 Reset funcional
+        //Reset funcional
         selectProveedor.disabled = true;
         inputManual.disabled = true;
 

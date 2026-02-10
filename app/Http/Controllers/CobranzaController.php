@@ -8,6 +8,7 @@ use App\Exports\CobranzasExport;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class CobranzaController extends Controller
 {
@@ -131,20 +132,19 @@ class CobranzaController extends Controller
 
     public function reprocesarPendientes(Request $request)
     {
-        Log::info('📥 [reprocesarPendientes] Inicio del reprocesamiento');
-
+      
         // 1️⃣ Buscar los pendientes en sesión
         $pendientes = session('sin_cobranza_pendientes') ?? session('sin_cobranza');
 
         if (empty($pendientes)) {
-            Log::warning('⚠️ [reprocesarPendientes] No hay datos en la sesión sin_cobranza ni sin_cobranza_pendientes');
+            
             return response()->json([
                 'success' => false,
                 'message' => 'No hay cobranzas pendientes para reprocesar.'
             ]);
         }
 
-        Log::info('🧠 [reprocesarPendientes] Pendientes encontrados', ['total' => count($pendientes)]);
+        
 
         $procesados = [];
         $omitidos = [];
@@ -154,40 +154,31 @@ class CobranzaController extends Controller
             $rut = $item['rut_cliente'] ?? null;
             $folios = $item['folios'] ?? [];
 
-            Log::info("📝 [reprocesarPendientes] FOLIOS RECIBIDOS PARA RUT {$rut}", [
-                'folios' => $folios
-            ]);
 
-            // ⚠️ CORREGIDO → antes usabas $folios que siempre es truthy si es array
+
+         
             if (!$rut || empty($folios)) {
-                $omitidos[] = $rut ?: 'Sin RUT';
-                Log::warning('⛔ [reprocesarPendientes] Faltan datos RUT o FOLIO', $item);
+                $omitidos[] = $rut ?: 'Sin RUT';        
                 continue;
             }
 
-            Log::info("🔍 [reprocesarPendientes] Cantidad de folios para procesar", [
-                'rut' => $rut,
-                'cantidad_folios' => count($folios),
-                'folios' => $folios
-            ]);
 
             try {
 
-                // 2️⃣ Buscar la cobranza creada
+          
                 $cobranza = \App\Models\Cobranza::where('rut_cliente', $rut)->first();
 
                 if (!$cobranza) {
                     $omitidos[] = $rut;
-                    Log::warning("❌ [reprocesarPendientes] No se encontró cobranza para el RUT {$rut}");
                     continue;
                 }
 
-                // 🔄 NUEVO: procesar cada folio individualmente
+       
                 foreach ($folios as $folio) {
 
-                    Log::info("➡️ [reprocesarPendientes] Procesando folio {$folio} / RUT {$rut}");
+            
 
-                    // 3️⃣ Buscar documento financiero que quedó sin cobranza_id
+                    //Buscar documento financiero que quedó sin cobranza_id
                     $documento = \App\Models\DocumentoFinanciero::where('folio', $folio)
                         ->whereNull('cobranza_id')
                         ->first();
@@ -208,24 +199,16 @@ class CobranzaController extends Controller
                         // ⚠️ CORREGIDO → antes guardabas el array completo
                         $procesados[] = $folio;
 
-                        Log::info("✅ [reprocesarPendientes] Documento actualizado correctamente", [
-                            'folio' => $folio,
-                            'cobranza_id' => $cobranza->id
-                        ]);
 
                     } else {
 
                         $omitidos[] = $folio;
 
-                        Log::warning("🔍 [reprocesarPendientes] No se encontró documento con folio {$folio} sin cobranza_id");
+                        
                     }
                 }
 
             } catch (\Throwable $e) {
-
-                Log::error("💥 [reprocesarPendientes] Error al procesar RUT {$rut}: {$e->getMessage()}", [
-                    'trace' => $e->getTraceAsString()
-                ]);
 
                 $omitidos[] = $rut;
             }
@@ -235,31 +218,21 @@ class CobranzaController extends Controller
         session()->forget('sin_cobranza');
         session()->forget('sin_cobranza_pendientes');
 
-        Log::info('🧹 [reprocesarPendientes] Sesión limpiada', [
-            'procesados' => $procesados,
-            'omitidos' => $omitidos,
-        ]);
 
         // 5️⃣ Registrar movimiento
         try {
             \App\Models\MovimientoDocumento::create([
                 'documento_financiero_id' => null,
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'tipo_movimiento' => 'Reprocesamiento automático',
                 'descripcion' => "Se reprocesaron " . count($procesados) . " documentos tras crear nuevas cobranzas.",
             ]);
-            Log::info('📘 [reprocesarPendientes] MovimientoDocumento registrado');
+            
         } catch (\Throwable $e) {
-            Log::error('❗ [reprocesarPendientes] Error al registrar MovimientoDocumento: ' . $e->getMessage());
+            
         }
 
         $success = count($procesados) > 0;
-
-        Log::info('🏁 [reprocesarPendientes] Finalizado', [
-            'success' => $success,
-            'procesados' => $procesados,
-            'omitidos' => $omitidos
-        ]);
 
         return response()->json([
             'success' => $success,

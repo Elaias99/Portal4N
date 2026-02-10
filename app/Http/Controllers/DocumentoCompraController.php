@@ -101,24 +101,24 @@ class DocumentoCompraController extends Controller
 
         if ($request->filled('saldo_valor')) {
 
-            // 1️⃣ Normalizar número (quita puntos y comas)
+            //Normalizar número (quita puntos y comas)
             $valor = (float) str_replace(['.', ','], '', $request->saldo_valor);
 
-            // 2️⃣ Determinar tipo de saldo (default: saldo_pendiente)
+            //Determinar tipo de saldo (default: saldo_pendiente)
             $tipoSaldo = $request->input('saldo_tipo', 'saldo_pendiente');
 
-            // 3️⃣ Whitelist de columnas permitidas
+            //Whitelist de columnas permitidas
             $columnasPermitidas = [
                 'saldo_pendiente',
                 'monto_total',
             ];
 
-            // 4️⃣ Fallback de seguridad
+            //Fallback de seguridad
             if (!in_array($tipoSaldo, $columnasPermitidas, true)) {
                 $tipoSaldo = 'saldo_pendiente';
             }
 
-            // 5️⃣ Aplicar filtro con tolerancia ±1
+            // Aplicar filtro con tolerancia ±1
             $baseQuery->whereBetween($tipoSaldo, [
                 $valor - 1,
                 $valor + 1
@@ -184,10 +184,7 @@ class DocumentoCompraController extends Controller
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
         if (session()->has('sugerencias_notas_compras')) {
             foreach (session('sugerencias_notas_compras') as $i => $item) {
-                Log::info("🧪 SUGERENCIA {$i}", [
-                    'nota_id' => $item['nota']->id ?? null,
-                    'nota_folio' => $item['nota']->folio ?? null,
-                ]);
+                
             }
         }
 
@@ -199,10 +196,6 @@ class DocumentoCompraController extends Controller
                     ? \App\Models\DocumentoCompra::where('id', $id)->exists()
                     : false;
 
-                Log::info('🧪 VALIDACION NOTA', [
-                    'nota_id' => $id,
-                    'existe_en_bd' => $existe,
-                ]);
             }
         }
 
@@ -227,7 +220,7 @@ class DocumentoCompraController extends Controller
 
     public function filtrar(Request $request)
     {
-        // === 1️⃣ Validación de parámetros ===
+        // ===Validación de parámetros ===
         $columna = $request->get('columna');
         $valor   = $request->get('valor');
 
@@ -243,7 +236,7 @@ class DocumentoCompraController extends Controller
                 ->route('finanzas_compras.index')
                 ->with('error', "El filtro por columna '{$columna}' no está permitido.");
         }
-        // === 2️⃣ Base query con relaciones ===
+        // ===Base query con relaciones ===
         $query = DocumentoCompra::with([
             'empresa',
             'tipoDocumento',
@@ -254,7 +247,7 @@ class DocumentoCompraController extends Controller
             'prontoPagos'
         ]);
 
-        // === 3️⃣ Filtro dinámico según tipo de campo ===
+        // === Filtro dinámico según tipo de campo ===
         if (!empty($valor)) {
             switch ($columna) {
                 case 'empresa_id':
@@ -293,7 +286,7 @@ class DocumentoCompraController extends Controller
             }
         }
 
-        // === 4️⃣ Ordenamiento ===
+        // ===Ordenamiento ===
         if ($request->filled('sort_by')) {
             $sortBy = $request->get('sort_by');
             $sortOrder = $request->get('sort_order', 'asc');
@@ -304,12 +297,12 @@ class DocumentoCompraController extends Controller
             $query->latest();
         }
 
-        // === 5️⃣ Obtener resultados ===
+        // ===Obtener resultados ===
         $documentosCompras = $query->get();
 
         $hoy = \Carbon\Carbon::today();
 
-        // === 6️⃣ Actualizar estado automático (Al día / Vencido)
+        // ===Actualizar estado automático (Al día / Vencido)
         foreach ($documentosCompras as $doc) {
             if ($doc->fecha_vencimiento && $doc->saldo_pendiente > 0) {
                 $fechaVenc = \Carbon\Carbon::parse($doc->fecha_vencimiento);
@@ -321,14 +314,14 @@ class DocumentoCompraController extends Controller
             }
         }
 
-        // === 7️⃣ Totales por estado original y pago ===
+        // ===Totales por estado original y pago ===
         $totalAlDia = DocumentoCompra::where('status_original', 'Al día')->count();
         $totalVencido = DocumentoCompra::where('status_original', 'Vencido')->count();
 
         $totalPagados = $documentosCompras->filter(fn($d) => $d->saldo_pendiente <= 0)->count();
         $totalPendientes = $documentosCompras->filter(fn($d) => $d->saldo_pendiente > 0)->count();
 
-        // === 8️⃣ Paginación manual (igual que en index)
+        // ===Paginación manual (igual que en index)
         $page = $request->get('page', 1);
         $perPage = 10;
         $offset = ($page - 1) * $perPage;
@@ -350,12 +343,12 @@ class DocumentoCompraController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        // === 9️⃣ Listas auxiliares ===
+        // ===Listas auxiliares ===
         $proveedores = \App\Models\Proveedor::select('id', 'razon_social', 'rut')->orderBy('razon_social')->get();
         $tiposDocumento = \App\Models\TipoDocumento::orderBy('nombre')->get();
         $empresas = \App\Models\Empresa::orderBy('Nombre')->get();
 
-        // === 🔟 Devolver vista ===
+        // === Devolver vista ===
         return view('cobranzas.finanzas_compras.index', compact(
             'documentosCompras',
             'proveedores',
@@ -381,7 +374,7 @@ class DocumentoCompraController extends Controller
         $file = $request->file('file');
         $filename = $file->getClientOriginalName();
 
-        // 🔍 Extraer RUT desde el nombre del archivo
+        //  Extraer RUT desde el nombre del archivo
         $rut = null;
         if (preg_match('/(\d{7,8}-[0-9Kk])/', $filename, $matches)) {
             $rut = $matches[1];
@@ -401,7 +394,7 @@ class DocumentoCompraController extends Controller
                 ->with('error', "No se encontró ninguna empresa asociada al RUT {$rut} (archivo: {$filename}).");
         }
 
-        // ✅ Importación
+        //Importación
         $import = new ComprasImport($empresa->id);
         Excel::import($import, $request->file('file'));
 
@@ -422,19 +415,8 @@ class DocumentoCompraController extends Controller
 
         foreach ($notas as $nota) {
 
-            Log::info('🧪 [POST-IMPORT] Evaluando NC para sugerencias', [
-                'nota_id' => $nota->id,
-                'folio' => $nota->folio,
-                'rut_proveedor' => $nota->rut_proveedor,
-            ]);
-
-            // 🟠 NC sin cobranza → no se sugiere nada (correcto)
+            //NC sin cobranza → no se sugiere nada (correcto)
             if (!$nota->cobranza_compra_id) {
-                Log::info('🟠 [POST-IMPORT] NC sin cobranza, se omite sugerencias', [
-                    'nota_id' => $nota->id,
-                    'folio' => $nota->folio,
-                    'rut_proveedor' => $nota->rut_proveedor,
-                ]);
                 continue;
             }
 
@@ -452,21 +434,9 @@ class DocumentoCompraController extends Controller
         if (!empty($sugerenciasPostImport)) {
             session(['sugerencias_notas_compras' => $sugerenciasPostImport]);
 
-            Log::info('🧪 [POST-IMPORT] Sugerencias guardadas en sesión', [
-                'count' => count($sugerenciasPostImport),
-                'notas_ids' => collect($sugerenciasPostImport)->pluck('nota.id')->toArray(),
-            ]);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | 🔚 FIN BLOQUE AGREGADO
-        |--------------------------------------------------------------------------
-        */
 
-        // ======================
-        // Lo que YA TENÍAS
-        // ======================
 
         $totalImportados = $import->nuevos;
         $totalDuplicados = count($import->duplicados);
@@ -545,7 +515,7 @@ class DocumentoCompraController extends Controller
     {
         $referencias = $request->input('referencia');
 
-        // 🟡 Caso: no se seleccionó ninguna referencia
+        //no se seleccionó ninguna referencia
         if (empty($referencias) || !is_array($referencias)) {
 
             // No se referencia nada, solo se cierra el flujo
@@ -557,7 +527,7 @@ class DocumentoCompraController extends Controller
             ]);
         }
 
-        // 🟢 Caso: sí hay referencias seleccionadas
+        //sí hay referencias seleccionadas
         foreach ($referencias as $notaId => $facturaId) {
             DocumentoCompra::where('id', $notaId)->update([
                 'referencia_id' => $facturaId
@@ -577,7 +547,7 @@ class DocumentoCompraController extends Controller
         $page = $request->get('page', 1);
         $offset = ($page - 1) * $perPage;
 
-        // === 1️⃣ Query base ===
+        // === Query base ===
         $query = DocumentoCompra::with([
             'empresa',
             'tipoDocumento',
@@ -588,7 +558,7 @@ class DocumentoCompraController extends Controller
             'prontoPagos'
         ]);
 
-        // === 2️⃣ Filtros principales ===
+        // ===Filtros principales ===
         if ($request->filled('rut_proveedor')) {
             $query->where('rut_proveedor', 'like', "%{$request->rut_proveedor}%");
         }
@@ -608,7 +578,7 @@ class DocumentoCompraController extends Controller
             });
         }
 
-        // === 3️⃣ Filtros de fechas ===
+        // ===Filtros de fechas ===
         if ($request->filled('fecha_docto_inicio') && $request->filled('fecha_docto_fin')) {
             $query->whereBetween('fecha_docto', [$request->fecha_docto_inicio, $request->fecha_docto_fin]);
         } elseif ($request->filled('fecha_docto_inicio')) {
@@ -625,7 +595,7 @@ class DocumentoCompraController extends Controller
             $query->whereDate('fecha_vencimiento', '<=', $request->fecha_venc_fin);
         }
 
-        // === 4️⃣ Filtros personalizados (filtrarColumnas) ===
+        // ===Filtros personalizados (filtrarColumnas) ===
         if ($request->filled('columna') && $request->filled('valor')) {
             switch ($request->columna) {
                 case 'razon_social':
@@ -653,7 +623,7 @@ class DocumentoCompraController extends Controller
             }
         }
 
-        // === 5️⃣ Filtro de estado de pago (directo en SQL) ===
+        // ===Filtro de estado de pago (directo en SQL) ===
         if ($request->filled('estado_pago')) {
             if ($request->estado_pago === 'Pagado') {
                 $query->where('saldo_pendiente', '<=', 0);
@@ -662,10 +632,10 @@ class DocumentoCompraController extends Controller
             }
         }
 
-        // === 6️⃣ Excluir notas de crédito / anulados ===
+        // ===Excluir notas de crédito / anulados ===
         $query->whereNotIn('tipo_documento_id', [61, 56]);
 
-        // === 7️⃣ Orden ===
+        // ===Orden ===
         if ($request->filled('sort_by')) {
             $sortBy = $request->get('sort_by', 'razon_social');
             $sortOrder = $request->get('sort_order', 'asc');
@@ -674,10 +644,10 @@ class DocumentoCompraController extends Controller
             $query->orderBy('fecha_vencimiento', 'desc');
         }
 
-        // === 8️⃣ Ejecutar query ===
+        // ===Ejecutar query ===
         $documentos = $query->get();
 
-        // === 9️⃣ Actualizar estado automático ===
+        // ===Actualizar estado automático ===
         $hoy = \Carbon\Carbon::today();
         foreach ($documentos as $doc) {
             if ($doc->fecha_vencimiento && $doc->saldo_pendiente > 0) {
@@ -690,10 +660,10 @@ class DocumentoCompraController extends Controller
             }
         }
 
-        // === 🔟 Paginación manual ===
+        // === Paginación manual ===
         $documentos = $documentos->slice($offset, $perPage)->values();
 
-        // === 11️⃣ Exportación ===
+        // ===Exportación ===
         $fecha = now()->format('Y-m-d_H-i-s');
         return Excel::download(
             new DocumentoCompraExport($documentos),
@@ -703,7 +673,7 @@ class DocumentoCompraController extends Controller
 
     public function exportAll(Request $request)
     {
-        // === 1️⃣ Query base ===
+        // ===Query base ===
         $query = DocumentoCompra::with([
             'empresa',
             'tipoDocumento',
@@ -714,7 +684,7 @@ class DocumentoCompraController extends Controller
             'prontoPagos'
         ]);
 
-        // === 2️⃣ Filtros principales ===
+        // ===Filtros principales ===
         if ($request->filled('rut_proveedor')) {
             $query->where('rut_proveedor', 'like', "%{$request->rut_proveedor}%");
         }
@@ -734,7 +704,7 @@ class DocumentoCompraController extends Controller
             });
         }
 
-        // === 3️⃣ Filtros de fechas ===
+        // ===Filtros de fechas ===
         if ($request->filled('fecha_docto_inicio') && $request->filled('fecha_docto_fin')) {
             $query->whereBetween('fecha_docto', [$request->fecha_docto_inicio, $request->fecha_docto_fin]);
         } elseif ($request->filled('fecha_docto_inicio')) {
@@ -751,7 +721,7 @@ class DocumentoCompraController extends Controller
             $query->whereDate('fecha_vencimiento', '<=', $request->fecha_venc_fin);
         }
 
-        // === 4️⃣ Filtros personalizados (filtrarColumnas) ===
+        // ===Filtros personalizados (filtrarColumnas) ===
         if ($request->filled('columna') && $request->filled('valor')) {
             switch ($request->columna) {
                 case 'razon_social':
@@ -779,10 +749,10 @@ class DocumentoCompraController extends Controller
             }
         }
 
-        // === 5️⃣ Excluir notas de crédito / anulados ===
+        // ===Excluir notas de crédito / anulados ===
         // $query->whereNotIn('tipo_documento_id', [61, 56]);
 
-        // === 6️⃣ Orden ===
+        // ===Orden ===
         if ($request->filled('sort_by')) {
             $sortBy = $request->get('sort_by', 'razon_social');
             $sortOrder = $request->get('sort_order', 'asc');
@@ -791,10 +761,10 @@ class DocumentoCompraController extends Controller
             $query->orderBy('fecha_vencimiento', 'desc');
         }
 
-        // === 7️⃣ Ejecutar la query ===
+        // ===Ejecutar la query ===
         $documentos = $query->get();
 
-        // === 8️⃣ Filtro de estado de pago (en memoria) ===
+        // ===  Filtro de estado de pago (en memoria) ===
         if ($request->filled('estado_pago')) {
             $documentos = $documentos->filter(function ($doc) use ($request) {
                 if ($request->estado_pago === 'Pagado') {
@@ -807,7 +777,7 @@ class DocumentoCompraController extends Controller
             });
         }
 
-        // === 9️⃣ Actualizar estado automático (Vencido / Al día) ===
+        // ===Actualizar estado automático (Vencido / Al día) ===
         $hoy = \Carbon\Carbon::today();
         foreach ($documentos as $doc) {
             if ($doc->fecha_vencimiento && $doc->saldo_pendiente > 0) {
@@ -820,7 +790,7 @@ class DocumentoCompraController extends Controller
             }
         }
 
-        // === 🔟 Exportación final ===
+        // ===  Exportación final ===
         $fecha = now()->format('Y-m-d_H-i-s');
         return Excel::download(
             new DocumentoCompraExport($documentos),
@@ -830,27 +800,27 @@ class DocumentoCompraController extends Controller
 
     public function updateEstado(Request $request, $id)
     {
-        // 🧩 Validación básica
+        //  Validación básica
         $request->validate([
             'estado' => 'nullable|string|max:50',
         ]);
 
-        // 🔍 Buscar el documento
+        // Buscar el documento
         $documento = DocumentoCompra::findOrFail($id);
 
-        // 📝 Guardar datos originales antes del cambio
+        //  Guardar datos originales antes del cambio
         $datosAnteriores = [
             'estado' => $documento->estado,
             'fecha_estado_manual' => $documento->fecha_estado_manual,
         ];
 
-        // ⚙️ Actualizar el estado manual y fecha
+        //  Actualizar el estado manual y fecha
         $documento->update([
             'estado' => $request->estado,
             'fecha_estado_manual' => now(),
         ]);
 
-        // 🧾 Registrar movimiento con trazabilidad extendida
+        //  Registrar movimiento con trazabilidad extendida
         MovimientoCompra::create([
             'documento_compra_id' => $documento->id,
             'usuario_id' => Auth::id(),
@@ -866,7 +836,7 @@ class DocumentoCompraController extends Controller
             ],
         ]);
 
-        // ✅ Redirigir con mensaje de éxito
+        //  Redirigir con mensaje de éxito
         return redirect()
             ->route('finanzas_compras.index')
             ->with('success', 'Estado actualizado correctamente.');
@@ -897,8 +867,7 @@ class DocumentoCompraController extends Controller
         // Cargar proveedores para los posibles cruces
         $proveedores = \App\Models\Proveedor::orderBy('razon_social')->get(['id', 'razon_social', 'rut']);
 
-        return view('cobranzas.finanzas_compras.detalles', compact('documento', 'proveedores',
-    'cobranzasCompras'));
+        return view('cobranzas.finanzas_compras.detalles', compact('documento', 'proveedores','cobranzasCompras'));
     }
 
 
@@ -919,7 +888,7 @@ class DocumentoCompraController extends Controller
             'fecha_abono.required' => 'La fecha del abono es obligatoria.',
         ]);
 
-        // 1️⃣ Validar límite del saldo
+        //Validar límite del saldo
         $saldoPendiente = $documento->saldo_pendiente;
         if ($request->monto > $saldoPendiente) {
             return back()
@@ -927,28 +896,28 @@ class DocumentoCompraController extends Controller
                 ->withInput();
         }
 
-        // 2️⃣ Guardar datos anteriores
+        //Guardar datos anteriores
         $datosAnteriores = [
             'saldo_pendiente' => $saldoPendiente,
             'estado' => $documento->estado,
         ];
 
-        // 3️⃣ Registrar abono
+        //Registrar abono
         $documento->abonos()->create([
             'monto' => $request->monto,
             'fecha_abono' => $request->fecha_abono,
         ]);
 
-        // 4️⃣ Recalcular saldo pendiente
+        //Recalcular saldo pendiente
         $documento->recalcularSaldoPendiente();
 
-        // 5️⃣ Actualizar estado manual
+        //Actualizar estado manual
         $documento->update([
             'estado' => 'Abono',
             'fecha_estado_manual' => now(),
         ]);
 
-        // 6️⃣ Registrar movimiento con trazabilidad extendida
+        //Registrar movimiento con trazabilidad extendida
         MovimientoCompra::create([
             'documento_compra_id' => $documento->id,
             'usuario_id' => Auth::id(),
@@ -971,7 +940,7 @@ class DocumentoCompraController extends Controller
 
     public function storeCruce(Request $request, DocumentoCompra $documento)
     {
-        // ✅ Validación usando cobranza_compras
+        //  Validación usando cobranza_compras
         $request->validate([
             'monto' => 'required|integer|min:1',
             'fecha_cruce' => 'required|date|before_or_equal:today',
@@ -983,7 +952,7 @@ class DocumentoCompraController extends Controller
             'cobranza_compra_id.exists' => 'El cliente seleccionado no es válido.',
         ]);
 
-        // 1️⃣ Validar que el cruce no supere el saldo pendiente
+        //Validar que el cruce no supere el saldo pendiente
         $saldoPendiente = $documento->saldo_pendiente;
 
         if ($request->monto > $saldoPendiente) {
@@ -992,29 +961,29 @@ class DocumentoCompraController extends Controller
                 ->withInput();
         }
 
-        // 2️⃣ Guardar datos anteriores
+        //Guardar datos anteriores
         $datosAnteriores = [
             'saldo_pendiente' => $saldoPendiente,
             'estado' => $documento->estado,
         ];
 
-        // 3️⃣ Registrar el cruce (SIN proveedores)
+        //Registrar el cruce (SIN proveedores)
         $cruce = $documento->cruces()->create([
             'monto' => $request->monto,
             'fecha_cruce' => $request->fecha_cruce,
             'cobranza_compra_id' => $request->cobranza_compra_id,
         ]);
 
-        // 4️⃣ Recalcular saldo pendiente
+        //Recalcular saldo pendiente
         $documento->recalcularSaldoPendiente();
 
-        // 5️⃣ Actualizar estado manual
+        //Actualizar estado manual
         $documento->update([
             'estado' => 'Cruce',
             'fecha_estado_manual' => now(),
         ]);
 
-        // 6️⃣ Registrar movimiento con trazabilidad
+        //Registrar movimiento con trazabilidad
         MovimientoCompra::create([
             'documento_compra_id' => $documento->id,
             'usuario_id' => Auth::id(),

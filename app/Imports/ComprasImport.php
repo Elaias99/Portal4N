@@ -17,7 +17,7 @@ class ComprasImport implements ToModel, WithHeadingRow
 {
     protected $empresaId;
 
-    // 🔹 Arrays auxiliares para trazabilidad
+    //  Arrays auxiliares para trazabilidad
     public $duplicados = [];
     public $importados = [];
     public $sinCobranza = [];
@@ -46,7 +46,7 @@ class ComprasImport implements ToModel, WithHeadingRow
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-        // 🔸 Normalizar encabezados
+        //  Normalizar encabezados
         $row = collect($row)->mapWithKeys(function ($value, $key) {
             $normalizedKey = str_replace(
                 [' ', '.', 'á', 'é', 'í', 'ó', 'ú', 'Á', 'É', 'Í', 'Ó', 'Ú'],
@@ -58,14 +58,14 @@ class ComprasImport implements ToModel, WithHeadingRow
 
 
 
-        // 🔹 Evitar procesar filas completamente vacías
+        //  Evitar procesar filas completamente vacías
         if (empty(array_filter($row))) {
             return null;
         }
 
         $folio = $row['folio'] ?? null;
 
-        // ⚠️ Validar folio vacío
+        //Validar folio vacío
         if (!$folio) {
             return null;
         }
@@ -102,7 +102,7 @@ class ComprasImport implements ToModel, WithHeadingRow
         }
 
 
-        // ✅ Crear registro si no está duplicado
+        //Crear registro si no está duplicado
         $this->importados[] = $folio;
         $this->nuevos++;
 
@@ -118,23 +118,15 @@ class ComprasImport implements ToModel, WithHeadingRow
 
 // ...
 
-    // 🔍 Buscar cobranza asociada (por RUT del proveedor)
+    //Buscar cobranza asociada (por RUT del proveedor)
     $cobranza = CobranzaCompra::where('rut_cliente', $row['rut_proveedor'] ?? null)->first();
 
 
 
-    // 🔍 Determinar tipo de documento
+    //Determinar tipo de documento
     $tipoDocumento = \App\Models\TipoDocumento::find((int) $row['tipo_doc']);
 
     if (!$cobranza) {
-
-        Log::warning('🟡 [ComprasImport] Documento creado SIN cobranza', [
-            'folio' => $row['folio'],
-            'rut_proveedor' => $row['rut_proveedor'],
-            'tipo_documento_id' => $tipoDocumento?->id,
-            'es_nota_credito' => ((int) $row['tipo_doc'] === 61),
-        ]);
-
 
 
         // Evitar duplicados por RUT
@@ -151,7 +143,7 @@ class ComprasImport implements ToModel, WithHeadingRow
             ];
         }
 
-        // 🧩 Crear el documento con cobranza_id = null (para ser reprocesado luego)
+        //Crear el documento con cobranza_id = null (para ser reprocesado luego)
         \App\Models\DocumentoCompra::updateOrCreate(
 
 
@@ -192,15 +184,15 @@ class ComprasImport implements ToModel, WithHeadingRow
                 'valor_otro_impuesto'  => $row['valor_otro_impuesto'] ?? 0,
                 'tasa_otro_impuesto'   => $row['tasa_otro_impuesto'] ?? 0,
 
-                // 🟢 Estado manual debe ser null
+                //Estado manual debe ser null
                 'estado'            => null,
 
 
 
 
-                // 🟢 Fecha de vencimiento usando 30 días por defecto
+               
                 'fecha_vencimiento' => null,
-                // 🟢 Estado automático real
+                //Estado automático real
                 'status_original'   => 'Pendiente',
 
 
@@ -209,22 +201,12 @@ class ComprasImport implements ToModel, WithHeadingRow
 
 
                 
-                // 🟢 Saldo pendiente inicial
+                // Saldo pendiente inicial
                 'saldo_pendiente'   => $this->cleanNumber($row['monto_total'] ?? 0),
 
-                // IMPORTANT: Sin cobranza aún
                 'cobranza_compra_id' => null,
             ]
         );
-
-
-
-        Log::info('🟡 [ComprasImport] DocumentoCompra sin cobranza creado', [
-            'folio' => $row['folio'],
-            'rut_proveedor' => $row['rut_proveedor'],
-            'razon_social' => $row['razon_social'],
-            'tipo_documento_id' => $tipoDocumento?->id,
-        ]);
 
         return null;
     }
@@ -272,7 +254,7 @@ class ComprasImport implements ToModel, WithHeadingRow
 
 
 
-        // 🔹 Ahora ya puedes usar las claves igual que en DocumentosImport
+        //Ahora ya puedes usar las claves igual que en DocumentosImport
         // (lo que tú ya tenías está correcto)
         $documento = new DocumentoCompra([
             'empresa_id' => $this->empresaId,
@@ -310,42 +292,6 @@ class ComprasImport implements ToModel, WithHeadingRow
         ]);
 
         $documento->save();
-
-        // if ((int) $documento->tipo_documento_id === 61) {
-
-
-        //     Log::info('🧪 [ComprasImport] Detectada Nota de Crédito', [
-        //         'folio' => $documento->folio,
-        //         'nota_id' => $documento->id,
-        //         'rut_proveedor' => $documento->rut_proveedor,
-        //         'cobranza_compra_id' => $documento->cobranza_compra_id,
-        //         'fecha_docto' => $documento->fecha_docto,
-        //         'monto_total' => $documento->monto_total,
-        //     ]);
-
-        //     $service = new \App\Services\ReferenciaNotasCompraService();
-        //     $sugerencias = $service->generarSugerencias($documento);
-
-
-
-        //     Log::info('🧪 [ComprasImport] Resultado sugerencias NC', [
-        //         'nota_folio' => $documento->folio,
-        //         'sugerida' => $sugerencias['sugerida']?->id ?? null,
-        //         'alternativas_count' => is_array($sugerencias['alternativas'])
-        //             ? count($sugerencias['alternativas'])
-        //             : 0,
-        //     ]);
-
-
-
-
-
-        //     $this->sugerenciasNotas[] = [
-        //         'nota' => $documento,
-        //         'sugerida' => $sugerencias['sugerida'],
-        //         'alternativas' => $sugerencias['alternativas']
-        //     ];
-        // }
 
         $this->importados[] = $row['folio'] ?? 'sin folio';
 

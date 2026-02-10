@@ -219,16 +219,6 @@ class CompraImport implements ToCollection, WithHeadingRow
 
                     if (in_array($clave, $this->seenKeys) || $existeEnBD) {
                         $duplicado = true;
-                        Log::info('❌ Duplicado detectado', [
-                            'proveedor_id'     => $proveedorId,
-                            'empresa_id'       => $empresaId,
-                            'tipo_doc_id'      => $tipoDocId,
-                            'numero_documento' => $numeroDoc,
-                            'fecha_documento'  => $fechaDoc,
-                            'pago_total'       => $monto,
-                            'glosa'            => $glosa,
-                            'clave'            => $clave
-                        ]);
                     } else {
                         $this->seenKeys[] = $clave;
                     }

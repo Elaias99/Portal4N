@@ -103,11 +103,11 @@ route::post('/notifications/mark-all-read', function () {
 
 //agregar una ruta para consultar notificaciones
 // Route::get('/notificaciones/recientes', function () {
-//     // 🔑 Mantener vivos los flashes para el siguiente request
+//     // Mantener vivos los flashes para el siguiente request
 //     session()->reflash();
 
-//     // 📝 Log de verificación temporal
-//     Log::info('♻️ Reflash ejecutado en /notificaciones/recientes', [
+//     // Log de verificación temporal
+//     Log::info('Reflash ejecutado en /notificaciones/recientes', [
 //         'session_flash' => session()->get('_flash'),
 //         'session_keys'  => array_keys(session()->all()),
 //     ]);
@@ -353,7 +353,7 @@ Route::get('/documentos/{documento}/detalles', [App\Http\Controllers\DocumentoFi
 Route::post('/documentos/{documento}/abonos', [DocumentoFinancieroController::class, 'storeAbono'])
     ->name('documentos.abonos.store');    
 
-// 🔹 Registrar un nuevo cruce
+//Registrar un nuevo cruce
 Route::post('/documentos/{documento}/cruces', [DocumentoFinancieroController::class, 'storeCruce'])
     ->name('documentos.cruces.store');
 
@@ -454,11 +454,11 @@ Route::get('/cruces/show', [App\Http\Controllers\CruceController::class, 'show']
 Route::post('/documentos/{documento}/pagos', [App\Http\Controllers\PagoDocumentoController::class, 'store'])
     ->name('documentos.pagos.store');
 
-// 📦 Ruta para registrar pagos masivos
+//Ruta para registrar pagos masivos
 Route::post('/documentos/pagos/masivo', [App\Http\Controllers\PagoDocumentoController::class, 'storeMasivo'])
     ->name('documentos.pagos.masivo');
 
-// 🔍 Buscar documentos pendientes para pagos masivos
+//Buscar documentos pendientes para pagos masivos
 Route::get('/api/documentos/buscar', [App\Http\Controllers\PagoDocumentoController::class, 'buscarDocumentos'])
     ->name('documentos.pagos.buscar');
 
@@ -523,15 +523,15 @@ Route::get('/finanzas_compras/export', [DocumentoCompraController::class, 'expor
 Route::get('/finanzas-compras/export-all', [DocumentoCompraController::class, 'exportAll'])
     ->name('finanzas_compras.exportAll');
 
-// 🔹 Actualizar estado de un documento de compra
+//Actualizar estado de un documento de compra
 Route::patch('/finanzas/compras/{id}/estado', [DocumentoCompraController::class, 'updateEstado'])
     ->name('finanzas_compras.updateEstado');
 
-// 🔹 Registrar Abono manual
+//Registrar Abono manual
 Route::post('/finanzas/compras/{documento}/abono', [DocumentoCompraController::class, 'storeAbono'])
     ->name('finanzas_compras.abonos.store');
 
-// 🔹 Registrar Cruce manual
+//Registrar Cruce manual
 Route::post('/finanzas/compras/{documento}/cruce', [DocumentoCompraController::class, 'storeCruce'])
     ->name('finanzas_compras.cruces.store');
 

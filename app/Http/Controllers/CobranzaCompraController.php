@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use App\Models\DocumentoCompra;
 use App\Models\MovimientoCompra;
 use App\Services\ReferenciaNotasCompraService;
+use Illuminate\Support\Facades\Auth;
 
 class CobranzaCompraController extends Controller
 {
@@ -152,12 +153,11 @@ class CobranzaCompraController extends Controller
      */
     public function reprocesarPendientesCompras(Request $request)
     {
-        Log::info('📥 [reprocesarPendientesCompras] Inicio del reprocesamiento');
-
+        
         $pendientes = session('sin_compra_pendientes');
 
         if (!$pendientes || count($pendientes) === 0) {
-            Log::warning('⚠️ No hay datos en la sesión sin_compra_pendientes');
+
             return response()->json([
                 'success' => false,
                 'message' => 'No hay documentos de compras pendientes para reprocesar.'
@@ -176,22 +176,22 @@ class CobranzaCompraController extends Controller
                 continue;
             }
 
-            Log::info("➡️ Reprocesando documentos del proveedor {$rutProveedor}");
+        
 
             $cobranzaCompra = CobranzaCompra::where('rut_cliente', $rutProveedor)->first();
 
             if (!$cobranzaCompra) {
-                Log::warning("⚠️ No se encontró cobranza_compra para el RUT {$rutProveedor}");
+
                 continue;
             }
 
-            // 🔥 CLAVE: traer TODOS los documentos pendientes del proveedor
+
             $documentos = DocumentoCompra::where('rut_proveedor', $rutProveedor)
                 ->whereNull('cobranza_compra_id')
                 ->get();
 
             if ($documentos->isEmpty()) {
-                Log::warning("🔍 No hay documentos pendientes para el RUT {$rutProveedor}");
+   
                 continue;
             }
 
@@ -215,19 +215,10 @@ class CobranzaCompraController extends Controller
                 ]);
 
 
-                // 🧪 DEBUG CLARO
-                Log::info('🧪 [DEBUG REPROCESO] Documento reprocesado', [
-                    'documento_id'      => $documento->id,
-                    'folio'             => $documento->folio,
-                    'tipo_documento_id' => $documento->tipo_documento_id,
-                    'es_nota_credito'   => (int) $documento->tipo_documento_id === 61,
-                    'rut_proveedor'     => $documento->rut_proveedor,
-                ]);
-
-                // 🧾 Movimiento por documento
+                // Movimiento por documento
                 MovimientoCompra::create([
                     'documento_compra_id' => $documento->id,
-                    'usuario_id'          => auth()->id(),
+                    'usuario_id'          => Auth::id(),
                     'tipo_movimiento'     => 'Reprocesamiento automático',
                     'descripcion'         => "Documento reprocesado tras creación de cobranza de compras.",
                     'datos_nuevos'        => [
@@ -279,16 +270,12 @@ class CobranzaCompraController extends Controller
         // 🧹 Limpiar sesión
         session()->forget('sin_compra_pendientes');
 
-        Log::info('🧹 Sesión limpiada', [
-            'procesados' => $procesados,
-            'omitidos' => $omitidos
-        ]);
 
         // Registrar movimiento general (con documento_compra_id = null)
         if (!empty($procesados)) {
             MovimientoCompra::create([
                 'documento_compra_id' => null,
-                'usuario_id' => auth()->id(),
+                'usuario_id' => Auth::id(),
                 'tipo_movimiento' => 'Reprocesamiento global automático',
                 'descripcion' => "Se reprocesaron " . count($procesados) . " documentos de compra tras crear nuevas cobranzas de compras.",
                 'datos_nuevos' => [
@@ -298,11 +285,6 @@ class CobranzaCompraController extends Controller
             ]);
         }
 
-        Log::info('🏁 Reprocesamiento finalizado', [
-            'success' => true,
-            'procesados' => $procesados,
-            'omitidos' => $omitidos
-        ]);
 
         return response()->json([
             'success' => true,

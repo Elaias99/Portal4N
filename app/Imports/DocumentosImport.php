@@ -31,7 +31,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
     {
         $this->empresaId = $empresaId;
 
-        // 🔄 Re-inicialización explícita
+        //Re-inicialización explícita
         $this->errores = [];
         $this->importados = [];
         $this->duplicados = [];
@@ -52,12 +52,12 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
     {
         
 
-        // 🔹 Evitar procesar filas completamente vacías
+        // Evitar procesar filas completamente vacías
         if (empty(array_filter($row))) {
             return null;
         }
 
-        // 🔹 Verificar estructura (solo la primera vez)
+        // Verificar estructura (solo la primera vez)
         static $estructuraVerificada = false;
         if (!$estructuraVerificada) {
             $estructuraVerificada = true;
@@ -135,28 +135,9 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                 ];
 
 
-                Log::info("IMPORT DEBUG → Nueva entrada creada para RUT", [
-                    'rut'    => $row['rut_cliente'],
-                    'folios' => [$folioExcel],
-                    'sinCobranza_actual' => $this->sinCobranza
-                ]);
-
-
-
             } else {
                 // Ya existe → agregarle el folio a la lista
                 $this->sinCobranza[$index]['folios'][] = $folioExcel;
-
-
-                Log::info("IMPORT DEBUG → Folio agregado a RUT existente", [
-                    'rut'    => $row['rut_cliente'],
-                    'folio_agregado' => $folioExcel,
-                    'folios_actuales' => $this->sinCobranza[$index]['folios'],
-                    'sinCobranza_actual' => $this->sinCobranza
-                ]);
-
-
-
 
 
             }
@@ -256,11 +237,11 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
         $estadoInicial = $this->definirEstadoInicial($fechaVencimiento);
 
-        // 🔹 Verificar si es una Nota de Crédito (tipo 61)
-        // 🔹 Verificar si es una Nota de Crédito (tipo 61)
+        //  Verificar si es una Nota de Crédito (tipo 61)
+        //  Verificar si es una Nota de Crédito (tipo 61)
         if ((int)($row['tipo_doc'] ?? 0) === 61) {
 
-            // 🧩 Detección flexible para diferentes encabezados
+            //  Detección flexible para diferentes encabezados
             $tipoReferencia = $row['tipo_docto_referencia']
                 ?? $row['tipo_doc_ref']
                 ?? $row['tipo_doc_referencia']
@@ -274,7 +255,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                 ?? $row['foliodocref']
                 ?? null;
 
-            // 🔍 Buscar la factura referenciada
+            //  Buscar la factura referenciada
             $factura = null;
             if ($tipoReferencia && $folioReferencia) {
                 $factura = DocumentoFinanciero::where('tipo_documento_id', $tipoReferencia)
@@ -282,7 +263,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
                     ->first();
             }
 
-            // 🧾 Crear la nota de crédito
+            //  Crear la nota de crédito
             $documento = new DocumentoFinanciero([
                 'folio' => $folioExcel,
                 'nro' => $row['nro'],
@@ -315,18 +296,13 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
             $documento->save();
 
-            // // 💬 Mensaje informativo
-            // $this->notasCredito[] = $factura
-            //     ? "✅ Nota de crédito folio {$row['folio']} vinculada correctamente a la factura {$factura->folio}."
-            //     : "⚠️ Nota de crédito {$row['folio']} creada sin documento de referencia.";
-
-            return $documento; // 👈 Retorna para que Maatwebsite la cuente como importada
+            return $documento;
         }
 
 
 
 
-        // 🧩 AQUÍ VIENE EL AJUSTE CLAVE (para facturas normales)
+        // AQUÍ VIENE EL AJUSTE CLAVE (para facturas normales)
         $documento = new DocumentoFinanciero([
             'folio' => $folioExcel,
             'nro' => $row['nro'],
@@ -340,19 +316,19 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
             'rut_cliente' => $row['rut_cliente'],
             'razon_social' => $row['razon_social'],
 
-            // ✅ Conversión de fechas
+            //  Conversión de fechas
             'fecha_docto' => $this->transformDate($row['fecha_docto']),
             'fecha_recepcion' => $this->transformDate($row['fecha_recepcion']),
             'fecha_acuse_recibo' => $this->transformDate($row['fecha_acuse_recibo']),
             'fecha_reclamo' => $this->transformDate($row['fecha_reclamo']),
 
-            // 🔹 Cálculo de fecha de vencimiento
+            //  Cálculo de fecha de vencimiento
             'fecha_vencimiento' => $this->calcularFechaVencimiento(
                 Carbon::parse($this->transformDate($row['fecha_docto']))->toDateString(),
                 $cobranza?->creditos
             ),
 
-            // ✅ Montos normalizados
+            //  Montos normalizados
             'monto_exento' => $this->cleanNumber($row['monto_exento']),
             'monto_neto' => $this->cleanNumber($row['monto_neto']),
             'monto_iva' => $this->cleanNumber($row['monto_iva']),
@@ -392,7 +368,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
             'cobranza_id' => $cobranza?->id,
             'empresa_id' => $this->empresaId,
 
-            // 🧩 Guardamos ambos estados
+            // Guardamos ambos estados
             'status_original' => $estadoInicial,
             'status' => null,
         ]);
@@ -478,7 +454,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
     {
         $this->notasCredito = [];
 
-        // 1️⃣ Vincular las notas de crédito importadas en este archivo
+        //  Vincular las notas de crédito importadas en este archivo
         $notas = \App\Models\DocumentoFinanciero::where('tipo_documento_id', 61)
             ->whereIn('folio', $this->importados)
             ->get();
@@ -487,7 +463,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
             $this->vincularNotaCredito($nota);
         }
 
-        // 2️⃣ Intentar vincular notas antiguas que quedaron huérfanas
+        //  Intentar vincular notas antiguas que quedaron huérfanas
         $notasPendientes = \App\Models\DocumentoFinanciero::where('tipo_documento_id', 61)
             ->whereNull('referencia_id')
             ->whereNotNull('folio_docto_referencia')
@@ -497,7 +473,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
             $this->vincularNotaCredito($nota, false);
         }
 
-        // 3️⃣ Recalcular saldo pendiente de TODAS las facturas que fueron afectadas
+        //  Recalcular saldo pendiente de TODAS las facturas que fueron afectadas
         $facturasAfectadas = \App\Models\DocumentoFinanciero::whereIn(
             'id',
             \App\Models\DocumentoFinanciero::where('tipo_documento_id', 61)
@@ -513,7 +489,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
 
     /**
-     * 🔗 Vincula una nota de crédito con su factura referenciada si existe
+     *  Vincula una nota de crédito con su factura referenciada si existe
      */
     private function vincularNotaCredito($nota, $esImportada = true)
     {
@@ -522,7 +498,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
             ->first();
 
         if ($factura) {
-            // 1️⃣ Vincular nota -> factura
+            //  Vincular nota -> factura
             if (!$nota->referencia_id) {
                 $nota->referencia_id = $factura->id;
                 $nota->save();
@@ -530,7 +506,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
 
 
-            // 2️⃣ Vincular factura -> nota (relación inversa)
+            //  Vincular factura -> nota (relación inversa)
             //    Esto asegura que la factura muestre "Referenciada por NC N°..."
         if (!$factura->referenciados()->where('id', $nota->id)->exists()) {
             $factura->referenciados()->save($nota);
@@ -541,7 +517,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
         $factura->recalcularSaldoPendiente();
         $factura->save();
 
-        // 3️⃣ Mensaje informativo solo si fue importada en este archivo
+        //  Mensaje informativo solo si fue importada en este archivo
         if ($esImportada) {
                 $this->notasCredito[] = "✅ Nota de crédito folio {$nota->folio} vinculada correctamente a la factura {$factura->folio}.";
             }

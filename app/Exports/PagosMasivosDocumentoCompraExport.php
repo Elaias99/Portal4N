@@ -26,9 +26,7 @@ class PagosMasivosDocumentoCompraExport implements
      */
     public function __construct(array $operacionesExport)
     {
-        Log::info('[PAGOS_MASIVOS] Export constructor iniciado', [
-            'cantidad_operaciones' => count($operacionesExport),
-        ]);
+
 
         $this->operaciones = collect($operacionesExport);
     }
@@ -38,9 +36,7 @@ class PagosMasivosDocumentoCompraExport implements
      */
     public function collection(): Collection
     {
-        Log::info('[PAGOS_MASIVOS] Export collection()', [
-            'cantidad_operaciones' => $this->operaciones->count(),
-        ]);
+
 
         return $this->operaciones;
     }
@@ -51,9 +47,7 @@ class PagosMasivosDocumentoCompraExport implements
     public function map($op): array
     {
         if (!isset($op['documento_id'])) {
-            Log::warning('[PAGOS_MASIVOS] Operación sin documento_id', [
-                'operacion' => $op,
-            ]);
+
             return [];
         }
 
@@ -62,9 +56,7 @@ class PagosMasivosDocumentoCompraExport implements
         ])->find($op['documento_id']);
 
         if (!$documento || !$documento->cobranzaCompra) {
-            Log::warning('[PAGOS_MASIVOS] Documento inválido para export', [
-                'documento_id' => $op['documento_id'],
-            ]);
+
             return [];
         }
 

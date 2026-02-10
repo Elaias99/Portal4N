@@ -146,13 +146,7 @@ class ReclamoController extends Controller
             })
             ->filter()
             ->unique()
-            // ->intersect(['eliascorrea@4nlogistica.cl'])
             ->values();
-
-        // Loguear en modo debug
-        // Log::info('Correos que se notificarían para el área: ' . $area->nombre, $correosDeEnvio->toArray());
-        Log::debug('Cantidad de trabajadores en el área:', ['count' => $area->trabajadores->count()]);
-
         // Notificar a todos los involucrados: autor, área origen y área destino
         $usuariosParaNotificar = usuariosInvolucradosEnReclamo($reclamo);
 

@@ -211,10 +211,6 @@ class DocumentoFinancieroController extends Controller
     }
 
 
-
-
-
-
     public function filtrarColumnas(Request $request)
     {
         //Control de acceso
@@ -654,15 +650,6 @@ class DocumentoFinancieroController extends Controller
         // ===Reemplazar la colección en el paginador ===
         $documentosPaginados->setCollection($documentosFiltrados);
 
-        // ===Registro de depuración (verificación) ===
-        Log::info('EXPORT DEBUG:', [
-            'usuario' => Auth::user()->name ?? 'Sin identificar',
-            'pagina' => $page,
-            'registros_exportados' => $documentosFiltrados->count(),
-            'estado_pago' => $request->estado_pago,
-            'razones_sociales' => $documentosFiltrados->pluck('razon_social')->toArray(),
-        ]);
-
         // ===Exportación final solo con los registros filtrados ===
         $fecha = now()->format('Y-m-d_H-i-s');
         return Excel::download(
@@ -850,8 +837,7 @@ class DocumentoFinancieroController extends Controller
         $cobranzas = \App\Models\Cobranza::orderBy('razon_social')->get(['id', 'razon_social', 'rut_cliente']);
 
 
-        return view('cobranzas.detalles', compact('documento', 'referencias', 'proveedores',
-    'cobranzas'));
+        return view('cobranzas.detalles', compact('documento', 'referencias', 'proveedores', 'cobranzas'));
     }
 
 

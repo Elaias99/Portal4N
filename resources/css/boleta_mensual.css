@@ -32,7 +32,7 @@
                 border: 1px solid rgba(0,0,0,.08);
                 border-radius: 12px;
                 padding: 12px 12px 6px;
-                background: #f7f8fa; /* ❌ no blanco puro */
+                background: #f7f8fa; /*no blanco puro */
             }
 
             .hm details.hm-filters > summary {

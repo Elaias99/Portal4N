@@ -74,7 +74,7 @@ class TrackingDeliveryLinksController extends Controller
                     'delivery_state' => $data['data']['delivery_state'] ?? null,
                     'photos' => collect($data['data']['delivery_proof']['photos'] ?? [])
                         ->pluck('url')
-                        ->toArray(), // 👈 AQUÍ VIENEN LAS 3
+                        ->toArray(),
                 ],
             ]);
 
@@ -91,7 +91,7 @@ class TrackingDeliveryLinksController extends Controller
     {
         /*
         |--------------------------------------------------------------------------
-        | 1️⃣ Ver qué llega desde la vista
+        |Ver qué llega desde la vista
         |--------------------------------------------------------------------------
         */
         $request->validate([
@@ -102,13 +102,13 @@ class TrackingDeliveryLinksController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | 2️⃣ Normalizar input (split por línea)
+        |Normalizar input (split por línea)
         |--------------------------------------------------------------------------
         */
         $lines = preg_split('/\r\n|\r|\n/', $rawInput);
         /*
         |--------------------------------------------------------------------------
-        | 3️⃣ Limpieza: trim, quitar vacíos, unique
+        |Limpieza: trim, quitar vacíos, unique
         |--------------------------------------------------------------------------
         */
         $trackings = collect($lines)
@@ -119,7 +119,7 @@ class TrackingDeliveryLinksController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | 4️⃣ Procesar cada tracking (PARALELO)
+        | Procesar cada tracking (PARALELO)
         |--------------------------------------------------------------------------
         */
         $results = [];
@@ -142,15 +142,7 @@ class TrackingDeliveryLinksController extends Controller
 
             $tracking = $trackings[$index];
 
-            Log::info('Processing tracking (parallel)', [
-                'tracking' => $tracking,
-            ]);
-
             if ($response->failed()) {
-                Log::warning('Request failed', [
-                    'tracking' => $tracking,
-                    'status'   => $response->status(),
-                ]);
 
                 $results[] = [
                     'tracking' => $tracking,
@@ -188,12 +180,6 @@ class TrackingDeliveryLinksController extends Controller
                 ->values()
                 ->toArray();
 
-            Log::info('Tracking processed successfully (parallel)', [
-                'tracking' => $tracking,
-                'state'    => $data['delivery_state'] ?? null,
-                'photos'   => count($photos),
-            ]);
-
             $results[] = [
                 'tracking' => $tracking,
                 'success'  => true,
@@ -227,7 +213,7 @@ class TrackingDeliveryLinksController extends Controller
 
         $tracking = trim($request->tracking);
 
-        // 👉 reutilizamos el MISMO flujo que search()
+        //reutilizamos el MISMO flujo que search()
         $response = file_get_contents(
             'https://4nlogistica.cl/tracking-proxy.php?tracking=' . urlencode($tracking)
         );
@@ -260,9 +246,6 @@ class TrackingDeliveryLinksController extends Controller
     // Exportación masiva
     public function exportBatch(Request $request)
     {
-        Log::info('Tracking batch export requested (by photo)', [
-            'items_count' => count($request->items ?? []),
-        ]);
 
         $request->validate([
             'items' => 'required|array|min:1',
@@ -287,10 +270,6 @@ class TrackingDeliveryLinksController extends Controller
         if (empty($rows)) {
             abort(404, 'No existen imágenes seleccionadas para exportar');
         }
-
-        Log::info('Tracking batch export ready', [
-            'rows' => count($rows),
-        ]);
 
         return Excel::download(
             new TrackingBatchExport($rows),

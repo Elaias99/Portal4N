@@ -20,32 +20,31 @@ class AutomaticEmailService
 
             $horaCorreo = substr($correo->hora_envio, 0, 5);
 
-            // ⏱️ Validar hora exacta
+            //Validar hora exacta
             if ($horaCorreo !== $horaActual) {
                 continue;
             }
 
-            // 🔁 Evitar duplicados
+            // Evitar duplicados
             if ($correo->last_sent_at &&
                 Carbon::parse($correo->last_sent_at)->isSameMinute($ahora)
             ) {
                 continue;
             }
 
-            // 📅 Validar frecuencia
+            // Validar frecuencia
             if (!$this->correspondeFrecuencia($correo)) {
                 continue;
             }
 
-            // 📧 Enviar
+            //  Enviar
             $this->enviarCorreo($correo);
 
-            // ✅ Marcar como enviado
+            //  Marcar como enviado
             $correo->update([
                 'last_sent_at' => $ahora
             ]);
 
-            Log::info("📧 Correo automático enviado: {$correo->nombre}");
         }
     }
 
@@ -87,42 +86,35 @@ class AutomaticEmailService
         $ahora = Carbon::now();
         $horaActual = $ahora->format('H:i');
 
-        Log::info("🔬 Evaluando simulación", [
-            'email_id' => $correo->id,
-            'hora_envio' => $correo->hora_envio,
-            'hora_actual' => $horaActual
-        ]);
-
         $horaCorreo = substr($correo->hora_envio, 0, 5);
 
         if ($horaCorreo !== $horaActual) {
-            Log::info("⏭ Simulación: hora no coincide");
             return false;
         }
 
-        // 🔁 Evitar duplicados
+        //  Evitar duplicados
         if ($correo->last_sent_at &&
             Carbon::parse($correo->last_sent_at)->isSameMinute($ahora)
         ) {
-            Log::info("⏭ Simulación: ya enviado este minuto");
+            
             return false;
         }
 
-        // 📅 Validar frecuencia
+        //  Validar frecuencia
         if (!$this->correspondeFrecuencia($correo)) {
-            Log::info("⏭ Simulación: no corresponde a la frecuencia");
+            
             return false;
         }
 
-        // 📧 Enviar
+        //  Enviar
         $this->enviarCorreo($correo);
 
-        // ✅ Marcar como enviado
+        //  Marcar como enviado
         $correo->update([
             'last_sent_at' => $ahora
         ]);
 
-        Log::info("✅ Simulación: correo enviado correctamente");
+        
 
         return true;
     }
@@ -144,10 +136,6 @@ class AutomaticEmailService
 
     public function enviarCorreoManual(AutomaticEmail $correo)
     {
-        Log::info("📤 Envío manual de correo", [
-            'id' => $correo->id,
-            'nombre' => $correo->nombre
-        ]);
 
         $this->enviarCorreo($correo);
     }
