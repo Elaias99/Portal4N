@@ -23,7 +23,7 @@
 
 
 
-    {{-- 🔹 Información general --}}
+    {{-- Información general --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Información general</div>
         <div class="card-body">
@@ -46,13 +46,13 @@
         </div>
     </div>
 
-    {{-- 🔹 Resumen del cálculo del saldo pendiente --}}
+    {{-- Resumen del cálculo del saldo pendiente --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Resumen del cálculo del saldo pendiente</div>
         <div class="card-body">
-            <p class="mb-1"><strong>1️⃣ Monto total inicial:</strong> ${{ number_format($documento->monto_total, 0, ',', '.') }}</p>
+            <p class="mb-1"><strong> Monto total inicial:</strong> ${{ number_format($documento->monto_total, 0, ',', '.') }}</p>
 
-            {{-- 🔹 Pago registrado --}}
+            {{-- Pago registrado --}}
             @if($documento->pagos()->exists())
                 @php $pago = $documento->pagos()->latest('fecha_pago')->first(); @endphp
                 <div class="card mb-4 shadow-sm border-success">
@@ -78,7 +78,7 @@
                 </div>
             @endif
 
-            {{-- 🔹 Pronto Pago --}}
+            {{-- Pronto Pago --}}
             @if($documento->prontoPagos()->exists())
                 @php $pp = $documento->prontoPagos()->latest('fecha_pronto_pago')->first(); @endphp
                 <div class="card mb-4 shadow-sm border-warning">
@@ -104,21 +104,21 @@
                 </div>
             @endif
 
-            {{-- 🔹 Abonos --}}
+            {{-- Abonos --}}
             @if($documento->abonos->isNotEmpty())
                 @foreach ($documento->abonos as $abono)
                     <p class="mb-1">
-                        <strong>2️⃣ Abono registrado el {{ \Carbon\Carbon::parse($abono->fecha_abono)->format('d-m-Y') }}:</strong>
+                        <strong> Abono registrado el {{ \Carbon\Carbon::parse($abono->fecha_abono)->format('d-m-Y') }}:</strong>
                         - ${{ number_format($abono->monto, 0, ',', '.') }}
                     </p>
                 @endforeach
             @endif
 
-            {{-- 🔹 Cruces --}}
+            {{-- Cruces --}}
             @if($documento->cruces->isNotEmpty())
                 @foreach ($documento->cruces as $cruce)
                     <p class="mb-1">
-                        <strong>3️⃣ Cruce registrado el {{ \Carbon\Carbon::parse($cruce->fecha_cruce)->format('d-m-Y') }}:</strong>
+                        <strong> Cruce registrado el {{ \Carbon\Carbon::parse($cruce->fecha_cruce)->format('d-m-Y') }}:</strong>
                         - ${{ number_format($cruce->monto, 0, ',', '.') }}
                     </p>
                 @endforeach
@@ -126,12 +126,12 @@
 
             <hr>
             <p class="fw-bold text-success mb-0">
-                ✅ <strong>Saldo pendiente actual:</strong> ${{ number_format($documento->saldo_pendiente, 0, ',', '.') }}
+                <strong>Saldo pendiente actual:</strong> ${{ number_format($documento->saldo_pendiente, 0, ',', '.') }}
             </p>
         </div>
     </div>
 
-    {{-- 🔹 Sección de abonos --}}
+    {{-- Sección de abonos --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Abonos registrados</div>
         <div class="card-body">
@@ -172,7 +172,7 @@
         </div>
     </div>
 
-    {{-- 🔹 Sección de cruces --}}
+    {{-- Sección de cruces --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Cruces registrados</div>
         <div class="card-body">
@@ -227,14 +227,14 @@
 
 
     {{-- ========================================= --}}
-{{-- 🔹 Sección de Referencias (igual a ventas) --}}
+{{-- Sección de Referencias (igual a ventas) --}}
 {{-- ========================================= --}}
 
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Referencias del Documento</div>
         <div class="card-body">
 
-            {{-- 1️⃣ Si este documento referencia a otro --}}
+            {{-- Si este documento referencia a otro --}}
             @if($documento->referencia)
                 <p>
                     <strong>Referencia a:</strong><br>
@@ -244,7 +244,7 @@
                 </p>
             @endif
 
-            {{-- 2️⃣ Si otros documentos referencian a este --}}
+            {{-- Si otros documentos referencian a este --}}
             @if($documento->referenciados->isNotEmpty())
                 <p><strong>Referenciado por:</strong></p>
                 <ul>
@@ -258,7 +258,7 @@
                 </ul>
             @endif
 
-            {{-- 3️⃣ Si no tiene ninguna referencia (igual que ventas) --}}
+            {{-- Si no tiene ninguna referencia (igual que ventas) --}}
             @if(!$documento->referencia && $documento->referenciados->isEmpty())
                 <p class="text-muted">Sin referencias asociadas.</p>
             @endif
@@ -267,7 +267,7 @@
     </div>
 
 
-    {{-- 🔹 Botón volver --}}
+    {{-- Botón volver --}}
     <div class="text-center mt-4">
         <a href="{{ session('return_to_listado', route('finanzas_compras.index')) }}" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> Volver al listado

@@ -48,7 +48,7 @@
             <input type="number" name="dias" id="dias" class="form-control" required min="1">
         </div>
 
-        <!-- 📌 Nuevo Campo para Seleccionar Firma -->
+        <!-- Nuevo Campo para Seleccionar Firma -->
         <div class="mb-3">
             <label for="firma" class="form-label">Seleccionar Firma</label>
             <select name="firma" id="firma" class="form-control" required>

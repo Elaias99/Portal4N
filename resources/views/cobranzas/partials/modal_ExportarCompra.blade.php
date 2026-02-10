@@ -14,7 +14,7 @@
           Los filtros aplicados actualmente serán respetados.
         </p>
 
-        {{-- 🟢 Exportar solo la página actual --}}
+        {{-- Exportar solo la página actual --}}
         <form method="GET" action="{{ route('finanzas_compras.export') }}">
             @foreach (request()->query() as $key => $value)
                 <input type="hidden" name="{{ $key }}" value="{{ $value }}">
@@ -25,7 +25,7 @@
             </button>
         </form>
 
-        {{-- 🔵 Exportar todos los registros filtrados --}}
+        {{-- Exportar todos los registros filtrados --}}
         <form method="GET" action="{{ route('finanzas_compras.exportAll') }}">
             @foreach (request()->query() as $key => $value)
                 <input type="hidden" name="{{ $key }}" value="{{ $value }}">

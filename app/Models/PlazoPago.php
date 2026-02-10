@@ -9,7 +9,7 @@ class PlazoPago extends Model
 {
     use HasFactory;
 
-    protected $table = 'plazo_pago'; // 👈 importante ya que es singular
+    protected $table = 'plazo_pago';
 
     protected $fillable = ['nombre'];
 

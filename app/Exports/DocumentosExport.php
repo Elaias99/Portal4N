@@ -18,7 +18,7 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
         $this->documentos = $documentos;
     }
     /**
-     * 🔹 Retorna la colección de registros a exportar
+     *  Retorna la colección de registros a exportar
      */
     public function collection()
     {
@@ -26,7 +26,7 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
     }
 
     /**
-     * 🔹 Define cómo se exporta cada fila
+     *  Define cómo se exporta cada fila
      */
     public function map($doc): array
     {
@@ -38,10 +38,10 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
 
         // === Saldo pendiente dinámico ===
         if ($doc->tipo_documento_id == 61) {
-            // 🧾 Nota de Crédito Electrónica → mostrar saldo 0 en la exportación
+            //  Nota de Crédito Electrónica → mostrar saldo 0 en la exportación
             $saldoPendiente = 0;
         } else {
-            // 🟢 Otros documentos → calcular normalmente
+            //  Otros documentos → calcular normalmente
             $saldoPendiente = $doc->saldo_pendiente;
         }
 
@@ -75,37 +75,37 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
             $doc->fecha_docto,
             $doc->fecha_vencimiento,
 
-            // 🔹 Estados
+            //  Estados
             $doc->status_original,
             $doc->status,
 
-            // 🔹 Fechas administrativas
+            //  Fechas administrativas
             $doc->fecha_recepcion,
             $doc->fecha_acuse_recibo,
             $doc->fecha_reclamo,
 
-            // 🔹 Montos
+            //  Montos
             $doc->monto_exento,
             $doc->monto_neto,
             $doc->monto_iva,
             $doc->monto_total,
 
-            // 🔹 Datos de abonos
+            //  Datos de abonos
             $totalAbonado,
             $ultimaFechaAbono ? Carbon::parse($ultimaFechaAbono)->format('Y-m-d') : null,
 
-            // 🔹 Datos de cruces
+            //  Datos de cruces
             $totalCruzado,
             $ultimaFechaCruce ? Carbon::parse($ultimaFechaCruce)->format('Y-m-d') : null,
 
-            // 🔹 Saldo pendiente (con control para notas de crédito)
+            //  Saldo pendiente (con control para notas de crédito)
             $saldoPendiente,
 
-            // 🔹 Columnas de referencia
+            //  Columnas de referencia
             $documentoReferencia,
             $referenciadoPor,
 
-            // 🔹 Otros campos
+            //  Otros campos
             $doc->iva_retenido_total,
             $doc->iva_retenido_parcial,
             $doc->iva_no_retenido,
@@ -143,7 +143,7 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping
     }
 
     /**
-     * 🔹 Encabezados de las columnas en el Excel
+     *  Encabezados de las columnas en el Excel
      */
     public function headings(): array
     {

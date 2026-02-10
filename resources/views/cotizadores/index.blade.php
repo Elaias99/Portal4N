@@ -329,14 +329,14 @@
                 document.getElementById("insumo")?.setAttribute("required", "required");
                 document.getElementById("tipo_maquila_id")?.setAttribute("required", "required");
 
-                // 👇 Limpiar o inicializar campos nuevos
+                // Limpiar o inicializar campos nuevos
                 document.getElementById("duracion_proceso").value = "";
                 document.getElementById("requiere_transporte").value = "0";
 
-                // 👇 Forzar que se apliquen las reglas de insumo
+                // Forzar que se apliquen las reglas de insumo
                 toggleDetalleInsumo();
 
-                // 👇 Actualizar visibilidad del botón transporte
+                // Actualizar visibilidad del botón transporte
                 toggleTransporteMaquila();
             }
         }
@@ -357,10 +357,10 @@
             } else {
                 btnModalWrapper.classList.add("d-none");
 
-                // 👇 limpiar filas de insumos para que no viajen al backend
+                // limpiar filas de insumos para que no viajen al backend
                 document.querySelectorAll("#tablaInsumosBody tr").forEach(tr => tr.remove());
 
-                // 👇 quitar required de insumos si quedaron
+                // quitar required de insumos si quedaron
                 document.querySelectorAll("#tablaInsumosBody input").forEach(el => {
                     el.removeAttribute("required");
                 });
@@ -399,7 +399,7 @@
         }
 
         // ======================
-        // 🚚 Cálculo de distancia
+        // Cálculo de distancia
         // ======================
         const btnCalcular = document.getElementById("btnCalcular");
         const resultadoDistancia = document.getElementById("resultadoDistancia");

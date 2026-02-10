@@ -76,10 +76,10 @@ class AbonoController extends Controller
         $abono = \App\Models\Abono::findOrFail($id);
         $documento = $abono->documento ?? $abono->documentoCompra;
 
-        // 🧩 Detectar tipo de documento
+        //  Detectar tipo de documento
         $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
 
-        // 📝 Guardar datos antes de eliminar
+        //  Guardar datos antes de eliminar
         $datosAnteriores = [
             'monto' => $abono->monto,
             'fecha_abono' => $abono->fecha_abono,
@@ -87,19 +87,19 @@ class AbonoController extends Controller
 
         $estadoAnterior = $documento->estado;
 
-        // 🔹 Eliminar el abono
+        //  Eliminar el abono
         $abono->delete();
 
-        // 🔹 Recalcular saldo pendiente
+        //  Recalcular saldo pendiente
         if (method_exists($documento, 'recalcularSaldoPendiente')) {
             $documento->recalcularSaldoPendiente();
         }
 
-        // 🔹 Recalcular totales
+        //  Recalcular totales
         $totalAbonos = $documento->abonos()->sum('monto');
         $totalCruces = $documento->cruces()->sum('monto');
 
-        // 🔹 Determinar nuevo estado
+        //  Determinar nuevo estado
         if ($totalAbonos > 0) {
             $nuevoEstado = 'Abono';
         } elseif ($totalCruces > 0) {
@@ -110,7 +110,7 @@ class AbonoController extends Controller
                 : 'Al día';
         }
 
-        // 🔹 Actualizar documento según tipo
+        //  Actualizar documento según tipo
         if ($tipoDocumento === 'compra') {
             $documento->update([
                 'estado' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
@@ -126,7 +126,7 @@ class AbonoController extends Controller
             ]);
         }
 
-        // 🔹 Registrar movimiento según tipo de documento
+        //  Registrar movimiento según tipo de documento
         if ($tipoDocumento === 'financiero') {
             \App\Models\MovimientoDocumento::create([
                 'documento_financiero_id' => $documento->id,
@@ -156,7 +156,7 @@ class AbonoController extends Controller
             ]);
         }
 
-        // 🔹 Redirección inteligente
+        //  Redirección inteligente
         if ($tipoDocumento === 'compra') {
             return redirect()
                 ->route('finanzas_compras.show', $documento->id)

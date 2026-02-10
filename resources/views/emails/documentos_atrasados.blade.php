@@ -17,11 +17,11 @@
             y mantienen un saldo pendiente al día <strong>{{ now()->format('d/m/Y') }}</strong>.
         </p>
 
-        {{-- 🔹 Sección de Ventas --}}
+        {{-- Sección de Ventas --}}
         <h3 style="color: #0056b3; margin-top: 25px;">RCV_VENTAS</h3>
 
         @if ($ventas->isEmpty())
-            <p style="color: #777;">✅ No hay documentos de venta vencidos con saldo pendiente.</p>
+            <p style="color: #777;">No hay documentos de venta vencidos con saldo pendiente.</p>
         @else
             <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse: collapse; margin-bottom: 20px;">
                 <thead>
@@ -45,11 +45,11 @@
             </table>
         @endif
 
-        {{-- 🔸 Sección de Compras --}}
+        {{-- Sección de Compras --}}
         {{-- <h3 style="color: #b35a00;">RCV_COMPRAS</h3>
 
         @if ($compras->isEmpty())
-            <p style="color: #777;">✅ No hay documentos de compra vencidos con saldo pendiente.</p>
+            <p style="color: #777;"> No hay documentos de compra vencidos con saldo pendiente.</p>
         @else
             <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse: collapse;">
                 <thead>
@@ -74,8 +74,8 @@
         @endif
 
         <p style="margin-top: 25px; color: #555;">
-            🕓 <em>Reporte generado automáticamente por el módulo de Finanzas.</em><br>
-            📧 Este correo es informativo; no requiere respuesta.
+             <em>Reporte generado automáticamente por el módulo de Finanzas.</em><br>
+             Este correo es informativo; no requiere respuesta.
         </p>
 
         <hr style="margin: 25px 0; border: none; border-top: 1px solid #ddd;">

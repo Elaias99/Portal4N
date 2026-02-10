@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
 
-        // 🔹 Tabla: abonos
+        // Tabla: abonos
         Schema::table('abonos', function (Blueprint $table) {
             $table->foreignId('documento_compra_id')
                   ->nullable()
@@ -21,7 +21,7 @@ return new class extends Migration
                   ->cascadeOnDelete();
         });
 
-        // 🔹 Tabla: cruces
+        // Tabla: cruces
         Schema::table('cruces', function (Blueprint $table) {
             $table->foreignId('documento_compra_id')
                   ->nullable()
@@ -30,7 +30,7 @@ return new class extends Migration
                   ->cascadeOnDelete();
         });
 
-        // 🔹 Tabla: pagos
+        // Tabla: pagos
         Schema::table('pagos', function (Blueprint $table) {
             $table->foreignId('documento_compra_id')
                   ->nullable()
@@ -39,7 +39,7 @@ return new class extends Migration
                   ->cascadeOnDelete();
         });
 
-        // 🔹 Tabla: pronto_pagos
+        // Tabla: pronto_pagos
         Schema::table('pronto_pagos', function (Blueprint $table) {
             $table->foreignId('documento_compra_id')
                   ->nullable()

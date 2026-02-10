@@ -273,7 +273,7 @@
             exportForm.submit(); // ⬅️ Solo enviamos el form
         });
 
-        // ✅ Si venimos con export_ready, dispara la descarga
+        // Si venimos con export_ready, dispara la descarga
         @if(session('export_ready'))
             window.location = "{{ route('pagos.descargar') }}";
         @endif

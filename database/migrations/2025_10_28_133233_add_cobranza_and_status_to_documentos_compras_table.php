@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('documentos_compras', function (Blueprint $table) {
             //
-            // 🔗 Relación con cobranzas
+            // Relación con cobranzas
             $table->foreignId('cobranza_id')
                 ->nullable()
                 ->constrained('cobranzas')

@@ -12,12 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('documentos_financieros', function (Blueprint $table) {
-            // 🧹 Eliminamos el campo antiguo
+            // Eliminamos el campo antiguo
             if (Schema::hasColumn('documentos_financieros', 'tipo_doc')) {
                 $table->dropColumn('tipo_doc');
             }
 
-            // 🔗 Agregamos la nueva relación con tipo_documentos
+            // Agregamos la nueva relación con tipo_documentos
             $table->unsignedBigInteger('tipo_documento_id')->after('nro')->nullable();
 
             // Establecemos la clave foránea

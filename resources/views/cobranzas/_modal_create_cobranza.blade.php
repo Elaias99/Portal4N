@@ -70,7 +70,7 @@
 $(function () {
 
     // =====================================================
-    // 🔧 Habilitar / deshabilitar inputs del formulario
+    // Habilitar / deshabilitar inputs del formulario
     // =====================================================
     function toggleFormState(container, enabled) {
         $(container).find('input, select, textarea').each(function () {
@@ -99,7 +99,7 @@ $(function () {
 
 
     // =====================================================
-    // 🟢 Abrir modal manualmente desde enlace
+    // Abrir modal manualmente desde enlace
     // =====================================================
     $(document).on('click', '.crear-cobranza-link, .crear-compra-link', function (e) {
         e.preventDefault();
@@ -142,7 +142,7 @@ $(function () {
 
 
     // =====================================================
-    // 🧩 Flujo guiado automático (ventas o compras)
+    // Flujo guiado automático (ventas o compras)
     // =====================================================
     @php
         $pendientes = session('sin_cobranza')
@@ -223,7 +223,7 @@ $(function () {
 
 
     // =====================================================
-    // 🟢 Enviar formulario por AJAX
+    // Enviar formulario por AJAX
     // =====================================================
     $('#formCrearCobranza').on('submit', function (e) {
         e.preventDefault();

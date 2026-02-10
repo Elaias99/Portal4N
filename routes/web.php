@@ -955,10 +955,10 @@ Route::get('/assign-role-jefe-jp', function () {
 Route::get('/test-mail', function () {
     Mail::raw('Este es un correo de prueba enviado desde Laravel usando Outlook SMTP.', function ($message) {
         $message->to('eliascorrea@4nlogistica.cl') // <-- Reemplaza con un correo que puedas revisar
-                ->subject('📧 Correo de Prueba - Laravel SMTP');
+                ->subject('Correo de Prueba - Laravel SMTP');
     });
 
-    return '✅ Correo enviado (si todo salió bien).';
+    return 'Correo enviado (si todo salió bien).';
 });
 // Investigar API
 // BACKCOFFE

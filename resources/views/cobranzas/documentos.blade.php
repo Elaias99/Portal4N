@@ -7,7 +7,7 @@
 {{-- MENSAJES UNIFICADOS Y OPTIMIZADOS --}}
 <div class="container" style="max-width: 1150px;">
 
-    {{-- 🔴 ERROR --}}
+    {{-- ERROR --}}
     @if(session('error'))
         <div class="alert alert-danger custom-alert mx-auto shadow-sm" style="max-width: 100%; border-left:5px solid #dc3545; border-radius:10px; padding:12px 16px;">
             <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between">
@@ -44,7 +44,7 @@
     @endif
 
 
-    {{-- 🟡 WARNING --}}
+    {{-- WARNING --}}
     @if(session('warning'))
         <div class="alert alert-warning custom-alert mx-auto shadow-sm" style="max-width: 100%; border-left:5px solid #ffc107; border-radius:10px; padding:12px 16px;">
             <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between">
@@ -81,7 +81,7 @@
     @endif
 
 
-    {{-- 🟢 SUCCESS --}}
+    {{-- SUCCESS --}}
     @if(session('success'))
         <div class="alert alert-success custom-alert mx-auto shadow-sm" style="max-width: 100%; border-left:5px solid #28a745; border-radius:10px; padding:12px 16px;">
             <div class="d-flex align-items-center">
@@ -192,7 +192,7 @@
 
 
 
-                                {{-- 🔹 Filtro solo con dos opciones --}}
+                                {{-- Filtro solo con dos opciones --}}
                                 <div class="col-md-1">
                                     <label class="form-label small text-muted">Estado Original</label>
 
@@ -209,7 +209,7 @@
                                 </div>
 
 
-                                {{-- 🔹 Filtro por estado actual (manual) --}}
+                                {{-- Filtro por estado actual (manual) --}}
                                 <div class="col-md-2">
                                     <label class="form-label small text-muted">Estado de Pago</label>
                                     <select name="estado_pago" class="form-select form-select-sm">
@@ -284,7 +284,7 @@
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center mt-3">
-                                {{-- 🔹 Texto alineado a la izquierda --}}
+                                {{-- Texto alineado a la izquierda --}}
                                 <div>
                                     <strong>Saldo pendiente total:</strong> 
                                     <span class="text-success fw-semibold">
@@ -292,7 +292,7 @@
                                     </span>
                                 </div>
 
-                                {{-- 🔹 Botón alineado a la derecha --}}
+                                {{-- Botón alineado a la derecha --}}
                                 <a href="{{ route('cobranzas.index') }}" class="btn btn-outline-secondary btn-sm">
                                     Detalle Cliente
                                 </a>
@@ -314,7 +314,7 @@
                     <div class="card-body text-center d-flex flex-column justify-content-center">
                         <h6 class="fw-bold mb-3">Gestión Masiva</h6>
 
-                        {{-- 🔹 Nuevo botón de Historial de Movimientos --}}
+                        {{-- Nuevo botón de Historial de Movimientos --}}
                         @if (Auth::id() != 375)
                             <a href="{{ route('panelfinanza.show') }}" 
                             class="btn btn-outline-secondary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
@@ -323,7 +323,7 @@
                             </a>
                         @endif
 
-                        {{-- 🔹 Importación de Excel --}}
+                        {{-- Importación de Excel --}}
                         @if (Auth::id() != 375)
                             <form action="{{ route('cobranzas.import') }}" method="POST" enctype="multipart/form-data" class="mb-3">
                                 @csrf
@@ -359,12 +359,12 @@
             @foreach ($documentosOriginal as $doc)
                 <tr>
 
-                    {{-- 1️⃣ Empresa --}}
+                    {{-- Empresa --}}
                     <td class="text-nowrap">
                         {{ $doc->empresa?->Nombre ?? 'Sin empresa' }}
                     </td>
 
-                    {{-- 2️⃣ Status (status_original / status manual) --}}
+                    {{-- Status (status_original / status manual) --}}
                     <td>
                         @php
                             $color = $doc->status_original === 'Vencido' ? 'bg-danger' : 'bg-success';
@@ -383,17 +383,17 @@
                         {{ \Illuminate\Support\Str::limit($doc->tipoDocumento?->nombre ?? '-', 18) }}
                     </td>                    
 
-                    {{-- 4️⃣ RUT Proveedor --}}
+                    {{-- RUT Proveedor --}}
                     <td class="text-nowrap">
                         {{ $doc->rut_cliente }}
                     </td>
 
-                    {{-- 5️⃣ Razón Social --}}
+                    {{-- Razón Social --}}
                     <td class="text-nowrap">
                         {{ $doc->razon_social }}
                     </td>
 
-                    {{-- 6️⃣ Folio --}}
+                    {{-- Folio --}}
                     <td>
                         <a href="{{ route('documentos.detalles', $doc->id) }}?{{ http_build_query(request()->query()) }}"
                             class="fw-semibold text-decoration-none">
@@ -412,17 +412,17 @@
                         @endif
                     </td>
 
-                    {{-- 7️⃣ Fecha Docto --}}
+                    {{-- Fecha Docto --}}
                     <td>
                         {{ $doc->fecha_docto ? \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') : '-' }}
                     </td>
 
-                    {{-- 8️⃣ Fecha Vencimiento --}}
+                    {{-- Fecha Vencimiento --}}
                     <td>
                         {{ $doc->fecha_vencimiento ? \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') : '-' }}
                     </td>
 
-                    {{-- 9️⃣ Monto Neto --}}
+                    {{-- Monto Neto --}}
                     <td class="text-end">
                         ${{ number_format($doc->monto_neto, 0, ',', '.') }}
                     </td>

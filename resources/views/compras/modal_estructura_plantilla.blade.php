@@ -308,7 +308,7 @@
       'panelPlazoPago',
       'panelEmpresas',
       'panelCentrosCostos',
-      'panelConsideraciones', // 👈 agrega este
+      'panelConsideraciones',
     ];
     paneles.forEach(pid => {
       const el = document.getElementById(pid);

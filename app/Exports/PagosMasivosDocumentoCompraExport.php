@@ -113,7 +113,7 @@ class PagosMasivosDocumentoCompraExport implements
             null,                 // Correo beneficiario
             null,                 // Mensaje correo beneficiario
             $glosa,               // Glosa cartola originador
-            $glosa,               // ✅ Glosa cartola beneficiario (CORREGIDO)
+            $glosa,               // Glosa cartola beneficiario (CORREGIDO)
         ];
     }
 

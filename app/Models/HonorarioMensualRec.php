@@ -105,25 +105,25 @@ class HonorarioMensualRec extends Model
 
     public function recalcularSaldoPendiente()
     {
-        // 1️⃣ Si tiene pago o pronto pago → saldo 0
+        // Si tiene pago o pronto pago → saldo 0
         if ($this->pagos()->exists() || $this->prontoPagos()->exists()) {
             $this->update(['saldo_pendiente' => 0]);
             return 0;
         }
 
-        // 2️⃣ Monto base: monto pagado informado por SII
+        // Monto base: monto pagado informado por SII
         $saldo = $this->monto_pagado ?? 0;
 
-        // 3️⃣ Descontar abonos
+        // Descontar abonos
         $saldo -= $this->abonos()->sum('monto');
 
-        // 4️⃣ Descontar cruces
+        // Descontar cruces
         $saldo -= $this->cruces()->sum('monto');
 
-        // 5️⃣ Nunca negativo
+        // Nunca negativo
         $saldo = max($saldo, 0);
 
-        // 6️⃣ Persistir
+        // Persistir
         $this->update(['saldo_pendiente' => $saldo]);
 
         return $saldo;
@@ -153,17 +153,17 @@ class HonorarioMensualRec extends Model
 
     public function getServicioFinalAttribute()
     {
-        // 1️⃣ Si hay servicio manual → prevalece
+        // Si hay servicio manual → prevalece
         if (!empty($this->servicio_manual)) {
             return $this->servicio_manual;
         }
 
-        // 2️⃣ Si hay proveedor asociado → usar su servicio
+        // Si hay proveedor asociado → usar su servicio
         if ($this->cobranzaCompra) {
             return $this->cobranzaCompra->servicio;
         }
 
-        // 3️⃣ Fallback explícito
+        // Fallback explícito
         return null;
     }
 

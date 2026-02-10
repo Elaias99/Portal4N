@@ -101,7 +101,7 @@ class ReclamosArea extends Component
         $this->filtroEstado = '';
         $this->filtroImportancia = '';
         $this->filtroBulto = '';
-        $this->filtroTrabajador = ''; // ✅ Esto es lo que faltaba
+        $this->filtroTrabajador = '';
         $this->aplicarFiltrado();
     }
 

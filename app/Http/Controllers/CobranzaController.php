@@ -56,7 +56,7 @@ class CobranzaController extends Controller
 
         $cobranza = Cobranza::create($validated);
 
-        // ⚡ Si la solicitud viene vía AJAX, devolver JSON
+        // Si la solicitud viene vía AJAX, devolver JSON
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
@@ -133,7 +133,7 @@ class CobranzaController extends Controller
     public function reprocesarPendientes(Request $request)
     {
       
-        // 1️⃣ Buscar los pendientes en sesión
+        // Buscar los pendientes en sesión
         $pendientes = session('sin_cobranza_pendientes') ?? session('sin_cobranza');
 
         if (empty($pendientes)) {
@@ -196,7 +196,7 @@ class CobranzaController extends Controller
                             'updated_at' => now(),
                         ]);
 
-                        // ⚠️ CORREGIDO → antes guardabas el array completo
+                        // CORREGIDO → antes guardabas el array completo
                         $procesados[] = $folio;
 
 
@@ -214,12 +214,12 @@ class CobranzaController extends Controller
             }
         }
 
-        // 4️⃣ Limpiar sesión
+        //  Limpiar sesión
         session()->forget('sin_cobranza');
         session()->forget('sin_cobranza_pendientes');
 
 
-        // 5️⃣ Registrar movimiento
+        //  Registrar movimiento
         try {
             \App\Models\MovimientoDocumento::create([
                 'documento_financiero_id' => null,

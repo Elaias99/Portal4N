@@ -80,14 +80,14 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
         }
 
         // Validar duplicados
-        // 🧩 Evitar procesar duplicados en base de datos y dentro del mismo archivo
+        // Evitar procesar duplicados en base de datos y dentro del mismo archivo
         static $foliosProcesados = []; // memoria temporal para el archivo actual
 
         $folioExcel = trim((string)($row['folio'] ?? ''));
         $rutCliente = trim((string)($row['rut_cliente'] ?? ''));
         $tipoDoc = (int)($row['tipo_doc'] ?? 0);
 
-        // 1️⃣ Revisar si ya se procesó en este mismo archivo
+        // Revisar si ya se procesó en este mismo archivo
         $claveUnica = "{$this->empresaId}-{$tipoDoc}-{$rutCliente}-{$folioExcel}";
 
         if (in_array($claveUnica, $foliosProcesados, true)) {
@@ -98,7 +98,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
         $foliosProcesados[] = $claveUnica;
 
-        // 2️⃣ Revisar si ya existe en la base de datos
+        //Revisar si ya existe en la base de datos
         if (
             \App\Models\DocumentoFinanciero::where('empresa_id', $this->empresaId)
                 ->where('tipo_documento_id', $tipoDoc)
@@ -142,7 +142,7 @@ class DocumentosImport implements ToModel, WithHeadingRow, SkipsOnError
 
             }
 
-            // 🧩 Crear el documento con cobranza_id = null (para ser reprocesado luego)
+            // Crear el documento con cobranza_id = null (para ser reprocesado luego)
             \App\Models\DocumentoFinanciero::updateOrCreate(
                 ['folio' => $folioExcel],
                 [

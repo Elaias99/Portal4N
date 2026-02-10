@@ -231,7 +231,7 @@
                 max-width: 100%;
                 text-align: center;
 
-                /* 🔽 Nuevo: centrar y alinear con el formulario */
+                /* Nuevo: centrar y alinear con el formulario */
                 box-sizing: border-box;
                 margin-left: 0;
                 margin-right: 0;

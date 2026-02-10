@@ -12,7 +12,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-                // 📋 Inserta los códigos oficiales del SII (solo documentos de ventas)
+                // Inserta los códigos oficiales del SII (solo documentos de ventas)
         DB::table('tipo_documentos')->insert([
             ['id' => 30,  'nombre' => 'Factura'],
             ['id' => 32,  'nombre' => 'Factura de ventas y servicios no afectos o exentos de IVA'],

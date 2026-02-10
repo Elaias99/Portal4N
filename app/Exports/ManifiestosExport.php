@@ -28,7 +28,7 @@ class ManifiestosExport implements FromCollection, WithHeadings, WithMapping, Wi
     public function map($row): array
     {
         return [
-            \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel($row[0]), // ✅ Esto lo convierte a fecha real para Excel
+            \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel($row[0]),
             $row[1],
             $row[2],
             $row[3],

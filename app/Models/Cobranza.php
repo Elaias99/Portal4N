@@ -24,7 +24,7 @@ class Cobranza extends Model
         return $this->hasMany(DocumentoCompra::class, 'cobranza_id');
     }
 
-    // ⚙️ Evento automático: si cambian los créditos, recalcula vencimientos
+    // Evento automático: si cambian los créditos, recalcula vencimientos
     protected static function booted()
     {
         static::updated(function ($cobranza) {

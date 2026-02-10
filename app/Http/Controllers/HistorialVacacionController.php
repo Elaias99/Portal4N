@@ -139,7 +139,7 @@ class HistorialVacacionController extends Controller
         // Crear el registro de días históricos
         HistorialVacacion::create($request->all());
 
-        // 📌 Descontar días proporcionales si es "vacaciones"
+        // Descontar días proporcionales si es "vacaciones"
         if (strtolower($request->tipo_dia) === 'vacaciones') {
             $nuevoSaldo = max(0, $trabajador->dias_proporcionales - $request->dias_laborales);
             $trabajador->update(['dias_proporcionales' => $nuevoSaldo]);

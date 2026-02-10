@@ -44,7 +44,7 @@ Schedule::call(function () {
 
         Mail::to($destinos)->send(new CumpleaniosNotificacion($cumpleanieros));
     }
-})->dailyAt('10:00'); // 🔄 ahora se dispara a las 10:00 AM
+})->dailyAt('10:00'); // se dispara a las 10:00 AM
 
 
 
@@ -54,28 +54,28 @@ Schedule::call(function () {
 
 
 Schedule::call(function () {
-    // 📆 Calcular lunes y domingo de la semana actual
+    //Calcular lunes y domingo de la semana actual
     $inicio = Carbon::now()->startOfWeek(Carbon::MONDAY)->startOfDay();
     $fin = Carbon::now()->endOfWeek(Carbon::SUNDAY)->endOfDay();
 
-    // 🔹 VENTAS (RCV_VENTAS)
+    // VENTAS (RCV_VENTAS)
     $ventas = DocumentoFinanciero::whereBetween('fecha_vencimiento', [$inicio, $fin])
         ->get()
         ->filter(fn($doc) => $doc->saldo_pendiente > 0)
         ->sortBy('fecha_vencimiento');
 
-    // 🔸 COMPRAS (RCV_COMPRAS)
+    // COMPRAS (RCV_COMPRAS)
     $compras = DocumentoCompra::whereBetween('fecha_vencimiento', [$inicio, $fin])
         ->get()
         ->filter(fn($doc) => $doc->saldo_pendiente > 0)
         ->sortBy('fecha_vencimiento');
 
     if ($ventas->isEmpty() && $compras->isEmpty()) {
-        Log::info('📭 [VENCIMIENTOS] No hay documentos (ventas ni compras) por vencer esta semana.');
+        
         return;
     }
 
-    // 📨 Enviar correo con ambas colecciones
+    // Enviar correo con ambas colecciones
     $destinos = [
         'eliascorrea@4nlogistica.cl',
         'NataliaLeyton@4nlogistica.cl',
@@ -85,8 +85,6 @@ Schedule::call(function () {
 
     Mail::to($destinos)->send(new DocumentosVencimientosNotificacion($ventas, $compras));
 
-    Log::info('✅ [VENCIMIENTOS] Correo de vencimientos enviado a (' . implode(', ', $destinos) . ') - Rango: ' .
-        $inicio->format('d/m/Y') . ' - ' . $fin->format('d/m/Y'));
 })
 ->cron('0 7 * * 1,5');// Lunes 07:00 de la mañana
 
@@ -97,25 +95,25 @@ Schedule::call(function () {
 // 1. Notificación de fechas vencidas
 // ===========================================================
 
-// 📬 Notificación de documentos vencidos con saldo pendiente
+// Notificación de documentos vencidos con saldo pendiente
 Schedule::call(function () {
     $hoy = now()->startOfDay();
 
-    // 🔹 VENTAS
+    // VENTAS
     $ventas = \App\Models\DocumentoFinanciero::where('fecha_vencimiento', '<', $hoy)
         ->get()
         ->filter(fn($doc) => $doc->saldo_pendiente > 0)
         ->sortBy('fecha_vencimiento');
 
 
-    // 🔸 COMPRAS
+    // COMPRAS
     $compras = \App\Models\DocumentoCompra::where('fecha_vencimiento', '<', $hoy)
         ->get()
         ->filter(fn($doc) => $doc->saldo_pendiente > 0)
         ->sortBy('fecha_vencimiento');
 
     if ($ventas->isEmpty() && $compras->isEmpty()) {
-        Log::info('📭 [ATRASADOS] No hay documentos vencidos con saldo pendiente.');
+        // Log::info(' [ATRASADOS] No hay documentos vencidos con saldo pendiente.');
         return;
     }
 
@@ -131,7 +129,7 @@ Schedule::call(function () {
 
     Mail::to($destinos)->send(new DocumentosAtrasadosMail($ventas, $compras));
 
-    Log::info('✅ [ATRASADOS] Correo de documentos vencidos enviado a (' . implode(', ', $destinos) . ')');
+    // Log::info(' [ATRASADOS] Correo de documentos vencidos enviado a (' . implode(', ', $destinos) . ')');
 })
 ->cron('0 7 * * 1,5');
 
@@ -171,7 +169,7 @@ Schedule::call(function () {
     ->send(new ReservasDiariasMail($mensaje, $mensaje_tabular));
 
 
-    Log::info("✅ Correo de ReservasDiarias enviado a las 8:00 (Lun-Vie)");
+    // Log::info("Correo de ReservasDiarias enviado a las 8:00 (Lun-Vie)");
 
 })
 ->weekdays()->at('08:00');
@@ -207,7 +205,7 @@ Schedule::call(function () {
         }
 
         Log::info(
-            '📌 [VACACIONES] Vacación próxima detectada',
+            '[VACACIONES] Vacación próxima detectada',
             [
                 'vacacion_id'    => $vacacion->id,
                 'trabajador_id'  => $vacacion->trabajador_id,
@@ -230,7 +228,7 @@ Schedule::call(function () {
         );
 
         Log::info(
-            '📧 [VACACIONES] Correo enviado por vacaciones próximas',
+            '[VACACIONES] Correo enviado por vacaciones próximas',
             [
                 'vacacion_id'    => $vacacion->id,
                 'fecha_inicio'   => $vacacion->fecha_inicio->format('Y-m-d'),
@@ -240,7 +238,7 @@ Schedule::call(function () {
         );
     }
 
-    Log::info('✅ [VACACIONES] Verificación de vacaciones finalizada');
+    Log::info('[VACACIONES] Verificación de vacaciones finalizada');
 
 })->dailyAt('09:00');
 

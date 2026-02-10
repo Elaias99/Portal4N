@@ -7,10 +7,10 @@
         Lista de Proveedores
     </h1>
 
-    {{-- ❌ Error de plantilla --}}
+    {{-- Error de plantilla --}}
     @if (session('faltantes_plantilla'))
         <div class="alert alert-danger shadow-sm">
-            <strong>❌ El archivo no coincide con la plantilla oficial</strong>
+            <strong>El archivo no coincide con la plantilla oficial</strong>
             <p class="mb-1">Faltan las siguientes columnas:</p>
             <ul class="mb-0" style="columns: 2">
                 @foreach (session('faltantes_plantilla') as $col)
@@ -20,13 +20,13 @@
         </div>
     @endif
 
-    {{-- 📋 Resultado de importación --}}
+    {{-- Resultado de importación --}}
     @if (session('import_result_proveedores'))
         <div class="alert alert-info shadow-sm">
-            <strong>📋 Importación finalizada</strong>
+            <strong>Importación finalizada</strong>
             <ul>
-                <li>✅ Proveedores importados: <strong>{{ session('import_result_proveedores.importadas') }}</strong></li>
-                <li>⚠️ Proveedores omitidos: <strong>{{ session('import_result_proveedores.omitidas') }}</strong></li>
+                <li>Proveedores importados: <strong>{{ session('import_result_proveedores.importadas') }}</strong></li>
+                <li>Proveedores omitidos: <strong>{{ session('import_result_proveedores.omitidas') }}</strong></li>
             </ul>
 
             {{-- Secciones desplegables --}}

@@ -1,7 +1,7 @@
 <thead>
     <tr>
 
-        {{-- 🔹 EMPRESA --}}
+        {{-- EMPRESA --}}
         <th>
             <div class="dropdown d-inline">
                 <button class="btn btn-light btn-sm dropdown-toggle px-2 py-1" type="button"
@@ -14,7 +14,7 @@
                 </button>
 
                 <ul class="dropdown-menu shadow-sm small p-2" style="min-width: 230px;">
-                    {{-- 🔹 Ordenamiento --}}
+                    {{-- Ordenamiento --}}
                     <li>
                         <a class="dropdown-item mb-1"
                             href="{{ route('cobranzas.column_filter', array_merge(request()->query(), ['sort_by' => 'empresa_id', 'sort_order' => 'asc'])) }}">
@@ -30,7 +30,7 @@
 
                     <li><hr class="dropdown-divider"></li>
 
-                    {{-- 🔹 Filtro por Empresa --}}
+                    {{-- Filtro por Empresa --}}
                     <li class="px-2">
                         <form method="GET" action="{{ route('cobranzas.column_filter') }}">
                             @foreach(request()->query() as $key => $value)
@@ -67,11 +67,11 @@
             </div>
         </th>
 
-        {{-- 🔹 Columnas fijas sin dropdown --}}
+        {{-- Columnas fijas sin dropdown --}}
         <th>Estado</th>
 
 
-        {{-- 🔹 TIPO DOCUMENTO --}}
+        {{-- TIPO DOCUMENTO --}}
         <th>
             <div class="dropdown d-inline">
                 <button class="btn btn-light btn-sm dropdown-toggle px-2 py-1" type="button"
@@ -84,7 +84,7 @@
                 </button>
 
                 <ul class="dropdown-menu shadow-sm small p-2" style="min-width: 230px;">
-                    {{-- 🔹 Ordenamiento --}}
+                    {{-- Ordenamiento --}}
                     <li>
                         <a class="dropdown-item mb-1"
                             href="{{ route('cobranzas.column_filter', array_merge(request()->query(), ['sort_by' => 'tipo_doc_id', 'sort_order' => 'asc'])) }}">
@@ -100,7 +100,7 @@
 
                     <li><hr class="dropdown-divider"></li>
 
-                    {{-- 🔹 Filtro por Tipo Doc --}}
+                    {{-- Filtro por Tipo Doc --}}
                     <li class="px-2">
                         <form method="GET" action="{{ route('cobranzas.column_filter') }}">
                             @foreach(request()->query() as $key => $value)
@@ -138,7 +138,7 @@
         </th>
 
 
-        {{-- 🔹 RUT CLIENTE --}}
+        {{-- RUT CLIENTE --}}
         <th>
             <div class="dropdown d-inline">
                 <button class="btn btn-light btn-sm dropdown-toggle px-2 py-1" type="button"
@@ -151,7 +151,7 @@
                 </button>
 
                 <ul class="dropdown-menu shadow-sm small p-2" style="min-width: 230px;">
-                    {{-- 🔹 Ordenamiento --}}
+                    {{-- Ordenamiento --}}
                     <li>
                         <a class="dropdown-item mb-1"
                            href="{{ route('cobranzas.column_filter', array_merge(request()->query(), ['sort_by' => 'rut_cliente', 'sort_order' => 'asc'])) }}">
@@ -167,7 +167,7 @@
 
                     <li><hr class="dropdown-divider"></li>
 
-                    {{-- 🔹 Filtro por texto --}}
+                    {{-- Filtro por texto --}}
                     <li class="px-2">
                         <form method="GET" action="{{ route('cobranzas.column_filter') }}">
                             @foreach(request()->query() as $key => $value)
@@ -197,7 +197,7 @@
             </div>
         </th>
 
-        {{-- 🔹 RAZÓN SOCIAL --}}
+        {{-- RAZÓN SOCIAL --}}
         <th>
             <div class="dropdown d-inline">
                 <button class="btn btn-light btn-sm dropdown-toggle px-2 py-1" type="button"
@@ -256,7 +256,7 @@
             </div>
         </th>
 
-        {{-- 🔹 FOLIO --}}
+        {{-- FOLIO --}}
         <th>
             <div class="dropdown d-inline">
                 <button class="btn btn-light btn-sm dropdown-toggle px-2 py-1" type="button"
@@ -314,7 +314,7 @@
             </div>
         </th>
 
-        {{-- 🔹 FECHA DOCTO --}}
+        {{-- FECHA DOCTO --}}
         <th>
             <div class="dropdown d-inline">
                 <button class="btn btn-light btn-sm dropdown-toggle px-2 py-1" type="button"
@@ -372,7 +372,7 @@
             </div>
         </th>
 
-        {{-- 🔹 FECHA VENCIMIENTO --}}
+        {{-- FECHA VENCIMIENTO --}}
         <th>
             <div class="dropdown d-inline">
                 <button class="btn btn-light btn-sm dropdown-toggle px-2 py-1" type="button"
@@ -435,7 +435,7 @@
         <th class="text-right">Monto Neto</th>
         <th class="text-right">Monto IVA</th>
 
-        {{-- 🔹 MONTO TOTAL --}}
+        {{-- MONTO TOTAL --}}
         <th class="text-right">
             <div class="dropdown d-inline">
                 <button class="btn btn-light btn-sm dropdown-toggle px-2 py-1" type="button"
@@ -494,7 +494,7 @@
         </th>
 
         <th class="text-right">Saldo Pendiente</th>
-        {{-- 🔹 Columnas fijas --}}
+        {{-- Columnas fijas --}}
         <th>Fecha Último Movimiento</th>
     </tr>
 </thead>

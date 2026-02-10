@@ -39,7 +39,7 @@ $notificaciones = Auth::user()->unreadNotifications
                     <div class="d-grid gap-2 mt-2">
 
 
-                        {{-- 🔹 Nuevo acceso al Reporte de Documentos Financieros --}}
+                        {{-- Nuevo acceso al Reporte de Documentos Financieros --}}
                         @if (in_array(Auth::id(), [1, 405, 374, 375]))
                             <a href="{{ route('cobranzas.general') }}" 
                             class="btn btn-outline-secondary text-start" 
@@ -49,7 +49,7 @@ $notificaciones = Auth::user()->unreadNotifications
                             </a>
                         @endif
 
-                        {{-- 🔹 Acceso exclusivo para el usuario con ID = 1 --}}
+                        {{-- Acceso exclusivo para el usuario con ID = 1 --}}
                         {{-- @if (Auth::check() && Auth::id() === 1)
                             <a href="{{ route('admin.roles.index') }}" 
                             class="btn btn-outline-secondary text-start"

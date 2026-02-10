@@ -17,13 +17,13 @@
             <strong>{{ now()->endOfWeek()->format('d/m/Y') }}</strong>
         </p>
 
-        {{-- 🔹 SECCIÓN RCV_VENTAS --}}
+        {{-- SECCIÓN RCV_VENTAS --}}
         <h3 style="color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 4px;">
             RCV_VENTAS
         </h3>
 
         @if ($ventas->isEmpty())
-            <p style="color: #777;">✅ No hay documentos de ventas por vencer esta semana.</p>
+            <p style="color: #777;">No hay documentos de ventas por vencer esta semana.</p>
         @else
             <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse: collapse; margin-bottom: 25px;">
                 <thead>
@@ -57,13 +57,13 @@
             </table>
         @endif
 
-        {{-- 🔸 SECCIÓN RCV_COMPRAS --}}
+        {{-- SECCIÓN RCV_COMPRAS --}}
         {{-- <h3 style="color: #28a745; border-bottom: 2px solid #28a745; padding-bottom: 4px;">
             RCV_COMPRAS
         </h3>
 
         @if ($compras->isEmpty())
-            <p style="color: #777;">✅ No hay documentos de compras por vencer esta semana.</p>
+            <p style="color: #777;">No hay documentos de compras por vencer esta semana.</p>
         @else
             <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse: collapse; margin-bottom: 25px;">
                 <thead>
@@ -98,8 +98,8 @@
         @endif --}}
 
         <p style="margin-top: 25px; color: #555;">
-            🕓 <em>Reporte generado automáticamente por el módulo de Finanzas.</em><br>
-            📧 Este correo es informativo; no requiere respuesta.
+            <em>Reporte generado automáticamente por el módulo de Finanzas.</em><br>
+            Este correo es informativo; no requiere respuesta.
         </p>
 
         <hr style="margin: 25px 0; border: none; border-top: 1px solid #ddd;">

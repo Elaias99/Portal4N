@@ -31,7 +31,7 @@ class MovimientoHonorarioMensualRec extends Model
 
     ];
 
-    // 🔗 Honorario asociado
+    //Honorario asociado
     public function honorario()
     {
         return $this->belongsTo(
@@ -40,7 +40,7 @@ class MovimientoHonorarioMensualRec extends Model
         );
     }
 
-    // 👤 Usuario que realizó la acción
+    // Usuario que realizó la acción
     public function user()
     {
         return $this->belongsTo(User::class, 'usuario_id');

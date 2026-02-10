@@ -36,7 +36,7 @@ class PagoDocumentoController extends Controller
             ? \App\Models\DocumentoCompra::findOrFail($id)
             : \App\Models\DocumentoFinanciero::findOrFail($id);
 
-        // 🚫 Evitar duplicados
+        // Evitar duplicados
         if ($documento->pagos()->exists()) {
             return back()->withErrors(['fecha_pago' => 'Este documento ya tiene un pago registrado.']);
         }
@@ -44,13 +44,13 @@ class PagoDocumentoController extends Controller
         $estadoAnterior = $documento->estado ?? $documento->status;
         $saldoAnterior = $documento->saldo_pendiente;
 
-        // ✅ Crear el pago
+        // Crear el pago
         $documento->pagos()->create([
             'fecha_pago' => $request->fecha_pago,
             'user_id' => Auth::id(),
         ]);
 
-        // ✅ Actualizar estado y saldo
+        // Actualizar estado y saldo
         $campoEstado = $esCompra ? 'estado' : 'status';
         $documento->update([
             $campoEstado => 'Pago',
@@ -58,7 +58,7 @@ class PagoDocumentoController extends Controller
             'saldo_pendiente' => 0,
         ]);
 
-        // ✅ Registrar movimiento
+        // Registrar movimiento
         if ($esCompra) {
             \App\Models\MovimientoCompra::create([
                 'documento_compra_id' => $documento->id,
@@ -110,15 +110,15 @@ class PagoDocumentoController extends Controller
             'user_id' => $pago->user_id,
         ];
 
-        // 🔹 Eliminar pago
+        // Eliminar pago
         $pago->delete();
 
-        // 🔹 Recalcular saldo
+        // Recalcular saldo
         if (method_exists($documento, 'recalcularSaldoPendiente')) {
             $documento->recalcularSaldoPendiente();
         }
 
-        // 🔹 Determinar nuevo estado
+        // Determinar nuevo estado
         if ($documento->pagos()->count() === 0) {
             $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
                 ? 'Vencido'
@@ -134,7 +134,7 @@ class PagoDocumentoController extends Controller
             $nuevoEstado = 'Pago';
         }
 
-        // 🔹 Registrar movimiento
+        // Registrar movimiento
         if ($tipoDocumento === 'financiero') {
             \App\Models\MovimientoDocumento::create([
                 'documento_financiero_id' => $documento->id,
@@ -167,7 +167,7 @@ class PagoDocumentoController extends Controller
             ]);
         }
 
-        // 🔹 Redirección
+        // Redirección
         $route = $tipoDocumento === 'compra' ? 'finanzas_compras.show' : 'documentos.detalles';
         return redirect()
             ->route($route, $documento->id)
@@ -466,10 +466,10 @@ class PagoDocumentoController extends Controller
         $documentos = DocumentoCompra::where(function ($query) use ($filtro) {
 
                 if (ctype_digit($filtro)) {
-                    // 🔹 Búsqueda EXACTA por folio
+                    // Búsqueda EXACTA por folio
                     $query->where('folio', $filtro);
                 } else {
-                    // 🔹 Búsqueda por texto
+                    // Búsqueda por texto
                     $query->where('razon_social', 'like', "%{$filtro}%")
                         ->orWhere('rut_proveedor', 'like', "%{$filtro}%");
                 }

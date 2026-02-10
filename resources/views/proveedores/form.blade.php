@@ -9,7 +9,7 @@
     </div>
 @endif
 
-{{-- ⚠️ Mensaje de campos obligatorios --}}
+{{-- Mensaje de campos obligatorios --}}
 <div class="alert alert-info shadow-sm">
     <strong>Atención:</strong> Los campos marcados con <span class="text-danger">*</span> son obligatorios.
 </div>

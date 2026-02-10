@@ -93,7 +93,7 @@ class ProveedorController extends Controller
 
         $bancos = Banco::all();
         $tiposCuentas = TipoCuenta::all();
-        $tiposPagos = TipoDocumento::all(); // 🔹 Obtener todos los tipos de pago
+        $tiposPagos = TipoDocumento::all();
         $comunas = Comuna::all();
 
         return view('proveedores.create', compact('bancos', 'tiposCuentas', 'tiposPagos','comunas'));
@@ -172,7 +172,7 @@ class ProveedorController extends Controller
         $proveedor = Proveedor::findOrFail($id);
         $bancos = Banco::all();
         $tiposCuentas = TipoCuenta::all();
-        $tiposPagos = TipoDocumento::all(); // 🔹 Obtener todos los tipos de pago
+        $tiposPagos = TipoDocumento::all();
         $comunas = Comuna::all();
 
         return view('proveedores.edit', compact('proveedor', 'bancos', 'tiposCuentas', 'tiposPagos', 'comunas'));

@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inputsWrap.innerHTML = '';
         bloqueResumen.innerHTML = '';
 
-        // 👉 AQUÍ es donde corresponde limpiar y refrescar
+        // AQUÍ es donde corresponde limpiar y refrescar
         sessionStorage.removeItem('honorarios_seleccionados');
         location.reload();
     });

@@ -61,7 +61,7 @@ class DashboardController extends Controller
             'empleadosNuevos' => $empleadosNuevos,
             'empresas' => $empresas,
             'user' => $user, // Se envía directamente a la vista
-            'vacacionesAprobadas' => $vacacionesAprobadas, // ✅ Se pasa correctamente
+            'vacacionesAprobadas' => $vacacionesAprobadas,
         ], $listas, $resumen, $validaciones));
         
     }

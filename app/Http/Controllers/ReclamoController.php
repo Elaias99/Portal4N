@@ -230,7 +230,7 @@ class ReclamoController extends Controller
             'estado' => 'pendiente',
             'importancia' => $request->importancia,
             'tipo_solicitud' => 'consulta',
-            'foto' => $fotoRuta, // ✅ guardamos la imagen
+            'foto' => $fotoRuta,
         ]);
 
         // Notificar a los miembros del área

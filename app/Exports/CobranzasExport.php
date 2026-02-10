@@ -11,7 +11,7 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 class CobranzasExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize
 {
     /**
-     * 🔹 Retorna la colección de datos a exportar.
+     *  Retorna la colección de datos a exportar.
      */
     public function collection()
     {
@@ -20,7 +20,7 @@ class CobranzasExport implements FromCollection, WithHeadings, WithMapping, Shou
     }
 
     /**
-     * 🔹 Define las columnas (encabezados) del Excel.
+     *  Define las columnas (encabezados) del Excel.
      */
     public function headings(): array
     {
@@ -36,7 +36,7 @@ class CobranzasExport implements FromCollection, WithHeadings, WithMapping, Shou
     }
 
     /**
-     * 🔹 Define cómo se mapea cada fila de datos.
+     *  Define cómo se mapea cada fila de datos.
      */
     public function map($cobranza): array
     {

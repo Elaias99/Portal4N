@@ -138,8 +138,6 @@ class DocumentoCompra extends Model
             $tieneNotas ||
             $esProntoPago;
 
-        // 🧪 DEPURACIÓN
-
 
         // 3) Si NO requiere recálculo → devolver valor BD
         if (!$requiereRecalculo && $valorBD !== null) {

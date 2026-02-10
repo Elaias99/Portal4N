@@ -73,23 +73,23 @@ class CruceController extends Controller
     //     $cruce = \App\Models\Cruce::findOrFail($id);
     //     $documento = $cruce->documento ?? $cruce->documentoCompra;
 
-    //     // 🧩 Detectar tipo de documento
+    //     //  Detectar tipo de documento
     //     $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
 
-    //     // 🔹 Eliminar el cruce
+    //     //  Eliminar el cruce
     //     $cruce->delete();
 
 
-    //      // 🔹 Recalcular saldo pendiente en la BD
+    //      //  Recalcular saldo pendiente en la BD
     //     if (method_exists($documento, 'recalcularSaldoPendiente')) {
     //         $documento->recalcularSaldoPendiente(); 
     //     }
 
-    //     // 🔹 Recalcular totales
+    //     //  Recalcular totales
     //     $totalCruces = $documento->cruces()->sum('monto');
     //     $totalAbonos = $documento->abonos()->sum('monto');
 
-    //     // 🔹 Determinar nuevo estado
+    //     //  Determinar nuevo estado
     //     if ($totalCruces > 0) {
     //         $nuevoEstado = 'Cruce';
     //     } elseif ($totalAbonos > 0) {
@@ -100,7 +100,7 @@ class CruceController extends Controller
     //             : 'Al día';
     //     }
 
-    //     // 🔹 Actualizar el documento según tipo
+    //     //  Actualizar el documento según tipo
     //     if ($tipoDocumento === 'compra') {
     //         $documento->update([
     //             'estado' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
@@ -115,7 +115,7 @@ class CruceController extends Controller
     //         ]);
     //     }
 
-    //     // 🔹 Redirección inteligente
+    //     //  Redirección inteligente
     //     if ($tipoDocumento === 'compra') {
     //         return redirect()
     //             ->route('finanzas_compras.show', $documento->id)
@@ -132,10 +132,10 @@ class CruceController extends Controller
         $cruce = \App\Models\Cruce::findOrFail($id);
         $documento = $cruce->documento ?? $cruce->documentoCompra;
 
-        // 🧩 Detectar tipo de documento
+        // Detectar tipo de documento
         $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
 
-        // 📝 Guardar datos antes de eliminar
+        //  Guardar datos antes de eliminar
         $datosAnteriores = [
             'monto' => $cruce->monto,
             'fecha_cruce' => $cruce->fecha_cruce,
@@ -144,19 +144,19 @@ class CruceController extends Controller
 
         $estadoAnterior = $documento->estado;
 
-        // 🔹 Eliminar el cruce
+        // Eliminar el cruce
         $cruce->delete();
 
-        // 🔹 Recalcular saldo pendiente
+        //  Recalcular saldo pendiente
         if (method_exists($documento, 'recalcularSaldoPendiente')) {
             $documento->recalcularSaldoPendiente(); 
         }
 
-        // 🔹 Recalcular totales
+        // Recalcular totales
         $totalCruces = $documento->cruces()->sum('monto');
         $totalAbonos = $documento->abonos()->sum('monto');
 
-        // 🔹 Determinar nuevo estado
+        //  Determinar nuevo estado
         if ($totalCruces > 0) {
             $nuevoEstado = 'Cruce';
         } elseif ($totalAbonos > 0) {
@@ -167,7 +167,7 @@ class CruceController extends Controller
                 : 'Al día';
         }
 
-        // 🔹 Actualizar documento según tipo
+        // Actualizar documento según tipo
         if ($tipoDocumento === 'compra') {
             $documento->update([
                 'estado' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
@@ -183,7 +183,7 @@ class CruceController extends Controller
             ]);
         }
 
-        // 🔹 Registrar movimiento según tipo de documento
+        //  Registrar movimiento según tipo de documento
         if ($tipoDocumento === 'financiero') {
             \App\Models\MovimientoDocumento::create([
                 'documento_financiero_id' => $documento->id,
@@ -213,7 +213,7 @@ class CruceController extends Controller
             ]);
         }
 
-        // 🔹 Redirección inteligente
+        //  Redirección inteligente
         if ($tipoDocumento === 'compra') {
             return redirect()
                 ->route('finanzas_compras.show', $documento->id)

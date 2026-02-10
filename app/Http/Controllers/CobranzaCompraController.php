@@ -267,7 +267,7 @@ class CobranzaCompraController extends Controller
 
 
 
-        // 🧹 Limpiar sesión
+        //  Limpiar sesión
         session()->forget('sin_compra_pendientes');
 
 

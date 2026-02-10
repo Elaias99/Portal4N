@@ -43,7 +43,7 @@ class PagoController extends Controller
         $proveedores = Proveedor::all();
         $empresas = Empresa::all();
 
-        // 👉 Próximos pagos agrupados por el viernes de la misma semana (lunes-domingo juntos)
+        // Próximos pagos agrupados por el viernes de la misma semana (lunes-domingo juntos)
         $proximosPagos = Compra::with(['proveedor','empresa'])
             ->where('status', 'pendiente')
             ->whereDate('fecha_vencimiento', '>', now()->endOfWeek(\Carbon\Carbon::SUNDAY))
@@ -79,7 +79,7 @@ class PagoController extends Controller
         // Debug temporal
         // dd($proximosPagos->toArray());
 
-        // ✅ Detectar si se acaba de exportar
+        // Detectar si se acaba de exportar
         $mensaje = null;
         if ($request->query('exportado') === 'ok') {
             $mensaje = 'Pagos exportados correctamente y marcados como Pagado.';

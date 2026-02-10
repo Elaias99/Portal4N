@@ -6,7 +6,7 @@
     <h1 class="mb-4">Resumen Honorarios (bte_indiv_cons4)</h1>
 
     {{-- =========================
-        1️⃣ FORMULARIO IMPORTACIÓN
+        FORMULARIO IMPORTACIÓN
     ========================== --}}
     <div class="card mb-4">
         <div class="card-header">
@@ -27,7 +27,7 @@
     </div>
 
     {{-- =========================
-        2️⃣ PREVISUALIZACIÓN
+        PREVISUALIZACIÓN
     ========================== --}}
     @if(isset($preview))
         <div class="card mb-5 border-warning">
@@ -91,7 +91,7 @@
     @endif
 
     {{-- =========================
-        3️⃣ REGISTROS ALMACENADOS
+        REGISTROS ALMACENADOS
     ========================== --}}
     <div class="card">
         <div class="card-header">

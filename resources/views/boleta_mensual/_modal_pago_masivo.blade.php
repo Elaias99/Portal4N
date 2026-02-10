@@ -33,7 +33,7 @@
 
                     {{-- =====================================================
                         BLOQUE A: BUSCADOR (modo antiguo)
-                        👉 Se ocultará cuando venga desde la tabla
+                        Se ocultará cuando venga desde la tabla
                     ====================================================== --}}
                     <div id="bloque-buscador">
 
@@ -59,7 +59,7 @@
 
                     {{-- =====================================================
                         BLOQUE B: RESUMEN (siempre visible)
-                        👉 Desde tabla o desde buscador
+                        Desde tabla o desde buscador
                     ====================================================== --}}
                     <div id="bloque-resumen">
 

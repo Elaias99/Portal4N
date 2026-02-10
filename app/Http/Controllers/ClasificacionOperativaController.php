@@ -33,12 +33,12 @@ class ClasificacionOperativaController extends Controller
             'ordenTransporte'
         ])->orderBy('Nombre');
 
-        // 👇 aplicas los filtros centralizados
+   
         $this->aplicarFiltros($comunasQuery, $request);
 
         $comunas = $comunasQuery->get();
 
-        // 👇 post-procesamiento de días y próxima entrega
+        //  post-procesamiento de días y próxima entrega
         foreach ($comunas as $comuna) {
             $dias = optional(optional($comuna->clasificacionOperativa)->frecuenciaDistribucion->dias)->pluck('dia_semana')->toArray() ?? [];
 

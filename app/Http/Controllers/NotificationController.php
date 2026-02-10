@@ -33,7 +33,7 @@ class NotificationController extends Controller
     {
         Auth::user()->unreadNotifications->markAsRead();
     
-        // 🔁 También mantenerse en la misma vista
+        // También mantenerse en la misma vista
         return back()->with('success', 'Todas las notificaciones han sido marcadas como leídas.');
     }
     

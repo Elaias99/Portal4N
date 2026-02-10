@@ -82,7 +82,7 @@ class ManifiestoController extends Controller
             return back()->with('error', 'No hay suficientes filas para procesar.');
         }
 
-        // 🧠 Detectar encabezados inteligentemente
+        // Detectar encabezados inteligentemente
         $encabezadoMap = $this->detectarEncabezados(array_slice($lineas, 0, 10)); // buscamos entre las primeras 10 líneas
 
         // dd($encabezadoMap);
@@ -95,7 +95,7 @@ class ManifiestoController extends Controller
             }
         }
 
-        // 🟡 Cortamos las líneas de datos después del último encabezado detectado
+        // Cortamos las líneas de datos después del último encabezado detectado
         $inicioDatos = max($encabezadoMap) + 1;
         $datos = array_slice($lineas, $inicioDatos);
 
@@ -103,7 +103,7 @@ class ManifiestoController extends Controller
         $hayAreaFaltante = false;
         $areasConocidas = ['ecommerce', 'mayorista', 'sac'];
 
-        // 👉 Si vienen pares y muy simples (solo bulto + código)
+        // Si vienen pares y muy simples (solo bulto + código)
         if (count($datos) % 2 === 0 && $this->esFormatoReducido($datos)) {
             for ($i = 0; $i < count($datos); $i += 2) {
                 $bulto = $datos[$i] ?? '';
@@ -113,7 +113,7 @@ class ManifiestoController extends Controller
                 $hayAreaFaltante = true;
             }
         } else {
-            // 🧠 Procesar filas con lógica adaptada
+            // Procesar filas con lógica adaptada
             for ($i = 0; $i < count($datos); ) {
                 $bloque = array_slice($datos, $i, 4);
 
@@ -178,7 +178,7 @@ class ManifiestoController extends Controller
     }
 
 
-    // 👉 Agregamos este método privado al controlador
+    // Agregamos este método privado al controlador
     private function esFormatoReducido(array $datos): bool
     {
         // Si todas las entradas pares parecen bultos numéricos y las impares códigos alfanuméricos
@@ -287,7 +287,7 @@ class ManifiestoController extends Controller
         $data = $registros->map(function ($fila) use ($codigosOrdenados) {
             $fila = array_pad($fila, 7, ''); // Aseguramos que tenga al menos: fecha + 6 columnas
 
-            // 👉 Capitalizar la columna de "Area" (índice 6)
+            // Capitalizar la columna de "Area" (índice 6)
             if (!empty($fila[6])) {
                 $fila[6] = strtoupper($fila[6]) === 'SAC' ? 'SAC' : ucfirst(strtolower($fila[6]));
 

@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // === 1️⃣ ABONOS ===
+        // === ABONOS ===
         Schema::table('abonos', function (Blueprint $table) {
             if (Schema::hasColumn('abonos', 'documento_financiero_id')) {
                 $table->foreignId('documento_financiero_id')
@@ -25,7 +25,7 @@ return new class extends Migration
             }
         });
 
-        // === 2️⃣ CRUCES ===
+        // === CRUCES ===
         Schema::table('cruces', function (Blueprint $table) {
             if (Schema::hasColumn('cruces', 'documento_financiero_id')) {
                 $table->foreignId('documento_financiero_id')
@@ -42,7 +42,7 @@ return new class extends Migration
             }
         });
 
-        // === 3️⃣ PAGOS ===
+        // === PAGOS ===
         Schema::table('pagos', function (Blueprint $table) {
             if (Schema::hasColumn('pagos', 'documento_financiero_id')) {
                 $table->foreignId('documento_financiero_id')
@@ -59,7 +59,7 @@ return new class extends Migration
             }
         });
 
-        // === 4️⃣ PRONTO PAGOS ===
+        // === PRONTO PAGOS ===
         Schema::table('pronto_pagos', function (Blueprint $table) {
             if (Schema::hasColumn('pronto_pagos', 'documento_financiero_id')) {
                 $table->foreignId('documento_financiero_id')

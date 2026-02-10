@@ -24,7 +24,7 @@ class ProntoPagoController extends Controller
             'fecha_pronto_pago.required' => 'La fecha del pronto pago es obligatoria.',
         ]);
 
-        // 🔍 Detectar tipo de documento
+        // Detectar tipo de documento
         $tipo = $request->input('tipo', 'ventas');
         $esCompra = $tipo === 'compra';
 
@@ -32,23 +32,23 @@ class ProntoPagoController extends Controller
             ? \App\Models\DocumentoCompra::findOrFail($documentoId)
             : \App\Models\DocumentoFinanciero::findOrFail($documentoId);
 
-        // 🚫 Evitar duplicar registros
+        // Evitar duplicar registros
         if ($documento->prontoPagos()->exists()) {
             return back()->withErrors(['fecha_pronto_pago' => 'Ya existe un registro de pronto pago para este documento.']);
         }
 
-        // 📋 Guardar datos anteriores
+        // Guardar datos anteriores
         $estadoAnterior = $esCompra ? $documento->estado : $documento->status;
         $saldoAnterior = $documento->saldo_pendiente;
 
-        // ✅ Crear el registro de pronto pago
+        // Crear el registro de pronto pago
         $documento->prontoPagos()->create([
             $esCompra ? 'documento_compra_id' : 'documento_financiero_id' => $documento->id,
             'fecha_pronto_pago' => $request->fecha_pronto_pago,
             'user_id' => Auth::id(),
         ]);
 
-        // ✅ Actualizar estado y saldo
+        // Actualizar estado y saldo
         $campoEstado = $esCompra ? 'estado' : 'status';
         $documento->update([
             $campoEstado => 'Pronto pago',
@@ -56,7 +56,7 @@ class ProntoPagoController extends Controller
             'saldo_pendiente' => 0,
         ]);
 
-        // ✅ Registrar movimiento detallado
+        // Registrar movimiento detallado
         if ($esCompra) {
             \App\Models\MovimientoCompra::create([
                 'documento_compra_id' => $documento->id,
@@ -105,13 +105,13 @@ class ProntoPagoController extends Controller
     //     $prontoPago = \App\Models\ProntoPago::findOrFail($id);
     //     $documento = $prontoPago->documentoFinanciero ?? $prontoPago->documentoCompra;
 
-    //     // 🧩 Detectar tipo de documento
+    //     //  Detectar tipo de documento
     //     $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
 
-    //     // 🔹 Eliminar registro
+    //     //  Eliminar registro
     //     $prontoPago->delete();
 
-    //     // 🔹 Si ya no quedan pronto pagos → limpiar estado ANTES del recálculo
+    //     //  Si ya no quedan pronto pagos → limpiar estado ANTES del recálculo
     //     if ($documento->prontoPagos()->count() === 0) {
 
     //         $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
@@ -133,18 +133,18 @@ class ProntoPagoController extends Controller
     //         }
     //     }
 
-    //     // 🔹 IMPORTANTE → liberar saldo_pendiente para que el accessor lo recalcule bien
+    //     //  IMPORTANTE → liberar saldo_pendiente para que el accessor lo recalcule bien
     //     $documento->update(['saldo_pendiente' => null]);
 
-    //     // 🔹 Recalcular saldo pendiente
+    //     //  Recalcular saldo pendiente
     //     if (method_exists($documento, 'recalcularSaldoPendiente')) {
     //         $documento->recalcularSaldoPendiente();
     //     }
 
-    //     // 🔄 REFRESH
+    //     //  REFRESH
     //     $documento->refresh();
 
-    //     // 🔹 Redirección final
+    //     //  Redirección final
     //     if ($tipoDocumento === 'compra') {
     //         return redirect()
     //             ->route('finanzas_compras.show', $documento->id)
@@ -160,10 +160,10 @@ class ProntoPagoController extends Controller
         $prontoPago = \App\Models\ProntoPago::findOrFail($id);
         $documento = $prontoPago->documentoFinanciero ?? $prontoPago->documentoCompra;
 
-        // 🧩 Detectar tipo de documento
+        // Detectar tipo de documento
         $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
 
-        // 📝 Guardar datos antes de eliminar
+        // Guardar datos antes de eliminar
         $datosAnteriores = [
             'fecha_pronto_pago' => $prontoPago->fecha_pronto_pago,
             'user_id' => $prontoPago->user_id,
@@ -172,10 +172,10 @@ class ProntoPagoController extends Controller
         $estadoAnterior = $documento->estado ?? $documento->status;
         $saldoAnterior = $documento->saldo_pendiente;
 
-        // 🔹 Eliminar el registro
+        // Eliminar el registro
         $prontoPago->delete();
 
-        // 🔹 Si ya no quedan pronto pagos → limpiar estado ANTES del recálculo
+        // Si ya no quedan pronto pagos → limpiar estado ANTES del recálculo
         if ($documento->prontoPagos()->count() === 0) {
             $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
                 ? 'Vencido'
@@ -191,18 +191,18 @@ class ProntoPagoController extends Controller
             $nuevoEstado = 'Pronto pago';
         }
 
-        // 🔹 Liberar saldo_pendiente para recalcular correctamente
+        // Liberar saldo_pendiente para recalcular correctamente
         $documento->update(['saldo_pendiente' => null]);
 
-        // 🔹 Recalcular saldo pendiente
+        // Recalcular saldo pendiente
         if (method_exists($documento, 'recalcularSaldoPendiente')) {
             $documento->recalcularSaldoPendiente();
         }
 
-        // 🔄 Refrescar instancia
+        // Refrescar instancia
         $documento->refresh();
 
-        // 🔹 Registrar movimiento detallado
+        // Registrar movimiento detallado
         if ($tipoDocumento === 'financiero') {
             \App\Models\MovimientoDocumento::create([
                 'documento_financiero_id' => $documento->id,
@@ -238,7 +238,7 @@ class ProntoPagoController extends Controller
             ]);
         }
 
-        // 🔹 Redirección final
+        // Redirección final
         $route = $tipoDocumento === 'compra' ? 'finanzas_compras.show' : 'documentos.detalles';
         return redirect()
             ->route($route, $documento->id)

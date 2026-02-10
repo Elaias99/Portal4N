@@ -3,8 +3,8 @@
 
 @section('content')
 
-    {{-- 🔹 Mensajes de estado --}}
-    {{-- 🟢 ÉXITO --}}
+    {{-- Mensajes de estado --}}
+    {{-- ÉXITO --}}
     @if(session('success'))
         <div class="alert alert-success custom-alert mx-auto shadow-sm" style="max-width:100%; border-left:5px solid #28a745; border-radius:10px; padding:12px 16px;">
             <div class="d-flex align-items-center">
@@ -14,7 +14,7 @@
         </div>
     @endif
 
-    {{-- 🟡 ADVERTENCIA --}}
+    {{-- ADVERTENCIA --}}
     @if(session('warning'))
         <div class="alert alert-warning custom-alert mx-auto shadow-sm" style="max-width:100%; border-left:5px solid #ffc107; border-radius:10px; padding:12px 16px;">
             <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between">
@@ -50,7 +50,7 @@
         </div>
     @endif
 
-    {{-- 🔴 ERROR --}}
+    {{-- ERROR --}}
     @if(session('error'))
         <div class="alert alert-danger custom-alert mx-auto shadow-sm" style="max-width:100%; border-left:5px solid #dc3545; border-radius:10px; padding:12px 16px;">
             <div class="d-flex align-items-center">
@@ -198,7 +198,7 @@
                             </div>
 
 
-                            {{-- 🔹 Fecha de Documento --}}
+                            {{-- Fecha de Documento --}}
                             <div class="col-md-1 dropdown-fechas">
                                 <label class="form-label small text-muted">Fecha Documento</label>
                                 <div class="dropdown w-100">
@@ -217,7 +217,7 @@
                                 </div>
                             </div>
 
-                            {{-- 🔹 Fecha de Vencimiento --}}
+                            {{-- Fecha de Vencimiento --}}
                             <div class="col-md-1 dropdown-fechas">
                                 <label class="form-label small text-muted">Fecha Vencimiento</label>
                                 <div class="dropdown w-100">
@@ -250,7 +250,7 @@
                         </div>
 
                         <div class="d-flex justify-content-between align-items-center mt-3">
-                            {{-- 🔹 Texto alineado a la izquierda --}}
+                            {{-- Texto alineado a la izquierda --}}
                             <div>
                                 <strong>Saldo pendiente total:</strong> 
                                 <span class="text-success fw-semibold">
@@ -345,7 +345,7 @@
     {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
     {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
     {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
-    {{-- 🔹 Tabla de registros limpia y responsiva sin scroll --}}
+    {{-- Tabla de registros limpia y responsiva sin scroll --}}
     <div class="card shadow-sm border-0">
         <div class="card-body">
             <h5 class="card-title mb-3">Documentos Importados</h5>
@@ -363,7 +363,7 @@
                                 </th>
 
 
-                                {{-- 🏢 Empresa --}}
+                                {{-- Empresa --}}
                                 @include('cobranzas.partials.filtros_compras', [
                                     'label' => 'Empresa',
                                     'columna' => 'empresa_id',
@@ -372,7 +372,7 @@
                                     'placeholder' => 'Buscar empresa...'
                                 ])
 
-                                {{-- ⚙️ Status (status_original) --}}
+                                {{-- Status (status_original) --}}
                                 @include('cobranzas.partials.filtros_compras', [
                                     'label' => 'Status',
                                     'columna' => 'status_original',
@@ -381,7 +381,7 @@
                                     'placeholder' => 'Al día / Vencido...'
                                 ])
 
-                                {{-- 🧾 Tipo Doc --}}
+                                {{-- Tipo Doc --}}
                                 @include('cobranzas.partials.filtros_compras', [
                                     'label' => 'Tipo Doc',
                                     'columna' => 'tipo_documento_id',
@@ -390,10 +390,10 @@
                                     'placeholder' => 'Buscar tipo doc...'
                                 ])
 
-                                {{-- 🛒 Tipo Compra (sin filtro directo) --}}
+                                {{-- Tipo Compra (sin filtro directo) --}}
                                 {{-- <th>Tipo Compra</th> --}}
 
-                                {{-- 🆔 RUT Proveedor --}}
+                                {{-- RUT Proveedor --}}
                                 @include('cobranzas.partials.filtros_compras', [
                                     'label' => 'RUT Proveedor',
                                     'columna' => 'rut_proveedor',
@@ -402,7 +402,7 @@
                                     'placeholder' => 'Ej: 76123456-7'
                                 ])
 
-                                {{-- 🏢 Razón Social --}}
+                                {{-- Razón Social --}}
                                 @include('cobranzas.partials.filtros_compras', [
                                     'label' => 'Razón Social',
                                     'columna' => 'razon_social',
@@ -411,7 +411,7 @@
                                     'placeholder' => 'Buscar razón social...'
                                 ])
 
-                                {{-- 📄 Folio --}}
+                                {{-- Folio --}}
                                 @include('cobranzas.partials.filtros_compras', [
                                     'label' => 'Folio',
                                     'columna' => 'folio',
@@ -420,7 +420,7 @@
                                     'placeholder' => 'N° folio...'
                                 ])
 
-                                {{-- 📅 Fecha Docto --}}
+                                {{-- Fecha Docto --}}
                                 @include('cobranzas.partials.filtros_compras', [
                                     'label' => 'Fecha Docto',
                                     'columna' => 'fecha_docto',
@@ -429,7 +429,7 @@
                                     'placeholder' => 'AAAA-MM-DD'
                                 ])
 
-                                {{-- 📅 Fecha Vencimiento --}}
+                                {{-- Fecha Vencimiento --}}
                                 @include('cobranzas.partials.filtros_compras', [
                                     'label' => 'Fecha Vencimiento',
                                     'columna' => 'fecha_vencimiento',
@@ -438,13 +438,13 @@
                                     'placeholder' => 'AAAA-MM-DD'
                                 ])
 
-                                {{-- 💰 Monto Neto --}}
+                                {{-- Monto Neto --}}
                                 <th>Monto Neto</th>
 
-                                {{-- 💵 IVA Rec --}}
+                                {{-- IVA Rec --}}
                                 <th>IVA Rec.</th>
 
-                                {{-- 💰 Total --}}
+                                {{-- Total --}}
                                 @include('cobranzas.partials.filtros_compras', [
                                     'label' => 'Total',
                                     'columna' => 'monto_total',
@@ -453,23 +453,9 @@
                                     'placeholder' => '≥ monto...'
                                 ])
 
-                                {{-- 💸 Saldo Pendiente (sin filtro directo) --}}
+                                {{-- Saldo Pendiente (sin filtro directo) --}}
                                 <th>Saldo Pendiente</th>
 
-
-
-                                {{-- ⚡ Acción --}}
-                                {{-- <th>Acción</th> --}}
-
-
-                                {{-- 📅 Fecha Estado Manual --}}
-                                {{-- @include('cobranzas.partials.filtros_compras', [
-                                    'label' => 'Fecha Estado Manual',
-                                    'columna' => 'fecha_estado_manual',
-                                    'sortBy' => $sortBy ?? null,
-                                    'sortOrder' => $sortOrder ?? 'asc',
-                                    'placeholder' => 'AAAA-MM-DD'
-                                ]) --}}
                                  <th>Fecha Último Movimiento</th>
 
                             </tr>
@@ -586,7 +572,7 @@
                     </table>
                 </div>
 
-                {{-- 🔹 Paginación --}}
+                {{-- Paginación --}}
                 <div class="mt-3 d-flex justify-content-center">
                     {{ $documentosCompras->appends(request()->query())->links('pagination::bootstrap-4') }}
                 </div>
@@ -642,7 +628,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 👇 Este bloque asegura que Bootstrap Modal esté correctamente inicializado
+    // Este bloque asegura que Bootstrap Modal esté correctamente inicializado
     document.addEventListener('DOMContentLoaded', function () {
         const modalElements = document.querySelectorAll('.modal');
         modalElements.forEach(function (modalEl) {

@@ -23,18 +23,18 @@ class ProveedorImportController extends Controller
         ]);
 
         try {
-            // 1️⃣ Cargar encabezados del archivo
+            // Cargar encabezados del archivo
             $archivo = $request->file('archivo');
             $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($archivo);
             $hoja = $spreadsheet->getActiveSheet();
             $encabezadosArchivo = $hoja->rangeToArray('A1:' . $hoja->getHighestColumn() . '1')[0];
 
-            // 2️⃣ Obtener encabezados esperados desde la plantilla oficial
+            // Obtener encabezados esperados desde la plantilla oficial
             $encabezadosEsperados = (new \App\Exports\PlantillaProveedoresExport)->headings();
 
 
 
-            // 3️⃣ Validar si faltan columnas
+            // Validar si faltan columnas
             $faltantes = array_diff(
                 array_map('strtolower', $encabezadosEsperados),
                 array_map('strtolower', $encabezadosArchivo)
@@ -45,7 +45,7 @@ class ProveedorImportController extends Controller
 
             }
 
-            // 4️⃣ Si todo está correcto, importar
+            // Si todo está correcto, importar
             $importador = new \App\Imports\ProveedoresImport();
             \Maatwebsite\Excel\Facades\Excel::import($importador, $archivo);
 
@@ -203,7 +203,7 @@ class ProveedorImportController extends Controller
             'nombre_razon_social_banco', 'cargo_contacto1', 'cargo_contacto2', 'comuna_empresa'
         ];
 
-        // 🔍 Mapear letra A, B, ... => campo esperado
+        // Mapear letra A, B, ... => campo esperado
         $letras = array_keys($datos[2]);
         $letraParaCampo = [];
 
@@ -221,7 +221,7 @@ class ProveedorImportController extends Controller
             }
         }
 
-        // 🧩 Armar data con columnas ordenadas
+        // Armar data con columnas ordenadas
         $nuevaData = [];
         $nuevaData[] = $ordenPlantilla;
 
@@ -236,7 +236,7 @@ class ProveedorImportController extends Controller
             $nuevaData[] = $filaReordenada;
         }
 
-        // 📥 Crear archivo
+        // Crear archivo
         $nuevo = new Spreadsheet();
         $nuevo->getActiveSheet()->fromArray($nuevaData);
 

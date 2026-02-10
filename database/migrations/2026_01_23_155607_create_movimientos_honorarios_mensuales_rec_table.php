@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('movimientos_honorarios_mensuales_rec', function (Blueprint $table) {
             $table->id();
 
-            // 🔗 Honorario
+            // Honorario
             $table->unsignedBigInteger('honorario_mensual_rec_id');
 
             $table->foreign('honorario_mensual_rec_id', 'mov_honorario_fk')
@@ -19,7 +19,7 @@ return new class extends Migration
                 ->on('honorarios_mensuales_rec')
                 ->onDelete('cascade');
 
-            // 👤 Usuario
+            // Usuario
             $table->unsignedBigInteger('usuario_id')->nullable();
 
             $table->foreign('usuario_id', 'mov_honorario_user_fk')
@@ -27,20 +27,20 @@ return new class extends Migration
                 ->on('users')
                 ->nullOnDelete();
 
-            // 🔄 Estados
+            // Estados
             $table->string('estado_anterior')->nullable();
             $table->string('nuevo_estado')->nullable();
 
-            // 📅 Fecha del cambio
+            // Fecha del cambio
             $table->timestamp('fecha_cambio')->nullable();
 
-            // 🏷 Tipo de movimiento
+            // Tipo de movimiento
             $table->string('tipo_movimiento')->nullable();
 
-            // 📝 Descripción
+            // Descripción
             $table->text('descripcion')->nullable();
 
-            // 📦 Snapshots
+            // Snapshots
             $table->json('datos_anteriores')->nullable();
             $table->json('datos_nuevos')->nullable();
 

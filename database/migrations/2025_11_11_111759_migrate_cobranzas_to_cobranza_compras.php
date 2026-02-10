@@ -12,7 +12,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // 1️⃣ Obtener cobranzas usadas solo en documentos_compras (no presentes en documentos_financieros)
+        // Obtener cobranzas usadas solo en documentos_compras (no presentes en documentos_financieros)
         $cobranzasSoloCompras = DB::table('cobranzas')
             ->whereIn('id', function ($query) {
                 $query->select('cobranza_id')
@@ -25,7 +25,7 @@ return new class extends Migration
             })
             ->get();
 
-        // 2️⃣ Insertar cada registro en la nueva tabla cobranza_compras
+        // Insertar cada registro en la nueva tabla cobranza_compras
         foreach ($cobranzasSoloCompras as $cobranza) {
             $nuevaId = DB::table('cobranza_compras')->insertGetId([
                 'rut_cliente'   => $cobranza->rut_cliente,
@@ -36,7 +36,7 @@ return new class extends Migration
                 'updated_at'    => now(),
             ]);
 
-            // 3️⃣ Actualizar documentos_compras para que apunten a la nueva cobranza
+            // Actualizar documentos_compras para que apunten a la nueva cobranza
             DB::table('documentos_compras')
                 ->where('cobranza_id', $cobranza->id)
                 ->update(['cobranza_compra_id' => $nuevaId]);
@@ -48,7 +48,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // ⚠️ Revertir los cambios (solo si es seguro hacerlo)
+        // Revertir los cambios (solo si es seguro hacerlo)
         // Volver a dejar los documentos apuntando a la tabla cobranzas original
         $cobranzasCompras = DB::table('cobranza_compras')->get();
 

@@ -4,12 +4,12 @@
     <div class="col-md-2">
         <div class="card shadow-sm border-0">
             <div class="card-body p-3">
-                <h6 class="text-muted mb-3">🧭 Panel de Reclamos</h6>
+                <h6 class="text-muted mb-3">Panel de Reclamos</h6>
 
                 {{-- Filtros activos --}}
 
                 <div class="mb-3">
-                    <label class="text-muted d-block mb-1">🔍 Filtros</label>
+                    <label class="text-muted d-block mb-1">Filtros</label>
 
                     <input type="text" wire:model.defer="filtroBulto" class="form-control form-control-sm mb-2" placeholder="Buscar por código de bulto">
 
@@ -50,11 +50,11 @@
 
                 {{-- Resumen --}}
                 <div>
-                    <small class="text-muted d-block mb-1">📊 Resumen</small>
+                    <small class="text-muted d-block mb-1">Resumen</small>
                     <ul class="list-unstyled small mb-0">
-                        <li>🟡 Pendientes: <strong>{{ $reclamos->where('estado', 'pendiente')->count() }}</strong></li>
-                        <li>🔴 Cerrados: <strong>{{ $reclamos->where('estado', 'cerrado')->count() }}</strong></li>
-                        <li>📋 Consultas: <strong>{{ $reclamos->where('tipo_solicitud', 'consulta')->count() }}</strong></li>
+                        <li>Pendientes: <strong>{{ $reclamos->where('estado', 'pendiente')->count() }}</strong></li>
+                        <li>Cerrados: <strong>{{ $reclamos->where('estado', 'cerrado')->count() }}</strong></li>
+                        <li>Consultas: <strong>{{ $reclamos->where('tipo_solicitud', 'consulta')->count() }}</strong></li>
                     </ul>
                 </div>
             </div>
@@ -65,7 +65,7 @@
 
     {{-- PANEL DERECHO: FORO --}}
     <div class="col-md-9">
-        <h4 class="mb-4">💬 Reclamos relacionados con tu área: {{ $trabajador->area->nombre }}</h4>
+        <h4 class="mb-4">Reclamos relacionados con tu área: {{ $trabajador->area->nombre }}</h4>
 
         @if ($reclamos->isEmpty())
             <div class="alert alert-secondary">
@@ -80,7 +80,7 @@
                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="mb-1 font-weight-bold text-primary">
-                                📦 Bulto: {{ $reclamo->bulto->codigo_bulto ?? '—' }} 
+                                Bulto: {{ $reclamo->bulto->codigo_bulto ?? '—' }} 
                                 <small class="text-muted">#{{ $reclamo->id }}</small>
                             </h6>
                             <small class="text-muted">
@@ -210,7 +210,7 @@
 
                         @else
                             <div class="alert alert-danger mt-3 p-2">
-                                🛑 Este hilo está cerrado. No se pueden agregar más respuestas.
+                                Este hilo está cerrado. No se pueden agregar más respuestas.
                             </div>
                         @endif
 

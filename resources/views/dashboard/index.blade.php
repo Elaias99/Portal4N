@@ -13,7 +13,7 @@
 
         <!-- Sidebar Izquierdo -->
         <div id="sidebarPanel" class="col-md-3 sidebar">
-            <button id="toggleSidebar" class="btn btn-secondary sidebar-toggle">☰</button>
+            <button id="toggleSidebar" class="btn btn-secondary sidebar-toggle"></button>
 
             <!-- Tarjeta del Usuario Autenticado -->
             <div class="card mt-3 shadow user-card">
@@ -61,22 +61,22 @@
             <ul class="nav flex-column">
 
                 <li class="nav-item">
-                    <a class="nav-link active section-link" href="#" data-section="resumen">📊 Resumen de Empleados</a>
+                    <a class="nav-link active section-link" href="#" data-section="resumen">Resumen de Empleados</a>
                 </li>
 
 
                 <li class="nav-item">
-                    <a class="nav-link section-link" href="#" data-section="asistencia">📌 Asistencia de Empleados</a>
+                    <a class="nav-link section-link" href="#" data-section="asistencia">Asistencia de Empleados</a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link section-link" href="#" data-section="solicitudes">📑 Solicitudes Pendientes</a>
+                    <a class="nav-link section-link" href="#" data-section="solicitudes">Solicitudes Pendientes</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link section-link" href="#" data-section="nuevos">🆕 Nuevos Empleados</a>
+                    <a class="nav-link section-link" href="#" data-section="nuevos">Nuevos Empleados</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link section-link" href="#" data-section="desvinculados">❌ Empleados Desvinculados</a>
+                    <a class="nav-link section-link" href="#" data-section="desvinculados">Empleados Desvinculados</a>
                 </li>
             </ul>
         </div>
@@ -114,7 +114,7 @@
 
                 <!-- Nueva sección: Desglose por Cargo -->
                 <div class="container mt-4">
-                    <h5 class="fw-bold text-dark">📋 Desglose por Cargo</h5>
+                    <h5 class="fw-bold text-dark">Desglose por Cargo</h5>
                     <div class="row">
                         @foreach ($cargosChunked as $grupo)
                         <div class="col-md-4">
@@ -137,7 +137,7 @@
             <!-- Sección de Asistencia -->
             <div id="section-asistencia" class="content-section d-none">
                 <div class="text-center p-4">
-                    <h5 class="fw-bold text-dark">📌 Asistencia de Empleados</h5>
+                    <h5 class="fw-bold text-dark">Asistencia de Empleados</h5>
                     <p class="text-muted">Registra la asistencia de los empleados de hoy.</p>
                     <a href="{{ route('asistencia.index') }}" class="btn btn-primary">Ir a Marcar Asistencia</a>
                     
@@ -150,7 +150,7 @@
 
             <!-- Sección de Solicitudes Pendientes -->
             <div id="section-solicitudes" class="content-section d-none">
-                <h5 class="fw-bold text-dark">📑 Solicitudes Pendientes</h5>
+                <h5 class="fw-bold text-dark">Solicitudes Pendientes</h5>
 
                 @if (!$haySolicitudesPendientes)
                     <p class="text-muted">No hay solicitudes pendientes.</p>
@@ -186,7 +186,7 @@
 
             <!-- Sección de Empleados Desvinculados -->
             <div id="section-desvinculados" class="content-section d-none">
-                <h5 class="fw-bold text-dark">❌ Empleados Desvinculados</h5>
+                <h5 class="fw-bold text-dark">Empleados Desvinculados</h5>
             
                 @if (!$hayEmpleadosDesvinculados)
                     <p class="text-muted">No hay empleados desvinculados.</p>

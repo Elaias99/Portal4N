@@ -1,5 +1,5 @@
 {{-- ==============================================
-    📘 Parcial: Filtros por columna (Compras)
+    Filtros por columna (Compras)
     Ubicación: resources/views/cobranzas/partials/filtros_compras.blade.php
 ============================================== --}}
 @props([
@@ -22,7 +22,7 @@
         </button>
 
         <ul class="dropdown-menu shadow-sm small p-2" style="min-width: 230px;">
-            {{-- 🔹 Ordenamiento --}}
+            {{-- Ordenamiento --}}
             <li>
                 <a class="dropdown-item mb-1"
                    href="{{ route('finanzas_compras.column_filter', array_merge(request()->query(), ['sort_by' => $columna, 'sort_order' => 'asc'])) }}">
@@ -38,7 +38,7 @@
 
             <li><hr class="dropdown-divider"></li>
 
-            {{-- 🔹 Filtro por texto --}}
+            {{-- Filtro por texto --}}
             <li class="px-2">
                 <form method="GET" action="{{ route('finanzas_compras.column_filter') }}">
                     @foreach(request()->query() as $key => $value)

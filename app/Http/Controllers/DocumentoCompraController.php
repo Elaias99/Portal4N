@@ -400,7 +400,7 @@ class DocumentoCompraController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | 🔁 BLOQUE AGREGADO: reprocesar sugerencias DESPUÉS del import completo
+        | BLOQUE AGREGADO: reprocesar sugerencias DESPUÉS del import completo
         |--------------------------------------------------------------------------
         */
         $service = new \App\Services\ReferenciaNotasCompraService();

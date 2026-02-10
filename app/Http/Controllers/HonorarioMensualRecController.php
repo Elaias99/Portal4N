@@ -389,7 +389,7 @@ class HonorarioMensualRecController extends Controller
 
                     if ($honorario) {
 
-                        // 🔁 EXISTE → solo actualizar datos SII
+                        //  EXISTE → solo actualizar datos SII
                         $honorario->update([
                             'razon_social'         => $meta['razon_social'],
                             'fecha_emision'        => $r['fecha_emision'],
@@ -404,7 +404,7 @@ class HonorarioMensualRecController extends Controller
 
                             'cobranza_compra_id' => $cobranza?->id,
 
-                            // ❌ NO tocar:
+                            //  NO tocar:
                             // saldo_pendiente
                             // estado_financiero
                             // servicio_manual
@@ -412,7 +412,7 @@ class HonorarioMensualRecController extends Controller
 
                     } else {
 
-                        // 🆕 NUEVO → inicializar capa financiera
+                        //  NUEVO → inicializar capa financiera
                         HonorarioMensualRec::create([
                             'empresa_id'        => $empresaId,
                             'rut_contribuyente' => $meta['rut_contribuyente'],
@@ -432,7 +432,7 @@ class HonorarioMensualRecController extends Controller
                             'monto_retenido' => $r['monto_retenido'],
                             'monto_pagado'   => $r['monto_pagado'],
 
-                            // ✅ SOLO AQUÍ
+            
                             'saldo_pendiente'           => $r['monto_pagado'],
                             'estado_financiero_inicial' => $estadoFinancieroInicial,
                             'fecha_vencimiento'         => $fechaVencimiento,
@@ -484,7 +484,7 @@ class HonorarioMensualRecController extends Controller
 
         $montoAbono = (int) $request->monto_abono;
 
-        // 📌 Snapshot previo
+        //  Snapshot previo
         $estadoAnterior = $honorario->estado_financiero_final;
         $saldoAnterior  = $honorario->saldo_pendiente;
 
@@ -494,16 +494,16 @@ class HonorarioMensualRecController extends Controller
             ]);
         }
 
-        // 1️⃣ Registrar abono
+        //  Registrar abono
         $honorario->abonos()->create([
             'monto'       => $montoAbono,
             'fecha_abono' => $request->fecha_abono,
         ]);
 
-        // 2️⃣ Recalcular saldo
+        //  Recalcular saldo
         $honorario->recalcularSaldoPendiente();
 
-        // 3️⃣ Actualizar estado
+        // Actualizar estado
         $honorario->update([
             'estado_financiero'       => 'Abono',
             'fecha_estado_financiero' => now(),
@@ -511,7 +511,7 @@ class HonorarioMensualRecController extends Controller
 
         $honorario->refresh();
 
-        // 4️⃣ Registrar movimiento
+        // Registrar movimiento
         $honorario->movimientos()->create([
             'usuario_id'      => Auth::id(),
             'estado_anterior' => $estadoAnterior,
@@ -651,7 +651,7 @@ class HonorarioMensualRecController extends Controller
                     continue;
                 }
 
-                // ❌ NO elegible para pago masivo
+                // NO elegible para pago masivo
                 if (
                     $honorario->pagos()->exists() ||
                     $honorario->prontoPagos()->exists() ||
@@ -660,7 +660,7 @@ class HonorarioMensualRecController extends Controller
                     continue;
                 }
 
-                // 📸 Snapshot previo
+                // Snapshot previo
                 $estadoAnterior = $honorario->estado_financiero_final;
                 $saldoAnterior  = $honorario->saldo_pendiente;
 
@@ -739,7 +739,7 @@ class HonorarioMensualRecController extends Controller
                     continue;
                 }
 
-                // 🔒 No elegible
+                // No elegible
                 if (
                     $honorario->pagos()->exists() ||
                     $honorario->prontoPagos()->exists() ||
@@ -860,7 +860,7 @@ class HonorarioMensualRecController extends Controller
 
         abort_if(!$honorariosProcesados || $honorariosProcesados->isEmpty(), 404, 'Exportación no disponible o expirada.');
 
-        // 🔒 One-shot (opcional)
+        // One-shot (opcional)
         Cache::forget("pago_masivo_excel:$token");
 
         // =========================

@@ -3,7 +3,7 @@
 @section('content')
 <div class="container">
     <h3 class="mb-4">
-        📊 Dashboard de Reclamos
+        Dashboard de Reclamos
     </h3>
 
     <a href="{{ route('dashboard.reclamos.export') }}" class="btn btn-success btn-sm mb-3">
@@ -14,7 +14,7 @@
         <div class="card shadow-sm mb-4">
             <div class="card-body">
                 <h5 class="card-title">
-                    📋 Reclamos Cerrados con Información de Tracking
+                    Reclamos Cerrados con Información de Tracking
                 </h5>
                 <p class="text-muted small">
                     Cada fila representa un reclamo cerrado, con detalle de su clasificación y trazabilidad logística.

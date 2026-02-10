@@ -22,7 +22,7 @@ class LoginController extends Controller
     protected function authenticated(Request $request, $user)
     {
         $usuariosFinanzas = [1, 405, 374];
-        // 🔹 Si es la jefa de finanzas (usuario con ID 405), redirigir a cobranzas
+        // Si es la jefa de finanzas (usuario con ID 405), redirigir a cobranzas
         if (in_array($user->id, $usuariosFinanzas)) {
             return redirect()->route('cobranzas.general');
         }

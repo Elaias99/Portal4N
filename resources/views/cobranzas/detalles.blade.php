@@ -23,7 +23,7 @@
     </div>
 
 
-    {{-- 🔹 Información general del documento --}}
+    {{-- Información general del documento --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Información general</div>
         <div class="card-body">
@@ -54,16 +54,16 @@
     </div>
 
 
-    {{-- 🔹 Nuevo: Resumen del cálculo del saldo pendiente --}}
+    {{-- Nuevo: Resumen del cálculo del saldo pendiente --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Resumen del cálculo del saldo pendiente</div>
         <div class="card-body">
 
             {{-- Paso 1: Monto base --}}
-            <p class="mb-1"><strong>1️⃣ Monto total inicial:</strong> ${{ number_format($documento->monto_total, 0, ',', '.') }}</p>
+            <p class="mb-1"><strong>Monto total inicial:</strong> ${{ number_format($documento->monto_total, 0, ',', '.') }}</p>
 
 
-            {{-- 🔹 Pago registrado --}}
+            {{-- Pago registrado --}}
             @if($documento->pagos()->exists())
                 @php
                     $pago = $documento->pagos()->latest('fecha_pago')->first();
@@ -98,7 +98,7 @@
             @endif
 
 
-            {{-- 🔹 Pronto Pago registrado --}}
+            {{-- Pronto Pago registrado --}}
             @if($documento->prontoPagos()->exists())
                 @php
                     $prontoPago = $documento->prontoPagos()->latest('fecha_pronto_pago')->first();
@@ -137,7 +137,7 @@
             @if($referencias['referenciadoPor']->isNotEmpty())
                 @foreach ($referencias['referenciadoPor'] as $ref)
                     <p class="mb-1">
-                        <strong>2️⃣ Descuento por Nota de Crédito folio {{ $ref->folio }}:</strong> 
+                        <strong>Descuento por Nota de Crédito folio {{ $ref->folio }}:</strong> 
                         - ${{ number_format($ref->monto_total, 0, ',', '.') }}
                     </p>
                 @endforeach
@@ -147,7 +147,7 @@
             @if($documento->abonos->isNotEmpty())
                 @foreach ($documento->abonos as $abono)
                     <p class="mb-1">
-                        <strong>3️⃣ Abono registrado el {{ \Carbon\Carbon::parse($abono->fecha_abono)->format('d-m-Y') }}:</strong>
+                        <strong>Abono registrado el {{ \Carbon\Carbon::parse($abono->fecha_abono)->format('d-m-Y') }}:</strong>
                         - ${{ number_format($abono->monto, 0, ',', '.') }}
                     </p>
                 @endforeach
@@ -157,7 +157,7 @@
             @if($documento->cruces->isNotEmpty())
                 @foreach ($documento->cruces as $cruce)
                     <p class="mb-1">
-                        <strong>4️⃣ Cruce registrado el {{ \Carbon\Carbon::parse($cruce->fecha_cruce)->format('d-m-Y') }}:</strong>
+                        <strong>Cruce registrado el {{ \Carbon\Carbon::parse($cruce->fecha_cruce)->format('d-m-Y') }}:</strong>
                         - ${{ number_format($cruce->monto, 0, ',', '.') }}
                     </p>
                 @endforeach
@@ -166,12 +166,12 @@
             {{-- Resultado final --}}
             <hr>
             <p class="fw-bold text-success mb-0">
-                ✅ <strong>Saldo pendiente actual:</strong> ${{ number_format($documento->saldo_pendiente, 0, ',', '.') }}
+                <strong>Saldo pendiente actual:</strong> ${{ number_format($documento->saldo_pendiente, 0, ',', '.') }}
             </p>
         </div>
     </div>
 
-    {{-- 🔹 Sección de abonos --}}
+    {{-- Sección de abonos --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Abonos registrados</div>
         <div class="card-body">
@@ -224,8 +224,7 @@
         </div>
     </div>
 
-    {{-- 🔹 Sección de cruces --}}
-    {{-- 🔹 Sección de cruces --}}
+    {{-- Sección de cruces --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Cruces registrados</div>
         <div class="card-body">
@@ -282,7 +281,7 @@
     </div>
 
 
-    {{-- 🔹 Referencias (Notas de crédito u otros documentos) --}}
+    {{-- Referencias (Notas de crédito u otros documentos) --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Referencias del documento</div>
         <div class="card-body">
@@ -312,7 +311,7 @@
         </div>
     </div>
 
-    {{-- 🔹 Botón para volver --}}
+    {{-- Botón para volver --}}
     <div class="text-center mt-4">
         <a href="{{ session('return_to_listado', url('/cobranzas/documentos')) }}" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> Volver al listado

@@ -186,7 +186,7 @@
                         @enderror
                     </div>
 
-                    {{-- ✅ Campo oculto para mantener coherencia con "Fecha Estado Manual" --}}
+                    {{-- Campo oculto para mantener coherencia con "Fecha Estado Manual" --}}
                     <input type="hidden" name="fecha_estado_manual" value="{{ old('fecha_estado_manual', now()->format('Y-m-d')) }}">
 
                     <div class="alert alert-info py-1 px-2 small">

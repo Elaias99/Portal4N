@@ -105,10 +105,10 @@ class LabelController extends Controller
 
         $rows = ($import->rows ?? collect())->values();
 
-        // 1️⃣ Agrupar TODAS las filas por ID (una etiqueta = un ID)
+        // Agrupar TODAS las filas por ID (una etiqueta = un ID)
         $etiquetas = $rows->groupBy('id')->values();
 
-        // 2️⃣ Partir en bloques de 95 etiquetas
+        // Partir en bloques de 95 etiquetas
         $lotes = $etiquetas->chunk(95);
 
         $zipName = 'etiquetas_' . now()->format('Ymd_His') . '.zip';

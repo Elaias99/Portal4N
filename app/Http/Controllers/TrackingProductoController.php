@@ -124,7 +124,7 @@ class TrackingProductoController extends Controller
 
         ['usuarioPerfil' => $usuarioPerfil, 'trabajador' => $trabajador] = $this->getPerfilYTrabajador();
 
-        // 🔁 Traer todos los códigos que ya existen en estado 'Retiro'
+        // Traer todos los códigos que ya existen en estado 'Retiro'
         $codigosExistentes = TrackingProducto::whereIn('codigo', $codigos)
             ->where('estado', 'Retiro')
             ->pluck('codigo')
@@ -132,7 +132,7 @@ class TrackingProductoController extends Controller
 
         $nuevos = array_diff($codigos, $codigosExistentes);
 
-        // 🧠 Usar insert para evitar múltiples `create()`
+        // Usar insert para evitar múltiples `create()`
         $datos = [];
         foreach ($nuevos as $codigo) {
             $datos[] = [
@@ -535,7 +535,7 @@ class TrackingProductoController extends Controller
 
         ['usuarioPerfil' => $usuarioPerfil, 'trabajador' => $trabajador] = $this->getPerfilYTrabajador();
 
-        // 🧠 Filtrar los códigos válidos que estén en estado 'Recepcionado' y asignados al chofer actual
+        // Filtrar los códigos válidos que estén en estado 'Recepcionado' y asignados al chofer actual
         $recepcionadosAsignados = TrackingProducto::whereIn('codigo', $codigos)
             ->where('estado', 'Recepcionado')
             ->where('chofer_id', $trabajador->id)
