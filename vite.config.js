@@ -15,6 +15,7 @@ export default defineConfig({
                 'resources/css/appcustom.css',
                 'resources/css/panel-finanzas.css',
                 'resources/css/cuentas-cobrar.css',
+                'resources/css/boleta_mensual.css',
                 'resources/sass/app.scss',
                 'resources/js/app.js',
                 'resources/js/reports/delivery-links.js',
