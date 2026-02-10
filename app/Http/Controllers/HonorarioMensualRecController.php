@@ -51,7 +51,16 @@ class HonorarioMensualRecController extends Controller
 
     public function index(Request $request)
     {
-        $query = HonorarioMensualRec::with('empresa', 'cobranzaCompra');
+        $query = HonorarioMensualRec::with([
+            'empresa:id,Nombre',
+            'cobranzaCompra:id,servicio',
+
+            'abonos:id,honorario_mensual_rec_id,fecha_abono',
+            'cruces:id,honorario_mensual_rec_id,fecha_cruce',
+            'pagos:id,honorario_mensual_rec_id,fecha_pago',
+            'prontoPagos:id,honorario_mensual_rec_id,fecha_pronto_pago',
+        ]);
+
 
         // =========================
         // FILTRO: EMPRESA

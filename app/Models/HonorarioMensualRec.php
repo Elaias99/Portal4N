@@ -50,6 +50,11 @@ class HonorarioMensualRec extends Model
 
     ];
 
+    protected $appends = [
+        'fecha_ultima_gestion',
+    ];
+
+
     // =========================
     // RELACIONES FINANCIERAS
     // =========================
@@ -160,6 +165,41 @@ class HonorarioMensualRec extends Model
 
         // 3️⃣ Fallback explícito
         return null;
+    }
+
+
+
+    public function getFechaUltimaGestionAttribute()
+    {
+
+        $fechas = collect();
+
+        if ($this->abonos->isNotEmpty()) {
+            $fechas->push(
+                $this->abonos->max('fecha_abono')
+            );
+        }
+
+        if ($this->cruces->isNotEmpty()) {
+            $fechas->push(
+                $this->cruces->max('fecha_cruce')
+            );
+        }
+
+        if ($this->pagos->isNotEmpty()) {
+            $fechas->push(
+                $this->pagos->max('fecha_pago')
+            );
+        }
+
+        if ($this->prontoPagos->isNotEmpty()) {
+            $fechas->push(
+                $this->prontoPagos->max('fecha_pronto_pago')
+            );
+        }
+
+        return $fechas->filter()->max();        
+
     }
 
 

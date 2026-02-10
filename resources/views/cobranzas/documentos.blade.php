@@ -444,10 +444,11 @@
 
                     {{-- Fecha Estado Manual --}}
                     <td>
-                        {{ $doc->fecha_estado_manual
-                            ? \Carbon\Carbon::parse($doc->fecha_estado_manual)->format('d-m-Y')
+                        {{ $doc->fecha_ultima_transaccion
+                            ? \Carbon\Carbon::parse($doc->fecha_ultima_transaccion)->format('d-m-Y')
                             : '-' }}
                     </td>
+
 
                 </tr>
             @endforeach

@@ -50,7 +50,11 @@ class DocumentoCompraController extends Controller
                 'empresa:id,Nombre',
                 'tipoDocumento:id,nombre',
                 'referencia:id,folio',
-                'referenciados:id,folio,referencia_id,tipo_documento_id,monto_total'
+                'referenciados:id,folio,referencia_id,tipo_documento_id,monto_total',
+                'abonos:id,documento_compra_id,fecha_abono',
+                'cruces:id,documento_compra_id,fecha_cruce',
+                'pagos:id,documento_compra_id,fecha_pago',
+                'prontoPagos:id,documento_compra_id,fecha_pronto_pago'
             ]);
 
         // === FILTROS GENERALES ===

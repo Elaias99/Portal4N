@@ -11,7 +11,7 @@ class DocumentoFinanciero extends Model
     use HasFactory;
 
     protected $table = 'documentos_financieros';
-    protected $appends = ['status_final'];
+    protected $appends = ['status_final','fecha_ultima_transaccion',];
 
     protected $fillable = [
         'nro',
@@ -104,7 +104,7 @@ class DocumentoFinanciero extends Model
         return $this->belongsTo(DocumentoFinanciero::class, 'referencia_id');
     }
 
-    // 🔁 Documentos que hacen referencia a este (por ejemplo, notas de crédito aplicadas)
+    //Documentos que hacen referencia a este (por ejemplo, notas de crédito aplicadas)
     public function referenciados()
     {
         return $this->hasMany(DocumentoFinanciero::class, 'referencia_id');
@@ -168,13 +168,13 @@ class DocumentoFinanciero extends Model
     public function getSaldoPendienteAttribute()
     {
         /**
-         * 1️⃣ Si el campo existe en BD → úsalo como base
+         * Si el campo existe en BD → úsalo como base
          * (pero solo si no hay necesidad de recalcular)
          */
         $valorBD = $this->attributes['saldo_pendiente'] ?? null;
 
         /**
-         * 2️⃣ Detectar si hay movimientos que requieren recálculo
+         *Detectar si hay movimientos que requieren recálculo
          */
         $tienePagos   = $this->pagos()->exists();
         $tieneAbonos  = $this->abonos()->exists();
@@ -191,7 +191,7 @@ class DocumentoFinanciero extends Model
             $esProntoPago;
 
         /**
-         * 3️⃣ Si NO requiere recálculo:
+         *Si NO requiere recálculo:
          *    devolver el valor guardado en la BD
          */
         if (!$requiereRecalculo && $valorBD !== null) {
@@ -199,15 +199,15 @@ class DocumentoFinanciero extends Model
         }
 
         /**
-         * 4️⃣ Si requiere recálculo → usar la lógica original
+         *Si requiere recálculo → usar la lógica original
          */
 
-        // 🟢 Si tiene pagos → saldo = 0
+        //Si tiene pagos → saldo = 0
         if ($tienePagos || $esProntoPago) {
             return 0;
         }
 
-        // 🟣 Si es Nota de Crédito → saldo = 0
+        //Si es Nota de Crédito → saldo = 0
         if ($this->tipo_documento_id == 61 ||
             (isset($this->tipoDocumento) &&
             str_contains(strtolower($this->tipoDocumento->nombre), 'nota de crédito'))) {
@@ -336,6 +336,49 @@ class DocumentoFinanciero extends Model
         return $this->status_final;
     }
 
+
+
+
+    // Accesor para mostrar la fechha de trasaccción (abono, cruce, pago, pronto pago) más reciente
+    public function getFechaUltimaTransaccionAttribute()
+    {
+
+        $fechas = collect();
+
+        // Abonos
+        if ($this->abonos->isNotEmpty()) {
+            $fechas->push(
+                $this->abonos->max('fecha_abono')
+            );
+        }
+
+        // Cruces
+        if ($this->cruces->isNotEmpty()) {
+            $fechas->push(
+                $this->cruces->max('fecha_cruce')
+            );
+        }
+
+        // Pagos
+        if ($this->pagos->isNotEmpty()) {
+            $fechas->push(
+                $this->pagos->max('fecha_pago')
+            );  
+        }
+
+        // Pronto Pagos
+        if ($this->prontoPagos->isNotEmpty()) {
+            $fechas->push(
+                $this->prontoPagos->max('fecha_pronto_pago')
+            );
+        }
+
+        return $fechas->filter()->max();
+
+
+
+    
+    }
 
 
 

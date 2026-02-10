@@ -658,7 +658,7 @@
                             <th class="hm-nowrap">Fecha Anulación</th>
                             <th class="hm-nowrap text-end">Monto Pagado</th>
                             <th class="hm-nowrap text-end">Saldo pendiente</th>
-                            <th class="hm-nowrap">Fecha Cambio Estado</th>
+                            <th class="hm-nowrap">Fecha Último Movimiento</th>
                         </tr>
                     </thead>
 
@@ -797,7 +797,12 @@
                                 </td>
 
                                 {{-- Fecha Cambio Estado --}}
-                                <td class="hm-nowrap">{{ $r->fecha_estado_financiero }}</td>
+                                <td>
+                                    {{ $r->fecha_ultima_gestion
+                                        ? \Carbon\Carbon::parse($r->fecha_ultima_gestion)->format('d-m-Y')
+                                        : '-' }}
+                                </td>
+
                             </tr>
                         @endforeach
                     </tbody>

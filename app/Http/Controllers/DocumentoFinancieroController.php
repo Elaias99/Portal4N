@@ -76,24 +76,24 @@ class DocumentoFinancieroController extends Controller
 
         if ($request->filled('saldo_valor')) {
 
-            // 1️⃣ Normalizar número (quita puntos y comas)
+            //Normalizar número (quita puntos y comas)
             $valor = (float) str_replace(['.', ','], '', $request->saldo_valor);
 
-            // 2️⃣ Determinar tipo de saldo (default: saldo_pendiente)
+            //Determinar tipo de saldo (default: saldo_pendiente)
             $tipoSaldo = $request->input('saldo_tipo', 'saldo_pendiente');
 
-            // 3️⃣ Whitelist de columnas permitidas
+            //Whitelist de columnas permitidas
             $columnasPermitidas = [
                 'saldo_pendiente',
                 'monto_total',
             ];
 
-            // 4️⃣ Fallback de seguridad
+            //Fallback de seguridad
             if (!in_array($tipoSaldo, $columnasPermitidas, true)) {
                 $tipoSaldo = 'saldo_pendiente';
             }
 
-            // 5️⃣ Aplicar filtro con tolerancia ±1
+            //Aplicar filtro con tolerancia ±1
             $baseQuery->whereBetween($tipoSaldo, [
                 $valor - 1,
                 $valor + 1
@@ -129,14 +129,17 @@ class DocumentoFinancieroController extends Controller
 
         // === QUERY PRINCIPAL (con relaciones) ===
         $query = $baseQuery->with([
-            'cobranza',
-            'empresa',
-            'abonos',
-            'cruces',
-            'referenciados',
-            'pagos',
-            'prontoPagos',
+            'cobranza:id,razon_social',
+            'empresa:id,Nombre',
+
+            'abonos:id,documento_financiero_id,fecha_abono',
+            'cruces:id,documento_financiero_id,fecha_cruce',
+            'pagos:id,documento_financiero_id,fecha_pago',
+            'prontoPagos:id,documento_financiero_id,fecha_pronto_pago',
+
+            'referenciados:id,referencia_id,folio',
         ]);
+
 
         if ($request->filled('status')) {
             $query->where('status_original', $request->status);
@@ -331,13 +334,13 @@ class DocumentoFinancieroController extends Controller
         $totalPagados = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente <= 0)->count();
         $totalPendientes = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente > 0)->count();
 
-        // ✅ Variables adicionales para mantener coherencia con index()
+        // Variables adicionales para mantener coherencia con index()
         $totalAlDia = DocumentoFinanciero::where('status_original', 'Al día')->count();
         $totalVencido = DocumentoFinanciero::where('status_original', 'Vencido')->count();
 
         $empresas = Empresa::orderBy('Nombre')->get(['id', 'Nombre']);
         $tiposDocumento = TipoDocumento::orderBy('nombre')->get(['id', 'nombre']);
-        $proveedores = \App\Models\Proveedor::orderBy('razon_social')->get(['id', 'razon_social', 'rut']); // ✅ añadido
+        $proveedores = \App\Models\Proveedor::orderBy('razon_social')->get(['id', 'razon_social', 'rut']); 
 
         // === RENDERIZAR VISTA ===
         return view('cobranzas.documentos', compact(
@@ -352,7 +355,7 @@ class DocumentoFinancieroController extends Controller
             'sortOrder',
             'empresas',
             'tiposDocumento',
-            'proveedores' // ✅ añadido
+            'proveedores'
         ));
     }
 
@@ -360,7 +363,7 @@ class DocumentoFinancieroController extends Controller
 
     public function general(Request $request)
     {
-        // 🚫 Restricción de acceso solo para usuario 405
+        // Restricción de acceso solo para usuario 405
         $usuariosFinanzas = [1, 405, 374, 375];
 
         if (!in_array(Auth::id(), $usuariosFinanzas)) {
@@ -513,7 +516,7 @@ class DocumentoFinancieroController extends Controller
             }
         }
 
-        // 🟢 Si el estado es Pronto pago → guardar en la tabla `pronto_pagos`
+        //Si el estado es Pronto pago → guardar en la tabla `pronto_pagos`
         if ($nuevoStatus === 'Pronto pago') {
             if ($documento->prontoPagos()->count() === 0) {
                 $documento->prontoPagos()->create([
@@ -549,7 +552,7 @@ class DocumentoFinancieroController extends Controller
         $perPage = 10; // igual que en index()
         $page = $request->get('page', 1);
 
-        // === 1️⃣ Construcción de la query base ===
+        // === Construcción de la query base ===
         $query = DocumentoFinanciero::with([
             'empresa',
             'abonos',
@@ -632,10 +635,10 @@ class DocumentoFinancieroController extends Controller
             $query->orderByRaw('ISNULL(fecha_vencimiento), fecha_vencimiento DESC');
         }
 
-        // === 6️⃣ Paginar antes de cargar ===
+        // ===Paginar antes de cargar ===
         $documentosPaginados = $query->paginate($perPage, ['*'], 'page', $page);
 
-        // === 7️⃣ Filtrar Estado de Pago en la colección ya paginada ===
+        // ===Filtrar Estado de Pago en la colección ya paginada ===
         $documentosFiltrados = $documentosPaginados->getCollection()->filter(function ($doc) use ($request) {
             if ($request->filled('estado_pago')) {
                 if ($request->estado_pago === 'Pagado') {
@@ -648,10 +651,10 @@ class DocumentoFinancieroController extends Controller
             return true;
         });
 
-        // === 8️⃣ Reemplazar la colección en el paginador ===
+        // ===Reemplazar la colección en el paginador ===
         $documentosPaginados->setCollection($documentosFiltrados);
 
-        // === 9️⃣ Registro de depuración (verificación) ===
+        // ===Registro de depuración (verificación) ===
         Log::info('EXPORT DEBUG:', [
             'usuario' => Auth::user()->name ?? 'Sin identificar',
             'pagina' => $page,
@@ -660,7 +663,7 @@ class DocumentoFinancieroController extends Controller
             'razones_sociales' => $documentosFiltrados->pluck('razon_social')->toArray(),
         ]);
 
-        // === 🔟 Exportación final solo con los registros filtrados ===
+        // ===Exportación final solo con los registros filtrados ===
         $fecha = now()->format('Y-m-d_H-i-s');
         return Excel::download(
             new DocumentosExport($documentosFiltrados),
@@ -672,7 +675,7 @@ class DocumentoFinancieroController extends Controller
 
     public function exportAll(Request $request)
     {
-        // === 1️⃣ Construcción de la query base ===
+        // ===Construcción de la query base ===
         $query = DocumentoFinanciero::with([
             'empresa',
             'abonos',
@@ -683,7 +686,7 @@ class DocumentoFinancieroController extends Controller
             'cobranza'
         ]);
 
-        // === 2️⃣ Filtros base (idénticos al index) ===
+        // ===Filtros base (idénticos al index) ===
         if ($request->filled('razon_social')) {
             $query->where('razon_social', 'like', "%{$request->razon_social}%");
         }
@@ -700,7 +703,7 @@ class DocumentoFinancieroController extends Controller
             $query->where('status_original', $request->status);
         }
 
-        // === 3️⃣ Filtros adicionales (desde filtrarColumnas) ===
+        // ===Filtros adicionales (desde filtrarColumnas) ===
         if ($request->filled('columna') && $request->filled('valor')) {
             switch ($request->columna) {
                 case 'razon_social':
@@ -729,7 +732,7 @@ class DocumentoFinancieroController extends Controller
             }
         }
 
-        // === 4️⃣ Filtros de fechas ===
+        // ===Filtros de fechas ===
         if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
             $query->whereBetween('fecha_docto', [$request->fecha_inicio, $request->fecha_fin]);
         } elseif ($request->filled('fecha_inicio')) {
@@ -746,10 +749,10 @@ class DocumentoFinancieroController extends Controller
             $query->whereDate('fecha_vencimiento', '<=', $request->vencimiento_fin);
         }
 
-        // === 5️⃣ Excluir notas de crédito y anulados ===
+        // ===Excluir notas de crédito y anulados ===
         // $query->whereNotIn('tipo_documento_id', [61, 56]);
 
-        // === 6️⃣ Ordenamiento ===
+        // === Ordenamiento ===
         if ($request->filled('sort_by')) {
             $sortBy = $request->get('sort_by', 'razon_social');
             $sortOrder = $request->get('sort_order', 'asc');
@@ -758,11 +761,11 @@ class DocumentoFinancieroController extends Controller
             $query->orderByRaw('ISNULL(fecha_vencimiento), fecha_vencimiento DESC');
         }
 
-        // === 7️⃣ Ejecutar query una sola vez ===
+        // === Ejecutar query una sola vez ===
         $documentos = $query->get();
 
 
-        // === 🔹 Precálculos para optimizar el export ===
+        // === Precálculos para optimizar el export ===
         // Evita recalcular sumas y fechas dentro de DocumentosExport::map()
         $documentos->each(function ($doc) {
             $doc->total_abonado = $doc->abonos->sum('monto');
@@ -771,7 +774,7 @@ class DocumentoFinancieroController extends Controller
             $doc->ultima_fecha_cruce = $doc->cruces->max('fecha_cruce');
         });
 
-        // === 8️⃣ Filtro de Estado de Pago (en memoria, con accessor saldo_pendiente) ===
+        // === Filtro de Estado de Pago (en memoria, con accessor saldo_pendiente) ===
         if ($request->filled('estado_pago')) {
             $documentos = $documentos->filter(function ($doc) use ($request) {
                 if ($request->estado_pago === 'Pagado') {
@@ -784,7 +787,7 @@ class DocumentoFinancieroController extends Controller
             });
         }
 
-        // === 9️⃣ Actualizar estado automático antes de exportar ===
+        // ===Actualizar estado automático antes de exportar ===
         $hoy = \Carbon\Carbon::today();
         foreach ($documentos as $doc) {
             if ($doc->fecha_vencimiento && $doc->saldo_pendiente > 0) {
@@ -797,7 +800,7 @@ class DocumentoFinancieroController extends Controller
             }
         }
 
-        // === 🔟 Exportación final (sin paginación) ===
+        // ===Exportación final (sin paginación) ===
         $fecha = now()->format('Y-m-d_H-i-s');
         return Excel::download(
             new DocumentosExport($documentos),
@@ -825,12 +828,12 @@ class DocumentoFinancieroController extends Controller
         $documento->load([
             'empresa',
             'abonos',
-            'cruces.proveedor', // ✅ relación anidada
+            'cruces.proveedor', 
             'referencia',
             'referenciados'
         ]);
 
-        // 🔹 Guardar la URL anterior solo si viene del listado y no de otra acción (como updateStatus)
+        //Guardar la URL anterior solo si viene del listado y no de otra acción (como updateStatus)
         if (url()->previous() && !str_contains(url()->previous(), '/documentos/')) {
             session(['return_to_listado' => url()->previous()]);
         }
@@ -859,11 +862,7 @@ class DocumentoFinancieroController extends Controller
 
 
 
-
-
-
-
-
+    // Almacenamiento de estados relacionados (abonos y cruces)
     public function storeAbono(Request $request, DocumentoFinanciero $documento)
     {
         $request->validate([
@@ -927,7 +926,7 @@ class DocumentoFinancieroController extends Controller
             'cobranza_id.exists' => 'El cliente seleccionado no es válido.',
         ]);
 
-        // 1️⃣ Validar límite del saldo
+        //Validar límite del saldo
         $saldoPendiente = $documento->saldo_pendiente;
 
         if ($request->monto > $saldoPendiente) {
@@ -936,23 +935,23 @@ class DocumentoFinancieroController extends Controller
                 ->withInput();
         }
 
-        // 2️⃣ Registrar cruce
+        //Registrar cruce
         $cruce = $documento->cruces()->create([
             'monto' => $request->monto,
             'fecha_cruce' => $request->fecha_cruce,
             'cobranza_id' => $request->cobranza_id,
         ]);
 
-        // 3️⃣ Recalcular saldo pendiente
+        //Recalcular saldo pendiente
         $documento->recalcularSaldoPendiente();
 
-        // 4️⃣ Actualizar estado del documento
+        //Actualizar estado del documento
         $documento->update([
             'status' => 'Cruce',
             'fecha_estado_manual' => now(),
         ]);
 
-        // 5️⃣ Registrar movimiento
+        //Registrar movimiento
         \App\Models\MovimientoDocumento::create([
             'documento_financiero_id' => $documento->id,
             'user_id' => Auth::id(),

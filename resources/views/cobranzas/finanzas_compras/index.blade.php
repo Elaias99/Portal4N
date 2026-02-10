@@ -463,13 +463,14 @@
 
 
                                 {{-- 📅 Fecha Estado Manual --}}
-                                @include('cobranzas.partials.filtros_compras', [
+                                {{-- @include('cobranzas.partials.filtros_compras', [
                                     'label' => 'Fecha Estado Manual',
                                     'columna' => 'fecha_estado_manual',
                                     'sortBy' => $sortBy ?? null,
                                     'sortOrder' => $sortOrder ?? 'asc',
                                     'placeholder' => 'AAAA-MM-DD'
-                                ])
+                                ]) --}}
+                                 <th>Fecha Último Movimiento</th>
 
                             </tr>
                         </thead>
@@ -572,7 +573,12 @@
                                     </td>
                                     
 
-                                    <td>{{ $doc->fecha_estado_manual ?? '-' }}</td>
+                                    <td>
+                                        {{ $doc->fecha_ultima_gestion 
+                                            ? \Carbon\Carbon::parse($doc->fecha_ultima_gestion)->format('d-m-Y')
+                                            : '-' 
+                                        }}
+                                    </td>
 
                                 </tr>
                             @endforeach
