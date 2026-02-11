@@ -17,11 +17,13 @@
 
         {{-- Acciones de navegación (no mezcladas con filtros) --}}
         <div class="hm-actions">
-            <a href="{{ route('cobranzas-compras.index') }}" class="btn btn-outline-secondary">
+            <a href="{{ route('cobranzas-compras.index', ['origen' => 'honorarios']) }}"
+            class="btn btn-outline-secondary">
                 Detalle Proveedor
             </a>
 
-            <a href="{{ route('honorarios.mensual.historial') }}" class="btn btn-outline-secondary">
+
+            <a href="{{ route('movimientos.honorarios.historial') }}" class="btn btn-outline-secondary">
                 Movimientos
             </a>
 
@@ -305,10 +307,21 @@
                     </div>
 
                     <div class="col-12 col-md-3">
-                        <button class="btn btn-success w-100">
-                            Importar
-                        </button>
+                        <div class="d-flex gap-2">
+
+                            <button type="submit"
+                                    class="btn btn-success w-100">
+                                Importar
+                            </button>
+
+                            <a href="{{ route('honorarios.mensual.export', request()->query()) }}"
+                            class="btn btn-outline-success w-100">
+                                Exportar
+                            </a>
+
+                        </div>
                     </div>
+
 
                 </div>
             </form>

@@ -3,7 +3,131 @@
 @section('content')
 <div class="container">
 
-    <h2 class="mb-4">Historial de movimientos de honorarios</h2>
+    {{-- ========================= --}}
+    {{-- ENCABEZADO --}}
+    {{-- ========================= --}}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Historial de movimientos de honorarios</h4>
+
+        <div class="text-end">
+            <a href="{{ route('movimientos.honorarios.export') }}"
+            class="btn btn-success">
+                Exportar a Excel
+            </a>
+        </div>
+    </div>
+
+
+    {{-- ========================= --}}
+    {{-- FILTRO HORIZONTAL COMPLETO --}}
+    {{-- ========================= --}}
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+
+            <form method="GET"
+                action="{{ route('movimientos.honorarios.historial') }}">
+
+                <div class="row g-3 align-items-end">
+
+                    <div class="col-lg-2">
+                        <label class="form-label">Empresa</label>
+                        <select name="empresa_id"
+                                class="form-select form-select-sm">
+                            <option value="">Todas</option>
+
+                            @foreach($empresas as $empresa)
+                                <option value="{{ $empresa->id }}"
+                                    {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
+                                    {{ $empresa->Nombre }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+
+                    <div class="col-lg-2">
+                        <label class="form-label">Usuario</label>
+                        <input type="text"
+                            name="usuario"
+                            value="{{ request('usuario') }}"
+                            class="form-control form-control-sm"
+                            placeholder="Nombre usuario">
+                    </div>
+
+                    <div class="col-lg-2">
+                        <label class="form-label">Tipo movimiento</label>
+                        <select name="tipo"
+                                class="form-select form-select-sm">
+                            <option value="">Todos</option>
+
+                            <option value="Registro de abono"
+                                {{ request('tipo') == 'Registro de abono' ? 'selected' : '' }}>
+                                Abono
+                            </option>
+
+                            <option value="Eliminación de abono"
+                                {{ request('tipo') == 'Eliminación de abono' ? 'selected' : '' }}>
+                                Eliminación Abono
+                            </option>
+
+                            <option value="Pago"
+                                {{ request('tipo') == 'Pago' ? 'selected' : '' }}>
+                                Pago
+                            </option>
+
+                            <option value="Pago masivo con exportación"
+                                {{ request('tipo') == 'Pago masivo con exportación' ? 'selected' : '' }}>
+                                Pago Masivo
+                            </option>
+
+                            <option value="Cruce"
+                                {{ request('tipo') == 'Cruce' ? 'selected' : '' }}>
+                                Cruce
+                            </option>
+                        </select>
+                    </div>
+
+
+                    {{-- <div class="col-lg-2">
+                        <label class="form-label">Desde</label>
+                        <input type="date"
+                            name="fecha_desde"
+                            value="{{ request('fecha_desde') }}"
+                            class="form-control form-control-sm">
+                    </div>
+
+                    <div class="col-lg-2">
+                        <label class="form-label">Hasta</label>
+                        <input type="date"
+                            name="fecha_hasta"
+                            value="{{ request('fecha_hasta') }}"
+                            class="form-control form-control-sm">
+                    </div> --}}
+
+                    <div class="col-lg-1">
+                        <button type="submit"
+                                class="btn btn-primary btn-sm w-100">
+                            Buscar
+                        </button>
+                    </div>
+
+                    <div class="col-lg-1">
+                        <a href="{{ route('movimientos.honorarios.historial') }}"
+                        class="btn btn-outline-secondary btn-sm w-100">
+                            Limpiar
+                        </a>
+                    </div>
+
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+
+
 
     {{-- =========================
     TABLA DE MOVIMIENTOS

@@ -576,16 +576,19 @@ Route::post(
 
 
 // Rutas Honorarios Mensual Recepción
+
+// Exportar
+
+Route::get(
+    'honorarios/mensual-rec/export',
+    [HonorarioMensualRecController::class, 'export']
+)->name('honorarios.mensual.export');
+
 Route::get(
     '/honorarios/mensual-rec',
     [HonorarioMensualRecController::class, 'index']
 )->name('honorarios.mensual.index');
 
-
-Route::get(
-    'honorarios/mensual-rec/historial',
-    [HonorarioMensualRecController::class, 'historial']
-)->name('honorarios.mensual.historial');
 
 Route::post(
     '/honorarios/mensual-rec/import',
@@ -700,6 +703,22 @@ Route::patch(
 )->name('honorarios.mensual.servicio.update');
 
 
+
+
+
+// Historial de cambios en honorarios mensuales recibidos
+use App\Http\Controllers\MovimientoHonorarioMensualRecController;
+
+Route::get(
+    '/movimientos-honorarios-mensuales-rec/export',
+    [MovimientoHonorarioMensualRecController::class, 'export']
+)->name('movimientos.honorarios.export');
+
+
+Route::get(
+    'movimientos-honorarios-mensuales-rec/historial',
+    [MovimientoHonorarioMensualRecController::class, 'historial']
+)->name('movimientos.honorarios.historial');
 
 
 

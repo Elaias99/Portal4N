@@ -14,15 +14,24 @@
     @endif
 
     <div class="text-center mb-4">
-        <h2 class="fw-bold mb-2">Gestión de Cobranzas de Compras</h2>
+        <h2 class="fw-bold mb-2">Gestión Proveedores</h2>
         <p class="text-muted mb-3">
-            Visualiza y administra la información de las cobranzas asociadas a documentos de compras.
+            Visualiza y administra la información de los proveedores asociados a documentos.
         </p>
 
         <div class="d-flex justify-content-center gap-3 flex-wrap">
-            <a href="{{ route('finanzas_compras.index') }}" class="btn btn-outline-secondary px-4">
-                Volver a Compras
-            </a>
+            @if(request('origen') === 'honorarios')
+                <a href="{{ route('honorarios.mensual.index') }}"
+                class="btn btn-outline-secondary px-4">
+                    Volver a Honorarios
+                </a>
+            @else
+                <a href="{{ route('finanzas_compras.index') }}"
+                class="btn btn-outline-secondary px-4">
+                    Volver a Compras
+                </a>
+            @endif
+
 
             @if (Auth::id() != 375)
                 <a href="{{ route('cobranzas-compras.create') }}" class="btn btn-primary px-4">

@@ -22,6 +22,7 @@ use App\Exports\HonorariosPagoMasivoExport;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use ZipArchive;
+use App\Exports\ExportHonorarioMensual;
 
 
 
@@ -1423,6 +1424,20 @@ class HonorarioMensualRecController extends Controller
         return back()->with('success', 'Servicio definido correctamente.');
     }
 
+
+
+
+
+    // Descargar EXCEL como exportación de honorarios mensuales
+
+
+    public function export(Request $request)
+    {
+        return Excel::download(
+            new ExportHonorarioMensual($request),
+            'honorarios_mensuales_rec.xlsx'
+        );
+    }
 
 
 

@@ -258,9 +258,11 @@
                                 </span>
                             </div>
 
-                            <a href="{{ route('cobranzas-compras.index') }}" class="btn btn-outline-secondary btn-sm">
+                            <a href="{{ route('cobranzas-compras.index', ['origen' => 'compras']) }}"
+                            class="btn btn-outline-secondary btn-sm">
                                 Detalle Proveedor
                             </a>
+
 
 
                         </div>
