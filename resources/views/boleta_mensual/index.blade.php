@@ -287,15 +287,15 @@
             ====================== --}}
             <hr class="my-4">
 
-            <form action="{{ route('honorarios.mensual.import') }}"
-                method="POST"
-                enctype="multipart/form-data">
+            <div class="row g-3 align-items-end">
 
-                @csrf
+                {{-- Form IMPORTAR --}}
+                <div class="col-12 col-md-8">
+                    <form action="{{ route('honorarios.mensual.import') }}"
+                        method="POST"
+                        enctype="multipart/form-data">
+                        @csrf
 
-                <div class="row g-3 align-items-end">
-
-                    <div class="col-12 col-md-9">
                         <label class="form-label fw-semibold">
                             Importar archivo SII (file_informeMensualREC)
                         </label>
@@ -304,27 +304,52 @@
                             name="archivo"
                             class="form-control"
                             required>
-                    </div>
-
-                    <div class="col-12 col-md-3">
-                        <div class="d-flex gap-2">
-
-                            <button type="submit"
-                                    class="btn btn-success w-100">
-                                Importar
-                            </button>
-
-                            <a href="{{ route('honorarios.mensual.export', request()->query()) }}"
-                            class="btn btn-outline-success w-100">
-                                Exportar
-                            </a>
-
-                        </div>
-                    </div>
-
-
+                    </form>
                 </div>
-            </form>
+
+                {{-- Botón IMPORTAR --}}
+                <div class="col-6 col-md-1">
+                    <form action="{{ route('honorarios.mensual.import') }}"
+                        method="POST"
+                        enctype="multipart/form-data">
+                        @csrf
+                        <button type="submit"
+                                class="btn btn-success w-100">
+                            Importar
+                        </button>
+                    </form>
+                </div>
+
+                {{-- Form EXPORTAR --}}
+                <div class="col-6 col-md-1">
+                    <form method="GET"
+                        action="{{ route('honorarios.mensual.export') }}"
+                        id="form-exportar">
+                        
+                        @foreach(request()->query() as $key => $value)
+                            <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                        @endforeach
+
+                        <button type="submit"
+                                class="btn btn-outline-success w-100"
+                                id="btn-exportar">
+                            <span id="texto-exportar">Exportar</span>
+                            <span id="spinner-exportar"
+                                class="spinner-border spinner-border-sm ms-2 d-none"
+                                role="status"
+                                aria-hidden="true"></span>
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+
+
+
+
+
+
+            
 
         </div>
     </details>
@@ -680,6 +705,37 @@
 
 
 
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const form = document.getElementById('form-exportar');
+    if (!form) return;
+
+    const btn = document.getElementById('btn-exportar');
+    const texto = document.getElementById('texto-exportar');
+    const spinner = document.getElementById('spinner-exportar');
+
+    form.addEventListener('submit', function () {
+
+        // Deshabilitar botón
+        btn.disabled = true;
+        texto.textContent = 'Generando archivo...';
+        spinner.classList.remove('d-none');
+
+        // Restaurar botón después de 4 segundos
+        setTimeout(function () {
+            btn.disabled = false;
+            texto.textContent = 'Exportar';
+            spinner.classList.add('d-none');
+        }, 4000);
+
+    });
+
+});
+</script>
+
+
+
 {{-- Script mínimo para el modal reutilizable --}}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -742,7 +798,6 @@ document.addEventListener('DOMContentLoaded', () => {
     tipoSelect.addEventListener('change', toggleServicioInput);
 });
 </script>
-
 
 @vite('resources/js/index.js')
 
