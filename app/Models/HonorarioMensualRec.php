@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\CalendarioPagoServicio;
 
 class HonorarioMensualRec extends Model
 {
@@ -199,6 +200,39 @@ class HonorarioMensualRec extends Model
         return $fechas->filter()->max();        
 
     }
+
+
+
+
+    public function getFechaPagoCorporativaAttribute()
+    {
+        if (!$this->fecha_emision || !$this->cobranzaCompra) {
+            return null;
+        }
+
+        $anio = $this->fecha_emision->year;
+        $mes  = $this->fecha_emision->month;
+
+        $servicio = strtoupper(trim($this->cobranzaCompra->servicio));
+        $creditos = $this->cobranzaCompra->creditos;
+
+        $query = CalendarioPagoServicio::where('anio', $anio)
+            ->where('mes', $mes)
+            ->where('servicio', $servicio);
+
+        // Solo Courier distingue por créditos
+        if ($servicio === 'COURIER') {
+            $query->where('creditos', $creditos);
+        } else {
+            $query->whereNull('creditos');
+        }
+
+        $calendario = $query->first();
+
+        return $calendario?->fecha_pago;
+    }
+
+
 
 
 

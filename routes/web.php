@@ -713,6 +713,10 @@ Route::patch(
 )->name('honorarios.mensual.servicio.update');
 
 
+Route::get('/honorarios-mensuales/calendario', 
+    [HonorarioMensualRecController::class, 'calendario']
+)->name('honorarios.mensual.calendario');
+
 
 
 

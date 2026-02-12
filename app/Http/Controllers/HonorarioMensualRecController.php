@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use ZipArchive;
 use App\Exports\ExportHonorarioMensual;
+use App\Models\CalendarioPagoServicio;
 
 
 
@@ -1602,6 +1603,26 @@ class HonorarioMensualRecController extends Controller
                 ->with('error', 'Ocurrió un error al crear los proveedores.');
         }
     }
+
+
+
+
+    public function calendario()
+    {
+        $honorarios = HonorarioMensualRec::with('cobranzaCompra')
+            ->orderBy('fecha_emision', 'desc')
+            ->get();
+
+        return view('boleta_mensual.calendario', compact('honorarios'));
+    }
+
+
+
+
+
+
+
+
 
 
 
