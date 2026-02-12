@@ -27,6 +27,11 @@
                 Movimientos
             </a>
 
+            <a href="{{ route('honorarios.mensual.calendario') }}"
+                class="btn btn-outline-secondary">
+                    Calendario Corporativo
+            </a>
+
         </div>
     </div>
 

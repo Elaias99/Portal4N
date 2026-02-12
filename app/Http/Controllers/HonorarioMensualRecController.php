@@ -1607,14 +1607,58 @@ class HonorarioMensualRecController extends Controller
 
 
 
-    public function calendario()
+    public function calendario(Request $request)
     {
-        $honorarios = HonorarioMensualRec::with('cobranzaCompra')
-            ->orderBy('fecha_emision', 'desc')
-            ->get();
+        $query = HonorarioMensualRec::with('cobranzaCompra');
 
-        return view('boleta_mensual.calendario', compact('honorarios'));
+        // =========================
+        // FILTRO: AÑO
+        // =========================
+        if ($request->filled('anio')) {
+            $query->whereYear('fecha_emision', $request->anio);
+        }
+
+        // =========================
+        // FILTRO: MES
+        // =========================
+        if ($request->filled('mes')) {
+            $query->whereMonth('fecha_emision', $request->mes);
+        }
+
+        // =========================
+        // FILTRO: SERVICIO
+        // =========================
+        if ($request->filled('servicio')) {
+            $query->whereHas('cobranzaCompra', function ($q) use ($request) {
+                $q->where('servicio', $request->servicio);
+            });
+        }
+
+        $honorarios = $query
+            ->orderBy('fecha_emision', 'desc')
+            ->paginate(10)
+            ->appends($request->query());
+
+        // Para los selectores
+        $anios = HonorarioMensualRec::selectRaw('YEAR(fecha_emision) as anio')
+            ->distinct()
+            ->orderBy('anio', 'desc')
+            ->pluck('anio');
+
+        $servicios = [
+            'COLABORADORES',
+            'AGENCIAS',
+            'COURIER',
+            'SUSCRIPCIONES',
+        ];
+
+        return view('boleta_mensual.calendario', compact(
+            'honorarios',
+            'anios',
+            'servicios'
+        ));
     }
+
 
 
 
