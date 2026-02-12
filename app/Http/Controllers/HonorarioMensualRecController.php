@@ -54,7 +54,7 @@ class HonorarioMensualRecController extends Controller
     {
         $query = HonorarioMensualRec::with([
             'empresa:id,Nombre',
-            'cobranzaCompra:id,servicio',
+            'cobranzaCompra:id,servicio,razon_social',
 
             'abonos:id,honorario_mensual_rec_id,fecha_abono',
             'cruces:id,honorario_mensual_rec_id,fecha_cruce',
@@ -304,6 +304,41 @@ class HonorarioMensualRecController extends Controller
             'rut'    => $empresa->rut,
         ];
 
+
+        // =========================
+        // DETECTAR PROVEEDORES FALTANTES
+        // =========================
+
+        // 1. Obtener RUTs únicos desde el archivo
+        $rutsEmisores = collect($preview['registros'])
+            ->pluck('rut_emisor')
+            ->filter()
+            ->unique()
+            ->values();
+
+        // 2. Buscar cuáles existen en cobranza_compras
+        $rutsExistentes = \App\Models\CobranzaCompra::whereIn('rut_cliente', $rutsEmisores)
+            ->pluck('rut_cliente')
+            ->toArray();
+
+        // 3. Determinar faltantes
+        $proveedoresFaltantes = $rutsEmisores
+            ->reject(fn($rut) => in_array($rut, $rutsExistentes))
+            ->values();
+
+        // 4. Armar estructura detallada para la vista
+        $preview['proveedores_faltantes'] = $proveedoresFaltantes
+            ->map(function ($rut) use ($preview) {
+                $registro = collect($preview['registros'])
+                    ->firstWhere('rut_emisor', $rut);
+
+                return [
+                    'rut_emisor' => $rut,
+                    'razon_social_emisor' => $registro['razon_social_emisor'] ?? null,
+                ];
+            })
+            ->all();
+
         // =========================
         // CALCULAR TOTALES
         // =========================
@@ -354,6 +389,17 @@ class HonorarioMensualRecController extends Controller
                 ? CobranzaCompra::where('rut_cliente', $rutEmisor)->first()
                 : null;
 
+            if (!$cobranza) {
+                Log::warning('HONORARIO SIN PROVEEDOR DETECTADO', [
+                    'empresa_id' => $empresaId,
+                    'rut_emisor' => $rutEmisor,
+                    'folio' => $r['folio'] ?? null,
+                    'anio' => $meta['anio'] ?? null,
+                    'mes' => $meta['mes'] ?? null,
+                ]);
+            }
+
+
             // =========================
             // ESTADO FINANCIERO INICIAL + FECHA VENCIMIENTO
             // =========================
@@ -390,6 +436,19 @@ class HonorarioMensualRecController extends Controller
 
                     if ($honorario) {
 
+
+                    Log::info('ACTUALIZANDO HONORARIO EXISTENTE', [
+                        'folio' => $r['folio'],
+                        'rut_emisor' => $rutEmisor,
+                        'cobranza_compra_id' => $cobranza?->id,
+                    ]);
+
+
+
+
+
+
+
                         //  EXISTE → solo actualizar datos SII
                         $honorario->update([
                             'razon_social'         => $meta['razon_social'],
@@ -412,6 +471,15 @@ class HonorarioMensualRecController extends Controller
                         ]);
 
                     } else {
+
+                        Log::info('CREANDO HONORARIO', [
+                            'folio' => $r['folio'],
+                            'rut_emisor' => $rutEmisor,
+                            'cobranza_compra_id' => $cobranza?->id,
+                            'estado_financiero_inicial' => $estadoFinancieroInicial,
+                            'fecha_vencimiento' => $fechaVencimiento,
+                        ]);
+
 
                         //  NUEVO → inicializar capa financiera
                         HonorarioMensualRec::create([
@@ -1438,6 +1506,103 @@ class HonorarioMensualRecController extends Controller
             'honorarios_mensuales_rec.xlsx'
         );
     }
+
+
+
+
+
+
+
+
+
+
+    // Detectar proveedor nuevo
+    public function storeProveedores(Request $request)
+    {
+        // =========================
+        // VALIDACIÓN
+        // =========================
+        $request->validate([
+            'proveedores' => 'required|array|min:1',
+            'proveedores.*.rut_cliente' => 'required|string',
+            'proveedores.*.razon_social' => 'required|string',
+            'proveedores.*.servicio' => 'nullable|string',
+            'proveedores.*.creditos' => 'nullable|integer|min:0',
+            'proveedores.*.tipo' => 'nullable|string',
+            'proveedores.*.facturacion' => 'nullable|string',
+            'proveedores.*.forma_pago' => 'nullable|string',
+            'proveedores.*.zona' => 'nullable|string',
+            'proveedores.*.importancia' => 'nullable|string',
+            'proveedores.*.responsable' => 'nullable|string',
+            'proveedores.*.nombre_cuenta' => 'nullable|string',
+            'proveedores.*.rut_cuenta' => 'nullable|string',
+            'proveedores.*.numero_cuenta' => 'nullable|string',
+            'proveedores.*.banco_id' => 'nullable|integer',
+            'proveedores.*.tipo_cuenta_id' => 'nullable|integer',
+        ]);
+
+        $proveedores = $request->input('proveedores');
+
+        DB::beginTransaction();
+
+        try {
+
+            foreach ($proveedores as $proveedor) {
+
+                // Evitar duplicados si alguien lo crea en paralelo
+                $existe = CobranzaCompra::where(
+                    'rut_cliente',
+                    $proveedor['rut_cliente']
+                )->exists();
+
+                if ($existe) {
+                    continue;
+                }
+
+                CobranzaCompra::create([
+                    'rut_cliente'     => $proveedor['rut_cliente'],
+                    'razon_social'    => $proveedor['razon_social'],
+                    'servicio'        => $proveedor['servicio'] ?? null,
+                    'creditos'        => $proveedor['creditos'] ?? null,
+                    'tipo'            => $proveedor['tipo'] ?? null,
+                    'facturacion'     => $proveedor['facturacion'] ?? null,
+                    'forma_pago'      => $proveedor['forma_pago'] ?? null,
+                    'zona'            => $proveedor['zona'] ?? null,
+                    'importancia'     => $proveedor['importancia'] ?? null,
+                    'responsable'     => $proveedor['responsable'] ?? null,
+                    'nombre_cuenta'   => $proveedor['nombre_cuenta'] ?? null,
+                    'rut_cuenta'      => $proveedor['rut_cuenta'] ?? null,
+                    'numero_cuenta'   => $proveedor['numero_cuenta'] ?? null,
+                    'banco_id'        => $proveedor['banco_id'] ?? null,
+                    'tipo_cuenta_id'  => $proveedor['tipo_cuenta_id'] ?? null,
+                ]);
+            }
+
+            DB::commit();
+
+            Log::info('PROVEEDORES CREADOS DESDE IMPORTACION HONORARIOS', [
+                'cantidad' => count($proveedores),
+                'usuario_id' => Auth::id(),
+            ]);
+
+            return redirect()
+                ->route('honorarios.mensual.index')
+                ->with('success', 'Proveedores creados correctamente. Puede continuar con la importación.');
+
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            Log::error('ERROR CREANDO PROVEEDORES DESDE IMPORTACION', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()
+                ->route('honorarios.mensual.index')
+                ->with('error', 'Ocurrió un error al crear los proveedores.');
+        }
+    }
+
 
 
 

@@ -289,13 +289,15 @@
 
             <div class="row g-3 align-items-end">
 
-                {{-- Form IMPORTAR --}}
-                <div class="col-12 col-md-8">
-                    <form action="{{ route('honorarios.mensual.import') }}"
-                        method="POST"
-                        enctype="multipart/form-data">
-                        @csrf
+                {{-- IMPORTAR --}}
+                <form action="{{ route('honorarios.mensual.import') }}"
+                    method="POST"
+                    enctype="multipart/form-data"
+                    class="row g-3 align-items-end">
+                    @csrf
 
+                    {{-- Input archivo --}}
+                    <div class="col-12 col-md-8">
                         <label class="form-label fw-semibold">
                             Importar archivo SII (file_informeMensualREC)
                         </label>
@@ -304,21 +306,18 @@
                             name="archivo"
                             class="form-control"
                             required>
-                    </form>
-                </div>
+                    </div>
 
-                {{-- Botón IMPORTAR --}}
-                <div class="col-6 col-md-1">
-                    <form action="{{ route('honorarios.mensual.import') }}"
-                        method="POST"
-                        enctype="multipart/form-data">
-                        @csrf
+                    {{-- Botón --}}
+                    <div class="col-6 col-md-1">
                         <button type="submit"
                                 class="btn btn-success w-100">
                             Importar
                         </button>
-                    </form>
-                </div>
+                    </div>
+
+                </form>
+
 
                 {{-- Form EXPORTAR --}}
                 <div class="col-6 col-md-1">
@@ -365,22 +364,116 @@
     @endif
 
     @if(session('preview'))
-        @php $preview = session('preview'); @endphp
+        @php 
+            $preview = session('preview'); 
+            $proveedoresFaltantes = $preview['proveedores_faltantes'] ?? [];
+            $hayFaltantes = count($proveedoresFaltantes) > 0;
+        @endphp
 
         <div class="hm-block hm-block-warning mb-3">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                <div class="hm-block-title mb-0">Previsualización del archivo (sin guardar)</div>
 
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div class="hm-block-title mb-0">
+                    Regularización previa a la importación
+                </div>
+
+                {{-- BOTÓN CONFIRMAR HONORARIOS --}}
                 <form action="{{ route('honorarios.mensual.store') }}" method="POST" class="m-0">
                     @csrf
                     <input type="hidden" name="data" value="{{ base64_encode(json_encode($preview)) }}">
-                    <button class="btn btn-success">
-                        Confirmar y guardar
+                    <button class="btn btn-success"
+                            {{ $hayFaltantes ? 'disabled' : '' }}>
+                        Confirmar y guardar honorarios
                     </button>
                 </form>
             </div>
 
-            <div class="mt-2">
+            {{-- ============================= --}}
+            {{-- BLOQUE PROVEEDORES FALTANTES --}}
+            {{-- ============================= --}}
+            @if($hayFaltantes)
+
+                <div class="alert alert-danger mt-3">
+                    <strong>Proveedores no registrados detectados.</strong>
+                    Debe crearlos antes de continuar.
+                </div>
+
+                <form action="{{ route('honorarios.mensual.proveedores.store') }}" method="POST">
+                    @csrf
+
+                    <div class="table-responsive mt-3">
+                        <table class="table table-sm table-bordered align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>RUT</th>
+                                    <th>Razón Social</th>
+                                    <th>Servicio</th>
+                                    <th>Créditos (días)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($proveedoresFaltantes as $index => $p)
+                                    <tr>
+                                        {{-- RUT --}}
+                                        <td>
+                                            <input type="text"
+                                                class="form-control"
+                                                value="{{ $p['rut_emisor'] }}"
+                                                readonly>
+                                            <input type="hidden"
+                                                name="proveedores[{{ $index }}][rut_cliente]"
+                                                value="{{ $p['rut_emisor'] }}">
+                                        </td>
+
+                                        {{-- RAZÓN SOCIAL --}}
+                                        <td>
+                                            <input type="text"
+                                                class="form-control"
+                                                value="{{ $p['razon_social_emisor'] }}"
+                                                readonly>
+                                            <input type="hidden"
+                                                name="proveedores[{{ $index }}][razon_social]"
+                                                value="{{ $p['razon_social_emisor'] }}">
+                                        </td>
+
+                                        {{-- SERVICIO --}}
+                                        <td>
+                                            <input type="text"
+                                                name="proveedores[{{ $index }}][servicio]"
+                                                class="form-control"
+                                                placeholder="Ej: Servicios profesionales"
+                                                required>
+                                        </td>
+
+                                        {{-- CREDITOS --}}
+                                        <td>
+                                            <input type="number"
+                                                name="proveedores[{{ $index }}][creditos]"
+                                                class="form-control"
+                                                min="0"
+                                                placeholder="Ej: 30"
+                                                required>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-3">
+                        <button class="btn btn-primary">
+                            Crear proveedores
+                        </button>
+                    </div>
+
+                </form>
+
+            @endif
+
+            {{-- ============================= --}}
+            {{-- TABLA INFORMATIVA DE ARCHIVO --}}
+            {{-- ============================= --}}
+            <div class="mt-4">
                 <div class="row g-2">
                     <div class="col-12 col-md-6">
                         <div class="hm-subtle">Contribuyente</div>
@@ -388,7 +481,9 @@
                     </div>
                     <div class="col-12 col-md-3">
                         <div class="hm-subtle">RUT</div>
-                        <div class="fw-semibold hm-nowrap">{{ $preview['meta']['rut_contribuyente'] }}</div>
+                        <div class="fw-semibold hm-nowrap">
+                            {{ $preview['meta']['rut_contribuyente'] }}
+                        </div>
                     </div>
                     <div class="col-12 col-md-3">
                         <div class="hm-subtle">Periodo</div>
@@ -400,49 +495,39 @@
                 </div>
             </div>
 
+            {{-- TABLA DOCUMENTOS (solo informativa ahora) --}}
             <div class="table-responsive mt-3">
                 <table class="table table-sm table-bordered align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th class="hm-nowrap">Folio</th>
-                            <th class="hm-nowrap">Fecha</th>
-                            <th class="hm-nowrap">Estado</th>
-                            <th class="hm-nowrap">Fecha Anulación</th>
-                            <th class="hm-nowrap">Rut Emisor</th>
+                            <th>Folio</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th>RUT Emisor</th>
                             <th>Razón Social</th>
-                            <th class="hm-nowrap">Soc. Prof.</th>
-                            <th class="hm-nowrap text-end">Bruto</th>
-                            <th class="hm-nowrap text-end">Retenido</th>
-                            <th class="hm-nowrap text-end">Pagado</th>
+                            <th class="text-end">Pagado</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($preview['registros'] as $r)
                             <tr>
-                                <td class="hm-nowrap">{{ $r['folio'] }}</td>
-                                <td class="hm-nowrap">{{ $r['fecha_emision'] }}</td>
-                                <td class="hm-nowrap">{{ $r['estado'] }}</td>
-                                <td class="hm-nowrap">{{ $r['fecha_anulacion'] }}</td>
-                                <td class="hm-nowrap">{{ $r['rut_emisor'] }}</td>
-                                <td><span class="hm-ellipsis" title="{{ $r['razon_social_emisor'] }}">{{ $r['razon_social_emisor'] }}</span></td>
-                                <td class="hm-nowrap">{{ $r['sociedad_profesional'] ? 'SI' : 'NO' }}</td>
-                                <td class="hm-nowrap text-end">{{ number_format($r['monto_bruto'], 0, ',', '.') }}</td>
-                                <td class="hm-nowrap text-end">{{ number_format($r['monto_retenido'], 0, ',', '.') }}</td>
-                                <td class="hm-nowrap text-end">{{ number_format($r['monto_pagado'], 0, ',', '.') }}</td>
+                                <td>{{ $r['folio'] }}</td>
+                                <td>{{ $r['fecha_emision'] }}</td>
+                                <td>{{ $r['estado'] }}</td>
+                                <td>{{ $r['rut_emisor'] }}</td>
+                                <td>{{ $r['razon_social_emisor'] }}</td>
+                                <td class="text-end">
+                                    {{ number_format($r['monto_pagado'], 0, ',', '.') }}
+                                </td>
                             </tr>
                         @endforeach
-
-                        <tr class="table-light fw-bold">
-                            <td colspan="7">Totales</td>
-                            <td class="hm-nowrap text-end">{{ number_format($preview['totales']['bruto'], 0, ',', '.') }}</td>
-                            <td class="hm-nowrap text-end">{{ number_format($preview['totales']['retenido'], 0, ',', '.') }}</td>
-                            <td class="hm-nowrap text-end">{{ number_format($preview['totales']['pagado'], 0, ',', '.') }}</td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
+
         </div>
     @endif
+
 
     {{-- =========================
         4) TABLA PRINCIPAL “PLANA” (sin cards)

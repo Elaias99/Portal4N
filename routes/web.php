@@ -577,7 +577,17 @@ Route::post(
 
 // Rutas Honorarios Mensual Recepción
 
+// Registrar honorarios mensuales recibidos por proveedor
+
+Route::post(
+    '/honorarios/mensual-rec/proveedores/store',
+    [\App\Http\Controllers\HonorarioMensualRecController::class, 'storeProveedores']
+)->name('honorarios.mensual.proveedores.store');
+
+
 // Exportar
+
+
 
 Route::get(
     'honorarios/mensual-rec/export',
