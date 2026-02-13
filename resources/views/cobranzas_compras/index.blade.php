@@ -32,7 +32,6 @@
                 </a>
             @endif
 
-
             @if (Auth::id() != 375)
                 <a href="{{ route('cobranzas-compras.create') }}" class="btn btn-primary px-4">
                     Nueva Cobranza
@@ -42,7 +41,13 @@
             <a href="{{ route('cobranzasCompra.export') }}" class="btn btn-outline-success px-4">
                 Exportar Excel
             </a>
+
+            {{-- Nueva vista: Salud de Proveedores --}}
+            <a href="{{ route('cobranzas-compras.salud') }}" class="btn btn-outline-dark px-4">
+                Salud de Proveedores
+            </a>
         </div>
+
     </div>
 
     {{-- Buscador --}}

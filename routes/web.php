@@ -392,6 +392,12 @@ Route::get('/cobranzas/export/compras', [CobranzaCompraController::class, 'expor
 Route::post('/cobranzas-compras/reprocesar-pendientes-compras', [CobranzaCompraController::class, 'reprocesarPendientesCompras'])
     ->name('cobranzas-compras.reprocesar-pendientes-compras');
 
+
+Route::get('/cobranzas-compras/salud', 
+    [\App\Http\Controllers\CobranzaCompraController::class, 'salud']
+)->name('cobranzas-compras.salud');
+
+
 Route::resource('cobranzas-compras', CobranzaCompraController::class)
     ->parameters(['cobranzas-compras' => 'cobranzaCompra']);
 

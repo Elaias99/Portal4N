@@ -314,6 +314,85 @@ class CobranzaCompraController extends Controller
 
 
 
+    /**
+     * Vista de Salud de Proveedores
+     */
+    public function salud()
+    {
+        $cobranzasCompras = CobranzaCompra::with(['banco', 'tipoCuenta'])
+            ->orderBy('razon_social')
+            ->paginate(20);
+
+        $evaluados = $cobranzasCompras->getCollection()->map(function ($p) {
+
+            $problemas = [];
+            $nivel = 'saludable'; // saludable | advertencia | critico
+
+            // =========================
+            // VALIDACIONES CRÍTICAS
+            // =========================
+
+            if (empty($p->servicio) || in_array(strtoupper(trim($p->servicio)), ['NULL', 'NO', 'SIN INFO', '1'])) {
+                $problemas[] = 'Servicio inválido o no definido';
+                $nivel = 'critico';
+            }
+
+            if ($p->creditos === null || !is_numeric($p->creditos)) {
+                $problemas[] = 'Créditos no definidos';
+                $nivel = 'critico';
+            }
+
+            if (empty($p->banco_id) || empty($p->tipo_cuenta_id)) {
+                $problemas[] = 'Información bancaria incompleta';
+                $nivel = 'critico';
+            }
+
+            if (empty($p->numero_cuenta) || empty($p->rut_cuenta)) {
+                $problemas[] = 'Datos de cuenta incompletos';
+                $nivel = 'critico';
+            }
+
+            // =========================
+            // VALIDACIONES DE ADVERTENCIA
+            // =========================
+
+            if ($nivel !== 'critico') {
+
+                if (empty($p->responsable)) {
+                    $problemas[] = 'Responsable no asignado';
+                    $nivel = 'advertencia';
+                }
+
+                if (empty($p->importancia)) {
+                    $problemas[] = 'Importancia no definida';
+                    $nivel = 'advertencia';
+                }
+
+                if (empty($p->zona)) {
+                    $problemas[] = 'Zona no definida';
+                    $nivel = 'advertencia';
+                }
+            }
+
+            return [
+                'proveedor' => $p,
+                'problemas' => $problemas,
+                'nivel' => $nivel,
+            ];
+        });
+
+        // Mantiene la paginación pero con items evaluados
+        $cobranzasCompras->setCollection($evaluados);
+
+        return view('cobranzas_compras.salud', [
+            'cobranzasCompras' => $cobranzasCompras,
+            'evaluados' => $evaluados,
+        ]);
+    }
+
+
+
+
 
 
 }
