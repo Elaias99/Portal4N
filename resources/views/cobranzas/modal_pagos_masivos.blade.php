@@ -149,30 +149,34 @@
 
     // Tomar selección desde la tabla principal
     function collectFromMainTable() {
+
         documentosSeleccionados = {};
 
-        const checks = $$('.check-documento:checked');
-        checks.forEach(cb => {
-            const id = String(cb.dataset.id || cb.value);
+        const seleccion = JSON.parse(localStorage.getItem('documentosSeleccionados')) || {};
 
-            const folio = cb.dataset.folio || '';
-            const razon = cb.dataset.razon || '';
-            const rut   = cb.dataset.rut || ''; // opcional
-            const saldo = Number(cb.dataset.saldo || 0);
-            const total = Number(cb.dataset.total || 0);
+        const checks = document.querySelectorAll('.check-documento');
 
-            // Default: pago total
-            documentosSeleccionados[id] = {
-                id,
-                folio,
-                razon,
-                rut,
-                saldoInicial: saldo,
-                montoTotal: total,
+        // Si no hay checkboxes visibles en la tabla, limpiar memoria
+        if (checks.length === 0) {
+            localStorage.removeItem('documentosSeleccionados');
+            return;
+        }
+
+        Object.values(seleccion).forEach(doc => {
+
+            documentosSeleccionados[doc.id] = {
+                id: doc.id,
+                folio: doc.folio,
+                razon: doc.razon,
+                rut: doc.rut || '',
+                saldoInicial: Number(doc.saldo),
+                montoTotal: Number(doc.total),
                 operacion: 'pago',
-                monto: saldo
+                monto: Number(doc.saldo)
             };
+
         });
+
     }
 
     function renderResumen() {
@@ -377,6 +381,9 @@
                 })
                 .then(data => {
                     if (!data.ok) throw new Error('Respuesta inválida');
+
+                    // limpiar selección guardada
+                    localStorage.removeItem('documentosSeleccionados');
 
                     // descargar x empresa
                     if (Array.isArray(data.downloads)) {

@@ -589,25 +589,83 @@
 
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => {
 
-    const checkAll = document.getElementById('check-all-documentos');
+        const STORAGE_KEY = 'documentosSeleccionados';
+        const checkAll = document.getElementById('check-all-documentos');
 
-    checkAll?.addEventListener('change', function () {
-        document.querySelectorAll('.check-documento').forEach(cb => {
-            cb.checked = this.checked;
-        });
-    });
-
-    document.addEventListener('change', function (e) {
-        if (!e.target.classList.contains('check-documento')) return;
-
-        if (!e.target.checked && checkAll) {
-            checkAll.checked = false;
+        function getSeleccion() {
+            return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
         }
-    });
 
-});
+        function saveSeleccion(data) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function addDocumento(cb) {
+
+            const seleccion = getSeleccion();
+
+            const id = cb.dataset.id;
+
+            seleccion[id] = {
+                id: id,
+                folio: cb.dataset.folio,
+                razon: cb.dataset.razon,
+                rut: cb.dataset.rut || '',
+                saldo: Number(cb.dataset.saldo),
+                total: Number(cb.dataset.total)
+            };
+
+            saveSeleccion(seleccion);
+        }
+
+        function removeDocumento(id) {
+            const seleccion = getSeleccion();
+            delete seleccion[id];
+            saveSeleccion(seleccion);
+        }
+
+        const seleccion = getSeleccion();
+
+        document.querySelectorAll('.check-documento').forEach(cb => {
+
+            const id = cb.dataset.id;
+
+            if (seleccion[id]) {
+                cb.checked = true;
+            }
+
+            cb.addEventListener('change', function () {
+
+                if (this.checked) {
+                    addDocumento(this);
+                } else {
+                    removeDocumento(this.dataset.id);
+                }
+
+            });
+
+        });
+
+        // SELECT ALL
+        checkAll?.addEventListener('change', function () {
+
+            document.querySelectorAll('.check-documento').forEach(cb => {
+
+                cb.checked = this.checked;
+
+                if (this.checked) {
+                    addDocumento(cb);
+                } else {
+                    removeDocumento(cb.dataset.id);
+                }
+
+            });
+
+        });
+
+    });
 </script>
 
 
@@ -640,6 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 </script>
+
 
 @include('cobranzas._modal_create_cobranza')
 @include('cobranzas.partials.modal_ExportarCompra')
