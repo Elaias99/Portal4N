@@ -125,16 +125,16 @@
                             <div class="col-md-1 dropdown-saldo">
                                 <label class="form-label small text-muted">Saldo</label>
 
-                                <div class="dropdown w-100">
+                                <div class="dropdown w-100 keep-open-on-drag">
                                     <button
-                                        class="form-control form-control-sm dropdown-toggle text-start"
-                                        type="button"
-                                        data-bs-toggle="dropdown"
-                                        aria-expanded="false"
+                                    class="form-control form-control-sm dropdown-toggle text-start"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    data-bs-auto-close="outside"
+                                    aria-expanded="false"
                                     >
-                                        Buscar saldo por
+                                    Buscar saldo
                                     </button>
-
                                     <div class="dropdown-menu p-3" style="min-width: 220px;">
                                         
                                         {{-- Tipo de saldo --}}
@@ -697,6 +697,36 @@
             });
         });
     });
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.dropdown.keep-open-on-drag').forEach(function (dd) {
+    let startedInside = false;
+
+    dd.addEventListener('mousedown', function (e) {
+      if (e.target.closest('.dropdown-menu')) startedInside = true;
+    });
+
+    const menu = dd.querySelector('.dropdown-menu');
+    if (menu) {
+      menu.addEventListener('click', function (e) {
+        e.stopPropagation();
+      });
+    }
+
+    document.addEventListener('click', function (e) {
+      if (!startedInside) return;
+      startedInside = false;
+
+      if (!e.target.closest('.dropdown.keep-open-on-drag')) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+    }, true);
+  });
+});
 </script>
 
 
