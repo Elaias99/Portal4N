@@ -159,17 +159,26 @@ class HonorarioMensualRecController extends Controller
         // =========================
         // FILTRO: SALDO
         // =========================
-        if ($request->filled('saldo_tipo') && $request->filled('saldo_monto')) {
 
-            $monto = (int) $request->saldo_monto;
+        if ($request->filled('saldo_monto')) {
 
-            if ($request->saldo_tipo === 'pendiente') {
-                $query->where('saldo_pendiente', '>=', $monto);
-            }
+            // Normalizar número (quita puntos/ comas/ espacios)
+            $monto = (float) str_replace(['.', ',', ' '], '', (string) $request->saldo_monto);
 
-            if ($request->saldo_tipo === 'original') {
-                $query->where('monto_pagado', '>=', $monto);
-            }
+            // Determinar tipo (default: pendiente)
+            $tipo = $request->input('saldo_tipo', 'pendiente');
+
+            // Mapear tipo -> columna real (whitelist)
+            $map = [
+                'pendiente' => 'saldo_pendiente',
+                'original'  => 'monto_pagado', // si “original” debe ser monto_bruto, cámbialo aquí
+            ];
+
+            // Fallback seguro
+            $columna = $map[$tipo] ?? 'saldo_pendiente';
+
+            // Aplicar filtro con tolerancia ±1
+            $query->whereBetween($columna, [$monto - 1, $monto + 1]);
         }
 
 
@@ -197,14 +206,6 @@ class HonorarioMensualRecController extends Controller
 
             }
         }
-
-
-
-
-
-
-
-
 
         // =========================
         // ORDEN + PAGINACIÓN

@@ -238,25 +238,42 @@
 
                     {{-- Saldo --}}
                     <div class="col-12 col-md-3 col-lg-2">
-                        <label class="form-label">Saldo</label>
-                        <select name="saldo_tipo" class="form-select">
-                            <option value="">Buscar saldo por</option>
+                    <label class="form-label">Saldo</label>
+
+                    <div class="dropdown w-100 keep-open-on-drag">
+                        <button
+                        class="form-control dropdown-toggle text-start"
+                        type="button"
+                        data-bs-toggle="dropdown"
+                        data-bs-auto-close="outside"
+                        aria-expanded="false"
+                        >
+                        Buscar saldo por
+                        </button>
+
+                        <div class="dropdown-menu p-3" style="min-width: 240px;">
+                        <label class="form-label small text-muted mb-1">Tipo</label>
+                        <select name="saldo_tipo" class="form-select form-select-sm mb-2">
+                            <option value="">Selecciona</option>
                             <option value="pendiente" {{ request('saldo_tipo') === 'pendiente' ? 'selected' : '' }}>
-                                Saldo pendiente
+                            Saldo pendiente
                             </option>
                             <option value="original" {{ request('saldo_tipo') === 'original' ? 'selected' : '' }}>
-                                Monto original
+                            Monto original
                             </option>
                         </select>
-                    </div>
 
-                    {{-- Monto --}}
-                    <div class="col-12 col-md-3 col-lg-2">
-                        <label class="form-label">Monto</label>
-                        <input type="number"
+                        <label class="form-label small text-muted mb-1">Monto</label>
+                        <input
+                            type="number"
                             name="saldo_monto"
-                            class="form-control"
-                            value="{{ request('saldo_monto') }}">
+                            class="form-control form-control-sm"
+                            value="{{ request('saldo_monto') }}"
+                            placeholder="Ej: 350000"
+                            min="0"
+                        >
+                        </div>
+                    </div>
                     </div>
 
                     {{-- Acciones filtros --}}
@@ -886,6 +903,36 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleServicioInput();
 
     tipoSelect.addEventListener('change', toggleServicioInput);
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.dropdown.keep-open-on-drag').forEach(function (dd) {
+    let startedInside = false;
+
+    dd.addEventListener('mousedown', function (e) {
+      if (e.target.closest('.dropdown-menu')) startedInside = true;
+    });
+
+    const menu = dd.querySelector('.dropdown-menu');
+    if (menu) {
+      menu.addEventListener('click', function (e) {
+        e.stopPropagation();
+      });
+    }
+
+    document.addEventListener('click', function (e) {
+      if (!startedInside) return;
+      startedInside = false;
+
+      if (!e.target.closest('.dropdown.keep-open-on-drag')) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+    }, true);
+  });
 });
 </script>
 
