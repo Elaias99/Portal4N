@@ -790,6 +790,14 @@ class HonorarioMensualRecController extends Controller
             'fecha_pago'   => 'required|date|before_or_equal:today',
         ]);
 
+
+        Log::info('HM storePagoMasivoExport IN', [
+            'honorarios_count' => is_array($request->honorarios) ? count($request->honorarios) : null,
+            'honorarios_ids'   => $request->honorarios,
+            'fecha_pago'       => $request->fecha_pago,
+            'user_id'          => Auth::id(),
+        ]);
+
         /**
          * [
          *   empresa_id => Collection<HonorarioMensualRec>
@@ -806,7 +814,18 @@ class HonorarioMensualRecController extends Controller
 
                 $honorario = HonorarioMensualRec::with('empresa')->find($honorarioId);
 
+                Log::info('HM honorario cargado', [
+                    'honorario_id'   => $honorarioId,
+                    'empresa_id'     => $honorario->empresa_id,
+                    'empresa_nombre' => $honorario->empresa?->Nombre,
+                    'saldo'          => $honorario->saldo_pendiente,
+                    'tiene_pagos'    => $honorario->pagos()->exists(),
+                    'tiene_pronto'   => $honorario->prontoPagos()->exists(),
+                ]);
+
                 if (!$honorario) {
+
+                
                     continue;
                 }
 
@@ -872,55 +891,32 @@ class HonorarioMensualRecController extends Controller
             }
         });
 
+        Log::info('HM agrupación resultante', [
+            'empresas_distintas' => $honorariosPorEmpresa->count(),
+            'empresa_ids'        => $honorariosPorEmpresa->keys()->values()->all(),
+            'por_empresa'        => $honorariosPorEmpresa->map(fn($c) => $c->count())->all(),
+        ]);
         // =========================
-        // GENERAR ZIP EN TEMPORAL
+        // SIN ZIP: generar tokens y devolver URLs de descarga
         // =========================
-        $zipPath = tempnam(sys_get_temp_dir(), 'pago_masivo_');
-        $zip = new ZipArchive();
-
-        if ($zip->open($zipPath, ZipArchive::OVERWRITE) !== true) {
-            abort(500, 'No se pudo crear el archivo ZIP.');
-        }
+        $downloads = [];
 
         foreach ($honorariosPorEmpresa as $empresaId => $honorarios) {
 
-            $empresa = $honorarios->first()->empresa;
-            $nombreEmpresa = $empresa?->Nombre ?? 'Empresa';
+            $token = (string) \Illuminate\Support\Str::uuid();
 
-            $nombreEmpresaArchivo = str_replace(
-                ' ',
-                '_',
-                preg_replace('/[^A-Za-z0-9\s]/', '', $nombreEmpresa)
-            );
+            // Guardar la Collection para que downloadPagoMasivoExcel($token) la consuma
+            Cache::put("pago_masivo_excel:$token", $honorarios, now()->addMinutes(10));
 
-            $fecha = now()->format('Y-m-d');
-
-            $nombreExcel = "{$nombreEmpresaArchivo}_honorarios_pago_masivo_{$fecha}.xlsx";
-
-            // Archivo Excel temporal
-            $excelTempName = 'honorarios_pago_masivo_' . uniqid() . '.xlsx';
-
-            Excel::store(
-                new HonorariosPagoMasivoExport($honorarios),
-                $excelTempName,
-                'local'
-            );
-
-            $excelRealPath = storage_path('app/' . $excelTempName);
-
-            $zip->addFile($excelRealPath, $nombreExcel);
-
+            $downloads[] = [
+                'url' => route('honorarios.mensual.pago.masivo.descargar', ['token' => $token]),
+            ];
         }
 
-        $zip->close();
-
-        // =========================
-        // DESCARGA ÚNICA (ZIP)
-        // =========================
-        $fecha = now()->format('Y-m-d');
-        $nombreZip = "honorarios_pago_masivo_{$fecha}.zip";
-
-        return response()->download($zipPath, $nombreZip)->deleteFileAfterSend(true);
+        return response()->json([
+            'ok' => true,
+            'downloads' => $downloads,
+        ]);
     }
 
 

@@ -163,16 +163,99 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================
     // AL CERRAR MODAL (SIN CONFIRMAR)
     // =========================
+    let pagoMasivoConfirmado = false;
+
     $('#modalPagoMasivo').on('hidden.bs.modal', function () {
+    bloqueBuscador.style.display = '';
+    inputsWrap.innerHTML = '';
+    bloqueResumen.innerHTML = '';
 
-        bloqueBuscador.style.display = '';
-        inputsWrap.innerHTML = '';
-        bloqueResumen.innerHTML = '';
-
-        // AQUÍ es donde corresponde limpiar y refrescar
+    // solo recargar si NO fue confirmado (cerrado manual)
+    if (!pagoMasivoConfirmado) {
         sessionStorage.removeItem('honorarios_seleccionados');
         location.reload();
+    }
+
+    // reset
+    pagoMasivoConfirmado = false;
     });
+
+
+
+
+    // =========================
+    // SUBMIT PAGO MASIVO (AJAX + descargas múltiples)
+    // =========================
+    const formPagoMasivo = document.getElementById('form-pago-masivo');
+
+    if (formPagoMasivo) {
+    formPagoMasivo.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const submitBtn = formPagoMasivo.querySelector('button[type="submit"]');
+        if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Procesando...';
+        }
+
+        const formData = new FormData(formPagoMasivo);
+
+        fetch(formPagoMasivo.action, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Error registrando pago masivo');
+            return res.json();
+        })
+        .then(data => {
+            if (!data || data.ok !== true) throw new Error('Respuesta inválida');
+
+            console.log('Respuesta pago masivo:', data);
+            console.log('Cantidad de descargas:', data.downloads.length);
+
+            // disparar descargas
+            if (Array.isArray(data.downloads)) {
+
+
+                data.downloads.forEach((item, index) => {
+                    setTimeout(() => {
+
+                        const link = document.createElement('a');
+                        link.href = item.url;
+                        link.download = '';
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+
+                    }, index * 800);
+                });
+
+
+            }
+
+
+
+            // limpiar selección y cerrar modal
+            clearSeleccionados(); // usa tu helper existente
+            $('#modalPagoMasivo').modal('hide');
+
+            if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Confirmar pago masivo';
+            }
+        })
+        .catch(err => {
+            alert(err?.message || 'Error procesando pago masivo');
+
+            if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Confirmar pago masivo';
+            }
+        });
+    });
+    }
 
 
 });
