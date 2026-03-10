@@ -9,6 +9,7 @@ use App\Models\CobranzaCompra;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 
@@ -252,6 +253,22 @@ class ComprasImport implements ToModel, WithHeadingRow
         }
 
 
+        $estadoInicial = null;
+        $saldoInicial = $this->cleanNumber($row['monto_total'] ?? 0);
+
+        $formaPagoNormalizada = mb_strtoupper(trim((string) ($cobranza->forma_pago ?? '')));
+
+        $esPagoAutomatico = in_array($formaPagoNormalizada, [
+            'CAJA CHICA',
+            'FONDO POR RENDIR',
+        ], true);
+
+        if ($esPagoAutomatico) {
+            $estadoInicial = 'Pago';
+            $saldoInicial = 0;
+        }
+
+
 
 
         //Ahora ya puedes usar las claves igual que en DocumentosImport
@@ -285,13 +302,22 @@ class ComprasImport implements ToModel, WithHeadingRow
             'codigo_otro_impuesto' => $row['codigo_otro_impuesto'] ?? null,
             'valor_otro_impuesto' => $this->cleanNumber($row['valor_otro_impuesto'] ?? 0),
             'tasa_otro_impuesto' => $row['tasa_otro_impuesto'] ?? null,
+
             'cobranza_compra_id' => $cobranzaId,
             'fecha_vencimiento' => $fechaVencimiento,
             'status_original' => $statusOriginal,
+            'estado' => $estadoInicial,
             'saldo_pendiente' => $this->cleanNumber($row['monto_total'] ?? 0),
         ]);
 
         $documento->save();
+
+        if ($esPagoAutomatico && $documento->fecha_docto) {
+            $documento->pagos()->create([
+                'fecha_pago' => \Carbon\Carbon::parse($documento->fecha_docto)->format('Y-m-d'),
+                'user_id' => Auth::id(),
+            ]);
+        }
 
         $this->importados[] = $row['folio'] ?? 'sin folio';
 
