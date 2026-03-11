@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Log;
 use App\Models\Banco;
 use App\Models\TipoCuenta;
 use App\Services\ReferenciaNotasCompraService;
+use App\Services\SincronizarPagoReferenciaCompraService;
 
 
 class DocumentoCompraController extends Controller
@@ -532,6 +533,8 @@ class DocumentoCompraController extends Controller
         $nota = DocumentoCompra::findOrFail($request->nota_id);
         $factura = DocumentoCompra::findOrFail($request->factura_id);
 
+        $syncMovimientoReferencia = app(\App\Services\SincronizarMovimientoReferenciaCompraService::class);
+
         $referenciaAnterior = $nota->referencia_id
             ? DocumentoCompra::find($nota->referencia_id)
             : null;
@@ -547,9 +550,17 @@ class DocumentoCompraController extends Controller
         // Recalcular nueva factura referenciada
         $factura->refresh();
         $factura->recalcularSaldoPendiente();
+        $factura->refresh();
+        $syncMovimientoReferencia->sincronizar($factura);
+        $factura->refresh();
+        $factura->recalcularSaldoPendiente();
 
         // Si antes tenía otra referencia, recalcular también esa factura anterior
         if ($referenciaAnterior && $referenciaAnterior->id !== $factura->id) {
+            $referenciaAnterior->refresh();
+            $referenciaAnterior->recalcularSaldoPendiente();
+            $referenciaAnterior->refresh();
+            $syncMovimientoReferencia->sincronizar($referenciaAnterior);
             $referenciaAnterior->refresh();
             $referenciaAnterior->recalcularSaldoPendiente();
         }
@@ -575,6 +586,8 @@ class DocumentoCompraController extends Controller
             ]);
         }
 
+        $syncMovimientoReferencia = app(\App\Services\SincronizarMovimientoReferenciaCompraService::class);
+
         foreach ($referencias as $notaId => $facturaId) {
             $nota = DocumentoCompra::find($notaId);
             $factura = DocumentoCompra::find($facturaId);
@@ -597,9 +610,17 @@ class DocumentoCompraController extends Controller
             // Recalcular factura nueva
             $factura->refresh();
             $factura->recalcularSaldoPendiente();
+            $factura->refresh();
+            $syncMovimientoReferencia->sincronizar($factura);
+            $factura->refresh();
+            $factura->recalcularSaldoPendiente();
 
             // Recalcular factura anterior si cambió
             if ($referenciaAnterior && $referenciaAnterior->id !== $factura->id) {
+                $referenciaAnterior->refresh();
+                $referenciaAnterior->recalcularSaldoPendiente();
+                $referenciaAnterior->refresh();
+                $syncMovimientoReferencia->sincronizar($referenciaAnterior);
                 $referenciaAnterior->refresh();
                 $referenciaAnterior->recalcularSaldoPendiente();
             }
@@ -618,6 +639,8 @@ class DocumentoCompraController extends Controller
     public function quitarReferencia($id)
     {
         $documento = DocumentoCompra::with(['referencia', 'referenciados'])->findOrFail($id);
+
+        $syncMovimientoReferencia = app(\App\Services\SincronizarMovimientoReferenciaCompraService::class);
 
         if (!$documento->referencia_id) {
             return redirect()
@@ -638,6 +661,10 @@ class DocumentoCompraController extends Controller
         if ($documentoReferenciado) {
             $documentoReferenciado->refresh();
             $documentoReferenciado->recalcularSaldoPendiente();
+            $documentoReferenciado->refresh();
+            $syncMovimientoReferencia->sincronizar($documentoReferenciado);
+            $documentoReferenciado->refresh();
+            $documentoReferenciado->recalcularSaldoPendiente();
         }
 
         return redirect()
@@ -654,6 +681,8 @@ class DocumentoCompraController extends Controller
 
         $documento = DocumentoCompra::findOrFail($id);
         $nuevaFactura = DocumentoCompra::findOrFail($request->factura_id);
+
+        $syncMovimientoReferencia = app(\App\Services\SincronizarMovimientoReferenciaCompraService::class);
 
         // Validaciones de negocio
         if ($documento->id === $nuevaFactura->id) {
@@ -672,6 +701,12 @@ class DocumentoCompraController extends Controller
             return redirect()
                 ->route('finanzas_compras.show', $documento->id)
                 ->with('error', 'La referencia debe corresponder al mismo proveedor.');
+        }
+
+        if ((int) $nuevaFactura->saldo_pendiente <= 0) {
+            return redirect()
+                ->route('finanzas_compras.show', $documento->id)
+                ->with('error', 'Solo se puede referenciar una factura con saldo pendiente mayor a cero.');
         }
 
         // Para este caso: una NC solo debe referenciar facturas
@@ -695,9 +730,17 @@ class DocumentoCompraController extends Controller
         // Recalcular nueva factura
         $nuevaFactura->refresh();
         $nuevaFactura->recalcularSaldoPendiente();
+        $nuevaFactura->refresh();
+        $syncMovimientoReferencia->sincronizar($nuevaFactura);
+        $nuevaFactura->refresh();
+        $nuevaFactura->recalcularSaldoPendiente();
 
         // Si antes apuntaba a otra factura distinta, recalcular también esa anterior
         if ($referenciaAnterior && $referenciaAnterior->id !== $nuevaFactura->id) {
+            $referenciaAnterior->refresh();
+            $referenciaAnterior->recalcularSaldoPendiente();
+            $referenciaAnterior->refresh();
+            $syncMovimientoReferencia->sincronizar($referenciaAnterior);
             $referenciaAnterior->refresh();
             $referenciaAnterior->recalcularSaldoPendiente();
         }
@@ -1050,6 +1093,7 @@ class DocumentoCompraController extends Controller
                 ->where('empresa_id', $documento->empresa_id)
                 ->where('rut_proveedor', $documento->rut_proveedor)
                 ->where('tipo_documento_id', 33)
+                ->where('saldo_pendiente', '>', 0)
                 ->where('id', '!=', $documento->id)
                 ->orderBy('fecha_docto', 'desc')
                 ->orderBy('folio', 'desc')
@@ -1100,6 +1144,7 @@ class DocumentoCompraController extends Controller
         $documento->abonos()->create([
             'monto' => $request->monto,
             'fecha_abono' => $request->fecha_abono,
+            'origen' => 'manual',
         ]);
 
         //Recalcular saldo pendiente

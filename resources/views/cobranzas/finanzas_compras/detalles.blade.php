@@ -54,28 +54,54 @@
 
             {{-- Pago registrado --}}
             @if($documento->pagos()->exists())
-                @php $pago = $documento->pagos()->latest('fecha_pago')->first(); @endphp
+
+                @php 
+                    $pago = $documento->pagos()->latest('fecha_pago')->first(); 
+                @endphp
+
                 <div class="card mb-4 shadow-sm border-success">
                     <div class="card-header bg-light fw-bold text-success">
                         Documento marcado como Pago
                     </div>
-                    <div class="card-body d-flex justify-content-between align-items-center flex-wrap">
+
+                    <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+
                         <p class="mb-2 mb-md-0">
                             Este documento fue marcado como <strong>Pagado</strong>
                             {{ $pago->fecha_pago ? 'el ' . \Carbon\Carbon::parse($pago->fecha_pago)->format('d-m-Y') : '' }}.
                         </p>
 
-                        <form action="{{ route('pagos.destroy', $pago->id) }}" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar este Pago y restaurar el estado original del documento?')">
-                            @csrf
-                            @method('DELETE')
-                            @if (Auth::id() != 375)
-                                <button type="submit" class="btn btn-outline-danger btn-sm">
-                                    <i class="bi bi-x-circle"></i> Eliminar Pago
-                                </button>
-                            @endif
-                        </form>
+                        {{-- Si el pago fue generado por referencia de NC --}}
+                        @if($pago->origen === 'referencia_nc')
+
+                            <span class="text-muted small">
+                                Este pago fue generado automáticamente por una referencia.
+                                Para revertirlo, quite la referencia del documento.
+                            </span>
+
+                        @else
+
+                            {{-- Pago manual o automático normal --}}
+                            <form action="{{ route('pagos.destroy', $pago->id) }}"
+                                method="POST"
+                                onsubmit="return confirm('¿Seguro que deseas eliminar este Pago y restaurar el estado original del documento?')">
+
+                                @csrf
+                                @method('DELETE')
+
+                                @if (Auth::id() != 375)
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                        <i class="bi bi-x-circle"></i> Eliminar Pago
+                                    </button>
+                                @endif
+
+                            </form>
+
+                        @endif
+
                     </div>
                 </div>
+
             @endif
 
             {{-- Pronto Pago --}}
@@ -152,17 +178,23 @@
                                 <td>{{ \Carbon\Carbon::parse($abono->fecha_abono)->format('d-m-Y') }}</td>
                                 <td>${{ number_format($abono->monto, 0, ',', '.') }}</td>
                                 <td class="text-center">
-                                    <form action="{{ route('abonos.destroy', $abono->id) }}" 
-                                        method="POST" 
-                                        onsubmit="return confirm('¿Seguro que deseas eliminar este abono?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        @if (Auth::id() != 375)
-                                            <button type="submit" class="btn btn-sm btn-danger">
-                                                Eliminar
-                                            </button>
-                                        @endif
-                                    </form>
+                                    @if($abono->origen === 'referencia_nc')
+                                        <span class="text-muted small">
+                                            Generado por referencia. Quite la referencia para revertirlo.
+                                        </span>
+                                    @else
+                                        <form action="{{ route('abonos.destroy', $abono->id) }}" 
+                                            method="POST" 
+                                            onsubmit="return confirm('¿Seguro que deseas eliminar este abono?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            @if (Auth::id() != 375)
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    Eliminar
+                                                </button>
+                                            @endif
+                                        </form>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach

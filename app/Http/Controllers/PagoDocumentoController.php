@@ -48,7 +48,10 @@ class PagoDocumentoController extends Controller
         $documento->pagos()->create([
             'fecha_pago' => $request->fecha_pago,
             'user_id' => Auth::id(),
+            'origen' => 'manual',
         ]);
+        
+
 
         // Actualizar estado y saldo
         $campoEstado = $esCompra ? 'estado' : 'status';
@@ -102,12 +105,22 @@ class PagoDocumentoController extends Controller
 
         $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
 
+        // Bloquear eliminación manual de pagos generados por referencia
+        if ($pago->origen === 'referencia_nc') {
+            $route = $tipoDocumento === 'compra' ? 'finanzas_compras.show' : 'documentos.detalles';
+
+            return redirect()
+                ->route($route, $documento->id)
+                ->with('warning', 'Este pago fue generado automáticamente por una referencia. Para revertirlo, quite la referencia asociada.');
+        }
+
         $estadoAnterior = $documento->estado ?? $documento->status;
         $saldoAnterior = $documento->saldo_pendiente;
 
         $datosAnteriores = [
             'fecha_pago' => $pago->fecha_pago,
             'user_id' => $pago->user_id,
+            'origen' => $pago->origen,
         ];
 
         // Eliminar pago

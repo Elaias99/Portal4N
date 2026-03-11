@@ -40,6 +40,24 @@ class DocumentoCompra extends Model
         return $this->hasMany(Abono::class, 'documento_compra_id');
     }
 
+
+    public function abonosReales()
+    {
+        return $this->hasMany(Abono::class, 'documento_compra_id')
+            ->where(function ($q) {
+                $q->whereNull('origen')
+                ->orWhere('origen', '!=', 'referencia_nc');
+            });
+    }
+
+    public function abonosPorReferencia()
+    {
+        return $this->hasMany(Abono::class, 'documento_compra_id')
+            ->where('origen', 'referencia_nc');
+    }
+
+
+
     public function cruces()
     {
         return $this->hasMany(Cruce::class, 'documento_compra_id');
@@ -49,6 +67,25 @@ class DocumentoCompra extends Model
     {
         return $this->hasMany(Pago::class, 'documento_compra_id');
     }
+
+
+    public function pagosReales()
+    {
+        return $this->hasMany(Pago::class, 'documento_compra_id')
+            ->where(function ($q) {
+                $q->whereNull('origen')
+                ->orWhere('origen', '!=', 'referencia_nc');
+            });
+    }
+
+    public function pagosPorReferencia()
+    {
+        return $this->hasMany(Pago::class, 'documento_compra_id')
+            ->where('origen', 'referencia_nc');
+    }
+
+
+
 
     public function prontoPagos()
     {
@@ -122,7 +159,13 @@ class DocumentoCompra extends Model
         $valorBD = $this->attributes['saldo_pendiente'] ?? null;
 
         // 2) Detectar si debe recálculo
-        $tienePagos      = $this->pagos()->exists();
+
+
+        $tienePagos      = $this->pagosReales()->exists();
+
+
+
+
         $tieneAbonos     = $this->abonos()->exists();
         $tieneCruces     = $this->cruces()->exists();
         $esProntoPago    = $this->prontoPagos()->exists();
@@ -162,10 +205,19 @@ class DocumentoCompra extends Model
         // ============================================================
         // 1) Si tiene pagos → saldo = 0
         // ============================================================
-        if ($this->pagos()->exists()) {
+        if ($this->pagosReales()->exists()) {
             $this->update(['saldo_pendiente' => 0]);
             return 0;
         }
+
+        // ============================================================
+        // 1.1) Si tiene pago automático por referencia → saldo = 0
+        // ============================================================
+        if ($this->pagosPorReferencia()->exists()) {
+            $this->update(['saldo_pendiente' => 0]);
+            return 0;
+        }
+
 
         // ============================================================
         // 2) Si es Pronto Pago → saldo = 0
@@ -198,16 +250,31 @@ class DocumentoCompra extends Model
         $saldo = $this->monto_total ?? 0;
 
         // ============================================================
-        // 5) Notas asociadas (cuando agreguemos referencias)
+        // 5) Notas asociadas
+        //    Evitar doble descuento cuando ya existan abonos/pagos
+        //    automáticos generados por referencia
         // ============================================================
         if (method_exists($this, 'referenciados')) {
 
             $referenciados = $this->referenciados()->get();
 
-            // Notas de crédito restan
-            $saldo -= $referenciados
+            // Total de NC referenciadas a esta factura
+            $totalNotasCredito = $referenciados
                 ->where('tipo_documento_id', 61)
                 ->sum('monto_total');
+
+            // Total ya materializado como abono automático por referencia
+            $totalAbonosReferencia = $this->abonosPorReferencia()->sum('monto');
+
+            // Si ya existe pago por referencia, no volver a descontar NC aquí
+            if ($this->pagosPorReferencia()->exists()) {
+                $pendienteDescontarPorNC = 0;
+            } else {
+                // Solo descontar la parte de NC que aún no ha sido materializada
+                $pendienteDescontarPorNC = max($totalNotasCredito - $totalAbonosReferencia, 0);
+            }
+
+            $saldo -= $pendienteDescontarPorNC;
 
             // Notas de débito suman
             $saldo += $referenciados

@@ -313,10 +313,16 @@ class ComprasImport implements ToModel, WithHeadingRow
         $documento->save();
 
         if ($esPagoAutomatico && $documento->fecha_docto) {
+
+
             $documento->pagos()->create([
                 'fecha_pago' => \Carbon\Carbon::parse($documento->fecha_docto)->format('Y-m-d'),
                 'user_id' => Auth::id(),
+                'origen' => 'forma_pago_automatica',
             ]);
+
+
+
         }
 
         $this->importados[] = $row['folio'] ?? 'sin folio';

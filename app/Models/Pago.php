@@ -17,6 +17,7 @@ class Pago extends Model
         'fecha_pago',
         'user_id',
         'honorario_mensual_rec_id',
+        'origen'
 
     ];
 
