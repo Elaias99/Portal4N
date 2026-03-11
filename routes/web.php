@@ -558,6 +558,12 @@ Route::post('/compras/asignar-referencias', [DocumentoCompraController::class, '
     ->name('compras.asignar_referencias');
 
 
+Route::delete('/finanzas-compras/{id}/quitar-referencia', [DocumentoCompraController::class, 'quitarReferencia'])
+    ->name('finanzas_compras.quitar_referencia');
+
+    Route::post('/finanzas/compras/{id}/asignar-referencia', [DocumentoCompraController::class, 'asignarNuevaReferencia'])
+    ->name('finanzas_compras.asignar_referencia');
+
 
 
 

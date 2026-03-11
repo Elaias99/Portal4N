@@ -45,6 +45,7 @@ class DocumentoCompraController extends Controller
                 'estado',
                 'status_original',
                 'fecha_estado_manual',
+                'referencia_id',
             ])
             ->with([
                 'empresa:id,Nombre',
@@ -132,6 +133,36 @@ class DocumentoCompraController extends Controller
             }
             if ($request->estado_pago === 'Pendiente') {
                 $baseQuery->where('saldo_pendiente', '>', 0);
+            }
+        }
+
+        // === FILTRO POR REFERENCIAS ===
+        if ($request->filled('filtro_referencia')) {
+            switch ($request->filtro_referencia) {
+                case 'referencia_a_otro':
+                    $baseQuery->whereNotNull('referencia_id');
+                    break;
+
+                case 'referenciado_por_otros':
+                    $baseQuery->whereHas('referenciados');
+                    break;
+
+                case 'ambas':
+                    $baseQuery->whereNotNull('referencia_id')
+                            ->whereHas('referenciados');
+                    break;
+
+                case 'con_cualquier_referencia':
+                    $baseQuery->where(function ($q) {
+                        $q->whereNotNull('referencia_id')
+                        ->orWhereHas('referenciados');
+                    });
+                    break;
+
+                case 'sin_referencias':
+                    $baseQuery->whereNull('referencia_id')
+                            ->whereDoesntHave('referenciados');
+                    break;
             }
         }
 
@@ -498,13 +529,32 @@ class DocumentoCompraController extends Controller
             'factura_id' => 'required|exists:documentos_compras,id',
         ]);
 
-        $nota = DocumentoCompra::find($request->nota_id);
+        $nota = DocumentoCompra::findOrFail($request->nota_id);
+        $factura = DocumentoCompra::findOrFail($request->factura_id);
+
+        $referenciaAnterior = $nota->referencia_id
+            ? DocumentoCompra::find($nota->referencia_id)
+            : null;
 
         // Guardar referencia
-        $nota->referencia_id = $request->factura_id;
+        $nota->referencia_id = $factura->id;
         $nota->save();
 
-        // limpiar las sugerencias (para que no reaparezca el modal)
+        // Recalcular nota (queda en 0 si tiene referencia)
+        $nota->refresh();
+        $nota->recalcularSaldoPendiente();
+
+        // Recalcular nueva factura referenciada
+        $factura->refresh();
+        $factura->recalcularSaldoPendiente();
+
+        // Si antes tenía otra referencia, recalcular también esa factura anterior
+        if ($referenciaAnterior && $referenciaAnterior->id !== $factura->id) {
+            $referenciaAnterior->refresh();
+            $referenciaAnterior->recalcularSaldoPendiente();
+        }
+
+        // limpiar las sugerencias
         session()->forget('sugerencias_notas_compras');
 
         return redirect()->route('finanzas_compras.index')
@@ -515,10 +565,8 @@ class DocumentoCompraController extends Controller
     {
         $referencias = $request->input('referencia');
 
-        //no se seleccionó ninguna referencia
+        // No se seleccionó ninguna referencia
         if (empty($referencias) || !is_array($referencias)) {
-
-            // No se referencia nada, solo se cierra el flujo
             session()->forget('sugerencias_notas_compras');
 
             return response()->json([
@@ -527,11 +575,34 @@ class DocumentoCompraController extends Controller
             ]);
         }
 
-        //sí hay referencias seleccionadas
         foreach ($referencias as $notaId => $facturaId) {
-            DocumentoCompra::where('id', $notaId)->update([
-                'referencia_id' => $facturaId
-            ]);
+            $nota = DocumentoCompra::find($notaId);
+            $factura = DocumentoCompra::find($facturaId);
+
+            if (!$nota || !$factura) {
+                continue;
+            }
+
+            $referenciaAnterior = $nota->referencia_id
+                ? DocumentoCompra::find($nota->referencia_id)
+                : null;
+
+            $nota->referencia_id = $factura->id;
+            $nota->save();
+
+            // Recalcular nota
+            $nota->refresh();
+            $nota->recalcularSaldoPendiente();
+
+            // Recalcular factura nueva
+            $factura->refresh();
+            $factura->recalcularSaldoPendiente();
+
+            // Recalcular factura anterior si cambió
+            if ($referenciaAnterior && $referenciaAnterior->id !== $factura->id) {
+                $referenciaAnterior->refresh();
+                $referenciaAnterior->recalcularSaldoPendiente();
+            }
         }
 
         // Limpiar sesión SIEMPRE
@@ -539,6 +610,106 @@ class DocumentoCompraController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+
+
+
+
+    public function quitarReferencia($id)
+    {
+        $documento = DocumentoCompra::with(['referencia', 'referenciados'])->findOrFail($id);
+
+        if (!$documento->referencia_id) {
+            return redirect()
+                ->route('finanzas_compras.show', $documento->id)
+                ->with('warning', 'El documento no tiene una referencia asociada.');
+        }
+
+        $documentoReferenciado = $documento->referencia;
+
+        $documento->referencia_id = null;
+        $documento->save();
+
+        // Recalcular saldo del documento actual
+        $documento->refresh();
+        $documento->recalcularSaldoPendiente();
+
+        // Recalcular saldo del documento que antes estaba siendo referenciado
+        if ($documentoReferenciado) {
+            $documentoReferenciado->refresh();
+            $documentoReferenciado->recalcularSaldoPendiente();
+        }
+
+        return redirect()
+            ->route('finanzas_compras.show', $documento->id)
+            ->with('success', 'Referencia eliminada correctamente.');
+    }
+
+
+    public function asignarNuevaReferencia(Request $request, $id)
+    {
+        $request->validate([
+            'factura_id' => 'required|exists:documentos_compras,id',
+        ]);
+
+        $documento = DocumentoCompra::findOrFail($id);
+        $nuevaFactura = DocumentoCompra::findOrFail($request->factura_id);
+
+        // Validaciones de negocio
+        if ($documento->id === $nuevaFactura->id) {
+            return redirect()
+                ->route('finanzas_compras.show', $documento->id)
+                ->with('error', 'Un documento no puede referenciarse a sí mismo.');
+        }
+
+        if ($documento->empresa_id !== $nuevaFactura->empresa_id) {
+            return redirect()
+                ->route('finanzas_compras.show', $documento->id)
+                ->with('error', 'La referencia debe pertenecer a la misma empresa.');
+        }
+
+        if ($documento->rut_proveedor !== $nuevaFactura->rut_proveedor) {
+            return redirect()
+                ->route('finanzas_compras.show', $documento->id)
+                ->with('error', 'La referencia debe corresponder al mismo proveedor.');
+        }
+
+        // Para este caso: una NC solo debe referenciar facturas
+        if ((int) $documento->tipo_documento_id === 61 && (int) $nuevaFactura->tipo_documento_id !== 33) {
+            return redirect()
+                ->route('finanzas_compras.show', $documento->id)
+                ->with('error', 'La Nota de Crédito solo puede referenciar una Factura Electrónica.');
+        }
+
+        $referenciaAnterior = $documento->referencia_id
+            ? DocumentoCompra::find($documento->referencia_id)
+            : null;
+
+        $documento->referencia_id = $nuevaFactura->id;
+        $documento->save();
+
+        // Recalcular documento actual (ej. NC -> saldo 0 si quedó referenciada)
+        $documento->refresh();
+        $documento->recalcularSaldoPendiente();
+
+        // Recalcular nueva factura
+        $nuevaFactura->refresh();
+        $nuevaFactura->recalcularSaldoPendiente();
+
+        // Si antes apuntaba a otra factura distinta, recalcular también esa anterior
+        if ($referenciaAnterior && $referenciaAnterior->id !== $nuevaFactura->id) {
+            $referenciaAnterior->refresh();
+            $referenciaAnterior->recalcularSaldoPendiente();
+        }
+
+        return redirect()
+            ->route('finanzas_compras.show', $documento->id)
+            ->with('success', 'Nueva referencia asignada correctamente.');
+    }
+
+
+
+
 
 
     public function export(Request $request)
@@ -847,8 +1018,11 @@ class DocumentoCompraController extends Controller
         // Cargar relaciones necesarias para mostrar los detalles del documento
         $documento->load([
             'empresa',
+            'tipoDocumento',
+            'referencia.tipoDocumento',
+            'referenciados.tipoDocumento',
             'abonos',
-            'cruces.proveedor', // relación anidada con proveedor
+            'cruces.proveedor',
             'pagos',
             'prontoPagos',
             'cobranzaCompra',
@@ -863,11 +1037,31 @@ class DocumentoCompraController extends Controller
             ->orderBy('razon_social')
             ->get();
 
-
         // Cargar proveedores para los posibles cruces
-        $proveedores = \App\Models\Proveedor::orderBy('razon_social')->get(['id', 'razon_social', 'rut']);
+        $proveedores = \App\Models\Proveedor::orderBy('razon_social')
+            ->get(['id', 'razon_social', 'rut']);
 
-        return view('cobranzas.finanzas_compras.detalles', compact('documento', 'proveedores','cobranzasCompras'));
+        // Candidatos para asignar nueva referencia
+        $candidatosReferencia = collect();
+
+        // Solo tiene sentido asignar referencia manual desde una Nota de Crédito
+        if ((int) $documento->tipo_documento_id === 61) {
+            $candidatosReferencia = \App\Models\DocumentoCompra::with('tipoDocumento')
+                ->where('empresa_id', $documento->empresa_id)
+                ->where('rut_proveedor', $documento->rut_proveedor)
+                ->where('tipo_documento_id', 33)
+                ->where('id', '!=', $documento->id)
+                ->orderBy('fecha_docto', 'desc')
+                ->orderBy('folio', 'desc')
+                ->get();
+        }
+
+        return view('cobranzas.finanzas_compras.detalles', compact(
+            'documento',
+            'proveedores',
+            'cobranzasCompras',
+            'candidatosReferencia'
+        ));
     }
 
 

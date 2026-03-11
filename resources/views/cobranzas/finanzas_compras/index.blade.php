@@ -237,6 +237,31 @@
                             </div>
 
 
+
+                            {{-- Referencias --}}
+                            <div class="col-md-1">
+                                <label class="form-label small text-muted">Referencias</label>
+                                <select name="filtro_referencia" class="form-select form-select-sm">
+                                    <option value="">Todas</option>
+                                    <option value="referencia_a_otro" {{ request('filtro_referencia') == 'referencia_a_otro' ? 'selected' : '' }}>
+                                        Referencia a otro
+                                    </option>
+                                    <option value="referenciado_por_otros" {{ request('filtro_referencia') == 'referenciado_por_otros' ? 'selected' : '' }}>
+                                        Referenciado
+                                    </option>
+                                    <option value="ambas" {{ request('filtro_referencia') == 'ambas' ? 'selected' : '' }}>
+                                        Ambas
+                                    </option>
+                                    <option value="con_cualquier_referencia" {{ request('filtro_referencia') == 'con_cualquier_referencia' ? 'selected' : '' }}>
+                                        Cualquier referencia
+                                    </option>
+                                    <option value="sin_referencias" {{ request('filtro_referencia') == 'sin_referencias' ? 'selected' : '' }}>
+                                        Sin referencias
+                                    </option>
+                                </select>
+                            </div>
+
+
                         </div>
 
                         {{-- Botones de acción --}}

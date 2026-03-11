@@ -122,10 +122,11 @@ class DocumentoCompra extends Model
         $valorBD = $this->attributes['saldo_pendiente'] ?? null;
 
         // 2) Detectar si debe recálculo
-        $tienePagos   = $this->pagos()->exists();
-        $tieneAbonos  = $this->abonos()->exists();
-        $tieneCruces  = $this->cruces()->exists();
-        $esProntoPago = $this->prontoPagos()->exists();
+        $tienePagos      = $this->pagos()->exists();
+        $tieneAbonos     = $this->abonos()->exists();
+        $tieneCruces     = $this->cruces()->exists();
+        $esProntoPago    = $this->prontoPagos()->exists();
+        $tieneReferencia = !is_null($this->referencia_id);
 
         $tieneNotas = method_exists($this, 'referenciados')
             ? $this->referenciados()->exists()
@@ -136,18 +137,13 @@ class DocumentoCompra extends Model
             $tieneAbonos ||
             $tieneCruces ||
             $tieneNotas ||
-            $esProntoPago;
-
+            $esProntoPago ||
+            $tieneReferencia;
 
         // 3) Si NO requiere recálculo → devolver valor BD
         if (!$requiereRecalculo && $valorBD !== null) {
-
-
-
             return $valorBD;
         }
-
- 
 
         return $this->recalcularSaldoPendiente();
     }
@@ -180,15 +176,20 @@ class DocumentoCompra extends Model
         }
 
         // ============================================================
-        // 3) Si es Nota de Crédito → saldo = 0
+        // 3) Si es Nota de Crédito
+        //    - con referencia  -> saldo = 0
+        //    - sin referencia  -> saldo = monto_total
         // ============================================================
         if (
             $this->tipo_documento_id == 61 ||
             (isset($this->tipoDocumento) &&
             str_contains(strtolower($this->tipoDocumento->nombre), 'nota de crédito'))
         ) {
-            $this->update(['saldo_pendiente' => 0]);
-            return 0;
+            $saldoNota = $this->referencia_id ? 0 : ($this->monto_total ?? 0);
+
+            $this->update(['saldo_pendiente' => $saldoNota]);
+
+            return $saldoNota;
         }
 
         // ============================================================

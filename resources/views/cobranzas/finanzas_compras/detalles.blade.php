@@ -236,23 +236,53 @@
 
             {{-- Si este documento referencia a otro --}}
             @if($documento->referencia)
-                <p>
-                    <strong>Referencia a:</strong><br>
-                    {{ $documento->referencia->tipoDocumento->nombre ?? 'Documento' }}
-                    Folio <strong>{{ $documento->referencia->folio }}</strong> —
-                    Monto: ${{ number_format($documento->referencia->monto_total, 0, ',', '.') }}
-                </p>
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                    <p class="mb-0">
+                        <strong>Referencia a:</strong><br>
+                        {{ $documento->referencia->tipoDocumento->nombre ?? 'Documento' }}
+                        Folio <strong>{{ $documento->referencia->folio }}</strong> —
+                        Monto: ${{ number_format($documento->referencia->monto_total, 0, ',', '.') }}
+                    </p>
+
+                    @if (Auth::id() != 375)
+                        <form action="{{ route('finanzas_compras.quitar_referencia', $documento->id) }}"
+                            method="POST"
+                            onsubmit="return confirm('¿Seguro que deseas quitar la referencia actual de este documento?')">
+                            @csrf
+                            @method('DELETE')
+
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                Quitar referencia
+                            </button>
+                        </form>
+                    @endif
+                </div>
             @endif
 
             {{-- Si otros documentos referencian a este --}}
             @if($documento->referenciados->isNotEmpty())
                 <p><strong>Referenciado por:</strong></p>
-                <ul>
+                <ul class="list-unstyled">
                     @foreach($documento->referenciados as $ref)
-                        <li>
-                            {{ $ref->tipoDocumento->nombre ?? 'Documento' }}
-                            Folio <strong>{{ $ref->folio }}</strong> —
-                            Monto: ${{ number_format($ref->monto_total, 0, ',', '.') }}
+                        <li class="mb-2 border rounded p-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                {{ $ref->tipoDocumento->nombre ?? 'Documento' }}
+                                Folio <strong>{{ $ref->folio }}</strong> —
+                                Monto: ${{ number_format($ref->monto_total, 0, ',', '.') }}
+                            </div>
+
+                            @if (Auth::id() != 375)
+                                <form action="{{ route('finanzas_compras.quitar_referencia', $ref->id) }}"
+                                    method="POST"
+                                    onsubmit="return confirm('¿Seguro que deseas quitar esta referencia?')">
+                                    @csrf
+                                    @method('DELETE')
+
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        Quitar referencia
+                                    </button>
+                                </form>
+                            @endif
                         </li>
                     @endforeach
                 </ul>
@@ -262,6 +292,61 @@
             @if(!$documento->referencia && $documento->referenciados->isEmpty())
                 <p class="text-muted">Sin referencias asociadas.</p>
             @endif
+
+
+            {{-- ========================================= --}}
+            {{-- Asignar nueva referencia (solo para NC) --}}
+            {{-- ========================================= --}}
+
+            @if($documento->tipo_documento_id == 61 && Auth::id() != 375)
+
+                <hr>
+
+                <h6 class="fw-bold text-primary">
+                    Asignar nueva referencia
+                </h6>
+
+                @if($candidatosReferencia->isEmpty())
+                    <p class="text-muted mb-0">
+                        No existen facturas disponibles para este proveedor.
+                    </p>
+                @else
+
+                    <form action="{{ route('finanzas_compras.asignar_referencia', $documento->id) }}"
+                        method="POST"
+                        class="row g-2 mt-1">
+
+                        @csrf
+
+                        <div class="col-md-9">
+                            <select name="factura_id" class="form-select" required>
+                                <option value="">Seleccione una factura</option>
+
+                                @foreach($candidatosReferencia as $factura)
+                                    <option value="{{ $factura->id }}">
+                                        Folio {{ $factura->folio }}
+                                        — ${{ number_format($factura->monto_total,0,',','.') }}
+                                        — {{ \Carbon\Carbon::parse($factura->fecha_docto)->format('d-m-Y') }}
+                                    </option>
+                                @endforeach
+
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary w-100">
+                                Guardar referencia
+                            </button>
+                        </div>
+
+                    </form>
+
+                @endif
+
+            @endif
+
+
+
 
         </div>
     </div>
