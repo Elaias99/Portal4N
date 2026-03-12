@@ -15,22 +15,221 @@
 
 
     @if($comprasProgramadasHoy->isNotEmpty())
-        <div class="alert alert-warning shadow-sm mb-4" style="border-left: 5px solid #f59e0b; border-radius: 12px;">
-            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <section class="panel-operativo-card panel-operativo-card--warning mb-4">
+            <div class="panel-operativo-card__head">
                 <div>
-                    <h5 class="mb-1">Compras con pago programado para hoy</h5>
-                    <p class="mb-0">
+                    <div class="panel-operativo-card__kicker">
+                        Revisión del día
+                    </div>
+
+                    <h5 class="panel-operativo-card__title mb-1">
+                        Compras con pago programado para hoy
+                    </h5>
+
+                    <p class="panel-operativo-card__text mb-0">
                         Hay <strong>{{ $comprasProgramadasHoy->count() }}</strong> documento(s) de compra con próximo pago definido para hoy.
                     </p>
                 </div>
 
-                <div>
-                    <a href="{{ route('finanzas_compras.index') }}" class="btn btn-sm btn-outline-warning">
+                <div class="panel-operativo-card__actions d-flex gap-2 flex-wrap">
+                    <span class="panel-soft-chip panel-soft-chip--warning">
+                        {{ $comprasProgramadasHoy->count() }} programado(s)
+                    </span>
+
+                    <button type="button"
+                            class="btn btn-sm btn-success rounded-pill px-3"
+                            id="btn-pagar-compras-programadas-hoy">
+                        Registrar pago
+                    </button>
+
+                    <a href="{{ route('finanzas_compras.index') }}"
+                    class="btn btn-sm btn-outline-warning rounded-pill px-3">
                         Revisar compras
                     </a>
                 </div>
             </div>
+
+            <div class="panel-operativo-card__body mt-3">
+                <div class="table-responsive">
+                    <table class="table table-finanzas panel-programados-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="text-center" style="width:40px;">
+                                    <input type="checkbox" id="check-all-compras-programadas-hoy">
+                                </th>
+                                <th>Empresa</th>
+                                <th>Proveedor</th>
+                                <th>Folio</th>
+                                <th>Fecha programada</th>
+                                <th class="text-end">Saldo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($comprasProgramadasHoy as $programado)
+                                @php $d = $programado->documentoCompra; @endphp
+                                @if($d)
+                                    <tr>
+                                        <td class="text-center">
+                                            <input type="checkbox"
+                                                class="chk-compra-programada-hoy"
+                                                value="{{ $d->id }}"
+                                                data-id="{{ $d->id }}"
+                                                data-folio="{{ $d->folio }}"
+                                                data-proveedor="{{ $d->razon_social }}"
+                                                data-rut="{{ $d->rut_proveedor }}"
+                                                data-saldo="{{ $d->saldo_pendiente ?? 0 }}">
+                                        </td>
+                                        <td>{{ $d->empresa->Nombre ?? '-' }}</td>
+                                        <td>{{ $d->razon_social }}</td>
+                                        <td>
+                                            <a href="{{ route('finanzas_compras.show', $d->id) }}"
+                                            class="panel-table-link">
+                                                {{ $d->folio }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <span class="panel-soft-chip panel-soft-chip--date">
+                                                {{ $programado->fecha_programada?->format('d-m-Y') }}
+                                            </span>
+                                        </td>
+                                        <td class="text-end fw-semibold">
+                                            ${{ number_format($d->saldo_pendiente ?? 0, 0, ',', '.') }}
+                                        </td>
+                                    </tr>
+                                @endif
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <div class="modal fade" id="modalPagoComprasProgramadasHoy" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <form method="POST"
+                    action="{{ route('documentos.pagos.masivo.panel_hoy') }}"
+                    id="form-pago-compras-programadas-hoy"
+                    class="modal-content">
+                    @csrf
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Registrar pago de compras programadas para hoy</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Documentos seleccionados</label>
+                            <div id="resumen-compras-programadas-hoy"
+                                class="border rounded p-2"
+                                style="min-height: 120px;">
+                            </div>
+                        </div>
+
+                        <div id="inputs-compras-programadas-hoy"></div>
+
+                        <hr>
+
+                        <div class="mb-3">
+                            <label class="form-label">Fecha de pago</label>
+                            <input type="date"
+                                name="fecha_pago"
+                                class="form-control"
+                                required>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-success">
+                            Confirmar pago
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const checkAll = document.getElementById('check-all-compras-programadas-hoy');
+            const checks = document.querySelectorAll('.chk-compra-programada-hoy');
+            const btnPagar = document.getElementById('btn-pagar-compras-programadas-hoy');
+            const modalEl = document.getElementById('modalPagoComprasProgramadasHoy');
+            const resumenWrap = document.getElementById('resumen-compras-programadas-hoy');
+            const inputsWrap = document.getElementById('inputs-compras-programadas-hoy');
+
+            if (!checkAll || !btnPagar || !modalEl || !resumenWrap || !inputsWrap) {
+                return;
+            }
+
+            const modal = new bootstrap.Modal(modalEl);
+
+            checkAll.addEventListener('change', () => {
+                checks.forEach(chk => {
+                    chk.checked = checkAll.checked;
+                });
+            });
+
+            checks.forEach(chk => {
+                chk.addEventListener('change', () => {
+                    if (!chk.checked) {
+                        checkAll.checked = false;
+                    }
+                });
+            });
+
+            btnPagar.addEventListener('click', () => {
+                const seleccionados = Array.from(document.querySelectorAll('.chk-compra-programada-hoy:checked'));
+
+                if (seleccionados.length === 0) {
+                    alert('Debes seleccionar al menos un documento.');
+                    return;
+                }
+
+                resumenWrap.innerHTML = '';
+                inputsWrap.innerHTML = '';
+
+                seleccionados.forEach(chk => {
+                    const card = document.createElement('div');
+                    card.className = 'border rounded p-2 mb-2 bg-light';
+
+                    card.innerHTML = `
+                        <div><strong>Folio:</strong> ${chk.dataset.folio}</div>
+                        <div><strong>Proveedor:</strong> ${chk.dataset.proveedor}</div>
+                        <div><strong>RUT:</strong> ${chk.dataset.rut}</div>
+                        <div><strong>Saldo:</strong> ${chk.dataset.saldo}</div>
+                    `;
+
+                    resumenWrap.appendChild(card);
+
+                    const inputDocumento = document.createElement('input');
+                    inputDocumento.type = 'hidden';
+                    inputDocumento.name = 'documentos[]';
+                    inputDocumento.value = chk.value;
+                    inputsWrap.appendChild(inputDocumento);
+
+                    const inputOperacion = document.createElement('input');
+                    inputOperacion.type = 'hidden';
+                    inputOperacion.name = `operaciones[${chk.value}]`;
+                    inputOperacion.value = 'pago';
+                    inputsWrap.appendChild(inputOperacion);
+                });
+
+                modal.show();
+            });
+
+            modalEl.addEventListener('hidden.bs.modal', () => {
+                resumenWrap.innerHTML = '';
+                inputsWrap.innerHTML = '';
+            });
+        });
+        </script>
     @endif
 
     @if($comprasProgramadasAtrasadas->isNotEmpty())

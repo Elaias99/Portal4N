@@ -38,13 +38,19 @@
                     </p>
                 </div>
 
-                <div class="panel-operativo-card__actions">
+                <div class="panel-operativo-card__actions d-flex gap-2 flex-wrap">
                     <span class="panel-soft-chip panel-soft-chip--warning">
                         {{ $programadosHoy->count() }} programado(s)
                     </span>
 
+                    <button type="button"
+                            class="btn btn-sm btn-success rounded-pill px-3"
+                            id="btn-pagar-programados-hoy">
+                        Registrar pago
+                    </button>
+
                     <a href="{{ route('honorarios.mensual.index') }}"
-                       class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                    class="btn btn-sm btn-outline-secondary rounded-pill px-3">
                         Revisar honorarios
                     </a>
                 </div>
@@ -55,6 +61,9 @@
                     <table class="table table-finanzas panel-programados-table mb-0">
                         <thead>
                             <tr>
+                                <th class="text-center" style="width:40px;">
+                                    <input type="checkbox" id="check-all-programados-hoy">
+                                </th>
                                 <th>Empresa</th>
                                 <th>Emisor</th>
                                 <th>Folio</th>
@@ -68,11 +77,20 @@
                                 @php $h = $programado->honorarioMensualRec; @endphp
                                 @if($h)
                                     <tr>
+                                        <td class="text-center">
+                                            <input type="checkbox"
+                                                class="chk-programado-hoy"
+                                                value="{{ $h->id }}"
+                                                data-id="{{ $h->id }}"
+                                                data-folio="{{ $h->folio }}"
+                                                data-emisor="{{ $h->razon_social_emisor }}"
+                                                data-saldo="{{ $h->saldo_pendiente ?? 0 }}">
+                                        </td>
                                         <td>{{ $h->empresa->Nombre ?? '-' }}</td>
                                         <td>{{ $h->razon_social_emisor }}</td>
                                         <td>
                                             <a href="{{ route('honorarios.mensual.show', $h->id) }}"
-                                               class="panel-table-link">
+                                            class="panel-table-link">
                                                 {{ $h->folio }}
                                             </a>
                                         </td>
@@ -93,6 +111,127 @@
                 </div>
             </div>
         </section>
+
+        <div class="modal fade" id="modalPagoProgramadosHoy" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <form method="POST"
+                    action="{{ route('honorarios.mensual.pago.masivo') }}"
+                    id="form-pago-programados-hoy"
+                    class="modal-content">
+                    @csrf
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Registrar pago de programados para hoy</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Honorarios seleccionados</label>
+                            <div id="resumen-programados-hoy"
+                                class="border rounded p-2"
+                                style="min-height: 120px;">
+                            </div>
+                        </div>
+
+                        <div id="inputs-programados-hoy"></div>
+
+                        <hr>
+
+                        <div class="mb-3">
+                            <label class="form-label">Fecha de pago</label>
+                            <input type="date"
+                                name="fecha_pago"
+                                class="form-control"
+                                required>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-success">
+                            Confirmar pago
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const checkAll = document.getElementById('check-all-programados-hoy');
+            const checks = document.querySelectorAll('.chk-programado-hoy');
+            const btnPagar = document.getElementById('btn-pagar-programados-hoy');
+            const modalEl = document.getElementById('modalPagoProgramadosHoy');
+            const resumenWrap = document.getElementById('resumen-programados-hoy');
+            const inputsWrap = document.getElementById('inputs-programados-hoy');
+
+            if (!checkAll || !btnPagar || !modalEl || !resumenWrap || !inputsWrap) {
+                return;
+            }
+
+            const modal = new bootstrap.Modal(modalEl);
+
+            checkAll.addEventListener('change', () => {
+                checks.forEach(chk => {
+                    chk.checked = checkAll.checked;
+                });
+            });
+
+            checks.forEach(chk => {
+                chk.addEventListener('change', () => {
+                    if (!chk.checked) {
+                        checkAll.checked = false;
+                    }
+                });
+            });
+
+            btnPagar.addEventListener('click', () => {
+                const seleccionados = Array.from(document.querySelectorAll('.chk-programado-hoy:checked'));
+
+                if (seleccionados.length === 0) {
+                    alert('Debes seleccionar al menos un honorario.');
+                    return;
+                }
+
+                resumenWrap.innerHTML = '';
+                inputsWrap.innerHTML = '';
+
+                seleccionados.forEach(chk => {
+                    const card = document.createElement('div');
+                    card.className = 'border rounded p-2 mb-2 bg-light';
+
+                    card.innerHTML = `
+                        <div><strong>Folio:</strong> ${chk.dataset.folio}</div>
+                        <div><strong>Emisor:</strong> ${chk.dataset.emisor}</div>
+                        <div><strong>Saldo:</strong> ${chk.dataset.saldo}</div>
+                    `;
+
+                    resumenWrap.appendChild(card);
+
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'honorarios[]';
+                    input.value = chk.value;
+
+                    inputsWrap.appendChild(input);
+                });
+
+                modal.show();
+            });
+
+            modalEl.addEventListener('hidden.bs.modal', () => {
+                resumenWrap.innerHTML = '';
+                inputsWrap.innerHTML = '';
+            });
+        });
+        </script>
     @endif
 
 

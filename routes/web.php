@@ -464,6 +464,11 @@ Route::post('/documentos/{documento}/pagos', [App\Http\Controllers\PagoDocumento
 Route::post('/documentos/pagos/masivo', [App\Http\Controllers\PagoDocumentoController::class, 'storeMasivo'])
     ->name('documentos.pagos.masivo');
 
+Route::post(
+    '/documentos/pagos/masivo/panel-hoy',
+    [App\Http\Controllers\PagoDocumentoController::class, 'storeMasivoDesdePanel']
+)->name('documentos.pagos.masivo.panel_hoy');
+
 //Buscar documentos pendientes para pagos masivos
 Route::get('/api/documentos/buscar', [App\Http\Controllers\PagoDocumentoController::class, 'buscarDocumentos'])
     ->name('documentos.pagos.buscar');

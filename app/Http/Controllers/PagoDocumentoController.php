@@ -464,6 +464,86 @@ class PagoDocumentoController extends Controller
 
 
 
+    public function storeMasivoDesdePanel(Request $request)
+    {
+        $request->validate([
+            'fecha_pago'      => 'required|date|before_or_equal:today',
+            'documentos'      => 'required|array|min:1',
+            'documentos.*'    => 'integer|exists:documentos_compras,id',
+        ]);
+
+        $ids       = collect($request->documentos)->unique()->values();
+        $fechaPago = $request->fecha_pago;
+
+        $procesados = 0;
+        $omitidos   = 0;
+
+        foreach ($ids as $id) {
+
+            $documento = \App\Models\DocumentoCompra::find($id);
+
+            if (!$documento) {
+                $omitidos++;
+                continue;
+            }
+
+            // No procesar documentos cerrados o no elegibles
+            if (
+                (int) $documento->saldo_pendiente <= 0 ||
+                $documento->pagosReales()->exists() ||
+                $documento->pagosPorReferencia()->exists() ||
+                $documento->prontoPagos()->exists() ||
+                (int) $documento->tipo_documento_id === 61
+            ) {
+                $omitidos++;
+                continue;
+            }
+
+            $estadoAnterior = $documento->estado;
+            $saldoAnterior  = $documento->saldo_pendiente;
+
+            $documento->pagos()->create([
+                'fecha_pago' => $fechaPago,
+                'user_id'    => Auth::id(),
+            ]);
+
+            $documento->update([
+                'estado'              => 'Pago',
+                'fecha_estado_manual' => now(),
+                'saldo_pendiente'     => 0,
+            ]);
+
+            \App\Models\DocumentoCompraPagoProgramado::where('documento_compra_id', $documento->id)->delete();
+
+            \App\Models\MovimientoCompra::create([
+                'documento_compra_id' => $documento->id,
+                'usuario_id'          => Auth::id(),
+                'estado_anterior'     => $estadoAnterior,
+                'nuevo_estado'        => 'Pago',
+                'fecha_cambio'        => now(),
+                'tipo_movimiento'     => 'Pago registrado desde panel',
+                'descripcion'         => "Pago registrado desde panel el {$fechaPago}.",
+                'datos_anteriores'    => [
+                    'estado'         => $estadoAnterior,
+                    'saldo_anterior' => $saldoAnterior,
+                ],
+                'datos_nuevos' => [
+                    'fecha_pago'   => $fechaPago,
+                    'saldo_actual' => 0,
+                ],
+            ]);
+
+            $procesados++;
+        }
+
+        return back()->with(
+            'success',
+            "Pagos registrados correctamente. Procesados: {$procesados}. Omitidos: {$omitidos}."
+        );
+    }
+
+
+
 
 
 
