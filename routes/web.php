@@ -529,6 +529,16 @@ Route::get('/finanzas_compras/export', [DocumentoCompraController::class, 'expor
 Route::get('/finanzas-compras/export-all', [DocumentoCompraController::class, 'exportAll'])
     ->name('finanzas_compras.exportAll');
 
+Route::post(
+    'finanzas-compras/proximo-pago/exportar',
+    [DocumentoCompraController::class, 'storePagoProgramadoMasivoExport']
+)->name('finanzas_compras.proximo_pago.exportar');
+
+Route::get(
+    'finanzas-compras/proximo-pago/descargar/{token}',
+    [DocumentoCompraController::class, 'downloadPagoProgramadoEmpresa']
+)->name('finanzas_compras.proximo_pago.descargar');
+
 //Actualizar estado de un documento de compra
 Route::patch('/finanzas/compras/{id}/estado', [DocumentoCompraController::class, 'updateEstado'])
     ->name('finanzas_compras.updateEstado');
@@ -736,7 +746,15 @@ Route::post(
     [HonorarioMensualRecController::class, 'storePagoProgramadoMasivo']
 )->name('honorarios.mensual.proximo-pago.store');
 
+Route::post(
+    'honorarios/mensual/proximo-pago/exportar',
+    [HonorarioMensualRecController::class, 'storePagoProgramadoMasivoExport']
+)->name('honorarios.mensual.proximo-pago.exportar');
 
+Route::get(
+    'honorarios/mensual/proximo-pago/descargar/{token}',
+    [HonorarioMensualRecController::class, 'downloadPagoProgramadoExcel']
+)->name('honorarios.mensual.proximo-pago.descargar');
 
 
 // Historial de cambios en honorarios mensuales recibidos

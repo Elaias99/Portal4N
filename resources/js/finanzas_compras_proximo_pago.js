@@ -8,12 +8,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputsWrap = document.getElementById('inputs-proximos-pagos-compras-seleccionados');
     const btnCerrarX = document.getElementById('btn-cerrar-x-proximo-pago-compras');
     const btnCancelar = document.getElementById('btn-cancelar-proximo-pago-compras');
+    const submitBtn = document.getElementById('btn-submit-proximo-pago-compras');
 
     if (!btnProximoPago || !modalEl || !form || !resumenWrap || !inputsWrap) {
         return;
     }
 
     const modal = new bootstrap.Modal(modalEl);
+    let proximoPagoProcesado = false;
 
     function getSeleccionStorage() {
         try {
@@ -111,10 +113,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnCerrarX?.addEventListener('click', () => {
         modal.hide();
+
+        if (proximoPagoProcesado) {
+            setTimeout(() => {
+                location.reload();
+            }, 250);
+        }
     });
 
     btnCancelar?.addEventListener('click', () => {
         modal.hide();
+
+        if (proximoPagoProcesado) {
+            setTimeout(() => {
+                location.reload();
+            }, 250);
+        }
     });
 
     modalEl.addEventListener('hidden.bs.modal', () => {
@@ -123,7 +137,58 @@ document.addEventListener('DOMContentLoaded', () => {
         form.reset();
     });
 
-    form.addEventListener('submit', () => {
-        clearSeleccion();
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Procesando...';
+        }
+
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Error registrando próximo pago');
+            return res.json();
+        })
+        .then(data => {
+            if (!data || data.ok !== true) {
+                throw new Error('Respuesta inválida');
+            }
+
+            if (Array.isArray(data.downloads)) {
+                data.downloads.forEach((item, index) => {
+                    setTimeout(() => {
+                        const link = document.createElement('a');
+                        link.href = item.url;
+                        link.download = '';
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+                    }, index * 800);
+                });
+            }
+
+            clearSeleccion();
+            proximoPagoProcesado = true;
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Próximo pago guardado';
+            }
+        })
+        .catch(err => {
+            alert(err?.message || 'Error procesando próximo pago');
+
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Guardar próximo pago';
+            }
+        });
     });
 });

@@ -21,7 +21,7 @@
 
             <form method="POST"
                   id="form-proximo-pago-compras"
-                  action="{{ route('finanzas_compras.proximo_pago.store') }}">
+                  action="{{ route('finanzas_compras.proximo_pago.exportar') }}">
                 @csrf
 
                 <div class="modal-body">
@@ -67,6 +67,7 @@
                     </button>
 
                     <button type="submit"
+                            id="btn-submit-proximo-pago-compras"
                             class="btn btn-primary">
                         Guardar próximo pago
                     </button>

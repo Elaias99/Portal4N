@@ -18,6 +18,8 @@ use App\Models\TipoCuenta;
 use App\Models\DocumentoCompraPagoProgramado;
 use App\Services\ReferenciaNotasCompraService;
 use App\Services\SincronizarPagoReferenciaCompraService;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 
 class DocumentoCompraController extends Controller
@@ -57,7 +59,8 @@ class DocumentoCompraController extends Controller
                 'abonos:id,documento_compra_id,fecha_abono',
                 'cruces:id,documento_compra_id,fecha_cruce',
                 'pagos:id,documento_compra_id,fecha_pago',
-                'prontoPagos:id,documento_compra_id,fecha_pronto_pago'
+                'prontoPagos:id,documento_compra_id,fecha_pronto_pago',
+                'pagoProgramado:id,documento_compra_id,fecha_programada',
             ]);
 
         // === FILTROS GENERALES ===
@@ -1328,6 +1331,124 @@ class DocumentoCompraController extends Controller
         return back()->with(
             'success',
             "Próximo pago definido correctamente. Programados: {$programados}. Omitidos: {$omitidos}."
+        );
+    }
+
+
+
+    public function storePagoProgramadoMasivoExport(Request $request)
+    {
+        $request->validate([
+            'documentos'        => 'required|array|min:1',
+            'documentos.*'      => 'integer|exists:documentos_compras,id',
+            'fecha_programada'  => 'required|date|after_or_equal:today',
+            'observacion'       => 'nullable|string|max:1000',
+        ]);
+
+        $exportPorEmpresa = [];
+
+        DB::transaction(function () use ($request, &$exportPorEmpresa) {
+
+            $ids = collect($request->documentos)
+                ->unique()
+                ->values();
+
+            foreach ($ids as $documentoId) {
+
+                $documento = DocumentoCompra::with([
+                    'empresa',
+                    'pagosReales',
+                    'pagosPorReferencia',
+                    'prontoPagos',
+                    'pagoProgramado',
+                ])->find($documentoId);
+
+                if (!$documento) {
+                    continue;
+                }
+
+                if (
+                    (int) $documento->saldo_pendiente <= 0 ||
+                    $documento->pagosReales->isNotEmpty() ||
+                    $documento->pagosPorReferencia->isNotEmpty() ||
+                    $documento->prontoPagos->isNotEmpty() ||
+                    (int) $documento->tipo_documento_id === 61
+                ) {
+                    continue;
+                }
+
+                DocumentoCompraPagoProgramado::updateOrCreate(
+                    [
+                        'documento_compra_id' => $documento->id,
+                    ],
+                    [
+                        'fecha_programada' => $request->fecha_programada,
+                        'user_id'          => Auth::id(),
+                        'observacion'      => $request->observacion,
+                    ]
+                );
+
+                $empresaId = $documento->empresa_id;
+
+                $exportPorEmpresa[$empresaId]['empresa'] ??=
+                    optional($documento->empresa)->Nombre ?? 'Empresa';
+
+                $exportPorEmpresa[$empresaId]['items'][] = [
+                    'documento_id' => $documento->id,
+                    'tipo'         => 'pago',
+                    'monto'        => $documento->monto_total,
+                    'fecha'        => $request->fecha_programada,
+                ];
+            }
+        });
+
+        $downloads = [];
+
+        foreach ($exportPorEmpresa as $empresaId => $data) {
+
+            if (empty($data['items'])) {
+                continue;
+            }
+
+            $token = (string) Str::uuid();
+
+            Cache::put(
+                "proximos_pagos_empresa:{$token}",
+                $data,
+                now()->addMinutes(10)
+            );
+
+            $downloads[] = [
+                'empresa' => $data['empresa'],
+                'url'     => route('finanzas_compras.proximo_pago.descargar', $token),
+            ];
+        }
+
+        return response()->json([
+            'ok'        => true,
+            'downloads' => $downloads,
+        ]);
+    }
+
+    public function downloadPagoProgramadoEmpresa(string $token)
+    {
+        $cacheKey = "proximos_pagos_empresa:{$token}";
+
+        $data = Cache::get($cacheKey);
+
+        if (!$data || empty($data['items'])) {
+            abort(404, 'No hay próximos pagos para exportar.');
+        }
+
+        Cache::forget($cacheKey);
+
+        $empresa = str_replace(' ', '_', $data['empresa']);
+        $fecha   = now()->format('Ymd_His');
+        $nombre  = "{$empresa}_Proximo_Pago_Proveedores_{$fecha}.xlsx";
+
+        return Excel::download(
+            new \App\Exports\PagosMasivosDocumentoCompraExport($data['items']),
+            $nombre
         );
     }
 

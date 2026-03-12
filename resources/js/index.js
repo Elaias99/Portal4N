@@ -265,11 +265,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    const btnProximoPago = document.getElementById('btn-proximo-pago-seleccionados');
+    const btnProximoPago   = document.getElementById('btn-proximo-pago-seleccionados');
     const modalProximoPago = document.getElementById('modalProximoPago');
-    const formProximoPago = document.getElementById('form-proximo-pago');
-    const inputsWrap = document.getElementById('inputs-proximos-pagos-seleccionados');
-    const resumenWrap = document.getElementById('proximos-pagos-seleccionados');
+    const formProximoPago  = document.getElementById('form-proximo-pago');
+    const inputsWrap       = document.getElementById('inputs-proximos-pagos-seleccionados');
+    const resumenWrap      = document.getElementById('proximos-pagos-seleccionados');
+    const submitBtn        = document.getElementById('btn-submit-proximo-pago');
 
     if (
         !btnProximoPago ||
@@ -328,9 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return seleccionados;
     }
 
-    formProximoPago.addEventListener('submit', function () {
-        clearSeleccionados();
-    });
+    let proximoPagoProcesado = false;
 
     btnProximoPago.addEventListener('click', () => {
         const seleccionados = loadSeleccionados();
@@ -351,5 +350,65 @@ document.addEventListener('DOMContentLoaded', () => {
         inputsWrap.innerHTML = '';
         resumenWrap.innerHTML = '';
         formProximoPago.reset();
+
+        if (proximoPagoProcesado) {
+            proximoPagoProcesado = false;
+            location.reload();
+        }
+    });
+
+    formProximoPago.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Procesando...';
+        }
+
+        const formData = new FormData(formProximoPago);
+
+        fetch(formProximoPago.action, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Error registrando próximo pago');
+            return res.json();
+        })
+        .then(data => {
+            if (!data || data.ok !== true) {
+                throw new Error('Respuesta inválida');
+            }
+
+            if (Array.isArray(data.downloads)) {
+                data.downloads.forEach((item, index) => {
+                    setTimeout(() => {
+                        const link = document.createElement('a');
+                        link.href = item.url;
+                        link.download = '';
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+                    }, index * 800);
+                });
+            }
+
+            clearSeleccionados();
+            proximoPagoProcesado = true;
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Próximo pago guardado';
+            }
+        })
+        .catch(err => {
+            alert(err?.message || 'Error procesando próximo pago');
+
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Guardar próximo pago';
+            }
+        });
     });
 });

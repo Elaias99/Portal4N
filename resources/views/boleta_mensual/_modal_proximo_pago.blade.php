@@ -20,7 +20,7 @@
 
             <form method="POST"
                   id="form-proximo-pago"
-                  action="{{ route('honorarios.mensual.proximo-pago.store') }}">
+                  action="{{ route('honorarios.mensual.proximo-pago.exportar') }}">
                 @csrf
 
                 <div class="modal-body">
@@ -66,6 +66,7 @@
                     </button>
 
                     <button type="submit"
+                            id="btn-submit-proximo-pago"
                             class="btn btn-primary">
                         Guardar próximo pago
                     </button>

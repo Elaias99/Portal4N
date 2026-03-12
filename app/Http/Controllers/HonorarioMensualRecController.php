@@ -1753,6 +1753,137 @@ class HonorarioMensualRecController extends Controller
 
 
 
+    public function storePagoProgramadoMasivoExport(Request $request)
+    {
+        $request->validate([
+            'honorarios'        => 'required|array|min:1',
+            'honorarios.*'      => 'integer|exists:honorarios_mensuales_rec,id',
+            'fecha_programada'  => 'required|date|after_or_equal:today',
+            'observacion'       => 'nullable|string|max:1000',
+        ]);
+
+        $honorariosPorEmpresa = collect();
+
+        DB::transaction(function () use ($request, &$honorariosPorEmpresa) {
+
+            $ids = collect($request->honorarios)
+                ->unique()
+                ->values();
+
+            foreach ($ids as $honorarioId) {
+
+                $honorario = HonorarioMensualRec::with([
+                    'empresa',
+                    'pagos',
+                    'prontoPagos',
+                    'pagoProgramado',
+                ])->find($honorarioId);
+
+                if (!$honorario) {
+                    continue;
+                }
+
+                // No programar si ya está cerrado o sin saldo
+                if (
+                    $honorario->pagos->isNotEmpty() ||
+                    $honorario->prontoPagos->isNotEmpty() ||
+                    (int) $honorario->saldo_pendiente <= 0
+                ) {
+                    continue;
+                }
+
+                HonorarioPagoProgramado::updateOrCreate(
+                    [
+                        'honorario_mensual_rec_id' => $honorario->id,
+                    ],
+                    [
+                        'fecha_programada' => $request->fecha_programada,
+                        'user_id'          => Auth::id(),
+                        'observacion'      => $request->observacion,
+                    ]
+                );
+
+                $empresaId = $honorario->empresa_id;
+
+                if (!$honorariosPorEmpresa->has($empresaId)) {
+                    $honorariosPorEmpresa[$empresaId] = collect();
+                }
+
+                $honorariosPorEmpresa[$empresaId]->push(
+                    $honorario->fresh()
+                );
+            }
+        });
+
+        $downloads = [];
+
+        foreach ($honorariosPorEmpresa as $empresaId => $honorarios) {
+
+            if ($honorarios->isEmpty()) {
+                continue;
+            }
+
+            $token = (string) Str::uuid();
+
+            Cache::put(
+                "proximo_pago_honorarios_excel:$token",
+                $honorarios,
+                now()->addMinutes(10)
+            );
+
+            $downloads[] = [
+                'url' => route('honorarios.mensual.proximo-pago.descargar', [
+                    'token' => $token
+                ]),
+            ];
+        }
+
+        return response()->json([
+            'ok' => true,
+            'downloads' => $downloads,
+        ]);
+    }
+
+
+    public function downloadPagoProgramadoExcel(string $token)
+    {
+        $honorariosProgramados = Cache::get("proximo_pago_honorarios_excel:$token");
+
+        abort_if(
+            !$honorariosProgramados || $honorariosProgramados->isEmpty(),
+            404,
+            'Exportación no disponible o expirada.'
+        );
+
+        Cache::forget("proximo_pago_honorarios_excel:$token");
+
+        // =========================
+        // OBTENER EMPRESA
+        // =========================
+        $honorario = $honorariosProgramados->first();
+        $honorario->loadMissing('empresa');
+
+        $nombreEmpresa = $honorario->empresa?->Nombre ?? 'Empresa';
+
+        // Normalizar nombre empresa para archivo
+        $nombreEmpresaArchivo = str_replace(
+            ' ',
+            '_',
+            preg_replace('/[^A-Za-z0-9\s]/', '', $nombreEmpresa)
+        );
+
+        // =========================
+        // NOMBRE ARCHIVO
+        // =========================
+        $fecha = now()->format('Y-m-d');
+
+        $nombreArchivo = "{$nombreEmpresaArchivo}_honorarios_proximo_pago_{$fecha}.xlsx";
+
+        return Excel::download(
+            new HonorariosPagoMasivoExport($honorariosProgramados),
+            $nombreArchivo
+        );
+    }
 
 
 
