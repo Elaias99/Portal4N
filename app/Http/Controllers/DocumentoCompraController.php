@@ -881,7 +881,7 @@ class DocumentoCompraController extends Controller
         $fecha = now()->format('Y-m-d_H-i-s');
         return Excel::download(
             new DocumentoCompraExport($documentos),
-            "documentos_compras_pagina_{$page}_{$fecha}.xlsx"
+            "Cuentas_Por_Pagar_Pagina_{$page}_{$fecha}.xlsx"
         );
     }
 
@@ -1008,7 +1008,7 @@ class DocumentoCompraController extends Controller
         $fecha = now()->format('Y-m-d_H-i-s');
         return Excel::download(
             new DocumentoCompraExport($documentos),
-            "documentos_compras_todos_{$fecha}.xlsx"
+            "Cuentas_Por_Pagar_Todos_{$fecha}.xlsx"
         );
     }
 

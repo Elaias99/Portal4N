@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use ZipArchive;
 use App\Exports\ExportHonorarioMensual;
-use App\Models\CalendarioPagoServicio;
+use App\Models\HonorarioPagoProgramado;
 
 
 
@@ -34,19 +34,46 @@ class HonorarioMensualRecController extends Controller
     // =========================
     // PANEL DE ACCESO A LOS DOS MÓDULOS DE BOLETA
     // =========================
-
     public function panel(Request $request)
     {
-
-        // Restricción de acceso solo para usuario 405
         $usuariosFinanzas = [1, 405];
 
         if (!in_array(Auth::id(), $usuariosFinanzas)) {
             abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
         }
 
-        return view('boleta_mensual.panel_acceso.panel');
+        $hoy = Carbon::today();
 
+        $programadosHoy = HonorarioPagoProgramado::with([
+            'honorarioMensualRec.empresa:id,Nombre',
+            'honorarioMensualRec.cobranzaCompra:id,servicio,razon_social',
+        ])
+        ->whereDate('fecha_programada', $hoy)
+        ->whereHas('honorarioMensualRec', function ($q) {
+            $q->where('saldo_pendiente', '>', 0)
+            ->doesntHave('pagos')
+            ->doesntHave('prontoPagos');
+        })
+        ->orderBy('fecha_programada')
+        ->get();
+
+        $programadosAtrasados = HonorarioPagoProgramado::with([
+            'honorarioMensualRec.empresa:id,Nombre',
+            'honorarioMensualRec.cobranzaCompra:id,servicio,razon_social',
+        ])
+        ->whereDate('fecha_programada', '<', $hoy)
+        ->whereHas('honorarioMensualRec', function ($q) {
+            $q->where('saldo_pendiente', '>', 0)
+            ->doesntHave('pagos')
+            ->doesntHave('prontoPagos');
+        })
+        ->orderBy('fecha_programada')
+        ->get();
+
+        return view('boleta_mensual.panel_acceso.panel', compact(
+            'programadosHoy',
+            'programadosAtrasados'
+        ));
     }
 
 
@@ -61,6 +88,8 @@ class HonorarioMensualRecController extends Controller
             'cruces:id,honorario_mensual_rec_id,fecha_cruce',
             'pagos:id,honorario_mensual_rec_id,fecha_pago',
             'prontoPagos:id,honorario_mensual_rec_id,fecha_pronto_pago',
+
+            'pagoProgramado:id,honorario_mensual_rec_id,fecha_programada',
         ]);
 
 
@@ -1654,6 +1683,72 @@ class HonorarioMensualRecController extends Controller
             'anios',
             'servicios'
         ));
+    }
+
+
+
+
+    public function storePagoProgramadoMasivo(Request $request)
+    {
+        $request->validate([
+            'honorarios'   => 'required|array|min:1',
+            'honorarios.*' => 'integer|exists:honorarios_mensuales_rec,id',
+            'fecha_programada' => 'required|date|after_or_equal:today',
+            'observacion'  => 'nullable|string|max:1000',
+        ]);
+
+        $programados = 0;
+        $omitidos    = 0;
+
+        DB::transaction(function () use ($request, &$programados, &$omitidos) {
+
+            $ids = collect($request->honorarios)
+                ->unique()
+                ->values();
+
+            foreach ($ids as $honorarioId) {
+
+                $honorario = HonorarioMensualRec::with([
+                    'pagos',
+                    'prontoPagos',
+                    'pagoProgramado',
+                ])->find($honorarioId);
+
+                if (!$honorario) {
+                    $omitidos++;
+                    continue;
+                }
+
+                // No programar si ya está cerrado o sin saldo
+                if (
+                    $honorario->pagos->isNotEmpty() ||
+                    $honorario->prontoPagos->isNotEmpty() ||
+                    (int) $honorario->saldo_pendiente <= 0
+                ) {
+                    $omitidos++;
+                    continue;
+                }
+
+                HonorarioPagoProgramado::updateOrCreate(
+                    
+                    [
+                        'honorario_mensual_rec_id' => $honorario->id,
+                    ],
+                    [
+                        'fecha_programada' => $request->fecha_programada,
+                        'user_id'          => Auth::id(),
+                        'observacion'      => $request->observacion,
+                    ]
+                );
+
+                $programados++;
+            }
+        });
+
+        return back()->with(
+            'success',
+            "Próximo pago definido correctamente. Programados: {$programados}. Omitidos: {$omitidos}."
+        );
     }
 
 

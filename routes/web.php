@@ -729,6 +729,11 @@ Route::get('/honorarios-mensuales/calendario',
     [HonorarioMensualRecController::class, 'calendario']
 )->name('honorarios.mensual.calendario');
 
+Route::post(
+    'honorarios/mensual/proximo-pago',
+    [HonorarioMensualRecController::class, 'storePagoProgramadoMasivo']
+)->name('honorarios.mensual.proximo-pago.store');
+
 
 
 

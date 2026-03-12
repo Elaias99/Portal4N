@@ -95,6 +95,14 @@ class HonorarioMensualRec extends Model
             'honorario_mensual_rec_id');
     }
 
+    public function pagoProgramado()
+    {
+        return $this->hasOne(
+            HonorarioPagoProgramado::class,
+            'honorario_mensual_rec_id'
+        );
+    }
+
 
 
 

@@ -260,3 +260,96 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 
+
+
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    const btnProximoPago = document.getElementById('btn-proximo-pago-seleccionados');
+    const modalProximoPago = document.getElementById('modalProximoPago');
+    const formProximoPago = document.getElementById('form-proximo-pago');
+    const inputsWrap = document.getElementById('inputs-proximos-pagos-seleccionados');
+    const resumenWrap = document.getElementById('proximos-pagos-seleccionados');
+
+    if (
+        !btnProximoPago ||
+        !modalProximoPago ||
+        !formProximoPago ||
+        !inputsWrap ||
+        !resumenWrap
+    ) {
+        return;
+    }
+
+    const STORAGE_KEY = 'honorarios_seleccionados';
+
+    function clearSeleccionados() {
+        sessionStorage.removeItem(STORAGE_KEY);
+    }
+
+    function loadSeleccionados() {
+        try {
+            const raw = sessionStorage.getItem(STORAGE_KEY);
+            if (!raw) return new Map();
+            return new Map(Object.entries(JSON.parse(raw)));
+        } catch (e) {
+            console.error('Error cargando seleccionados para próximo pago', e);
+            return new Map();
+        }
+    }
+
+    function renderSeleccionados() {
+        const seleccionados = loadSeleccionados();
+
+        inputsWrap.innerHTML = '';
+        resumenWrap.innerHTML = '';
+
+        seleccionados.forEach(h => {
+            const card = document.createElement('div');
+            card.className = 'border rounded p-2 mb-2 bg-light';
+
+            card.innerHTML = `
+                <div><strong>Folio:</strong> ${h.folio}</div>
+                <div><strong>RUT:</strong> ${h.rut}</div>
+                <div><strong>Emisor:</strong> ${h.emisor}</div>
+                <div><strong>Saldo:</strong> ${h.saldo}</div>
+            `;
+
+            resumenWrap.appendChild(card);
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'honorarios[]';
+            input.value = h.id;
+
+            inputsWrap.appendChild(input);
+        });
+
+        return seleccionados;
+    }
+
+    formProximoPago.addEventListener('submit', function () {
+        clearSeleccionados();
+    });
+
+    btnProximoPago.addEventListener('click', () => {
+        const seleccionados = loadSeleccionados();
+
+        if (seleccionados.size === 0) {
+            alert('Debes seleccionar al menos un honorario.');
+            return;
+        }
+
+        $('#modalProximoPago').modal('show');
+    });
+
+    $('#modalProximoPago').on('show.bs.modal', function () {
+        renderSeleccionados();
+    });
+
+    $('#modalProximoPago').on('hidden.bs.modal', function () {
+        inputsWrap.innerHTML = '';
+        resumenWrap.innerHTML = '';
+        formProximoPago.reset();
+    });
+});

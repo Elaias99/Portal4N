@@ -454,7 +454,7 @@ class PagoDocumentoController extends Controller
 
         $empresa   = str_replace(' ', '_', $data['empresa']);
         $fecha     = now()->format('Ymd_His');
-        $nombre    = "{$empresa}_documentos_compras_{$fecha}.xlsx";
+        $nombre    = "{$empresa}_Pago_Proveedores_{$fecha}.xlsx";
 
         return Excel::download(
             new \App\Exports\PagosMasivosDocumentoCompraExport($data['items']),

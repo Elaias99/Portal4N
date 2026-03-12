@@ -268,7 +268,7 @@ class PanelFinanzaController extends Controller
 
         return Excel::download(
             new MovimientoExport($fechaInicio, $fechaFin),
-            'Historial_Movimientos_' . now()->format('Ymd_His') . '.xlsx'
+            'Historial_Movimientos_Cuentas_Por_Cobrar' . now()->format('Ymd_His') . '.xlsx'
         );
     }
 
@@ -403,7 +403,7 @@ class PanelFinanzaController extends Controller
 
         return Excel::download(
             new MovimientoCompraExport($fechaInicio, $fechaFin),
-            'Historial_Movimientos_Compras_' . now()->format('Ymd_His') . '.xlsx'
+            'Historial_Movimientos_Cuentas_Por_Pagar_' . now()->format('Ymd_His') . '.xlsx'
         );
 
     }

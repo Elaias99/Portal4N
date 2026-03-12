@@ -654,7 +654,7 @@ class DocumentoFinancieroController extends Controller
         $fecha = now()->format('Y-m-d_H-i-s');
         return Excel::download(
             new DocumentosExport($documentosFiltrados),
-            "documentos_financieros_pagina_{$page}_{$fecha}.xlsx"
+            "Cuentas_Por_Cobrar_Pagina_{$page}_{$fecha}.xlsx"
         );
     }
 
@@ -791,7 +791,7 @@ class DocumentoFinancieroController extends Controller
         $fecha = now()->format('Y-m-d_H-i-s');
         return Excel::download(
             new DocumentosExport($documentos),
-            "documentos_financieros_todos_{$fecha}.xlsx"
+            "Cuentas_Por_Cobrar_Todos_{$fecha}.xlsx"
         );
     }
 

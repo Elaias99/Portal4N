@@ -4,6 +4,21 @@
 @vite('resources/css/boleta_mensual.css')
 
 @section('content')
+
+<style>
+
+
+    /* Documento con pago programado */
+
+    .hm-programado {
+        background-color: #e9f2ff; /* azul muy suave */
+        border-left: 3px solid #3b82f6;
+    }
+
+
+</style>
+
+
 <div class="container-fluid py-3 hm">
 
     {{-- =========================
@@ -294,6 +309,13 @@
                                 id="btn-pagar-seleccionados"
                                 class="btn btn-success">
                                 Pagar
+                            </button>
+
+                            <button
+                                type="button"
+                                id="btn-proximo-pago-seleccionados"
+                                class="btn btn-outline-primary">
+                                Definir próximo pago
                             </button>
 
 
@@ -616,7 +638,9 @@
                             <tr>
 
                                 {{-- Checkbox --}}
-                                <td class="hm-nowrap text-center">
+                                <td class="hm-nowrap text-center 
+                                {{ ($r->pagoProgramado && $saldoPendiente > 0 && $r->pagos->isEmpty() && $r->prontoPagos->isEmpty()) ? 'hm-programado' : '' }}">
+
                                     @if($saldoPendiente > 0)
                                         <input type="checkbox"
                                             class="chk-honorario"
@@ -629,6 +653,7 @@
                                     @else
                                         <input type="checkbox" disabled>
                                     @endif
+
                                 </td>
 
 
@@ -733,10 +758,23 @@
                                 </td>
 
                                 {{-- Fecha Cambio Estado --}}
-                                <td>
-                                    {{ $r->fecha_ultima_gestion
-                                        ? \Carbon\Carbon::parse($r->fecha_ultima_gestion)->format('d-m-Y')
-                                        : '-' }}
+                                <td class="hm-nowrap">
+                                    <div>
+                                        {{ $r->fecha_ultima_gestion
+                                            ? \Carbon\Carbon::parse($r->fecha_ultima_gestion)->format('d-m-Y')
+                                            : '-' }}
+                                    </div>
+
+                                        @if(
+                                            $r->pagoProgramado &&
+                                            $r->pagos->isEmpty() &&
+                                            $r->prontoPagos->isEmpty() &&
+                                            (int) $r->saldo_pendiente > 0
+                                        )
+                                            <div class="small text-primary fw-semibold mt-1">
+                                                Próx. pago: {{ $r->pagoProgramado->fecha_programada?->format('d-m-Y') }}
+                                            </div>
+                                        @endif
                                 </td>
 
                             </tr>
@@ -809,7 +847,7 @@
 </div>
 
 @include('boleta_mensual._modal_pago_masivo')
-
+@include('boleta_mensual._modal_proximo_pago')
 
 
 <script>
