@@ -3,6 +3,13 @@
 
 @section('content')
 
+<style>
+    .doc-programado {
+        background-color: #e9f2ff;
+        border-left: 3px solid #3b82f6;
+    }
+</style>
+
     {{-- Mensajes de estado --}}
     {{-- ÉXITO --}}
     @if(session('success'))
@@ -349,6 +356,10 @@
                     Pagar
                 </button>
 
+                <button type="button" class="btn btn-outline-primary btn-sm" id="btn-proximo-pago-documentos">
+                    Definir próximo pago
+                </button>
+
 
                 
 
@@ -494,6 +505,13 @@
                                 @php
                                     $color = $doc->status_original === 'Vencido' ? 'bg-danger' : 'bg-success';
                                     $estadoMostrar = $doc->estado_visible;
+
+                                    $programacionActiva =
+                                        $doc->pagoProgramado &&
+                                        (int) $doc->saldo_pendiente > 0 &&
+                                        $doc->pagos->isEmpty() &&
+                                        $doc->prontoPagos->isEmpty() &&
+                                        (int) $doc->tipo_documento_id !== 61;
                                 @endphp
 
 
@@ -501,7 +519,7 @@
                                 <tr class="small">
 
 
-                                    <td class="text-center">
+                                    <td class="text-center {{ $programacionActiva ? 'doc-programado' : '' }}">
                                         @if($doc->saldo_pendiente > 0 && $doc->tipo_documento_id != 61)
                                             <input type="checkbox"
                                                 class="check-documento"
@@ -509,6 +527,7 @@
                                                 data-id="{{ $doc->id }}"
                                                 data-folio="{{ $doc->folio }}"
                                                 data-razon="{{ $doc->razon_social }}"
+                                                data-rut="{{ $doc->rut_proveedor }}"
                                                 data-saldo="{{ $doc->saldo_pendiente }}"
                                                 data-total="{{ $doc->monto_total }}"
                                             >
@@ -587,10 +606,18 @@
                                     
 
                                     <td>
-                                        {{ $doc->fecha_ultima_gestion 
-                                            ? \Carbon\Carbon::parse($doc->fecha_ultima_gestion)->format('d-m-Y')
-                                            : '-' 
-                                        }}
+                                        <div>
+                                            {{ $doc->fecha_ultima_gestion 
+                                                ? \Carbon\Carbon::parse($doc->fecha_ultima_gestion)->format('d-m-Y')
+                                                : '-' 
+                                            }}
+                                        </div>
+
+                                        @if($programacionActiva)
+                                            <div class="small text-primary fw-semibold mt-1">
+                                                Próx. pago: {{ $doc->pagoProgramado->fecha_programada?->format('d-m-Y') }}
+                                            </div>
+                                        @endif
                                     </td>
 
                                 </tr>
@@ -759,6 +786,10 @@ document.addEventListener('DOMContentLoaded', function () {
 @include('cobranzas.partials.modal_ExportarCompra')
 @include('cobranzas.modal_pagos_masivos')
 @include('cobranzas.finanzas_compras.modal_sugerencias')
+@include('cobranzas.finanzas_compras.modal_proximo_pago')
+
+
+@vite('resources/js/finanzas_compras_proximo_pago.js')
 
 
 

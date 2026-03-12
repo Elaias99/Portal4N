@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Banco;
 use App\Models\TipoCuenta;
+use App\Models\DocumentoCompraPagoProgramado;
 use App\Services\ReferenciaNotasCompraService;
 use App\Services\SincronizarPagoReferenciaCompraService;
 
@@ -1255,6 +1256,79 @@ class DocumentoCompraController extends Controller
         $sugerencias = session('sugerencias_notas_compras', []);
 
         return view('cobranzas.finanzas_compras.sugerencias', compact('sugerencias'));
+    }
+
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+    public function storePagoProgramadoMasivo(Request $request)
+    {
+        $request->validate([
+            'documentos'        => 'required|array|min:1',
+            'documentos.*'      => 'integer|exists:documentos_compras,id',
+            'fecha_programada'  => 'required|date|after_or_equal:today',
+            'observacion'       => 'nullable|string|max:1000',
+        ]);
+
+        $programados = 0;
+        $omitidos    = 0;
+
+        DB::transaction(function () use ($request, &$programados, &$omitidos) {
+
+            $ids = collect($request->documentos)
+                ->unique()
+                ->values();
+
+            foreach ($ids as $documentoId) {
+
+                $documento = DocumentoCompra::with([
+                    'pagosReales',
+                    'pagosPorReferencia',
+                    'prontoPagos',
+                    'pagoProgramado',
+                ])->find($documentoId);
+
+                if (!$documento) {
+                    $omitidos++;
+                    continue;
+                }
+
+                // No permitir programar documentos cerrados o sin saldo
+                if (
+                    (int) $documento->saldo_pendiente <= 0 ||
+                    $documento->pagosReales->isNotEmpty() ||
+                    $documento->pagosPorReferencia->isNotEmpty() ||
+                    $documento->prontoPagos->isNotEmpty() ||
+                    (int) $documento->tipo_documento_id === 61
+                ) {
+                    $omitidos++;
+                    continue;
+                }
+
+                DocumentoCompraPagoProgramado::updateOrCreate(
+                    [
+                        'documento_compra_id' => $documento->id,
+                    ],
+                    [
+                        'fecha_programada' => $request->fecha_programada,
+                        'user_id'          => Auth::id(),
+                        'observacion'      => $request->observacion,
+                    ]
+                );
+
+                $programados++;
+            }
+        });
+
+        return back()->with(
+            'success',
+            "Próximo pago definido correctamente. Programados: {$programados}. Omitidos: {$omitidos}."
+        );
     }
 
 

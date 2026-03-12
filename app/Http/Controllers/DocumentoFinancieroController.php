@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Cobranza;
 use Illuminate\Pagination\LengthAwarePaginator;
+use App\Models\DocumentoCompraPagoProgramado;
+use Carbon\Carbon;
 
 class DocumentoFinancieroController extends Controller
 {
@@ -359,14 +361,46 @@ class DocumentoFinancieroController extends Controller
 
     public function general(Request $request)
     {
-        // Restricción de acceso solo para usuario 405
         $usuariosFinanzas = [1, 405, 374, 375];
 
         if (!in_array(Auth::id(), $usuariosFinanzas)) {
             abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
         }
 
-        return view('cobranzas.general');
+        $hoy = \Carbon\Carbon::today();
+
+        $comprasProgramadasHoy = \App\Models\DocumentoCompraPagoProgramado::with([
+            'documentoCompra.empresa:id,Nombre',
+        ])
+        ->whereDate('fecha_programada', $hoy)
+        ->whereHas('documentoCompra', function ($q) {
+            $q->where('saldo_pendiente', '>', 0)
+            ->where('tipo_documento_id', '!=', 61)
+            ->doesntHave('pagosReales')
+            ->doesntHave('pagosPorReferencia')
+            ->doesntHave('prontoPagos');
+        })
+        ->orderBy('fecha_programada')
+        ->get();
+
+        $comprasProgramadasAtrasadas = \App\Models\DocumentoCompraPagoProgramado::with([
+            'documentoCompra.empresa:id,Nombre',
+        ])
+        ->whereDate('fecha_programada', '<', $hoy)
+        ->whereHas('documentoCompra', function ($q) {
+            $q->where('saldo_pendiente', '>', 0)
+            ->where('tipo_documento_id', '!=', 61)
+            ->doesntHave('pagosReales')
+            ->doesntHave('pagosPorReferencia')
+            ->doesntHave('prontoPagos');
+        })
+        ->orderBy('fecha_programada')
+        ->get();
+
+        return view('cobranzas.general', compact(
+            'comprasProgramadasHoy',
+            'comprasProgramadasAtrasadas'
+        ));
     }
 
 

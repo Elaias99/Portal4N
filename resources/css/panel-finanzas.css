@@ -679,3 +679,27 @@
         max-width: 100%;
     }
 }
+
+
+/* //////////////////////////////////////////////////////////////////// */
+
+
+.panel-operativo-card--danger {
+    border-top: 4px solid rgba(239, 68, 68, 0.55);
+}
+
+.panel-operativo-card__kicker--danger {
+    color: #B91C1C;
+}
+
+.panel-soft-chip--danger {
+    background: rgba(239, 68, 68, 0.10);
+    color: #B91C1C;
+    border: 1px solid rgba(239, 68, 68, 0.16);
+}
+
+.panel-soft-chip--danger-date {
+    background: rgba(239, 68, 68, 0.10);
+    color: #B91C1C;
+    border: 1px solid rgba(239, 68, 68, 0.14);
+}

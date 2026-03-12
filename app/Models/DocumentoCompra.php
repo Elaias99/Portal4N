@@ -109,6 +109,11 @@ class DocumentoCompra extends Model
         return $this->hasMany(DocumentoCompra::class, 'referencia_id');
     }
 
+    public function pagoProgramado()
+    {
+        return $this->hasOne(DocumentoCompraPagoProgramado::class, 'documento_compra_id');
+    }
+
 
 
 

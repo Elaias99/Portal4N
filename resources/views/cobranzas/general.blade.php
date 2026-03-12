@@ -13,6 +13,46 @@
     </div>
 
 
+
+    @if($comprasProgramadasHoy->isNotEmpty())
+        <div class="alert alert-warning shadow-sm mb-4" style="border-left: 5px solid #f59e0b; border-radius: 12px;">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div>
+                    <h5 class="mb-1">Compras con pago programado para hoy</h5>
+                    <p class="mb-0">
+                        Hay <strong>{{ $comprasProgramadasHoy->count() }}</strong> documento(s) de compra con próximo pago definido para hoy.
+                    </p>
+                </div>
+
+                <div>
+                    <a href="{{ route('finanzas_compras.index') }}" class="btn btn-sm btn-outline-warning">
+                        Revisar compras
+                    </a>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if($comprasProgramadasAtrasadas->isNotEmpty())
+        <div class="alert alert-danger shadow-sm mb-4" style="border-left: 5px solid #dc3545; border-radius: 12px;">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div>
+                    <h5 class="mb-1">Compras con pago programado atrasado</h5>
+                    <p class="mb-0">
+                        Hay <strong>{{ $comprasProgramadasAtrasadas->count() }}</strong> documento(s) con fecha programada vencida.
+                    </p>
+                </div>
+
+                <div>
+                    <a href="{{ route('finanzas_compras.index') }}" class="btn btn-sm btn-outline-danger">
+                        Revisar pendientes
+                    </a>
+                </div>
+            </div>
+        </div>
+    @endif
+
+
     {{-- ====== ACCESOS DIRECTOS ====== --}}
     <div class="row justify-content-center text-center g-4 mb-4">
 

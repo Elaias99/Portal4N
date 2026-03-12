@@ -564,6 +564,8 @@ Route::delete('/finanzas-compras/{id}/quitar-referencia', [DocumentoCompraContro
     Route::post('/finanzas/compras/{id}/asignar-referencia', [DocumentoCompraController::class, 'asignarNuevaReferencia'])
     ->name('finanzas_compras.asignar_referencia');
 
+Route::post('/finanzas/compras/proximo-pago', [DocumentoCompraController::class, 'storePagoProgramadoMasivo'])
+    ->name('finanzas_compras.proximo_pago.store');
 
 
 

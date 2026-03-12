@@ -20,6 +20,7 @@ export default defineConfig({
                 'resources/js/app.js',
                 'resources/js/reports/delivery-links.js',
                 'resources/js/index.js',
+                'resources/js/finanzas_compras_proximo_pago.js',
 
             ],
             refresh: true,
