@@ -820,12 +820,6 @@ class HonorarioMensualRecController extends Controller
         ]);
 
 
-        Log::info('HM storePagoMasivoExport IN', [
-            'honorarios_count' => is_array($request->honorarios) ? count($request->honorarios) : null,
-            'honorarios_ids'   => $request->honorarios,
-            'fecha_pago'       => $request->fecha_pago,
-            'user_id'          => Auth::id(),
-        ]);
 
         /**
          * [
@@ -843,14 +837,6 @@ class HonorarioMensualRecController extends Controller
 
                 $honorario = HonorarioMensualRec::with('empresa')->find($honorarioId);
 
-                Log::info('HM honorario cargado', [
-                    'honorario_id'   => $honorarioId,
-                    'empresa_id'     => $honorario->empresa_id,
-                    'empresa_nombre' => $honorario->empresa?->Nombre,
-                    'saldo'          => $honorario->saldo_pendiente,
-                    'tiene_pagos'    => $honorario->pagos()->exists(),
-                    'tiene_pronto'   => $honorario->prontoPagos()->exists(),
-                ]);
 
                 if (!$honorario) {
 

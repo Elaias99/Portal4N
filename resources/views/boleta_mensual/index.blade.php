@@ -26,7 +26,7 @@
     ========================== --}}
     <div class="hm-header mb-3">
         <div>
-            <h1 class="hm-title">Honorario Mensual</h1>
+            <h1 class="hm-title">Boletas Honorarios</h1>
             <div class="hm-subtle">Búsqueda, revisión y acciones sobre honorarios mensuales.</div>
         </div>
 

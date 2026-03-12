@@ -288,7 +288,7 @@
             <a href="{{ route('boleta.mensual.panel') }}" class="text-decoration-none text-dark">
                 <div class="card border-0 shadow-sm rounded-4 h-100 card-hover">
                     <div class="card-body d-flex flex-column align-items-center justify-content-center py-4">
-                        <h6 class="fw-semibold mb-1">Panel boleta Honorarios</h6>
+                        <h6 class="fw-semibold mb-1">Honorarios por Pagar</h6>
                         <p class="text-muted small mb-0">Boleta honorarios</p>
                     </div>
                 </div>

@@ -278,7 +278,7 @@
                     </div>
 
                     <div class="panel-link-card__body">
-                        <h5 class="panel-link-card__title">Honorario Mensual REC</h5>
+                        <h5 class="panel-link-card__title">Honorarios por Pagar</h5>
                         <p class="panel-link-card__text">
                             Revisa documentos, próximos pagos, movimientos y acciones operativas del ciclo mensual.
                         </p>
