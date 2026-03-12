@@ -41,6 +41,7 @@ class HonorariosPagoMasivoExport implements
     public function map($honorario): array
     {
         $honorario->loadMissing([
+            'empresa',
             'cobranzaCompra.banco',
         ]);
 
@@ -49,7 +50,7 @@ class HonorariosPagoMasivoExport implements
         // =========================
         // CUENTA ORIGEN
         // =========================
-        $cuentaOrigen = '0';
+        $cuentaOrigen = $honorario?->empresa?->cta_corriente ?? '0';
         $moneda       = 'CLP';
 
         // =========================

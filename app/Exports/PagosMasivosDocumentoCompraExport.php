@@ -52,6 +52,7 @@ class PagosMasivosDocumentoCompraExport implements
         }
 
         $documento = DocumentoCompra::with([
+            'empresa',
             'cobranzaCompra.banco',
         ])->find($op['documento_id']);
 
@@ -65,7 +66,7 @@ class PagosMasivosDocumentoCompraExport implements
         // =========================
         // CUENTA ORIGEN
         // =========================
-        $cuentaOrigen = '0';
+        $cuentaOrigen = $documento?->empresa?->cta_corriente ?? '0';
         $moneda       = 'CLP';
 
         // =========================
