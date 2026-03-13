@@ -32,10 +32,13 @@
                         <table class="table table-sm table-hover align-middle">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Folio</th>
-                                    <th>Razón Social</th>
+                                    <th>Empresa</th>
                                     <th>RUT</th>
-                                    <th class="text-end">Monto Total</th>
+                                    <th>Emisión</th>
+                                    <th>Folio</th>
+                                    <th>Fecha Emisión</th>
+                                    <th>Fecha Vencimiento</th>
+                                    <th class="text-end">Monto</th>
                                     <th style="width:160px;">Operación</th>
                                     <th style="width:180px;">Monto a pagar</th>
                                     <th class="text-end">Saldo Pendiente</th>
@@ -49,6 +52,8 @@
                         </table>
                     </div>
 
+
+
                     {{-- Fecha de pago --}}
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Fecha de pago</label>
@@ -57,11 +62,25 @@
 
                     <div id="contenedor-montos-hidden"></div>
 
-                    <div class="text-end">
-                        <button type="submit" id="btn-registrar-pagos" class="btn btn-success btn-sm">
-                            <i class="bi bi-check-circle"></i> Registrar Pagos Seleccionados
-                        </button>
+                    <div class="d-flex justify-content-between align-items-end mt-3">
+                        <div>
+                            <div class="fw-semibold mb-1">
+                                Total a pagar:
+                                <span id="pm-total-general">$0</span>
+                            </div>
+
+                            <div id="pm-totales-empresa" class="small text-muted"></div>
+                        </div>
+
+                        <div class="text-end">
+                            <button type="submit" id="btn-registrar-pagos" class="btn btn-success btn-sm">
+                                <i class="bi bi-check-circle"></i> Registrar Pagos Seleccionados
+                            </button>
+                        </div>
                     </div>
+
+
+
                 </form>
 
             </div>
@@ -94,6 +113,46 @@
     function fmtCLP(n) {
         const num = Number(n || 0);
         return '$' + num.toLocaleString('es-CL');
+    }
+
+    function renderTotales() {
+        const totalGeneralEl = $('#pm-total-general');
+        const totalesEmpresaEl = $('#pm-totales-empresa');
+
+        if (!totalGeneralEl || !totalesEmpresaEl) return;
+
+        const docs = Object.values(documentosSeleccionados);
+
+        if (docs.length === 0) {
+            totalGeneralEl.textContent = '$0';
+            totalesEmpresaEl.innerHTML = '';
+            return;
+        }
+
+        let totalGeneral = 0;
+        const totalesPorEmpresa = {};
+
+        docs.forEach(doc => {
+            const empresa = doc.empresa || 'Sin empresa';
+            const monto = Number(doc.monto || 0);
+
+            totalGeneral += monto;
+
+            if (!totalesPorEmpresa[empresa]) {
+                totalesPorEmpresa[empresa] = 0;
+            }
+
+            totalesPorEmpresa[empresa] += monto;
+        });
+
+        totalGeneralEl.textContent = fmtCLP(totalGeneral);
+
+        let html = '';
+        Object.entries(totalesPorEmpresa).forEach(([empresa, monto]) => {
+            html += `<div><strong>${escapeHtml(empresa)}:</strong> ${fmtCLP(monto)}</div>`;
+        });
+
+        totalesEmpresaEl.innerHTML = html;
     }
 
     function upsertHiddenDocumento(id) {
@@ -166,9 +225,12 @@
 
             documentosSeleccionados[doc.id] = {
                 id: doc.id,
+                empresa: doc.empresa || '',
                 folio: doc.folio,
                 razon: doc.razon,
                 rut: doc.rut || '',
+                fechaDocto: doc.fechaDocto || '',
+                fechaVencimiento: doc.fechaVencimiento || '',
                 saldoInicial: Number(doc.saldo),
                 montoTotal: Number(doc.total),
                 operacion: 'pago',
@@ -197,6 +259,7 @@
         if (ids.length === 0) {
             alertaSin.classList.remove('d-none');
             btn.disabled = true;
+            renderTotales();
             return;
         }
 
@@ -214,15 +277,18 @@
             const tr = document.createElement('tr');
 
             tr.innerHTML = `
-                <td class="fw-semibold">${escapeHtml(doc.folio)}</td>
-                <td class="text-start">${escapeHtml(doc.razon)}</td>
+                <td>${escapeHtml(doc.empresa)}</td>
                 <td>${escapeHtml(doc.rut)}</td>
+                <td class="text-start">${escapeHtml(doc.razon)}</td>
+                <td class="fw-semibold">${escapeHtml(doc.folio)}</td>
+                <td>${escapeHtml(doc.fechaDocto)}</td>
+                <td>${escapeHtml(doc.fechaVencimiento)}</td>
                 <td class="text-end">${fmtCLP(doc.montoTotal)}</td>
 
                 <td>
                     <select class="form-select form-select-sm pm-op" data-id="${id}">
-                        <option value="pago" selected>Pago total</option>
-                        <option value="abono">Abono</option>
+                        <option value="pago" ${doc.operacion === 'pago' ? 'selected' : ''}>Pago total</option>
+                        <option value="abono" ${doc.operacion === 'abono' ? 'selected' : ''}>Abono</option>
                     </select>
                 </td>
 
@@ -234,7 +300,7 @@
                         max="${doc.saldoInicial}"
                         step="1"
                         value="${doc.monto}"
-                        disabled
+                        ${doc.operacion === 'pago' ? 'disabled' : ''}
                     >
                 </td>
 
@@ -249,12 +315,19 @@
 
             tbody.appendChild(tr);
         });
+
+        renderTotales();
     }
 
     function quitarDocumento(id) {
         // eliminar interno
         delete documentosSeleccionados[id];
         removeHiddenFor(id);
+
+        // actualizar localStorage también
+        const seleccion = JSON.parse(localStorage.getItem('documentosSeleccionados')) || {};
+        delete seleccion[id];
+        localStorage.setItem('documentosSeleccionados', JSON.stringify(seleccion));
 
         // desmarcar checkbox en tabla principal (si está visible)
         $$('.check-documento').forEach(cb => {
@@ -313,6 +386,9 @@
                 const inputMonto = modalEl.querySelector(`.pm-monto[data-id="${id}"]`);
                 if (!inputMonto) return;
 
+
+
+
                 if (op === 'pago') {
                     documentosSeleccionados[id].monto = documentosSeleccionados[id].saldoInicial;
                     inputMonto.value = documentosSeleccionados[id].saldoInicial;
@@ -324,6 +400,14 @@
                     documentosSeleccionados[id].monto = v;
                     upsertHiddenMonto(id, v);
                 }
+
+                renderTotales();
+
+
+
+
+
+
             }
         });
 
@@ -345,6 +429,7 @@
 
             documentosSeleccionados[id].monto = v;
             upsertHiddenMonto(id, v);
+            renderTotales();
         });
 
         modalEl.addEventListener('click', (e) => {

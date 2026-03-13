@@ -525,9 +525,12 @@
                                                 class="check-documento"
                                                 value="{{ $doc->id }}"
                                                 data-id="{{ $doc->id }}"
+                                                data-empresa="{{ $doc->empresa?->Nombre ?? '' }}"
                                                 data-folio="{{ $doc->folio }}"
                                                 data-razon="{{ $doc->razon_social }}"
                                                 data-rut="{{ $doc->rut_proveedor }}"
+                                                data-fecha-docto="{{ $doc->fecha_docto ? \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') : '' }}"
+                                                data-fecha-vencimiento="{{ $doc->fecha_vencimiento ? \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') : '' }}"
                                                 data-saldo="{{ $doc->saldo_pendiente }}"
                                                 data-total="{{ $doc->monto_total }}"
                                             >
@@ -662,9 +665,12 @@
 
             seleccion[id] = {
                 id: id,
+                empresa: cb.dataset.empresa || '',
                 folio: cb.dataset.folio,
                 razon: cb.dataset.razon,
                 rut: cb.dataset.rut || '',
+                fechaDocto: cb.dataset.fechaDocto || '',
+                fechaVencimiento: cb.dataset.fechaVencimiento || '',
                 saldo: Number(cb.dataset.saldo),
                 total: Number(cb.dataset.total)
             };
