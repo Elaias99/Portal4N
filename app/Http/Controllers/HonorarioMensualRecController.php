@@ -420,17 +420,6 @@ class HonorarioMensualRecController extends Controller
                 ? CobranzaCompra::where('rut_cliente', $rutEmisor)->first()
                 : null;
 
-            if (!$cobranza) {
-                Log::warning('HONORARIO SIN PROVEEDOR DETECTADO', [
-                    'empresa_id' => $empresaId,
-                    'rut_emisor' => $rutEmisor,
-                    'folio' => $r['folio'] ?? null,
-                    'anio' => $meta['anio'] ?? null,
-                    'mes' => $meta['mes'] ?? null,
-                ]);
-            }
-
-
             // =========================
             // ESTADO FINANCIERO INICIAL + FECHA VENCIMIENTO
             // =========================
@@ -456,6 +445,16 @@ class HonorarioMensualRecController extends Controller
             }
 
 
+            // =========================
+            // REGLA: DOCUMENTO NULA => SALDO PENDIENTE 0
+            // =========================
+            $estadoDocumento = $r['estado'] ?? null;
+
+            $saldoPendienteInicial = $estadoDocumento === 'NULA'
+                ? 0
+                : (int) ($r['monto_pagado'] ?? 0);
+
+
                     $honorario = HonorarioMensualRec::where([
                         'empresa_id'        => $empresaId,
                         'rut_contribuyente' => $meta['rut_contribuyente'],
@@ -466,19 +465,6 @@ class HonorarioMensualRecController extends Controller
                     ])->first();
 
                     if ($honorario) {
-
-
-                    Log::info('ACTUALIZANDO HONORARIO EXISTENTE', [
-                        'folio' => $r['folio'],
-                        'rut_emisor' => $rutEmisor,
-                        'cobranza_compra_id' => $cobranza?->id,
-                    ]);
-
-
-
-
-
-
 
                         //  EXISTE → solo actualizar datos SII
                         $honorario->update([
@@ -500,6 +486,13 @@ class HonorarioMensualRecController extends Controller
                             // estado_financiero
                             // servicio_manual
                         ]);
+
+                        // Si el documento viene NULA desde SII, forzar saldo pendiente a 0
+                        if ($estadoDocumento === 'NULA' && (int) $honorario->saldo_pendiente !== 0) {
+                            $honorario->update([
+                                'saldo_pendiente' => 0,
+                            ]);
+                        }
 
                     } else {
 
@@ -532,8 +525,8 @@ class HonorarioMensualRecController extends Controller
                             'monto_retenido' => $r['monto_retenido'],
                             'monto_pagado'   => $r['monto_pagado'],
 
-            
-                            'saldo_pendiente'           => $r['monto_pagado'],
+                            // Si el documento viene NULA desde SII, forzar saldo pendiente a 0
+                            'saldo_pendiente'           => $saldoPendienteInicial,
                             'estado_financiero_inicial' => $estadoFinancieroInicial,
                             'fecha_vencimiento'         => $fechaVencimiento,
 

@@ -3,12 +3,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================
     // ELEMENTOS BASE
     // =========================
-    const checkAll        = document.getElementById('check-all-honorarios');
-    const modal           = document.getElementById('modalPagoMasivo');
-    const inputsWrap      = document.getElementById('inputs-honorarios-seleccionados');
-    const bloqueBuscador  = document.getElementById('bloque-buscador');
-    const bloqueResumen   = document.getElementById('honorarios-seleccionados');
-    const btnPagar        = document.getElementById('btn-pagar-seleccionados');
+    const checkAll            = document.getElementById('check-all-honorarios');
+    const modal               = document.getElementById('modalPagoMasivo');
+    const inputsWrap          = document.getElementById('inputs-honorarios-seleccionados');
+    const bloqueBuscador      = document.getElementById('bloque-buscador');
+    const bloqueResumen       = document.getElementById('honorarios-seleccionados');
+    const btnPagar            = document.getElementById('btn-pagar-seleccionados');
+    const totalPagoWrap       = document.getElementById('total-pago-masivo');
+    const empresaTotalesWrap  = document.getElementById('empresa-totales-pago-masivo');
 
     if (
         !checkAll ||
@@ -16,7 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
         !inputsWrap ||
         !bloqueBuscador ||
         !bloqueResumen ||
-        !btnPagar
+        !btnPagar ||
+        !totalPagoWrap ||
+        !empresaTotalesWrap
     ) {
         return;
     }
@@ -52,6 +56,75 @@ document.addEventListener('DOMContentLoaded', () => {
     const seleccionados = loadSeleccionados();
 
     // =========================
+    // FUNCIÓN: RENDER DEL MODAL
+    // =========================
+    function renderPagoMasivoSeleccionados() {
+        inputsWrap.innerHTML = '';
+        bloqueResumen.innerHTML = '';
+        empresaTotalesWrap.innerHTML = '';
+
+        let total = 0;
+        const totalesPorEmpresa = new Map();
+
+        seleccionados.forEach(h => {
+            const monto = Number(h.monto || 0);
+            const empresa = h.empresa || 'Sin empresa';
+
+            total += monto;
+
+            if (!totalesPorEmpresa.has(empresa)) {
+                totalesPorEmpresa.set(empresa, 0);
+            }
+
+            totalesPorEmpresa.set(
+                empresa,
+                totalesPorEmpresa.get(empresa) + monto
+            );
+
+            const tr = document.createElement('tr');
+
+            tr.innerHTML = `
+                <td>${h.empresa || ''}</td>
+                <td>${h.rut || ''}</td>
+                <td>${h.emisor || ''}</td>
+                <td>${h.folio || ''}</td>
+                <td>${h.fecha_emision || ''}</td>
+                <td>${h.fecha_vencimiento || ''}</td>
+                <td class="text-end">${monto.toLocaleString('es-CL')}</td>
+                <td class="text-center">
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger btn-quitar-honorario-modal"
+                            data-id="${h.id}">
+                        ×
+                    </button>
+                </td>
+            `;
+
+            bloqueResumen.appendChild(tr);
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'honorarios[]';
+            input.value = h.id;
+
+            inputsWrap.appendChild(input);
+        });
+
+        totalPagoWrap.textContent = '$' + total.toLocaleString('es-CL');
+
+        let htmlTotalesEmpresa = '';
+        totalesPorEmpresa.forEach((monto, empresa) => {
+            htmlTotalesEmpresa += `
+                <div>
+                    <strong>${empresa}:</strong> $${monto.toLocaleString('es-CL')}
+                </div>
+            `;
+        });
+
+        empresaTotalesWrap.innerHTML = htmlTotalesEmpresa;
+    }
+
+    // =========================
     // REHIDRATAR CHECKBOXES
     // =========================
     document.querySelectorAll('.chk-honorario').forEach(chk => {
@@ -64,7 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // CHECKBOXES INDIVIDUALES
     // =========================
     document.addEventListener('change', (e) => {
-
         const chk = e.target.closest('.chk-honorario');
         if (!chk) return;
 
@@ -73,9 +145,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (chk.checked) {
             seleccionados.set(id, {
                 id: id,
-                folio: chk.dataset.folio,
+                empresa: chk.dataset.empresa,
                 rut: chk.dataset.rut,
                 emisor: chk.dataset.emisor,
+                folio: chk.dataset.folio,
+                fecha_emision: chk.dataset.fechaEmision,
+                fecha_vencimiento: chk.dataset.fechaVencimiento,
+                monto: chk.dataset.monto,
                 saldo: chk.dataset.saldo,
             });
         } else {
@@ -90,7 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // CHECKBOX "SELECCIONAR TODOS"
     // =========================
     checkAll.addEventListener('change', () => {
-
         const checks = document.querySelectorAll('.chk-honorario:not(:disabled)');
 
         seleccionados.clear();
@@ -100,11 +175,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (checkAll.checked) {
                 const id = chk.value;
+
                 seleccionados.set(id, {
                     id: id,
-                    folio: chk.dataset.folio,
+                    empresa: chk.dataset.empresa,
                     rut: chk.dataset.rut,
                     emisor: chk.dataset.emisor,
+                    folio: chk.dataset.folio,
+                    fecha_emision: chk.dataset.fechaEmision,
+                    fecha_vencimiento: chk.dataset.fechaVencimiento,
+                    monto: chk.dataset.monto,
                     saldo: chk.dataset.saldo,
                 });
             }
@@ -117,7 +197,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // BOTÓN PAGAR (ABRE MODAL)
     // =========================
     btnPagar.addEventListener('click', () => {
-
         if (seleccionados.size === 0) {
             alert('Debes seleccionar al menos un honorario.');
             return;
@@ -127,37 +206,39 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =========================
-    // AL ABRIR MODAL: PREPARAR RESUMEN
+    // AL ABRIR MODAL
     // =========================
     $('#modalPagoMasivo').on('show.bs.modal', function () {
-
-        inputsWrap.innerHTML = '';
-        bloqueResumen.innerHTML = '';
-
-        // Ocultar buscador (modo tabla)
         bloqueBuscador.style.display = 'none';
+        renderPagoMasivoSeleccionados();
+    });
 
-        seleccionados.forEach(h => {
+    // =========================
+    // QUITAR HONORARIO DESDE MODAL
+    // =========================
+    document.addEventListener('click', (e) => {
+        const btnQuitar = e.target.closest('.btn-quitar-honorario-modal');
+        if (!btnQuitar) return;
 
-            const div = document.createElement('div');
-            div.className = 'border rounded p-2 mb-2 bg-light';
+        const id = btnQuitar.dataset.id;
+        if (!id) return;
 
-            div.innerHTML = `
-                <div><strong>Folio:</strong> ${h.folio}</div>
-                <div><strong>RUT:</strong> ${h.rut}</div>
-                <div><strong>Emisor:</strong> ${h.emisor}</div>
-                <div><strong>Saldo:</strong> ${h.saldo}</div>
-            `;
+        seleccionados.delete(id);
+        saveSeleccionados(seleccionados);
 
-            bloqueResumen.appendChild(div);
+        const chkTabla = document.querySelector(`.chk-honorario[value="${id}"]`);
+        if (chkTabla) {
+            chkTabla.checked = false;
+        }
 
-            const input = document.createElement('input');
-            input.type  = 'hidden';
-            input.name  = 'honorarios[]';
-            input.value = h.id;
+        if (seleccionados.size === 0) {
+            checkAll.checked = false;
+            $('#modalPagoMasivo').modal('hide');
+            return;
+        }
 
-            inputsWrap.appendChild(input);
-        });
+        checkAll.checked = false;
+        renderPagoMasivoSeleccionados();
     });
 
     // =========================
@@ -166,22 +247,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let pagoMasivoConfirmado = false;
 
     $('#modalPagoMasivo').on('hidden.bs.modal', function () {
-    bloqueBuscador.style.display = '';
-    inputsWrap.innerHTML = '';
-    bloqueResumen.innerHTML = '';
+        bloqueBuscador.style.display = '';
+        inputsWrap.innerHTML = '';
+        bloqueResumen.innerHTML = '';
+        totalPagoWrap.textContent = '$0';
+        empresaTotalesWrap.innerHTML = '';
 
-    // solo recargar si NO fue confirmado (cerrado manual)
-    if (!pagoMasivoConfirmado) {
+        if (pagoMasivoConfirmado) {
+            location.reload();
+            return;
+        }
+
         sessionStorage.removeItem('honorarios_seleccionados');
         location.reload();
-    }
-
-    // reset
-    pagoMasivoConfirmado = false;
     });
-
-
-
 
     // =========================
     // SUBMIT PAGO MASIVO (AJAX + descargas múltiples)
@@ -189,79 +268,62 @@ document.addEventListener('DOMContentLoaded', () => {
     const formPagoMasivo = document.getElementById('form-pago-masivo');
 
     if (formPagoMasivo) {
-    formPagoMasivo.addEventListener('submit', (e) => {
-        e.preventDefault();
+        formPagoMasivo.addEventListener('submit', (e) => {
+            e.preventDefault();
 
-        const submitBtn = formPagoMasivo.querySelector('button[type="submit"]');
-        if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Procesando...';
-        }
-
-        const formData = new FormData(formPagoMasivo);
-
-        fetch(formPagoMasivo.action, {
-        method: 'POST',
-        body: formData,
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(res => {
-            if (!res.ok) throw new Error('Error registrando pago masivo');
-            return res.json();
-        })
-        .then(data => {
-            if (!data || data.ok !== true) throw new Error('Respuesta inválida');
-
-            console.log('Respuesta pago masivo:', data);
-            console.log('Cantidad de descargas:', data.downloads.length);
-
-            // disparar descargas
-            if (Array.isArray(data.downloads)) {
-
-
-                data.downloads.forEach((item, index) => {
-                    setTimeout(() => {
-
-                        const link = document.createElement('a');
-                        link.href = item.url;
-                        link.download = '';
-                        document.body.appendChild(link);
-                        link.click();
-                        link.remove();
-
-                    }, index * 800);
-                });
-
-
-            }
-
-
-
-            // limpiar selección y cerrar modal
-            clearSeleccionados(); // usa tu helper existente
-            $('#modalPagoMasivo').modal('hide');
-
+            const submitBtn = formPagoMasivo.querySelector('button[type="submit"]');
             if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Confirmar pago masivo';
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Procesando...';
             }
-        })
-        .catch(err => {
-            alert(err?.message || 'Error procesando pago masivo');
 
-            if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Confirmar pago masivo';
-            }
+            const formData = new FormData(formPagoMasivo);
+
+            fetch(formPagoMasivo.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Error registrando pago masivo');
+                return res.json();
+            })
+            .then(data => {
+                if (!data || data.ok !== true) throw new Error('Respuesta inválida');
+
+                if (Array.isArray(data.downloads)) {
+                    data.downloads.forEach((item, index) => {
+                        setTimeout(() => {
+                            const link = document.createElement('a');
+                            link.href = item.url;
+                            link.download = '';
+                            document.body.appendChild(link);
+                            link.click();
+                            link.remove();
+                        }, index * 800);
+                    });
+                }
+
+                pagoMasivoConfirmado = true;
+                clearSeleccionados();
+
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Pago registrado';
+                }
+            })
+            .catch(err => {
+                alert(err?.message || 'Error procesando pago masivo');
+
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Confirmar pago masivo';
+                }
+            });
         });
-    });
     }
 
-
 });
-
-
-
 
 document.addEventListener('DOMContentLoaded', () => {
 

@@ -641,15 +641,24 @@
                                 <td class="hm-nowrap text-center 
                                 {{ ($r->pagoProgramado && $saldoPendiente > 0 && $r->pagos->isEmpty() && $r->prontoPagos->isEmpty()) ? 'hm-programado' : '' }}">
 
-                                    @if($saldoPendiente > 0)
+                                    @if($saldoPendiente > 0 && $r->estado !== 'NULA')
+
+
                                         <input type="checkbox"
                                             class="chk-honorario"
                                             value="{{ $r->id }}"
                                             data-id="{{ $r->id }}"
-                                            data-folio="{{ $r->folio }}"
+                                            data-empresa="{{ $r->empresa->Nombre }}"
                                             data-rut="{{ $r->rut_emisor }}"
                                             data-emisor="{{ $r->razon_social_emisor }}"
+                                            data-folio="{{ $r->folio }}"
+                                            data-fecha-emision="{{ $r->fecha_emision?->format('Y-m-d') }}"
+                                            data-fecha-vencimiento="{{ $r->fecha_vencimiento?->format('Y-m-d') }}"
+                                            data-monto="{{ $montoPagado }}"
                                             data-saldo="{{ $saldoPendiente }}">
+
+
+
                                     @else
                                         <input type="checkbox" disabled>
                                     @endif

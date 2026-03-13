@@ -68,9 +68,24 @@
                                 Honorarios que quedarán como pagados
                             </label>
 
-                            <div id="honorarios-seleccionados"
-                                 class="border rounded p-2"
-                                 style="min-height: 120px;">
+                            <div class="table-responsive border rounded">
+                                <table class="table table-sm table-bordered align-middle mb-0">
+
+
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Empresa</th>
+                                            <th>Rut</th>
+                                            <th>Emisión</th>
+                                            <th>Folio</th>
+                                            <th>Fecha Emisión</th>
+                                            <th>Fecha Vencimiento</th>
+                                            <th class="text-end">Monto</th>
+                                            <th class="text-center">Quitar</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="honorarios-seleccionados"></tbody>
+                                </table>
                             </div>
                         </div>
 
@@ -100,21 +115,37 @@
                 {{-- =========================
                     FOOTER
                 ========================== --}}
-                <div class="modal-footer">
-                    <button type="button"
-                            class="btn btn-secondary"
-                            data-bs-dismiss="modal">
-                        Cancelar
-                    </button>
+                <div class="modal-footer d-flex justify-content-between align-items-end">
+                    <div>
+                        <div class="fw-semibold mb-1">
+                            Total a pagar:
+                            <span id="total-pago-masivo">$0</span>
+                        </div>
 
-                    <button type="submit"
-                            class="btn btn-success">
-                        Confirmar pago masivo
-                    </button>
+                        <div id="empresa-totales-pago-masivo" class="small text-muted"></div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-success">
+                            Confirmar pago masivo
+                        </button>
+                    </div>
                 </div>
 
             </form>
 
         </div>
     </div>
+
+
+
+
+    
 </div>
