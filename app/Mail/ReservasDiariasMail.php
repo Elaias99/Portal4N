@@ -27,7 +27,7 @@ class ReservasDiariasMail extends Mailable
 
     public function envelope(): Envelope
     {
-        $fecha = Carbon::now()->format('d-m-Y');
+        $fecha = Carbon::tomorrow()->format('d-m-Y');
 
         return new Envelope(
             subject: "Reservas LATAM 4NLOGISTICA SPA $fecha",
