@@ -27,6 +27,64 @@
     <link rel="dns-prefetch" href="//fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+    <style>
+        .page-loader{
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(17,24,39,.35);
+            z-index: 9999;
+            padding: 18px;
+        }
+
+        .page-loader.is-visible{
+            display: flex;
+        }
+
+        .page-loader__card{
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,.18);
+            max-width: 360px;
+            width: 100%;
+        }
+
+        .page-loader__spinner{
+            width: 36px;
+            height: 36px;
+            border-radius: 999px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #2563eb;
+            animation: spin .9s linear infinite;
+            flex: 0 0 auto;
+        }
+
+        .page-loader__title{
+            font-weight: 900;
+            font-size: 16px;
+            color: #111827;
+            margin: 0;
+        }
+
+        .page-loader__subtitle{
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
     
 
     @vite([
@@ -41,6 +99,19 @@
 </head>
 <body>
     <div id="app">
+
+
+        <div id="pageLoader" class="page-loader" aria-hidden="true">
+            <div class="page-loader__card" role="status" aria-live="polite" aria-label="Cargando">
+                <div class="page-loader__spinner"></div>
+                <div>
+                    <div class="page-loader__title">Cargando…</div>
+                    <div class="page-loader__subtitle">Por favor espera</div>
+                </div>
+            </div>
+        </div>
+
+
         <nav class="navbar navbar-expand-md navbar-dark">
             <div class="container">
                 <!-- Off-canvas Sidebar Menu Button (only for roles admin and jefe) -->
@@ -385,10 +456,6 @@
 
 
 
-
-    @stack('scripts')
-    @livewireScripts
-
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
@@ -396,6 +463,156 @@
             .catch(err => console.error('Error al registrar Service Worker', err));
         }
     </script>
+
+
+    <script>
+        (function () {
+            const loader = document.getElementById('pageLoader');
+            if (!loader) return;
+
+            let visibleCount = 0;
+            let safetyTimer = null;
+
+            const render = () => {
+                if (visibleCount > 0) {
+                    loader.classList.add('is-visible');
+                    loader.setAttribute('aria-hidden', 'false');
+                } else {
+                    loader.classList.remove('is-visible');
+                    loader.setAttribute('aria-hidden', 'true');
+                }
+            };
+
+            const clearSafety = () => {
+                if (safetyTimer) {
+                    clearTimeout(safetyTimer);
+                    safetyTimer = null;
+                }
+            };
+
+            const startSafety = () => {
+                clearSafety();
+                safetyTimer = setTimeout(() => {
+                    visibleCount = 0;
+                    render();
+                }, 15000);
+            };
+
+            const show = () => {
+                visibleCount++;
+                render();
+                startSafety();
+            };
+
+            const hide = () => {
+                if (visibleCount > 0) {
+                    visibleCount--;
+                }
+                if (visibleCount === 0) {
+                    clearSafety();
+                }
+                render();
+            };
+
+            const forceHide = () => {
+                visibleCount = 0;
+                clearSafety();
+                render();
+            };
+
+            window.pageLoader = { show, hide, forceHide };
+
+            // Formularios normales
+            document.addEventListener('submit', (e) => {
+                const form = e.target;
+                if (!(form instanceof HTMLFormElement)) return;
+                if (form.hasAttribute('data-no-loader')) return;
+
+                show();
+
+                const submits = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+                submits.forEach(btn => btn.disabled = true);
+            }, true);
+
+            // Links internos normales
+            document.addEventListener('click', (e) => {
+                const a = e.target.closest('a');
+                if (!a) return;
+
+                if (a.hasAttribute('data-no-loader')) return;
+                if (a.hasAttribute('download')) return;
+                if (a.target && a.target !== '_self') return;
+                if (a.hasAttribute('data-bs-toggle')) return;
+
+                const href = a.getAttribute('href');
+                if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('blob:')) return;
+
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+
+                try {
+                    const url = new URL(href, window.location.href);
+                    if (url.origin !== window.location.origin) return;
+                } catch (_) {
+                    return;
+                }
+
+                show();
+            }, true);
+
+            // Interceptor global para fetch
+            const nativeFetch = window.fetch;
+            if (nativeFetch) {
+                window.fetch = async function (...args) {
+                    const [, init = {}] = args;
+                    const headers = new Headers(init.headers || {});
+                    const skipLoader = headers.get('X-No-Loader') === '1';
+
+                    if (!skipLoader) show();
+
+                    try {
+                        return await nativeFetch.apply(this, args);
+                    } finally {
+                        if (!skipLoader) {
+                            setTimeout(() => hide(), 250);
+                        }
+                    }
+                };
+            }
+
+            // Si usas jQuery AJAX en otras partes
+            if (window.jQuery) {
+                $(document).ajaxStart(() => show());
+                $(document).ajaxStop(() => hide());
+            }
+
+            // Failsafes globales
+            window.addEventListener('pageshow', () => forceHide());
+            window.addEventListener('focus', () => forceHide());
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    forceHide();
+                }
+            });
+
+            // Si se cierra cualquier modal, ocultar loader
+            document.addEventListener('hidden.bs.modal', () => {
+                forceHide();
+            });
+        })();
+    </script>
+
+
+
+
+    @stack('scripts')
+    @livewireScripts
+
+
+
+
+
+
+
 
 </body>
 </html>
