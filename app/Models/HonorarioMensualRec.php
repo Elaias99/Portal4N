@@ -41,6 +41,9 @@ class HonorarioMensualRec extends Model
         'servicio_manual',
 
 
+        'tipo_boleta',
+
+
     ];
 
     protected $casts = [

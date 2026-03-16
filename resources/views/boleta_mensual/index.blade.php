@@ -604,6 +604,7 @@
                                 <input type="checkbox" id="check-all-honorarios">
                             </th>
                             <th class="hm-nowrap">Empresa</th>
+                            <th class="hm-nowrap">Tipo boleta</th>
                             <th class="hm-nowrap">Estado</th>
                             <th class="hm-nowrap">RUT</th>
                             <th class="hm-nowrap">Emisor</th>
@@ -672,6 +673,23 @@
                                         {{ $r->empresa->Nombre }}
                                     </span>
                                 </td>
+
+
+
+                                {{-- Tipo boleta --}}
+                                <td class="hm-nowrap">
+                                    @if($r->tipo_boleta === 'Boleta de Terceros')
+                                        <span class="hm-chip hm-chip-info">
+                                            {{ $r->tipo_boleta }}
+                                        </span>
+                                    @else
+                                        <span class="hm-chip hm-chip-ok">
+                                            {{ $r->tipo_boleta ?? 'Boleta Honorario' }}
+                                        </span>
+                                    @endif
+                                </td>
+
+
 
                                 {{-- Estado --}}
                                 <td class="hm-nowrap">

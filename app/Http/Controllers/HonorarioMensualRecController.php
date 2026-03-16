@@ -21,7 +21,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\HonorariosPagoMasivoExport;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
-use ZipArchive;
+use App\Services\Sii\HonorarioMensualTerceroRecParser;
 use App\Exports\ExportHonorarioMensual;
 use App\Models\HonorarioPagoProgramado;
 
@@ -292,21 +292,79 @@ class HonorarioMensualRecController extends Controller
             'archivo' => 'required|file',
         ]);
 
-        $parser = new HonorarioMensualRecParser(
-            $request->file('archivo')
+        $archivo = $request->file('archivo');
+
+        $contenido = mb_convert_encoding(
+            file_get_contents($archivo->getRealPath()),
+            'UTF-8',
+            ['ISO-8859-1', 'Windows-1252', 'UTF-8']
         );
+
+        $esBoletaTerceros =
+            Str::contains($contenido, 'Total Boletas') &&
+            Str::contains($contenido, 'Receptor') &&
+            (
+                Str::contains($contenido, 'Emisi&oacute;n') ||
+                Str::contains($contenido, 'Emisión')
+            );
+
+        $parser = $esBoletaTerceros
+            ? new HonorarioMensualTerceroRecParser($archivo)
+            : new HonorarioMensualRecParser($archivo);
 
         $preview = $parser->parse();
 
+        if (empty($preview['tipo_boleta'])) {
+            $preview['tipo_boleta'] = 'Boleta Honorario';
+        }
+
         // =========================
-        // META DESDE SII
+        // FALLBACK META DESDE PRIMER REGISTRO
         // =========================
+        $primerRegistro = collect($preview['registros'])->first();
+
+        $preview['meta']['rut_contribuyente'] = $preview['meta']['rut_contribuyente']
+            ?? $primerRegistro['rut_contribuyente']
+            ?? null;
+
+        $preview['meta']['razon_social'] = $preview['meta']['razon_social']
+            ?? $primerRegistro['razon_social']
+            ?? null;
+
+        if (
+            empty($preview['meta']['anio']) ||
+            empty($preview['meta']['mes'])
+        ) {
+            $fechaMeta = $primerRegistro['fecha_emision'] ?? null;
+
+            if ($fechaMeta) {
+                $fechaCarbon = Carbon::parse($fechaMeta);
+
+                $preview['meta']['anio'] = $preview['meta']['anio'] ?? $fechaCarbon->year;
+                $preview['meta']['mes']  = $preview['meta']['mes'] ?? $fechaCarbon->month;
+            }
+        }
+
+        // =========================
+        // VALIDACIÓN META MÍNIMA
+        // =========================
+        if (empty($preview['meta']['rut_contribuyente'])) {
+            abort(422, 'No fue posible determinar el RUT contribuyente del archivo.');
+        }
+
+        if (empty($preview['meta']['razon_social'])) {
+            abort(422, 'No fue posible determinar la razón social del archivo.');
+        }
+
+        if (empty($preview['meta']['anio']) || empty($preview['meta']['mes'])) {
+            abort(422, 'No fue posible determinar el período del archivo.');
+        }
+
         // =========================
         // NORMALIZAR RUT CONTRIBUYENTE
         // =========================
         $rutArchivo = $preview['meta']['rut_contribuyente'];
 
-        // quitar todo excepto números y K
         $rutLimpio = strtoupper(
             preg_replace('/[^0-9K]/', '', $rutArchivo)
         );
@@ -320,11 +378,10 @@ class HonorarioMensualRecController extends Controller
         // BUSCAR EMPRESA
         // =========================
         $empresa = Empresa::where('rut', $rutFormateado)->first();
-        if (!$empresa) {
 
+        if (!$empresa) {
             abort(422, 'Empresa no encontrada para el RUT informado por el SII.');
         }
-
 
         // =========================
         // ADJUNTAR EMPRESA A PREVIEW
@@ -335,29 +392,23 @@ class HonorarioMensualRecController extends Controller
             'rut'    => $empresa->rut,
         ];
 
-
         // =========================
         // DETECTAR PROVEEDORES FALTANTES
         // =========================
-
-        // 1. Obtener RUTs únicos desde el archivo
         $rutsEmisores = collect($preview['registros'])
             ->pluck('rut_emisor')
             ->filter()
             ->unique()
             ->values();
 
-        // 2. Buscar cuáles existen en cobranza_compras
-        $rutsExistentes = \App\Models\CobranzaCompra::whereIn('rut_cliente', $rutsEmisores)
+        $rutsExistentes = CobranzaCompra::whereIn('rut_cliente', $rutsEmisores)
             ->pluck('rut_cliente')
             ->toArray();
 
-        // 3. Determinar faltantes
         $proveedoresFaltantes = $rutsEmisores
             ->reject(fn($rut) => in_array($rut, $rutsExistentes))
             ->values();
 
-        // 4. Armar estructura detallada para la vista
         $preview['proveedores_faltantes'] = $proveedoresFaltantes
             ->map(function ($rut) use ($preview) {
                 $registro = collect($preview['registros'])
@@ -380,7 +431,9 @@ class HonorarioMensualRecController extends Controller
         ];
 
         foreach ($preview['registros'] as $fila) {
-            if (($fila['estado'] ?? null) !== 'ANULADA') {
+            $estadoFila = mb_strtoupper(trim((string) ($fila['estado'] ?? '')));
+
+            if (!in_array($estadoFila, ['ANULADA', 'NULA'], true)) {
                 $totales['bruto']    += (int) ($fila['monto_bruto'] ?? 0);
                 $totales['retenido'] += (int) ($fila['monto_retenido'] ?? 0);
                 $totales['pagado']   += (int) ($fila['monto_pagado'] ?? 0);
@@ -388,7 +441,6 @@ class HonorarioMensualRecController extends Controller
         }
 
         $preview['totales'] = $totales;
-
 
         return redirect()
             ->route('honorarios.mensual.index')
@@ -403,17 +455,40 @@ class HonorarioMensualRecController extends Controller
             true
         );
 
-        $meta      = $data['meta'];
-        $registros = $data['registros'];
-        $empresaId = $data['empresa']['id'];
+        $tipoBoleta = $data['tipo_boleta'] ?? 'Boleta Honorario';
+        $meta       = $data['meta'] ?? [];
+        $registros  = $data['registros'] ?? [];
+        $empresaId  = $data['empresa']['id'] ?? null;
 
-        // =========================
-        // GUARDAR DETALLE (ÚNICA RELACIÓN CON EMPRESA)
-        // =========================
+        if (!$empresaId || empty($registros)) {
+            return redirect()
+                ->route('honorarios.mensual.index')
+                ->with('error', 'No hay información válida para guardar.');
+        }
 
         foreach ($registros as $r) {
 
             $rutEmisor = $r['rut_emisor'] ?? null;
+
+            $rutContribuyenteDocumento = $r['rut_contribuyente']
+                ?? $meta['rut_contribuyente']
+                ?? null;
+
+            $razonSocialDocumento = $r['razon_social']
+                ?? $meta['razon_social']
+                ?? null;
+
+            $anioDocumento = $meta['anio'] ?? null;
+            $mesDocumento  = $meta['mes'] ?? null;
+
+            if (
+                empty($rutContribuyenteDocumento) ||
+                empty($razonSocialDocumento) ||
+                empty($anioDocumento) ||
+                empty($mesDocumento)
+            ) {
+                continue;
+            }
 
             // Buscar proveedor en cobranza_compras
             $cobranza = $rutEmisor
@@ -428,12 +503,11 @@ class HonorarioMensualRecController extends Controller
 
             if ($cobranza && $cobranza->creditos !== null) {
 
-                $fechaEmision = $r['fecha_emision']
+                $fechaEmision = !empty($r['fecha_emision'])
                     ? Carbon::parse($r['fecha_emision'])
                     : null;
 
                 if ($fechaEmision) {
-
                     $fechaVencimiento = $fechaEmision
                         ->copy()
                         ->addDays((int) $cobranza->creditos);
@@ -444,119 +518,119 @@ class HonorarioMensualRecController extends Controller
                 }
             }
 
-
             // =========================
-            // REGLA: DOCUMENTO NULA => SALDO PENDIENTE 0
+            // REGLA: DOCUMENTO ANULADO/NULO => SALDO PENDIENTE 0
             // =========================
-            $estadoDocumento = $r['estado'] ?? null;
+            $estadoDocumento = mb_strtoupper(trim((string) ($r['estado'] ?? '')));
+            $documentoCerradoPorSii = in_array($estadoDocumento, ['NULA', 'ANULADA'], true);
 
-            $saldoPendienteInicial = $estadoDocumento === 'NULA'
+            $saldoPendienteInicial = $documentoCerradoPorSii
                 ? 0
                 : (int) ($r['monto_pagado'] ?? 0);
 
+            $honorario = HonorarioMensualRec::where([
+                'empresa_id'        => $empresaId,
+                'tipo_boleta'       => $tipoBoleta,
+                'rut_contribuyente' => $rutContribuyenteDocumento,
+                'anio'              => $anioDocumento,
+                'mes'               => $mesDocumento,
+                'rut_emisor'        => $rutEmisor,
+                'folio'             => $r['folio'],
+            ])->first();
 
-                    $honorario = HonorarioMensualRec::where([
-                        'empresa_id'        => $empresaId,
-                        'rut_contribuyente' => $meta['rut_contribuyente'],
-                        'anio'              => $meta['anio'],
-                        'mes'               => $meta['mes'],
-                        'rut_emisor'        => $rutEmisor,
-                        'folio'             => $r['folio'],
-                    ])->first();
+            if ($honorario) {
 
-                    if ($honorario) {
+                $honorario->update([
+                    'tipo_boleta'          => $tipoBoleta,
+                    'rut_contribuyente'    => $rutContribuyenteDocumento,
+                    'razon_social'         => $razonSocialDocumento,
+                    'fecha_emision'        => $r['fecha_emision'] ?? null,
+                    'estado'               => $r['estado'],
+                    'fecha_anulacion'      => $r['fecha_anulacion'] ?? null,
+                    'razon_social_emisor'  => $r['razon_social_emisor'],
+                    'sociedad_profesional' => $r['sociedad_profesional'] ?? 0,
 
-                        //  EXISTE → solo actualizar datos SII
-                        $honorario->update([
-                            'razon_social'         => $meta['razon_social'],
-                            'fecha_emision'        => $r['fecha_emision'],
-                            'estado'               => $r['estado'],
-                            'fecha_anulacion'      => $r['fecha_anulacion'],
-                            'razon_social_emisor'  => $r['razon_social_emisor'],
-                            'sociedad_profesional' => $r['sociedad_profesional'],
+                    'monto_bruto'    => $r['monto_bruto'],
+                    'monto_retenido' => $r['monto_retenido'],
+                    'monto_pagado'   => $r['monto_pagado'],
 
-                            'monto_bruto'    => $r['monto_bruto'],
-                            'monto_retenido' => $r['monto_retenido'],
-                            'monto_pagado'   => $r['monto_pagado'],
+                    'cobranza_compra_id' => $cobranza?->id,
+                ]);
 
-                            'cobranza_compra_id' => $cobranza?->id,
+                if ($documentoCerradoPorSii && (int) $honorario->saldo_pendiente !== 0) {
+                    $honorario->update([
+                        'saldo_pendiente' => 0,
+                    ]);
+                }
 
-                            //  NO tocar:
-                            // saldo_pendiente
-                            // estado_financiero
-                            // servicio_manual
-                        ]);
+            } else {
 
-                        // Si el documento viene NULA desde SII, forzar saldo pendiente a 0
-                        if ($estadoDocumento === 'NULA' && (int) $honorario->saldo_pendiente !== 0) {
-                            $honorario->update([
-                                'saldo_pendiente' => 0,
-                            ]);
-                        }
+                Log::info('CREANDO HONORARIO', [
+                    'tipo_boleta' => $tipoBoleta,
+                    'folio' => $r['folio'],
+                    'rut_contribuyente' => $rutContribuyenteDocumento,
+                    'razon_social' => $razonSocialDocumento,
+                    'rut_emisor' => $rutEmisor,
+                    'cobranza_compra_id' => $cobranza?->id,
+                    'estado_financiero_inicial' => $estadoFinancieroInicial,
+                    'fecha_vencimiento' => $fechaVencimiento,
+                ]);
 
-                    } else {
+                HonorarioMensualRec::create([
+                    'empresa_id'        => $empresaId,
+                    'tipo_boleta'       => $tipoBoleta,
+                    'rut_contribuyente' => $rutContribuyenteDocumento,
+                    'anio'              => $anioDocumento,
+                    'mes'               => $mesDocumento,
+                    'rut_emisor'        => $rutEmisor,
+                    'folio'             => $r['folio'],
 
-                        Log::info('CREANDO HONORARIO', [
-                            'folio' => $r['folio'],
-                            'rut_emisor' => $rutEmisor,
-                            'cobranza_compra_id' => $cobranza?->id,
-                            'estado_financiero_inicial' => $estadoFinancieroInicial,
-                            'fecha_vencimiento' => $fechaVencimiento,
-                        ]);
+                    'razon_social'         => $razonSocialDocumento,
+                    'fecha_emision'        => $r['fecha_emision'] ?? null,
+                    'estado'               => $r['estado'],
+                    'fecha_anulacion'      => $r['fecha_anulacion'] ?? null,
+                    'razon_social_emisor'  => $r['razon_social_emisor'],
+                    'sociedad_profesional' => $r['sociedad_profesional'] ?? 0,
 
+                    'monto_bruto'    => $r['monto_bruto'],
+                    'monto_retenido' => $r['monto_retenido'],
+                    'monto_pagado'   => $r['monto_pagado'],
 
-                        //  NUEVO → inicializar capa financiera
-                        HonorarioMensualRec::create([
-                            'empresa_id'        => $empresaId,
-                            'rut_contribuyente' => $meta['rut_contribuyente'],
-                            'anio'              => $meta['anio'],
-                            'mes'               => $meta['mes'],
-                            'rut_emisor'        => $rutEmisor,
-                            'folio'             => $r['folio'],
+                    'saldo_pendiente'           => $saldoPendienteInicial,
+                    'estado_financiero_inicial' => $estadoFinancieroInicial,
+                    'fecha_vencimiento'         => $fechaVencimiento,
 
-                            'razon_social'         => $meta['razon_social'],
-                            'fecha_emision'        => $r['fecha_emision'],
-                            'estado'               => $r['estado'],
-                            'fecha_anulacion'      => $r['fecha_anulacion'],
-                            'razon_social_emisor'  => $r['razon_social_emisor'],
-                            'sociedad_profesional' => $r['sociedad_profesional'],
-
-                            'monto_bruto'    => $r['monto_bruto'],
-                            'monto_retenido' => $r['monto_retenido'],
-                            'monto_pagado'   => $r['monto_pagado'],
-
-                            // Si el documento viene NULA desde SII, forzar saldo pendiente a 0
-                            'saldo_pendiente'           => $saldoPendienteInicial,
-                            'estado_financiero_inicial' => $estadoFinancieroInicial,
-                            'fecha_vencimiento'         => $fechaVencimiento,
-
-                            'cobranza_compra_id' => $cobranza?->id,
-                        ]);
-                    }
-
-
+                    'cobranza_compra_id' => $cobranza?->id,
+                ]);
+            }
         }
 
-
-
         // =========================
-        // GUARDAR TOTALES (SIN empresa_id)
+        // GUARDAR TOTALES
         // =========================
         if (!empty($data['totales'])) {
 
-            HonorarioMensualRecTotal::updateOrCreate(
-                [
-                    'rut_contribuyente' => $meta['rut_contribuyente'],
-                    'anio'              => $meta['anio'],
-                    'mes'               => $meta['mes'],
-                ],
-                [
-                    'razon_social'   => $meta['razon_social'],
-                    'monto_bruto'    => $data['totales']['bruto'],
-                    'monto_retenido' => $data['totales']['retenido'],
-                    'monto_pagado'   => $data['totales']['pagado'],
-                ]
-            );
+            $rutContribuyenteTotal = $meta['rut_contribuyente']
+                ?? collect($registros)->pluck('rut_contribuyente')->filter()->first();
+
+            $razonSocialTotal = $meta['razon_social']
+                ?? collect($registros)->pluck('razon_social')->filter()->first();
+
+            if ($rutContribuyenteTotal && $anioDocumento && $mesDocumento) {
+                HonorarioMensualRecTotal::updateOrCreate(
+                    [
+                        'rut_contribuyente' => $rutContribuyenteTotal,
+                        'anio'              => $anioDocumento,
+                        'mes'               => $mesDocumento,
+                    ],
+                    [
+                        'razon_social'   => $razonSocialTotal,
+                        'monto_bruto'    => $data['totales']['bruto'],
+                        'monto_retenido' => $data['totales']['retenido'],
+                        'monto_pagado'   => $data['totales']['pagado'],
+                    ]
+                );
+            }
         }
 
         return redirect()
