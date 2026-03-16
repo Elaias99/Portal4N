@@ -11,84 +11,28 @@
 </style>
 
     {{-- Mensajes de estado --}}
-    {{-- ÉXITO --}}
-    @if(session('success'))
-        <div class="alert alert-success custom-alert mx-auto shadow-sm" style="max-width:100%; border-left:5px solid #28a745; border-radius:10px; padding:12px 16px;">
-            <div class="d-flex align-items-center">
-                <i class="bi bi-check-circle-fill text-success me-2"></i>
-                <div><strong>Éxito:</strong> {{ session('success') }}</div>
-            </div>
-        </div>
-    @endif
-
-    {{-- ADVERTENCIA --}}
-    @if(session('warning'))
-        <div class="alert alert-warning custom-alert mx-auto shadow-sm" style="max-width:100%; border-left:5px solid #ffc107; border-radius:10px; padding:12px 16px;">
-            <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between">
-                <div class="d-flex align-items-center mb-2 mb-md-0">
-                    <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
-                    <div><strong>Atención:</strong> {{ session('warning') }}</div>
-                </div>
-
-                @if(session('detalles_errores'))
-                    <button class="btn btn-link btn-sm p-0 text-decoration-none text-warning"
-                            type="button"
-                            data-toggle="collapse"
-                            data-target="#detallesErrores"
-                            aria-expanded="false"
-                            aria-controls="detallesErrores">
-                        <i class="bi bi-caret-down-fill"></i> Ver detalles
-                    </button>
-                @endif
-            </div>
-
-            @if(session('detalles_errores'))
-                <div id="detallesErrores" class="collapse mt-2">
-                    <div class="error-list border-top pt-2"
-                        style="max-height:180px; overflow-y:auto; background:#fffef5; border-radius:8px; padding:8px 10px;">
-                        <ul class="small mb-0 ps-3" style="list-style-type:'⚠️ '; line-height:1.4;">
-                            @foreach (session('detalles_errores') as $error)
-                                <li class="mb-1">Folio duplicado: {{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                </div>
-            @endif
-        </div>
-    @endif
-
-    {{-- ERROR --}}
-    @if(session('error'))
-        <div class="alert alert-danger custom-alert mx-auto shadow-sm" style="max-width:100%; border-left:5px solid #dc3545; border-radius:10px; padding:12px 16px;">
-            <div class="d-flex align-items-center">
-                <i class="bi bi-x-circle-fill text-danger me-2"></i>
-                <div><strong>Error:</strong> {{ session('error') }}</div>
-            </div>
-        </div>
-    @endif
+    <x-finanzas.flash-messages />
 
 
     {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
     {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
     {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
     {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
-<div class="container" style="max-width: 100%;">
-    {{-- Volver --}}
-    <div class="mb-3">
-        <a href="{{ route('cobranzas.general') }}" class="btn btn-outline-secondary btn-sm">
-            <i class="fa fa-arrow-left"></i> Volver al Panel Principal
-        </a>
-    </div>
+    <div class="container" style="max-width: 100%;">
 
-    <h1 class="text-center mb-4">Reporte Cuentas por Pagar</h1>
+        {{-- Volver --}}
+        <x-finanzas.header
+            :back-route="route('cobranzas.general')"
+            title="Reporte Cuentas por Pagar"
+        />
 
-    {{-- === FILTROS + GESTIÓN MASIVA === --}}
-    <div class="d-flex justify-content-between align-items-start gap-3 mb-4" style="align-items: stretch;">
 
-        {{-- TARJETA DE FILTROS --}}
-        <div class="flex-grow-1">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
+
+        
+        {{-- === FILTROS + GESTIÓN MASIVA === --}}
+        <x-finanzas.top-section>
+            <x-slot:filters>
+                <x-finanzas.filters-card>
                     <form method="GET" action="{{ route('finanzas_compras.index') }}">
                         <div class="row g-3 align-items-end">
 
@@ -103,7 +47,6 @@
                                 <input type="text" name="rut_proveedor" class="form-control form-control-sm"
                                     placeholder="Ej: 76432100-5" value="{{ request('rut_proveedor') }}">
                             </div>
-
 
                             <div class="col-md-1">
                                 <label class="form-label small text-muted">Folio</label>
@@ -125,31 +68,22 @@
                                 </select>
                             </div>
 
-
-
-
-
                             <div class="col-md-1 dropdown-saldo">
                                 <label class="form-label small text-muted">Saldo</label>
 
                                 <div class="dropdown w-100 keep-open-on-drag">
                                     <button
-                                    class="form-control form-control-sm dropdown-toggle text-start"
-                                    type="button"
-                                    data-bs-toggle="dropdown"
-                                    data-bs-auto-close="outside"
-                                    aria-expanded="false"
-                                    >
-                                    Buscar saldo
+                                        class="form-control form-control-sm dropdown-toggle text-start"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        data-bs-auto-close="outside"
+                                        aria-expanded="false">
+                                        Buscar saldo
                                     </button>
+
                                     <div class="dropdown-menu p-3" style="min-width: 220px;">
-                                        
-                                        {{-- Tipo de saldo --}}
                                         <label class="form-label small text-muted mb-1">Tipo</label>
-                                        <select
-                                            name="saldo_tipo"
-                                            class="form-select form-select-sm mb-2"
-                                        >
+                                        <select name="saldo_tipo" class="form-select form-select-sm mb-2">
                                             <option value="saldo_pendiente"
                                                 {{ request('saldo_tipo', 'saldo_pendiente') === 'saldo_pendiente' ? 'selected' : '' }}>
                                                 Saldo pendiente
@@ -161,7 +95,6 @@
                                             </option>
                                         </select>
 
-                                        {{-- Valor --}}
                                         <label class="form-label small text-muted mb-1">Monto</label>
                                         <input
                                             type="text"
@@ -169,13 +102,10 @@
                                             class="form-control form-control-sm"
                                             placeholder="Ej: 260000"
                                             value="{{ request('saldo_valor') }}"
-                                            min="0"
-                                        >
+                                            min="0">
                                     </div>
                                 </div>
                             </div>
-
-
 
                             <div class="col-md-1">
                                 <label class="form-label small text-muted">Estado Original</label>
@@ -190,7 +120,6 @@
                                 </select>
                             </div>
 
-
                             <div class="col-md-1">
                                 <label class="form-label small text-muted">Estado de Pago</label>
                                 <select name="estado_pago" class="form-select form-select-sm">
@@ -204,8 +133,6 @@
                                 </select>
                             </div>
 
-
-                            {{-- Fecha de Documento --}}
                             <div class="col-md-1 dropdown-fechas">
                                 <label class="form-label small text-muted">Fecha Documento</label>
                                 <div class="dropdown w-100">
@@ -224,7 +151,6 @@
                                 </div>
                             </div>
 
-                            {{-- Fecha de Vencimiento --}}
                             <div class="col-md-1 dropdown-fechas">
                                 <label class="form-label small text-muted">Fecha Vencimiento</label>
                                 <div class="dropdown w-100">
@@ -243,9 +169,6 @@
                                 </div>
                             </div>
 
-
-
-                            {{-- Referencias --}}
                             <div class="col-md-1">
                                 <label class="form-label small text-muted">Referencias</label>
                                 <select name="filtro_referencia" class="form-select form-select-sm">
@@ -268,10 +191,8 @@
                                 </select>
                             </div>
 
-
                         </div>
 
-                        {{-- Botones de acción --}}
                         <div class="d-flex justify-content-end gap-2 mt-3">
                             <a href="{{ route('finanzas_compras.index') }}" class="btn btn-outline-secondary btn-sm">
                                 <i class="bi bi-x-circle"></i> Limpiar
@@ -282,9 +203,8 @@
                         </div>
 
                         <div class="d-flex justify-content-between align-items-center mt-3">
-                            {{-- Texto alineado a la izquierda --}}
                             <div>
-                                <strong>Saldo pendiente total:</strong> 
+                                <strong>Saldo pendiente total:</strong>
                                 <span class="text-success fw-semibold">
                                     ${{ number_format($totalSaldoPendiente, 0, ',', '.') }}
                                 </span>
@@ -294,498 +214,455 @@
                             class="btn btn-outline-secondary btn-sm">
                                 Detalle Proveedor
                             </a>
-
-
-
                         </div>
-
-
                     </form>
-                </div>
-            </div>
-        </div>
+                </x-finanzas.filters-card>
+            </x-slot:filters>
 
-        {{-- TARJETA DE GESTIÓN MASIVA --}}
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-body text-center d-flex flex-column justify-content-center">
-                <h6 class="fw-bold mb-3">Gestión Masiva</h6>
+            <x-slot:actions>
+                <x-finanzas.mass-actions-card title="Gestión Masiva">
+                    @if (Auth::id() != 375)
+                        <a href="{{ route('panelfinanza.show_compras') }}"
+                        class="btn btn-outline-secondary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                            <span>Historial de Compras</span>
+                        </a>
 
+                        <form action="{{ route('finanzas_compras.import') }}" method="POST" enctype="multipart/form-data" class="mb-3">
+                            @csrf
+                            <input type="file" name="file" class="form-control form-control-sm mb-2" required>
+                            <button type="submit" class="btn btn-success btn-sm w-100">
+                                <i class="bi bi-file-earmark-arrow-up"></i> Importar Excel
+                            </button>
+                        </form>
+                    @endif
 
-
-                @if (Auth::id() != 375)
-                    {{-- Nuevo botón Historial --}}
-                    <a href="{{ route('panelfinanza.show_compras') }}" 
-                    class="btn btn-outline-secondary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
-                        <i class="fa-solid fa-clock-rotate-left"></i> 
-                        <span>Historial de Compras</span>
-                    </a>
-
-                    <form action="{{ route('finanzas_compras.import') }}" method="POST" enctype="multipart/form-data" class="mb-3">
-                        @csrf
-                        <input type="file" name="file" class="form-control form-control-sm mb-2" required>
-                        <button type="submit" class="btn btn-success btn-sm w-100">
-                            <i class="bi bi-file-earmark-arrow-up"></i> Importar Excel
-                        </button>
-                    </form>
-                @endif
-
-
-
-
-                <!-- Botón de Exportar que abre el modal -->
-                <button type="button"
-                        class="btn btn-outline-success btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
-                        data-bs-toggle="modal" data-bs-target="#modalExportarCompra">
-                    <i class="bi bi-file-earmark-arrow-down"></i>
-                    <span>Exportar Excel</span>
-                </button>
-
-
-                {{-- @if (Auth::id() != 375)
                     <button type="button"
-                                    class="btn btn-outline-primary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#modalPagosMasivos">
-                        <i class="bi bi-cash-stack"></i>
-                        <span>Pagos Masivos</span>
+                            class="btn btn-outline-success btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
+                            data-bs-toggle="modal" data-bs-target="#modalExportarCompra">
+                        <i class="bi bi-file-earmark-arrow-down"></i>
+                        <span>Exportar Excel</span>
                     </button>
-                @endif --}}
-                
-                
-                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalPagosMasivos">
-                    Pagar
-                </button>
 
-                <button type="button" class="btn btn-outline-primary btn-sm" id="btn-proximo-pago-documentos">
-                    Definir próximo pago
-                </button>
+                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalPagosMasivos">
+                        Pagar
+                    </button>
 
-
-                
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="btn-proximo-pago-documentos">
+                        Definir próximo pago
+                    </button>
+                </x-finanzas.mass-actions-card>
+            </x-slot:actions>
+        </x-finanzas.top-section>
 
 
 
 
 
+        {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
+        {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
+        {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
+        {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
+        {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
+        {{-- Tabla de registros limpia y responsiva sin scroll --}}
+        <x-finanzas.table-card title="Documentos Importados">
 
+                @if($documentosCompras->count() > 0)
+                    <div class="table-responsive-sm">
+                        <table class="table table-striped table-hover table-sm align-middle text-center">
 
-            </div>
-        </div>
-
-
-    </div>
-
-
-
-
-    {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
-    {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
-    {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
-    {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
-    {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
-    {{-- Tabla de registros limpia y responsiva sin scroll --}}
-    <div class="card shadow-sm border-0">
-        <div class="card-body">
-            <h5 class="card-title mb-3">Documentos Importados</h5>
-
-            @if($documentosCompras->count() > 0)
-                <div class="table-responsive-sm">
-                    <table class="table table-striped table-hover table-sm align-middle text-center">
-
-                        
-                        <thead class="table-light text-uppercase align-middle">
-                            <tr class="small">
-
-                                <th class="text-center" style="width:40px;">
-                                    <input type="checkbox" id="check-all-documentos">
-                                </th>
-
-
-                                {{-- Empresa --}}
-                                @include('cobranzas.partials.filtros_compras', [
-                                    'label' => 'Empresa',
-                                    'columna' => 'empresa_id',
-                                    'sortBy' => $sortBy ?? null,
-                                    'sortOrder' => $sortOrder ?? 'asc',
-                                    'placeholder' => 'Buscar empresa...'
-                                ])
-
-                                {{-- Status (status_original) --}}
-                                @include('cobranzas.partials.filtros_compras', [
-                                    'label' => 'Status',
-                                    'columna' => 'status_original',
-                                    'sortBy' => $sortBy ?? null,
-                                    'sortOrder' => $sortOrder ?? 'asc',
-                                    'placeholder' => 'Al día / Vencido...'
-                                ])
-
-                                {{-- Tipo Doc --}}
-                                @include('cobranzas.partials.filtros_compras', [
-                                    'label' => 'Tipo Doc',
-                                    'columna' => 'tipo_documento_id',
-                                    'sortBy' => $sortBy ?? null,
-                                    'sortOrder' => $sortOrder ?? 'asc',
-                                    'placeholder' => 'Buscar tipo doc...'
-                                ])
-
-                                {{-- Tipo Compra (sin filtro directo) --}}
-                                {{-- <th>Tipo Compra</th> --}}
-
-                                {{-- RUT Proveedor --}}
-                                @include('cobranzas.partials.filtros_compras', [
-                                    'label' => 'RUT Proveedor',
-                                    'columna' => 'rut_proveedor',
-                                    'sortBy' => $sortBy ?? null,
-                                    'sortOrder' => $sortOrder ?? 'asc',
-                                    'placeholder' => 'Ej: 76123456-7'
-                                ])
-
-                                {{-- Razón Social --}}
-                                @include('cobranzas.partials.filtros_compras', [
-                                    'label' => 'Razón Social',
-                                    'columna' => 'razon_social',
-                                    'sortBy' => $sortBy ?? null,
-                                    'sortOrder' => $sortOrder ?? 'asc',
-                                    'placeholder' => 'Buscar razón social...'
-                                ])
-
-                                {{-- Folio --}}
-                                @include('cobranzas.partials.filtros_compras', [
-                                    'label' => 'Folio',
-                                    'columna' => 'folio',
-                                    'sortBy' => $sortBy ?? null,
-                                    'sortOrder' => $sortOrder ?? 'asc',
-                                    'placeholder' => 'N° folio...'
-                                ])
-
-                                {{-- Fecha Docto --}}
-                                @include('cobranzas.partials.filtros_compras', [
-                                    'label' => 'Fecha Docto',
-                                    'columna' => 'fecha_docto',
-                                    'sortBy' => $sortBy ?? null,
-                                    'sortOrder' => $sortOrder ?? 'asc',
-                                    'placeholder' => 'AAAA-MM-DD'
-                                ])
-
-                                {{-- Fecha Vencimiento --}}
-                                @include('cobranzas.partials.filtros_compras', [
-                                    'label' => 'Fecha Vencimiento',
-                                    'columna' => 'fecha_vencimiento',
-                                    'sortBy' => $sortBy ?? null,
-                                    'sortOrder' => $sortOrder ?? 'asc',
-                                    'placeholder' => 'AAAA-MM-DD'
-                                ])
-
-                                {{-- Monto Neto --}}
-                                <th>Monto Neto</th>
-
-                                {{-- IVA Rec --}}
-                                <th>IVA Rec.</th>
-
-                                {{-- Total --}}
-                                @include('cobranzas.partials.filtros_compras', [
-                                    'label' => 'Total',
-                                    'columna' => 'monto_total',
-                                    'sortBy' => $sortBy ?? null,
-                                    'sortOrder' => $sortOrder ?? 'asc',
-                                    'placeholder' => '≥ monto...'
-                                ])
-
-                                {{-- Saldo Pendiente (sin filtro directo) --}}
-                                <th>Saldo Pendiente</th>
-
-                                 <th>Fecha Último Movimiento</th>
-
-                            </tr>
-                        </thead>
-
-
-                        <tbody>
-                            @foreach ($documentosCompras as $doc)
-                                @php
-                                    $color = $doc->status_original === 'Vencido' ? 'bg-danger' : 'bg-success';
-                                    $estadoMostrar = $doc->estado_visible;
-
-                                    $programacionActiva =
-                                        $doc->pagoProgramado &&
-                                        (int) $doc->saldo_pendiente > 0 &&
-                                        $doc->pagos->isEmpty() &&
-                                        $doc->prontoPagos->isEmpty() &&
-                                        (int) $doc->tipo_documento_id !== 61;
-                                @endphp
-
-
-
+                            
+                            <thead class="table-light text-uppercase align-middle">
                                 <tr class="small">
 
-
-                                    <td class="text-center {{ $programacionActiva ? 'doc-programado' : '' }}">
-                                        @if($doc->saldo_pendiente > 0 && $doc->tipo_documento_id != 61)
-                                            <input type="checkbox"
-                                                class="check-documento"
-                                                value="{{ $doc->id }}"
-                                                data-id="{{ $doc->id }}"
-                                                data-empresa="{{ $doc->empresa?->Nombre ?? '' }}"
-                                                data-folio="{{ $doc->folio }}"
-                                                data-razon="{{ $doc->razon_social }}"
-                                                data-rut="{{ $doc->rut_proveedor }}"
-                                                data-fecha-docto="{{ $doc->fecha_docto ? \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') : '' }}"
-                                                data-fecha-vencimiento="{{ $doc->fecha_vencimiento ? \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') : '' }}"
-                                                data-saldo="{{ $doc->saldo_pendiente }}"
-                                                data-total="{{ $doc->monto_total }}"
-                                            >
-                                        @endif
-                                    </td>
+                                    <th class="text-center" style="width:40px;">
+                                        <input type="checkbox" id="check-all-documentos">
+                                    </th>
 
 
+                                    {{-- Empresa --}}
+                                    @include('cobranzas.partials.filtros_compras', [
+                                        'label' => 'Empresa',
+                                        'columna' => 'empresa_id',
+                                        'sortBy' => $sortBy ?? null,
+                                        'sortOrder' => $sortOrder ?? 'asc',
+                                        'placeholder' => 'Buscar empresa...'
+                                    ])
 
-                                    <td>{{ $doc->empresa?->Nombre ?? '—' }}</td>
-                                    
-                                    <td>
-                                        @php
-                                            $esNotaCredito = ($doc->tipo_documento_id == 61);
-                                        @endphp
+                                    {{-- Status (status_original) --}}
+                                    @include('cobranzas.partials.filtros_compras', [
+                                        'label' => 'Status',
+                                        'columna' => 'status_original',
+                                        'sortBy' => $sortBy ?? null,
+                                        'sortOrder' => $sortOrder ?? 'asc',
+                                        'placeholder' => 'Al día / Vencido...'
+                                    ])
 
-                                        {{-- Si es una nota de crédito, no mostramos estado ni botón --}}
-                                        @if(!$esNotaCredito)
-                                            <span class="badge {{ $color }}">{{ $estadoMostrar }}</span><br>
+                                    {{-- Tipo Doc --}}
+                                    @include('cobranzas.partials.filtros_compras', [
+                                        'label' => 'Tipo Doc',
+                                        'columna' => 'tipo_documento_id',
+                                        'sortBy' => $sortBy ?? null,
+                                        'sortOrder' => $sortOrder ?? 'asc',
+                                        'placeholder' => 'Buscar tipo doc...'
+                                    ])
 
-                                            {{-- @if (Auth::id() != 375)
-                                                <button type="button"
-                                                        class="btn btn-outline-secondary btn-sm mt-1 px-2 py-0"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#modalEstadoCompra-{{ $doc->id }}">
-                                                    Editar
-                                                </button>
-                                            @endif --}}
+                                    {{-- Tipo Compra (sin filtro directo) --}}
+                                    {{-- <th>Tipo Compra</th> --}}
 
-                                            
-                                        @else
-                                            <span class="badge bg-secondary">Nota de Crédito</span>
-                                        @endif
-                                    </td>
+                                    {{-- RUT Proveedor --}}
+                                    @include('cobranzas.partials.filtros_compras', [
+                                        'label' => 'RUT Proveedor',
+                                        'columna' => 'rut_proveedor',
+                                        'sortBy' => $sortBy ?? null,
+                                        'sortOrder' => $sortOrder ?? 'asc',
+                                        'placeholder' => 'Ej: 76123456-7'
+                                    ])
 
-                                    <td title="{{ $doc->tipoDocumento?->nombre }}">
-                                        {{ \Illuminate\Support\Str::limit($doc->tipoDocumento?->nombre ?? '-', 18) }}
-                                    </td>
+                                    {{-- Razón Social --}}
+                                    @include('cobranzas.partials.filtros_compras', [
+                                        'label' => 'Razón Social',
+                                        'columna' => 'razon_social',
+                                        'sortBy' => $sortBy ?? null,
+                                        'sortOrder' => $sortOrder ?? 'asc',
+                                        'placeholder' => 'Buscar razón social...'
+                                    ])
 
-                                    {{-- <td>{{ $doc->tipo_compra ?? '-' }}</td> --}}
-                                    <td>{{ $doc->rut_proveedor }}</td>
-                                    <td class="text-start">{{ $doc->razon_social }}</td>
+                                    {{-- Folio --}}
+                                    @include('cobranzas.partials.filtros_compras', [
+                                        'label' => 'Folio',
+                                        'columna' => 'folio',
+                                        'sortBy' => $sortBy ?? null,
+                                        'sortOrder' => $sortOrder ?? 'asc',
+                                        'placeholder' => 'N° folio...'
+                                    ])
 
+                                    {{-- Fecha Docto --}}
+                                    @include('cobranzas.partials.filtros_compras', [
+                                        'label' => 'Fecha Docto',
+                                        'columna' => 'fecha_docto',
+                                        'sortBy' => $sortBy ?? null,
+                                        'sortOrder' => $sortOrder ?? 'asc',
+                                        'placeholder' => 'AAAA-MM-DD'
+                                    ])
 
-                                    <td>
-                                        <a href="{{ route('finanzas_compras.show', $doc->id) }}?{{ http_build_query(request()->query()) }}" 
-                                            class="fw-semibold text-decoration-none">
-                                            {{ $doc->folio }}
-                                        </a>
+                                    {{-- Fecha Vencimiento --}}
+                                    @include('cobranzas.partials.filtros_compras', [
+                                        'label' => 'Fecha Vencimiento',
+                                        'columna' => 'fecha_vencimiento',
+                                        'sortBy' => $sortBy ?? null,
+                                        'sortOrder' => $sortOrder ?? 'asc',
+                                        'placeholder' => 'AAAA-MM-DD'
+                                    ])
 
-                                        {{-- La factura tiene notas de crédito que la referencian --}}
-                                        @if($doc->referenciados->count() > 0)
-                                            <span class="badge bg-info text-dark ms-1">
-                                                Referenciado por NC Nº{{ $doc->referenciados->pluck('folio')->join(', ') }}
-                                            </span>
+                                    {{-- Monto Neto --}}
+                                    <th>Monto Neto</th>
 
-                                        {{-- Este documento (una nota de crédito) referencia a una factura --}}
-                                        @elseif($doc->referencia)
-                                            <span class="badge bg-warning text-dark ms-1">
-                                                Referencia a Factura Nº{{ $doc->referencia->folio }}
-                                            </span>
-                                        @endif
-                                    </td>
+                                    {{-- IVA Rec --}}
+                                    <th>IVA Rec.</th>
 
+                                    {{-- Total --}}
+                                    @include('cobranzas.partials.filtros_compras', [
+                                        'label' => 'Total',
+                                        'columna' => 'monto_total',
+                                        'sortBy' => $sortBy ?? null,
+                                        'sortOrder' => $sortOrder ?? 'asc',
+                                        'placeholder' => '≥ monto...'
+                                    ])
 
+                                    {{-- Saldo Pendiente (sin filtro directo) --}}
+                                    <th>Saldo Pendiente</th>
 
-
-
-                                    <td>{{ $doc->fecha_docto ? \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') : '-' }}</td>
-                                    <td>{{ $doc->fecha_vencimiento }}</td>
-                                    <td class="text-end">${{ number_format($doc->monto_neto, 0, ',', '.') }}</td>
-                                    <td class="text-end">${{ number_format($doc->monto_iva_recuperable, 0, ',', '.') }}</td>
-                                    <td class="text-end fw-semibold">${{ number_format($doc->monto_total, 0, ',', '.') }}</td>
-                                    <td class="text-end fw-semibold {{ $doc->saldo_pendiente == 0 ? 'text-success' : 'text-danger' }}">
-                                        ${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}
-                                    </td>
-                                    
-
-                                    <td>
-                                        <div>
-                                            {{ $doc->fecha_ultima_gestion 
-                                                ? \Carbon\Carbon::parse($doc->fecha_ultima_gestion)->format('d-m-Y')
-                                                : '-' 
-                                            }}
-                                        </div>
-
-                                        @if($programacionActiva)
-                                            <div class="small text-primary fw-semibold mt-1">
-                                                Próx. pago: {{ $doc->pagoProgramado->fecha_programada?->format('d-m-Y') }}
-                                            </div>
-                                        @endif
-                                    </td>
+                                    <th>Fecha Último Movimiento</th>
 
                                 </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
 
-                {{-- Paginación --}}
-                <div class="mt-3 d-flex justify-content-center">
-                    {{ $documentosCompras->appends(request()->query())->links('pagination::bootstrap-4') }}
-                </div>
-            @else
-                <p class="text-muted text-center mb-0">Aún no hay registros importados.</p>
-            @endif
-        </div>
+
+                            <tbody>
+                                @foreach ($documentosCompras as $doc)
+                                    @php
+                                        $color = $doc->status_original === 'Vencido' ? 'bg-danger' : 'bg-success';
+                                        $estadoMostrar = $doc->estado_visible;
+
+                                        $programacionActiva =
+                                            $doc->pagoProgramado &&
+                                            (int) $doc->saldo_pendiente > 0 &&
+                                            $doc->pagos->isEmpty() &&
+                                            $doc->prontoPagos->isEmpty() &&
+                                            (int) $doc->tipo_documento_id !== 61;
+                                    @endphp
+
+
+
+                                    <tr class="small">
+
+
+                                        <td class="text-center {{ $programacionActiva ? 'doc-programado' : '' }}">
+                                            @if($doc->saldo_pendiente > 0 && $doc->tipo_documento_id != 61)
+                                                <input type="checkbox"
+                                                    class="check-documento"
+                                                    value="{{ $doc->id }}"
+                                                    data-id="{{ $doc->id }}"
+                                                    data-empresa="{{ $doc->empresa?->Nombre ?? '' }}"
+                                                    data-folio="{{ $doc->folio }}"
+                                                    data-razon="{{ $doc->razon_social }}"
+                                                    data-rut="{{ $doc->rut_proveedor }}"
+                                                    data-fecha-docto="{{ $doc->fecha_docto ? \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') : '' }}"
+                                                    data-fecha-vencimiento="{{ $doc->fecha_vencimiento ? \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') : '' }}"
+                                                    data-saldo="{{ $doc->saldo_pendiente }}"
+                                                    data-total="{{ $doc->monto_total }}"
+                                                >
+                                            @endif
+                                        </td>
+
+
+
+                                        <td>{{ $doc->empresa?->Nombre ?? '—' }}</td>
+                                        
+                                        <td>
+                                            @php
+                                                $esNotaCredito = ($doc->tipo_documento_id == 61);
+                                            @endphp
+
+                                            {{-- Si es una nota de crédito, no mostramos estado ni botón --}}
+                                            @if(!$esNotaCredito)
+                                                <span class="badge {{ $color }}">{{ $estadoMostrar }}</span><br>
+
+                                                {{-- @if (Auth::id() != 375)
+                                                    <button type="button"
+                                                            class="btn btn-outline-secondary btn-sm mt-1 px-2 py-0"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#modalEstadoCompra-{{ $doc->id }}">
+                                                        Editar
+                                                    </button>
+                                                @endif --}}
+
+                                                
+                                            @else
+                                                <span class="badge bg-secondary">Nota de Crédito</span>
+                                            @endif
+                                        </td>
+
+                                        <td title="{{ $doc->tipoDocumento?->nombre }}">
+                                            {{ \Illuminate\Support\Str::limit($doc->tipoDocumento?->nombre ?? '-', 18) }}
+                                        </td>
+
+                                        {{-- <td>{{ $doc->tipo_compra ?? '-' }}</td> --}}
+                                        <td>{{ $doc->rut_proveedor }}</td>
+                                        <td class="text-start">{{ $doc->razon_social }}</td>
+
+
+                                        <td>
+                                            <a href="{{ route('finanzas_compras.show', $doc->id) }}?{{ http_build_query(request()->query()) }}" 
+                                                class="fw-semibold text-decoration-none">
+                                                {{ $doc->folio }}
+                                            </a>
+
+                                            {{-- La factura tiene notas de crédito que la referencian --}}
+                                            @if($doc->referenciados->count() > 0)
+                                                <span class="badge bg-info text-dark ms-1">
+                                                    Referenciado por NC Nº{{ $doc->referenciados->pluck('folio')->join(', ') }}
+                                                </span>
+
+                                            {{-- Este documento (una nota de crédito) referencia a una factura --}}
+                                            @elseif($doc->referencia)
+                                                <span class="badge bg-warning text-dark ms-1">
+                                                    Referencia a Factura Nº{{ $doc->referencia->folio }}
+                                                </span>
+                                            @endif
+                                        </td>
+
+
+
+
+
+                                        <td>{{ $doc->fecha_docto ? \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') : '-' }}</td>
+                                        <td>{{ $doc->fecha_vencimiento }}</td>
+                                        <td class="text-end">${{ number_format($doc->monto_neto, 0, ',', '.') }}</td>
+                                        <td class="text-end">${{ number_format($doc->monto_iva_recuperable, 0, ',', '.') }}</td>
+                                        <td class="text-end fw-semibold">${{ number_format($doc->monto_total, 0, ',', '.') }}</td>
+                                        <td class="text-end fw-semibold {{ $doc->saldo_pendiente == 0 ? 'text-success' : 'text-danger' }}">
+                                            ${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}
+                                        </td>
+                                        
+
+                                        <td>
+                                            <div>
+                                                {{ $doc->fecha_ultima_gestion 
+                                                    ? \Carbon\Carbon::parse($doc->fecha_ultima_gestion)->format('d-m-Y')
+                                                    : '-' 
+                                                }}
+                                            </div>
+
+                                            @if($programacionActiva)
+                                                <div class="small text-primary fw-semibold mt-1">
+                                                    Próx. pago: {{ $doc->pagoProgramado->fecha_programada?->format('d-m-Y') }}
+                                                </div>
+                                            @endif
+                                        </td>
+
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {{-- Paginación --}}
+                    <div class="mt-3 d-flex justify-content-center">
+                        {{ $documentosCompras->appends(request()->query())->links('pagination::bootstrap-4') }}
+                    </div>
+                @else
+                    <p class="text-muted text-center mb-0">Aún no hay registros importados.</p>
+                @endif
+        </x-finanzas.table-card>
+
     </div>
 
 
-</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
 
+            const STORAGE_KEY = 'documentosSeleccionados';
+            const checkAll = document.getElementById('check-all-documentos');
 
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-
-        const STORAGE_KEY = 'documentosSeleccionados';
-        const checkAll = document.getElementById('check-all-documentos');
-
-        function getSeleccion() {
-            return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-        }
-
-        function saveSeleccion(data) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-        }
-
-        function addDocumento(cb) {
-
-            const seleccion = getSeleccion();
-
-            const id = cb.dataset.id;
-
-            seleccion[id] = {
-                id: id,
-                empresa: cb.dataset.empresa || '',
-                folio: cb.dataset.folio,
-                razon: cb.dataset.razon,
-                rut: cb.dataset.rut || '',
-                fechaDocto: cb.dataset.fechaDocto || '',
-                fechaVencimiento: cb.dataset.fechaVencimiento || '',
-                saldo: Number(cb.dataset.saldo),
-                total: Number(cb.dataset.total)
-            };
-
-            saveSeleccion(seleccion);
-        }
-
-        function removeDocumento(id) {
-            const seleccion = getSeleccion();
-            delete seleccion[id];
-            saveSeleccion(seleccion);
-        }
-
-        const seleccion = getSeleccion();
-
-        document.querySelectorAll('.check-documento').forEach(cb => {
-
-            const id = cb.dataset.id;
-
-            if (seleccion[id]) {
-                cb.checked = true;
+            function getSeleccion() {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
             }
 
-            cb.addEventListener('change', function () {
+            function saveSeleccion(data) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            }
 
-                if (this.checked) {
-                    addDocumento(this);
-                } else {
-                    removeDocumento(this.dataset.id);
-                }
+            function addDocumento(cb) {
 
-            });
+                const seleccion = getSeleccion();
 
-        });
+                const id = cb.dataset.id;
 
-        // SELECT ALL
-        checkAll?.addEventListener('change', function () {
+                seleccion[id] = {
+                    id: id,
+                    empresa: cb.dataset.empresa || '',
+                    folio: cb.dataset.folio,
+                    razon: cb.dataset.razon,
+                    rut: cb.dataset.rut || '',
+                    fechaDocto: cb.dataset.fechaDocto || '',
+                    fechaVencimiento: cb.dataset.fechaVencimiento || '',
+                    saldo: Number(cb.dataset.saldo),
+                    total: Number(cb.dataset.total)
+                };
+
+                saveSeleccion(seleccion);
+            }
+
+            function removeDocumento(id) {
+                const seleccion = getSeleccion();
+                delete seleccion[id];
+                saveSeleccion(seleccion);
+            }
+
+            const seleccion = getSeleccion();
 
             document.querySelectorAll('.check-documento').forEach(cb => {
 
-                cb.checked = this.checked;
+                const id = cb.dataset.id;
 
-                if (this.checked) {
-                    addDocumento(cb);
-                } else {
-                    removeDocumento(cb.dataset.id);
+                if (seleccion[id]) {
+                    cb.checked = true;
                 }
 
+                cb.addEventListener('change', function () {
+
+                    if (this.checked) {
+                        addDocumento(this);
+                    } else {
+                        removeDocumento(this.dataset.id);
+                    }
+
+                });
+
+            });
+
+            // SELECT ALL
+            checkAll?.addEventListener('change', function () {
+
+                document.querySelectorAll('.check-documento').forEach(cb => {
+
+                    cb.checked = this.checked;
+
+                    if (this.checked) {
+                        addDocumento(cb);
+                    } else {
+                        removeDocumento(cb.dataset.id);
+                    }
+
+                });
+
             });
 
         });
-
-    });
-</script>
+    </script>
 
 
 
 
-<script>
-    function toggleFechaEstado(select, id) {
-        const inputFecha = document.getElementById('fecha-input-' + id);
-        const hiddenFecha = document.getElementById('fecha-hidden-' + id);
+    <script>
+        function toggleFechaEstado(select, id) {
+            const inputFecha = document.getElementById('fecha-input-' + id);
+            const hiddenFecha = document.getElementById('fecha-hidden-' + id);
 
-        // Mostrar el campo de fecha solo para estados manuales
-        if (['Abono', 'Pago', 'Pronto pago', 'Cobranza judicial'].includes(select.value)) {
-            if (inputFecha) inputFecha.style.display = 'block';
-        } else {
-            if (inputFecha) {
-                inputFecha.style.display = 'none';
-                inputFecha.value = '';
+            // Mostrar el campo de fecha solo para estados manuales
+            if (['Abono', 'Pago', 'Pronto pago', 'Cobranza judicial'].includes(select.value)) {
+                if (inputFecha) inputFecha.style.display = 'block';
+            } else {
+                if (inputFecha) {
+                    inputFecha.style.display = 'none';
+                    inputFecha.value = '';
+                }
+                if (hiddenFecha) hiddenFecha.value = '';
             }
-            if (hiddenFecha) hiddenFecha.value = '';
         }
-    }
 
-    // Este bloque asegura que Bootstrap Modal esté correctamente inicializado
-    document.addEventListener('DOMContentLoaded', function () {
-        const modalElements = document.querySelectorAll('.modal');
-        modalElements.forEach(function (modalEl) {
-            modalEl.addEventListener('show.bs.modal', function () {
-                // Reposicionar o limpiar formularios si hace falta
+        // Este bloque asegura que Bootstrap Modal esté correctamente inicializado
+        document.addEventListener('DOMContentLoaded', function () {
+            const modalElements = document.querySelectorAll('.modal');
+            modalElements.forEach(function (modalEl) {
+                modalEl.addEventListener('show.bs.modal', function () {
+                    // Reposicionar o limpiar formularios si hace falta
+                });
             });
         });
-    });
-</script>
+    </script>
 
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('.dropdown.keep-open-on-drag').forEach(function (dd) {
-    let startedInside = false;
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.dropdown.keep-open-on-drag').forEach(function (dd) {
+            let startedInside = false;
 
-    dd.addEventListener('mousedown', function (e) {
-      if (e.target.closest('.dropdown-menu')) startedInside = true;
-    });
+            dd.addEventListener('mousedown', function (e) {
+            if (e.target.closest('.dropdown-menu')) startedInside = true;
+            });
 
-    const menu = dd.querySelector('.dropdown-menu');
-    if (menu) {
-      menu.addEventListener('click', function (e) {
-        e.stopPropagation();
-      });
-    }
+            const menu = dd.querySelector('.dropdown-menu');
+            if (menu) {
+            menu.addEventListener('click', function (e) {
+                e.stopPropagation();
+            });
+            }
 
-    document.addEventListener('click', function (e) {
-      if (!startedInside) return;
-      startedInside = false;
+            document.addEventListener('click', function (e) {
+            if (!startedInside) return;
+            startedInside = false;
 
-      if (!e.target.closest('.dropdown.keep-open-on-drag')) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-      }
-    }, true);
-  });
-});
-</script>
+            if (!e.target.closest('.dropdown.keep-open-on-drag')) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+            }
+            }, true);
+        });
+        });
+    </script>
 
 
 @include('cobranzas._modal_create_cobranza')
