@@ -7,12 +7,13 @@
 <div class="container-fluid mt-4" id="modulo-finanzas">
 
     {{-- ====== CABECERA ====== --}}
-    <div class="text-center mb-4">
-        <h2 class="fw-bold">Módulo Finanzas</h2>
-        <p class="text-muted mb-0">Panel central de gestión — Documentos, abonos, cruces y movimientos</p>
+    <div class="panel-finanzas-header text-center mb-5">
+        <span class="panel-finanzas-header__eyebrow">Área de Finanzas</span>
+        <h2 class="fw-bold mb-2">Módulo Finanzas</h2>
+        <p class="text-muted mb-0">
+            Panel central de gestión — Documentos, abonos, cruces y movimientos
+        </p>
     </div>
-
-
 
     @if($comprasProgramadasHoy->isNotEmpty())
         <section class="panel-operativo-card panel-operativo-card--warning mb-4">
@@ -43,7 +44,7 @@
                     </button>
 
                     <a href="{{ route('finanzas_compras.index') }}"
-                    class="btn btn-sm btn-outline-warning rounded-pill px-3">
+                       class="btn btn-sm btn-outline-warning rounded-pill px-3">
                         Revisar compras
                     </a>
                 </div>
@@ -83,7 +84,7 @@
                                         <td>{{ $d->razon_social }}</td>
                                         <td>
                                             <a href="{{ route('finanzas_compras.show', $d->id) }}"
-                                            class="panel-table-link">
+                                               class="panel-table-link">
                                                 {{ $d->folio }}
                                             </a>
                                         </td>
@@ -107,9 +108,9 @@
         <div class="modal fade" id="modalPagoComprasProgramadasHoy" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <form method="POST"
-                    action="{{ route('documentos.pagos.masivo.panel_hoy') }}"
-                    id="form-pago-compras-programadas-hoy"
-                    class="modal-content">
+                      action="{{ route('documentos.pagos.masivo.panel_hoy') }}"
+                      id="form-pago-compras-programadas-hoy"
+                      class="modal-content">
                     @csrf
 
                     <div class="modal-header">
@@ -121,8 +122,8 @@
                         <div class="mb-3">
                             <label class="form-label">Documentos seleccionados</label>
                             <div id="resumen-compras-programadas-hoy"
-                                class="border rounded p-2"
-                                style="min-height: 120px;">
+                                 class="border rounded p-2"
+                                 style="min-height: 120px;">
                             </div>
                         </div>
 
@@ -133,9 +134,9 @@
                         <div class="mb-3">
                             <label class="form-label">Fecha de pago</label>
                             <input type="date"
-                                name="fecha_pago"
-                                class="form-control"
-                                required>
+                                   name="fecha_pago"
+                                   class="form-control"
+                                   required>
                         </div>
                     </div>
 
@@ -233,74 +234,146 @@
     @endif
 
     @if($comprasProgramadasAtrasadas->isNotEmpty())
-        <div class="alert alert-danger shadow-sm mb-4" style="border-left: 5px solid #dc3545; border-radius: 12px;">
-            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <section class="panel-operativo-card panel-operativo-card--danger mb-4">
+            <div class="panel-operativo-card__head">
                 <div>
-                    <h5 class="mb-1">Compras con pago programado atrasado</h5>
-                    <p class="mb-0">
+                    <div class="panel-operativo-card__kicker panel-operativo-card__kicker--danger">
+                        Atención operativa
+                    </div>
+
+                    <h5 class="panel-operativo-card__title mb-1">
+                        Compras con pago programado atrasado
+                    </h5>
+
+                    <p class="panel-operativo-card__text mb-0">
                         Hay <strong>{{ $comprasProgramadasAtrasadas->count() }}</strong> documento(s) con fecha programada vencida.
                     </p>
                 </div>
 
-                <div>
-                    <a href="{{ route('finanzas_compras.index') }}" class="btn btn-sm btn-outline-danger">
+                <div class="panel-operativo-card__actions d-flex gap-2 flex-wrap">
+                    <span class="panel-soft-chip panel-soft-chip--danger">
+                        {{ $comprasProgramadasAtrasadas->count() }} pendiente(s)
+                    </span>
+
+                    <a href="{{ route('finanzas_compras.index') }}"
+                       class="btn btn-sm btn-outline-danger rounded-pill px-3">
                         Revisar pendientes
                     </a>
                 </div>
             </div>
-        </div>
+
+            <div class="panel-operativo-card__body mt-3">
+                <div class="table-responsive">
+                    <table class="table table-finanzas panel-programados-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Empresa</th>
+                                <th>Proveedor</th>
+                                <th>Folio</th>
+                                <th>Fecha programada</th>
+                                <th class="text-end">Saldo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($comprasProgramadasAtrasadas as $programado)
+                                @php $d = $programado->documentoCompra; @endphp
+                                @if($d)
+                                    <tr>
+                                        <td>{{ $d->empresa->Nombre ?? '-' }}</td>
+                                        <td>{{ $d->razon_social }}</td>
+                                        <td>
+                                            <a href="{{ route('finanzas_compras.show', $d->id) }}"
+                                               class="panel-table-link">
+                                                {{ $d->folio }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <span class="panel-soft-chip panel-soft-chip--danger-date">
+                                                {{ $programado->fecha_programada?->format('d-m-Y') }}
+                                            </span>
+                                        </td>
+                                        <td class="text-end fw-semibold">
+                                            ${{ number_format($d->saldo_pendiente ?? 0, 0, ',', '.') }}
+                                        </td>
+                                    </tr>
+                                @endif
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
     @endif
 
-
     {{-- ====== ACCESOS DIRECTOS ====== --}}
-    <div class="row justify-content-center text-center g-4 mb-4">
+    <section class="panel-accesos-directos mb-4">
+        <div class="row justify-content-center g-4">
 
-        {{-- === Cuentas por Cobrar === --}}
-        <div class="col-md-3">
-            <a href="{{ route('cobranzas.documentos') }}" class="text-decoration-none text-dark">
-                <div class="card border-0 shadow-sm rounded-4 h-100 card-hover">
-                    <div class="card-body d-flex flex-column align-items-center justify-content-center py-4">
-                        <h6 class="fw-semibold mb-1">Cuentas por Cobrar</h6>
-                        <p class="text-muted small mb-0">Gestión de facturas y notas de crédito</p>
+            <div class="col-12 col-md-6 col-xl-4">
+                <a href="{{ route('cobranzas.documentos') }}"
+                   class="panel-link-card panel-link-card--secondary">
+                    <div class="panel-link-card__top">
+                        <span class="panel-soft-chip panel-soft-chip--neutral">Cobranza activa</span>
+                        <span class="panel-link-card__hint">Entrar</span>
                     </div>
-                </div>
-            </a>
-        </div>
 
-
-
-
-        {{-- === Cuentas por Pagar === --}}
-        <div class="col-md-3">
-            <a href="{{ route('finanzas_compras.index') }}" class="text-decoration-none text-dark">
-                <div class="card border-0 shadow-sm rounded-4 h-100 card-hover">
-                    <div class="card-body d-flex flex-column align-items-center justify-content-center py-4">
-                        <h6 class="fw-semibold mb-1">Cuentas por Pagar</h6>
-                        <p class="text-muted small mb-0">Gestión de facturas de compras y proveedores</p>
+                    <div class="panel-link-card__body">
+                        <h5 class="panel-link-card__title">Cuentas por Cobrar</h5>
+                        <p class="panel-link-card__text">
+                            Gestión de facturas, notas de crédito y seguimiento operativo de cobranza.
+                        </p>
                     </div>
-                </div>
-            </a>
-        </div>
 
-
-
-        <div class="col-md-3">
-            <a href="{{ route('boleta.mensual.panel') }}" class="text-decoration-none text-dark">
-                <div class="card border-0 shadow-sm rounded-4 h-100 card-hover">
-                    <div class="card-body d-flex flex-column align-items-center justify-content-center py-4">
-                        <h6 class="fw-semibold mb-1">Honorarios por Pagar</h6>
-                        <p class="text-muted small mb-0">Boleta honorarios</p>
+                    <div class="panel-link-card__footer">
+                        <span class="panel-link-card__cta">Abrir módulo</span>
                     </div>
-                </div>
-            </a>
+                </a>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+                <a href="{{ route('finanzas_compras.index') }}"
+                   class="panel-link-card panel-link-card--primary">
+                    <div class="panel-link-card__top">
+                        <span class="panel-soft-chip panel-soft-chip--date">Operación compras</span>
+                        <span class="panel-link-card__hint">Entrar</span>
+                    </div>
+
+                    <div class="panel-link-card__body">
+                        <h5 class="panel-link-card__title">Cuentas por Pagar</h5>
+                        <p class="panel-link-card__text">
+                            Gestión de facturas de compras, pagos, referencias y control de proveedores.
+                        </p>
+                    </div>
+
+                    <div class="panel-link-card__footer">
+                        <span class="panel-link-card__cta">Abrir módulo</span>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-12 col-md-6 col-xl-4">
+                <a href="{{ route('boleta.mensual.panel') }}"
+                   class="panel-link-card panel-link-card--secondary">
+                    <div class="panel-link-card__top">
+                        <span class="panel-soft-chip panel-soft-chip--neutral">Operación honorarios</span>
+                        <span class="panel-link-card__hint">Entrar</span>
+                    </div>
+
+                    <div class="panel-link-card__body">
+                        <h5 class="panel-link-card__title">Honorarios por Pagar</h5>
+                        <p class="panel-link-card__text">
+                            Revisión de boletas de honorarios, próximos pagos, movimientos y operación mensual.
+                        </p>
+                    </div>
+
+                    <div class="panel-link-card__footer">
+                        <span class="panel-link-card__cta">Abrir módulo</span>
+                    </div>
+                </a>
+            </div>
+
         </div>
-
-
-
-    </div>
-
-
-
+    </section>
 
     <footer class="text-center mt-5">
         <small class="text-muted">© 4NLogística — Área de Finanzas</small>

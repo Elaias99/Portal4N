@@ -778,11 +778,11 @@
         </div>
     </div>
 
-    <div class="d-flex justify-content-center mt-4">
+    {{-- <div class="d-flex justify-content-center mt-4">
         <a href="{{ route('boleta.mensual.panel') }}" class="btn btn-outline-primary px-4 py-2 rounded-pill">
             ← Ir a Panel Boletas honorarios
         </a>
-    </div>
+    </div> --}}
 
 </div>
 
