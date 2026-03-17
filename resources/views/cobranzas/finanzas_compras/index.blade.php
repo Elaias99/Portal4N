@@ -492,7 +492,7 @@
 
 
                                         <td>{{ $doc->fecha_docto ? \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') : '-' }}</td>
-                                        <td>{{ $doc->fecha_vencimiento }}</td>
+                                        <td>{{ $doc->fecha_vencimiento ? \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') : '-' }}</td>
                                         <td class="text-end">${{ number_format($doc->monto_neto, 0, ',', '.') }}</td>
                                         <td class="text-end">${{ number_format($doc->monto_iva_recuperable, 0, ',', '.') }}</td>
                                         <td class="text-end fw-semibold">${{ number_format($doc->monto_total, 0, ',', '.') }}</td>

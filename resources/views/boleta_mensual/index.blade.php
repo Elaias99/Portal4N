@@ -640,8 +640,8 @@
                                             data-rut="{{ $r->rut_emisor }}"
                                             data-emisor="{{ $r->razon_social_emisor }}"
                                             data-folio="{{ $r->folio }}"
-                                            data-fecha-emision="{{ $r->fecha_emision?->format('Y-m-d') }}"
-                                            data-fecha-vencimiento="{{ $r->fecha_vencimiento?->format('Y-m-d') }}"
+                                            data-fecha-emision="{{ $r->fecha_emision?->format('d-m-Y') }}"
+                                            data-fecha-vencimiento="{{ $r->fecha_vencimiento?->format('d-m-Y') }}"
                                             data-monto="{{ $montoPagado }}"
                                             data-saldo="{{ $saldoPendiente }}">
                                     @else
@@ -723,8 +723,8 @@
                                     @endif
                                 </td>
 
-                                <td class="hm-nowrap">{{ $r->fecha_emision?->format('Y-m-d') }}</td>
-                                <td class="hm-nowrap">{{ $r->fecha_vencimiento?->format('Y-m-d') }}</td>
+                                <td class="hm-nowrap">{{ $r->fecha_emision?->format('d-m-Y') }}</td>
+                                <td class="hm-nowrap">{{ $r->fecha_vencimiento?->format('d-m-Y') }}</td>
 
                                 <td class="hm-nowrap">
                                     <span class="{{ $r->estado === 'ANULADA' ? 'text-danger' : 'text-success' }}">
@@ -732,7 +732,7 @@
                                     </span>
                                 </td>
 
-                                <td class="hm-nowrap">{{ $r->fecha_anulacion?->format('Y-m-d') }}</td>
+                                <td class="hm-nowrap">{{ $r->fecha_anulacion?->format('d-m-Y') }}</td>
 
                                 <td class="hm-nowrap text-end fw-semibold">
                                     {{ number_format($montoPagado, 0, ',', '.') }}
