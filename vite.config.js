@@ -16,6 +16,7 @@ export default defineConfig({
                 'resources/css/panel-finanzas.css',
                 'resources/css/cuentas-cobrar.css',
                 'resources/css/boleta_mensual.css',
+                'resources/css/finanzas_compras.css',
                 'resources/sass/app.scss',
                 'resources/js/app.js',
                 'resources/js/reports/delivery-links.js',
@@ -23,6 +24,10 @@ export default defineConfig({
                 'resources/js/finanzas_compras_proximo_pago.js',
                 'resources/js/finanzas_general.js',
                 'resources/js/boleta_mensual_panel.js',
+                'resources/js/cobranzas_documentos.js',
+                'resources/js/finanzas_compras_index.js',
+                'resources/js/boleta_mensual_index.js',
+
                 
 
             ],

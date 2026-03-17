@@ -353,7 +353,7 @@
             <table class="table table-hover align-middle custom-table">
 
 
-                @include('cobranzas.partials.filtros')
+            @include('cobranzas.partials.filtros')
 
             <tbody>
             @foreach ($documentosOriginal as $doc)
@@ -469,28 +469,13 @@
 
 
 
-    <script>
-        function toggleFechaEstado(select, id) {
-            const inputFecha = document.getElementById('fecha-input-' + id);
-            const hiddenFecha = document.getElementById('fecha-hidden-' + id);
 
-            // Mostrar el campo de fecha solo para estados manuales
-            if (['Abono', 'Pago', 'Pronto pago', 'Cobranza judicial'].includes(select.value)) {
-                if (inputFecha) inputFecha.style.display = 'block';
-            } else {
-                if (inputFecha) {
-                    inputFecha.style.display = 'none';
-                    inputFecha.value = '';
-                }
-                if (hiddenFecha) hiddenFecha.value = '';
-            }
-        }
-    </script>
 
 @include('cobranzas._modal_create_cobranza')
 @include('cobranzas.modal_pagos_masivos')
 @include('cobranzas.partials.modal_ExportarVenta')
 
+@vite('resources/js/cobranzas_documentos.js')
 
 @endsection
 

@@ -1,14 +1,8 @@
 @extends('layouts.app')
 
+@vite('resources/css/finanzas_compras.css')
 
 @section('content')
-
-<style>
-    .doc-programado {
-        background-color: #e9f2ff;
-        border-left: 3px solid #3b82f6;
-    }
-</style>
 
     {{-- Mensajes de estado --}}
     <x-finanzas.flash-messages />
@@ -533,152 +527,6 @@
 
     </div>
 
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-
-            const STORAGE_KEY = 'documentosSeleccionados';
-            const checkAll = document.getElementById('check-all-documentos');
-
-            function getSeleccion() {
-                return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-            }
-
-            function saveSeleccion(data) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-            }
-
-            function addDocumento(cb) {
-
-                const seleccion = getSeleccion();
-
-                const id = cb.dataset.id;
-
-                seleccion[id] = {
-                    id: id,
-                    empresa: cb.dataset.empresa || '',
-                    folio: cb.dataset.folio,
-                    razon: cb.dataset.razon,
-                    rut: cb.dataset.rut || '',
-                    fechaDocto: cb.dataset.fechaDocto || '',
-                    fechaVencimiento: cb.dataset.fechaVencimiento || '',
-                    saldo: Number(cb.dataset.saldo),
-                    total: Number(cb.dataset.total)
-                };
-
-                saveSeleccion(seleccion);
-            }
-
-            function removeDocumento(id) {
-                const seleccion = getSeleccion();
-                delete seleccion[id];
-                saveSeleccion(seleccion);
-            }
-
-            const seleccion = getSeleccion();
-
-            document.querySelectorAll('.check-documento').forEach(cb => {
-
-                const id = cb.dataset.id;
-
-                if (seleccion[id]) {
-                    cb.checked = true;
-                }
-
-                cb.addEventListener('change', function () {
-
-                    if (this.checked) {
-                        addDocumento(this);
-                    } else {
-                        removeDocumento(this.dataset.id);
-                    }
-
-                });
-
-            });
-
-            // SELECT ALL
-            checkAll?.addEventListener('change', function () {
-
-                document.querySelectorAll('.check-documento').forEach(cb => {
-
-                    cb.checked = this.checked;
-
-                    if (this.checked) {
-                        addDocumento(cb);
-                    } else {
-                        removeDocumento(cb.dataset.id);
-                    }
-
-                });
-
-            });
-
-        });
-    </script>
-
-
-
-
-    <script>
-        function toggleFechaEstado(select, id) {
-            const inputFecha = document.getElementById('fecha-input-' + id);
-            const hiddenFecha = document.getElementById('fecha-hidden-' + id);
-
-            // Mostrar el campo de fecha solo para estados manuales
-            if (['Abono', 'Pago', 'Pronto pago', 'Cobranza judicial'].includes(select.value)) {
-                if (inputFecha) inputFecha.style.display = 'block';
-            } else {
-                if (inputFecha) {
-                    inputFecha.style.display = 'none';
-                    inputFecha.value = '';
-                }
-                if (hiddenFecha) hiddenFecha.value = '';
-            }
-        }
-
-        // Este bloque asegura que Bootstrap Modal esté correctamente inicializado
-        document.addEventListener('DOMContentLoaded', function () {
-            const modalElements = document.querySelectorAll('.modal');
-            modalElements.forEach(function (modalEl) {
-                modalEl.addEventListener('show.bs.modal', function () {
-                    // Reposicionar o limpiar formularios si hace falta
-                });
-            });
-        });
-    </script>
-
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-        document.querySelectorAll('.dropdown.keep-open-on-drag').forEach(function (dd) {
-            let startedInside = false;
-
-            dd.addEventListener('mousedown', function (e) {
-            if (e.target.closest('.dropdown-menu')) startedInside = true;
-            });
-
-            const menu = dd.querySelector('.dropdown-menu');
-            if (menu) {
-            menu.addEventListener('click', function (e) {
-                e.stopPropagation();
-            });
-            }
-
-            document.addEventListener('click', function (e) {
-            if (!startedInside) return;
-            startedInside = false;
-
-            if (!e.target.closest('.dropdown.keep-open-on-drag')) {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-            }
-            }, true);
-        });
-        });
-    </script>
-
-
 @include('cobranzas._modal_create_cobranza')
 @include('cobranzas.partials.modal_ExportarCompra')
 @include('cobranzas.modal_pagos_masivos')
@@ -687,7 +535,7 @@
 
 
 @vite('resources/js/finanzas_compras_proximo_pago.js')
-
+@vite('resources/js/finanzas_compras_index.js')
 
 
 
