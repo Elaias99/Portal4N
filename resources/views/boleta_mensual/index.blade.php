@@ -290,6 +290,42 @@
                             </div>
                         </div>
 
+
+
+
+
+                        <div class="col-md-1">
+                            <label class="form-label small text-muted">Estado Original</label>
+                            <select name="estado_original" class="form-select form-select-sm">
+                                <option value="">Todos</option>
+                                <option value="Al día" {{ request('estado_original') == 'Al día' ? 'selected' : '' }}>
+                                    Al día ({{ $totalAlDia ?? 0 }})
+                                </option>
+                                <option value="Vencido" {{ request('estado_original') == 'Vencido' ? 'selected' : '' }}>
+                                    Vencido ({{ $totalVencido ?? 0 }})
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-1">
+                            <label class="form-label small text-muted">Estado de Pago</label>
+                            <select name="estado_pago" class="form-select form-select-sm">
+                                <option value="">Todos</option>
+                                <option value="Pagado" {{ request('estado_pago') == 'Pagado' ? 'selected' : '' }}>
+                                    Pagado ({{ $totalPagados ?? 0 }})
+                                </option>
+                                <option value="Pendiente" {{ request('estado_pago') == 'Pendiente' ? 'selected' : '' }}>
+                                    Pendiente ({{ $totalPendientes ?? 0 }})
+                                </option>
+                            </select>
+                        </div>
+
+
+
+
+
+                        
+
                     </div>
 
                     <div class="d-flex justify-content-end gap-2 mt-3">

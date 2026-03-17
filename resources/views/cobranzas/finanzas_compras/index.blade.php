@@ -136,14 +136,21 @@
                             <div class="col-md-1 dropdown-fechas">
                                 <label class="form-label small text-muted">Fecha Documento</label>
                                 <div class="dropdown w-100">
-                                    <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
-                                            id="dropdownFechasDocto" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <button
+                                        class="form-control form-control-sm dropdown-toggle text-start"
+                                        type="button"
+                                        id="dropdownFechasDocto"
+                                        data-bs-toggle="dropdown"
+                                        data-bs-auto-close="outside"
+                                        aria-expanded="false">
                                         <i class="bi bi-calendar3"></i> Fecha Dcto.
                                     </button>
+
                                     <div class="dropdown-menu p-3">
                                         <label class="form-label small text-muted">Desde</label>
                                         <input type="date" name="fecha_docto_inicio" class="form-control form-control-sm mb-2"
                                             value="{{ request('fecha_docto_inicio') }}">
+
                                         <label class="form-label small text-muted">Hasta</label>
                                         <input type="date" name="fecha_docto_fin" class="form-control form-control-sm"
                                             value="{{ request('fecha_docto_fin') }}">
@@ -154,14 +161,21 @@
                             <div class="col-md-1 dropdown-fechas">
                                 <label class="form-label small text-muted">Fecha Vencimiento</label>
                                 <div class="dropdown w-100">
-                                    <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
-                                            id="dropdownFechasVenc" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <button
+                                        class="form-control form-control-sm dropdown-toggle text-start"
+                                        type="button"
+                                        id="dropdownFechasVenc"
+                                        data-bs-toggle="dropdown"
+                                        data-bs-auto-close="outside"
+                                        aria-expanded="false">
                                         <i class="bi bi-calendar-event"></i> Fecha Venc.
                                     </button>
+
                                     <div class="dropdown-menu p-3">
                                         <label class="form-label small text-muted">Desde</label>
                                         <input type="date" name="fecha_venc_inicio" class="form-control form-control-sm mb-2"
                                             value="{{ request('fecha_venc_inicio') }}">
+
                                         <label class="form-label small text-muted">Hasta</label>
                                         <input type="date" name="fecha_venc_fin" class="form-control form-control-sm"
                                             value="{{ request('fecha_venc_fin') }}">
@@ -244,11 +258,11 @@
                         <span>Exportar Excel</span>
                     </button>
 
-                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalPagosMasivos">
+                    <button type="button" class="btn btn-success btn-sm w-100 mb-2" data-bs-toggle="modal" data-bs-target="#modalPagosMasivos">
                         Pagar
                     </button>
 
-                    <button type="button" class="btn btn-outline-primary btn-sm" id="btn-proximo-pago-documentos">
+                    <button type="button" class="btn btn-outline-primary btn-sm w-100" id="btn-proximo-pago-documentos">
                         Definir próximo pago
                     </button>
                 </x-finanzas.mass-actions-card>

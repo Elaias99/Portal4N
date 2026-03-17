@@ -236,6 +236,27 @@ class HonorarioMensualRecController extends Controller
             }
         }
 
+
+        // =========================
+        // FILTRO: ESTADO ORIGINAL
+        // =========================
+        if ($request->filled('estado_original')) {
+            $query->where('estado_financiero_inicial', $request->estado_original);
+        }
+
+        // =========================
+        // FILTRO: ESTADO DE PAGO
+        // =========================
+        if ($request->filled('estado_pago')) {
+            if ($request->estado_pago === 'Pagado') {
+                $query->where('saldo_pendiente', '<=', 0);
+            }
+
+            if ($request->estado_pago === 'Pendiente') {
+                $query->where('saldo_pendiente', '>', 0);
+            }
+        }
+
         // =========================
         // ORDEN + PAGINACIÓN
         // =========================
@@ -251,6 +272,12 @@ class HonorarioMensualRecController extends Controller
         // =========================
         $empresas = \App\Models\Empresa::orderBy('Nombre')->get();
 
+        $totalAlDia = (clone $query)->where('estado_financiero_inicial', 'Al día')->count();
+        $totalVencido = (clone $query)->where('estado_financiero_inicial', 'Vencido')->count();
+
+        $totalPagados = (clone $query)->where('saldo_pendiente', '<=', 0)->count();
+        $totalPendientes = (clone $query)->where('saldo_pendiente', '>', 0)->count();
+
         $anios = HonorarioMensualRec::select('anio')
             ->distinct()
             ->orderBy('anio', 'desc')
@@ -259,7 +286,11 @@ class HonorarioMensualRecController extends Controller
         return view('boleta_mensual.index', compact(
             'registros',
             'empresas',
-            'anios'
+            'anios',
+            'totalAlDia',
+            'totalVencido',
+            'totalPagados',
+            'totalPendientes'
         ));
     }
 
@@ -1801,6 +1832,48 @@ class HonorarioMensualRecController extends Controller
         return back()->with(
             'success',
             "Próximo pago definido correctamente. Programados: {$programados}. Omitidos: {$omitidos}."
+        );
+    }
+
+
+
+    public function destroyPagoProgramadoMasivo(Request $request)
+    {
+        $usuariosFinanzas = [1, 405];
+
+        if (!in_array(Auth::id(), $usuariosFinanzas)) {
+            abort(403, 'Acceso denegado. No tienes permiso para realizar esta acción.');
+        }
+
+        $request->validate([
+            'programados'   => 'required|array|min:1',
+            'programados.*' => 'integer|exists:honorario_pagos_programados,id',
+        ]);
+
+        $eliminados = 0;
+        $omitidos   = 0;
+
+        DB::transaction(function () use ($request, &$eliminados, &$omitidos) {
+            $ids = collect($request->programados)
+                ->unique()
+                ->values();
+
+            foreach ($ids as $programadoId) {
+                $programado = HonorarioPagoProgramado::find($programadoId);
+
+                if (!$programado) {
+                    $omitidos++;
+                    continue;
+                }
+
+                $programado->delete();
+                $eliminados++;
+            }
+        });
+
+        return back()->with(
+            'success',
+            "Fechas de próximo pago eliminadas correctamente. Eliminadas: {$eliminados}. Omitidas: {$omitidos}."
         );
     }
 

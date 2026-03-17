@@ -1452,6 +1452,46 @@ class DocumentoCompraController extends Controller
         );
     }
 
+    public function destroyPagoProgramadoMasivo(Request $request)
+    {
+        $usuariosFinanzas = [1, 405, 374, 375];
+
+        if (!in_array(Auth::id(), $usuariosFinanzas)) {
+            abort(403, 'Acceso denegado. No tienes permiso para realizar esta acción.');
+        }
+
+        $request->validate([
+            'programados'   => 'required|array|min:1',
+            'programados.*' => 'integer|exists:documento_compra_pagos_programados,id',
+        ]);
+
+        $eliminados = 0;
+        $omitidos = 0;
+
+        DB::transaction(function () use ($request, &$eliminados, &$omitidos) {
+            $ids = collect($request->programados)
+                ->unique()
+                ->values();
+
+            foreach ($ids as $programadoId) {
+                $programado = DocumentoCompraPagoProgramado::find($programadoId);
+
+                if (!$programado) {
+                    $omitidos++;
+                    continue;
+                }
+
+                $programado->delete();
+                $eliminados++;
+            }
+        });
+
+        return back()->with(
+            'success',
+            "Fechas de próximo pago eliminadas correctamente. Eliminadas: {$eliminados}. Omitidas: {$omitidos}."
+        );
+    }
+
 
 
 

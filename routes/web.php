@@ -582,6 +582,11 @@ Route::delete('/finanzas-compras/{id}/quitar-referencia', [DocumentoCompraContro
 Route::post('/finanzas/compras/proximo-pago', [DocumentoCompraController::class, 'storePagoProgramadoMasivo'])
     ->name('finanzas_compras.proximo_pago.store');
 
+Route::delete(
+    '/finanzas-compras/pago-programado/eliminar-masivo',
+    [DocumentoCompraController::class, 'destroyPagoProgramadoMasivo']
+)->name('finanzas_compras.pago-programado.destroy.masivo');
+
 
 
 
@@ -750,6 +755,12 @@ Route::post(
     'honorarios/mensual/proximo-pago',
     [HonorarioMensualRecController::class, 'storePagoProgramadoMasivo']
 )->name('honorarios.mensual.proximo-pago.store');
+
+Route::delete(
+    '/honorarios-mensual/pago-programado/eliminar-masivo',
+    [HonorarioMensualRecController::class, 'destroyPagoProgramadoMasivo']
+)->name('honorarios.mensual.pago-programado.destroy.masivo');
+
 
 Route::post(
     'honorarios/mensual/proximo-pago/exportar',

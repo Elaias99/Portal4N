@@ -43,16 +43,22 @@
                         {{ $programadosHoy->count() }} programado(s)
                     </span>
 
-                    <button type="button"
+                    {{-- <button type="button"
                             class="btn btn-sm btn-success rounded-pill px-3"
                             id="btn-pagar-programados-hoy">
                         Registrar pago
+                    </button> --}}
+
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                            id="btn-eliminar-programados-hoy">
+                        Quitar programación
                     </button>
 
-                    <a href="{{ route('honorarios.mensual.index') }}"
+                    {{-- <a href="{{ route('honorarios.mensual.index') }}"
                     class="btn btn-sm btn-outline-secondary rounded-pill px-3">
                         Revisar honorarios
-                    </a>
+                    </a> --}}
                 </div>
             </div>
 
@@ -82,6 +88,7 @@
                                                 class="chk-programado-hoy"
                                                 value="{{ $h->id }}"
                                                 data-id="{{ $h->id }}"
+                                                data-programado-id="{{ $programado->id }}"
                                                 data-folio="{{ $h->folio }}"
                                                 data-emisor="{{ $h->razon_social_emisor }}"
                                                 data-saldo="{{ $h->saldo_pendiente ?? 0 }}">
@@ -162,100 +169,108 @@
                 </form>
             </div>
         </div>
-
-        <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const checkAll = document.getElementById('check-all-programados-hoy');
-            const checks = document.querySelectorAll('.chk-programado-hoy');
-            const btnPagar = document.getElementById('btn-pagar-programados-hoy');
-            const modalEl = document.getElementById('modalPagoProgramadosHoy');
-            const resumenWrap = document.getElementById('resumen-programados-hoy');
-            const inputsWrap = document.getElementById('inputs-programados-hoy');
-
-            if (!checkAll || !btnPagar || !modalEl || !resumenWrap || !inputsWrap) {
-                return;
-            }
-
-            const modal = new bootstrap.Modal(modalEl);
-
-            checkAll.addEventListener('change', () => {
-                checks.forEach(chk => {
-                    chk.checked = checkAll.checked;
-                });
-            });
-
-            checks.forEach(chk => {
-                chk.addEventListener('change', () => {
-                    if (!chk.checked) {
-                        checkAll.checked = false;
-                    }
-                });
-            });
-
-            btnPagar.addEventListener('click', () => {
-                const seleccionados = Array.from(document.querySelectorAll('.chk-programado-hoy:checked'));
-
-                if (seleccionados.length === 0) {
-                    alert('Debes seleccionar al menos un honorario.');
-                    return;
-                }
-
-                resumenWrap.innerHTML = '';
-                inputsWrap.innerHTML = '';
-
-                seleccionados.forEach(chk => {
-                    const card = document.createElement('div');
-                    card.className = 'border rounded p-2 mb-2 bg-light';
-
-                    card.innerHTML = `
-                        <div><strong>Folio:</strong> ${chk.dataset.folio}</div>
-                        <div><strong>Emisor:</strong> ${chk.dataset.emisor}</div>
-                        <div><strong>Saldo:</strong> ${chk.dataset.saldo}</div>
-                    `;
-
-                    resumenWrap.appendChild(card);
-
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'honorarios[]';
-                    input.value = chk.value;
-
-                    inputsWrap.appendChild(input);
-                });
-
-                modal.show();
-            });
-
-            modalEl.addEventListener('hidden.bs.modal', () => {
-                resumenWrap.innerHTML = '';
-                inputsWrap.innerHTML = '';
-            });
-        });
-        </script>
     @endif
-
 
 
 
     @if($programadosAtrasados->isNotEmpty())
-        <div class="alert alert-danger border-start border-4 border-danger shadow-sm mb-4">
-            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <section class="panel-operativo-card panel-operativo-card--danger mb-4">
+            <div class="panel-operativo-card__head">
                 <div>
-                    <h5 class="mb-1">Pagos programados pendientes de revisión</h5>
-                    <p class="mb-2">
-                        Hay <strong>{{ $programadosAtrasados->count() }}</strong> honorario(s) con fecha programada vencida
-                        que aún no han sido revisados.
+                    <div class="panel-operativo-card__kicker panel-operativo-card__kicker--danger">
+                        Atención operativa
+                    </div>
+
+                    <h5 class="panel-operativo-card__title mb-1">
+                        Honorarios con pago programado atrasado
+                    </h5>
+
+                    <p class="panel-operativo-card__text mb-0">
+                        Hay <strong>{{ $programadosAtrasados->count() }}</strong> honorario(s) con fecha programada vencida.
                     </p>
                 </div>
 
-                <div>
-                    <a href="{{ route('honorarios.mensual.index') }}" class="btn btn-sm btn-outline-danger">
+                <div class="panel-operativo-card__actions d-flex gap-2 flex-wrap">
+                    <span class="panel-soft-chip panel-soft-chip--danger">
+                        {{ $programadosAtrasados->count() }} pendiente(s)
+                    </span>
+
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                            id="btn-eliminar-programados-atrasados">
+                        Quitar programación
+                    </button>
+
+                    <a href="{{ route('honorarios.mensual.index') }}"
+                    class="btn btn-sm btn-outline-danger rounded-pill px-3">
                         Revisar pendientes
                     </a>
                 </div>
             </div>
-        </div>
+
+            <div class="panel-operativo-card__body mt-3">
+                <div class="table-responsive">
+                    <table class="table table-finanzas panel-programados-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="text-center" style="width:40px;">
+                                    <input type="checkbox" id="check-all-programados-atrasados">
+                                </th>
+                                <th>Empresa</th>
+                                <th>Proveedor</th>
+                                <th>Folio</th>
+                                <th>Fecha programada</th>
+                                <th class="text-end">Saldo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($programadosAtrasados as $programado)
+                                @php $h = $programado->honorarioMensualRec; @endphp
+                                @if($h)
+                                    <tr>
+                                        <td class="text-center">
+                                            <input type="checkbox"
+                                                class="chk-programado-atrasado"
+                                                value="{{ $programado->id }}"
+                                                data-programado-id="{{ $programado->id }}"
+                                                data-folio="{{ $h->folio }}"
+                                                data-emisor="{{ $h->razon_social_emisor }}"
+                                                data-saldo="{{ $h->saldo_pendiente ?? 0 }}">
+                                        </td>
+                                        <td>{{ $h->empresa->Nombre ?? '-' }}</td>
+                                        <td>{{ $h->razon_social_emisor ?? '-' }}</td>
+                                        <td>
+                                            <a href="{{ route('honorarios.mensual.show', $h->id) }}"
+                                            class="panel-table-link">
+                                                {{ $h->folio }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <span class="panel-soft-chip panel-soft-chip--danger-date">
+                                                {{ $programado->fecha_programada?->format('d-m-Y') }}
+                                            </span>
+                                        </td>
+                                        <td class="text-end fw-semibold">
+                                            ${{ number_format($h->saldo_pendiente ?? 0, 0, ',', '.') }}
+                                        </td>
+                                    </tr>
+                                @endif
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
     @endif
+
+    <form method="POST"
+          action="{{ route('honorarios.mensual.pago-programado.destroy.masivo') }}"
+          id="form-eliminar-programados">
+        @csrf
+        @method('DELETE')
+
+        <div id="inputs-eliminar-programados"></div>
+    </form>
 
 
     {{-- ====== ACCESOS DIRECTOS ====== --}}
@@ -328,4 +343,158 @@
         <small class="text-muted">© 4NLogística — Área de Finanzas</small>
     </footer>
 </div>
+
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const checkAllHoy = document.getElementById('check-all-programados-hoy');
+        const checksHoy = document.querySelectorAll('.chk-programado-hoy');
+        const btnPagarHoy = document.getElementById('btn-pagar-programados-hoy');
+        const btnEliminarHoy = document.getElementById('btn-eliminar-programados-hoy');
+
+        const modalEl = document.getElementById('modalPagoProgramadosHoy');
+        const resumenWrap = document.getElementById('resumen-programados-hoy');
+        const inputsWrap = document.getElementById('inputs-programados-hoy');
+
+        const checkAllAtrasados = document.getElementById('check-all-programados-atrasados');
+        const checksAtrasados = document.querySelectorAll('.chk-programado-atrasado');
+        const btnEliminarAtrasados = document.getElementById('btn-eliminar-programados-atrasados');
+
+        const formEliminar = document.getElementById('form-eliminar-programados');
+        const inputsEliminar = document.getElementById('inputs-eliminar-programados');
+
+        let modal = null;
+
+        if (modalEl) {
+            modal = new bootstrap.Modal(modalEl);
+        }
+
+        if (checkAllHoy) {
+            checkAllHoy.addEventListener('change', () => {
+                checksHoy.forEach(chk => {
+                    chk.checked = checkAllHoy.checked;
+                });
+            });
+
+            checksHoy.forEach(chk => {
+                chk.addEventListener('change', () => {
+                    if (!chk.checked) {
+                        checkAllHoy.checked = false;
+                    }
+                });
+            });
+        }
+
+        if (checkAllAtrasados) {
+            checkAllAtrasados.addEventListener('change', () => {
+                checksAtrasados.forEach(chk => {
+                    chk.checked = checkAllAtrasados.checked;
+                });
+            });
+
+            checksAtrasados.forEach(chk => {
+                chk.addEventListener('change', () => {
+                    if (!chk.checked) {
+                        checkAllAtrasados.checked = false;
+                    }
+                });
+            });
+        }
+
+        if (btnPagarHoy && modalEl && resumenWrap && inputsWrap && modal) {
+            btnPagarHoy.addEventListener('click', () => {
+                const seleccionados = Array.from(document.querySelectorAll('.chk-programado-hoy:checked'));
+
+                if (seleccionados.length === 0) {
+                    alert('Debes seleccionar al menos un honorario.');
+                    return;
+                }
+
+                resumenWrap.innerHTML = '';
+                inputsWrap.innerHTML = '';
+
+                seleccionados.forEach(chk => {
+                    const card = document.createElement('div');
+                    card.className = 'border rounded p-2 mb-2 bg-light';
+
+                    card.innerHTML = `
+                        <div><strong>Folio:</strong> ${chk.dataset.folio}</div>
+                        <div><strong>Emisor:</strong> ${chk.dataset.emisor}</div>
+                        <div><strong>Saldo:</strong> ${chk.dataset.saldo}</div>
+                    `;
+
+                    resumenWrap.appendChild(card);
+
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'honorarios[]';
+                    input.value = chk.value;
+
+                    inputsWrap.appendChild(input);
+                });
+
+                modal.show();
+            });
+
+            modalEl.addEventListener('hidden.bs.modal', () => {
+                resumenWrap.innerHTML = '';
+                inputsWrap.innerHTML = '';
+            });
+        }
+
+        function eliminarProgramados(selector, mensajeConfirmacion) {
+            if (!formEliminar || !inputsEliminar) {
+                return;
+            }
+
+            const seleccionados = Array.from(document.querySelectorAll(`${selector}:checked`));
+
+            if (seleccionados.length === 0) {
+                alert('Debes seleccionar al menos un registro programado.');
+                return;
+            }
+
+            if (!confirm(mensajeConfirmacion)) {
+                return;
+            }
+
+            inputsEliminar.innerHTML = '';
+
+            const ids = [...new Set(
+                seleccionados
+                    .map(chk => chk.dataset.programadoId)
+                    .filter(id => id)
+            )];
+
+            ids.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'programados[]';
+                input.value = id;
+                inputsEliminar.appendChild(input);
+            });
+
+            formEliminar.submit();
+        }
+
+        if (btnEliminarHoy) {
+            btnEliminarHoy.addEventListener('click', () => {
+                eliminarProgramados(
+                    '.chk-programado-hoy',
+                    '¿Deseas quitar la fecha de próximo pago de los honorarios seleccionados?'
+                );
+            });
+        }
+
+        if (btnEliminarAtrasados) {
+            btnEliminarAtrasados.addEventListener('click', () => {
+                eliminarProgramados(
+                    '.chk-programado-atrasado',
+                    '¿Deseas quitar la fecha de próximo pago de los honorarios atrasados seleccionados?'
+                );
+            });
+        }
+    });
+</script>
 @endsection
