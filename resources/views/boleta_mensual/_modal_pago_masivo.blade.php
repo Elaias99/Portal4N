@@ -127,12 +127,14 @@
 
                     <div class="d-flex gap-2">
                         <button type="button"
+                                id="btn-cancelar-pago-masivo"
                                 class="btn btn-secondary"
                                 data-bs-dismiss="modal">
                             Cancelar
                         </button>
 
                         <button type="submit"
+                                id="btn-submit-pago-masivo"
                                 class="btn btn-success">
                             Confirmar pago masivo
                         </button>

@@ -37,11 +37,11 @@
                         {{ $comprasProgramadasHoy->count() }} programado(s)
                     </span>
 
-                    <button type="button"
+                    {{-- <button type="button"
                             class="btn btn-sm btn-success rounded-pill px-3"
                             id="btn-pagar-compras-programadas-hoy">
                         Registrar pago
-                    </button>
+                    </button> --}}
 
                     <button type="button"
                             class="btn btn-sm btn-outline-danger rounded-pill px-3"
@@ -49,10 +49,10 @@
                         Quitar programación
                     </button>
 
-                    <a href="{{ route('finanzas_compras.index') }}"
+                    {{-- <a href="{{ route('finanzas_compras.index') }}"
                     class="btn btn-sm btn-outline-warning rounded-pill px-3">
                         Revisar compras
-                    </a>
+                    </a> --}}
                 </div>
             </div>
 

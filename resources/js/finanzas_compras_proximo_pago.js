@@ -17,6 +17,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = new bootstrap.Modal(modalEl);
     let proximoPagoProcesado = false;
 
+    function setEstadoInicialModal() {
+        proximoPagoProcesado = false;
+
+        if (btnCancelar) {
+            btnCancelar.textContent = 'Cancelar';
+        }
+
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Guardar próximo pago';
+        }
+    }
+
+    function setEstadoFinalModal() {
+        proximoPagoProcesado = true;
+
+        if (btnCancelar) {
+            btnCancelar.textContent = 'Cerrar';
+        }
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Próximo pago guardado';
+        }
+    }
+
     function getSeleccionStorage() {
         try {
             return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
@@ -107,9 +133,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        setEstadoInicialModal();
         renderSeleccionados();
         modal.show();
     });
+
+
+
+
 
     btnCerrarX?.addEventListener('click', () => {
         modal.hide();
@@ -135,7 +166,18 @@ document.addEventListener('DOMContentLoaded', () => {
         resumenWrap.innerHTML = '';
         inputsWrap.innerHTML = '';
         form.reset();
+
+        if (!proximoPagoProcesado) {
+            setEstadoInicialModal();
+        }
     });
+
+
+
+
+
+
+
 
     form.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -175,12 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             clearSeleccion();
-            proximoPagoProcesado = true;
-
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Próximo pago guardado';
-            }
+            setEstadoFinalModal();
         })
         .catch(err => {
             alert(err?.message || 'Error procesando próximo pago');

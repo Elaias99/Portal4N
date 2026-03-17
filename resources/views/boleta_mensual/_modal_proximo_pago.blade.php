@@ -58,8 +58,12 @@
 
                 </div>
 
+
+
+
                 <div class="modal-footer">
                     <button type="button"
+                            id="btn-cancelar-proximo-pago"
                             class="btn btn-secondary"
                             data-bs-dismiss="modal">
                         Cancelar
@@ -71,6 +75,10 @@
                         Guardar próximo pago
                     </button>
                 </div>
+
+
+
+
 
             </form>
 

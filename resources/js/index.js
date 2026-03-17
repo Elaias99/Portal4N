@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnPagar            = document.getElementById('btn-pagar-seleccionados');
     const totalPagoWrap       = document.getElementById('total-pago-masivo');
     const empresaTotalesWrap  = document.getElementById('empresa-totales-pago-masivo');
+    const formPagoMasivo      = document.getElementById('form-pago-masivo');
+    const submitBtn           = document.getElementById('btn-submit-pago-masivo');
+    const btnCancelar         = document.getElementById('btn-cancelar-pago-masivo');
 
     if (
         !checkAll ||
@@ -20,10 +23,22 @@ document.addEventListener('DOMContentLoaded', () => {
         !bloqueResumen ||
         !btnPagar ||
         !totalPagoWrap ||
-        !empresaTotalesWrap
+        !empresaTotalesWrap ||
+        !formPagoMasivo ||
+        !submitBtn ||
+        !btnCancelar
     ) {
         return;
     }
+
+    // =========================
+    // TEXTOS
+    // =========================
+    const TEXTO_CANCELAR = 'Cancelar';
+    const TEXTO_CERRAR = 'Cerrar';
+    const TEXTO_CONFIRMAR = 'Confirmar pago masivo';
+    const TEXTO_PROCESANDO = 'Procesando...';
+    const TEXTO_REGISTRADO = 'Pago registrado';
 
     // =========================
     // STORAGE (FUENTE DE VERDAD)
@@ -48,6 +63,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function clearSeleccionados() {
         sessionStorage.removeItem(STORAGE_KEY);
+    }
+
+    function resetEstadoModalPagoMasivo() {
+        submitBtn.disabled = false;
+        submitBtn.textContent = TEXTO_CONFIRMAR;
+        btnCancelar.textContent = TEXTO_CANCELAR;
     }
 
     // =========================
@@ -209,6 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // AL ABRIR MODAL
     // =========================
     $('#modalPagoMasivo').on('show.bs.modal', function () {
+        resetEstadoModalPagoMasivo();
         bloqueBuscador.style.display = 'none';
         renderPagoMasivoSeleccionados();
     });
@@ -242,7 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =========================
-    // AL CERRAR MODAL (SIN CONFIRMAR)
+    // AL CERRAR MODAL
     // =========================
     let pagoMasivoConfirmado = false;
 
@@ -263,65 +285,56 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =========================
-    // SUBMIT PAGO MASIVO (AJAX + descargas múltiples)
+    // SUBMIT PAGO MASIVO
     // =========================
-    const formPagoMasivo = document.getElementById('form-pago-masivo');
+    formPagoMasivo.addEventListener('submit', (e) => {
+        e.preventDefault();
 
-    if (formPagoMasivo) {
-        formPagoMasivo.addEventListener('submit', (e) => {
-            e.preventDefault();
+        submitBtn.disabled = true;
+        submitBtn.textContent = TEXTO_PROCESANDO;
 
-            const submitBtn = formPagoMasivo.querySelector('button[type="submit"]');
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Procesando...';
+        const formData = new FormData(formPagoMasivo);
+
+        fetch(formPagoMasivo.action, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Error registrando pago masivo');
+            return res.json();
+        })
+        .then(data => {
+            if (!data || data.ok !== true) throw new Error('Respuesta inválida');
+
+            if (Array.isArray(data.downloads)) {
+                data.downloads.forEach((item, index) => {
+                    setTimeout(() => {
+                        const link = document.createElement('a');
+                        link.href = item.url;
+                        link.download = '';
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+                    }, index * 800);
+                });
             }
 
-            const formData = new FormData(formPagoMasivo);
+            pagoMasivoConfirmado = true;
+            clearSeleccionados();
 
-            fetch(formPagoMasivo.action, {
-                method: 'POST',
-                body: formData,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
-            .then(res => {
-                if (!res.ok) throw new Error('Error registrando pago masivo');
-                return res.json();
-            })
-            .then(data => {
-                if (!data || data.ok !== true) throw new Error('Respuesta inválida');
+            submitBtn.disabled = true;
+            submitBtn.textContent = TEXTO_REGISTRADO;
+            btnCancelar.textContent = TEXTO_CERRAR;
+        })
+        .catch(err => {
+            alert(err?.message || 'Error procesando pago masivo');
 
-                if (Array.isArray(data.downloads)) {
-                    data.downloads.forEach((item, index) => {
-                        setTimeout(() => {
-                            const link = document.createElement('a');
-                            link.href = item.url;
-                            link.download = '';
-                            document.body.appendChild(link);
-                            link.click();
-                            link.remove();
-                        }, index * 800);
-                    });
-                }
-
-                pagoMasivoConfirmado = true;
-                clearSeleccionados();
-
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = 'Pago registrado';
-                }
-            })
-            .catch(err => {
-                alert(err?.message || 'Error procesando pago masivo');
-
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Confirmar pago masivo';
-                }
-            });
+            submitBtn.disabled = false;
+            submitBtn.textContent = TEXTO_CONFIRMAR;
+            btnCancelar.textContent = TEXTO_CANCELAR;
         });
-    }
+    });
 
 });
 
@@ -333,18 +346,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputsWrap       = document.getElementById('inputs-proximos-pagos-seleccionados');
     const resumenWrap      = document.getElementById('proximos-pagos-seleccionados');
     const submitBtn        = document.getElementById('btn-submit-proximo-pago');
+    const btnCancelar      = document.getElementById('btn-cancelar-proximo-pago');
 
     if (
         !btnProximoPago ||
         !modalProximoPago ||
         !formProximoPago ||
         !inputsWrap ||
-        !resumenWrap
+        !resumenWrap ||
+        !submitBtn ||
+        !btnCancelar
     ) {
         return;
     }
 
     const STORAGE_KEY = 'honorarios_seleccionados';
+    const TEXTO_CANCELAR = 'Cancelar';
+    const TEXTO_CERRAR = 'Cerrar';
+    const TEXTO_GUARDAR = 'Guardar próximo pago';
+    const TEXTO_PROCESANDO = 'Procesando...';
+    const TEXTO_GUARDADO = 'Próximo pago guardado';
 
     function clearSeleccionados() {
         sessionStorage.removeItem(STORAGE_KEY);
@@ -391,6 +412,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return seleccionados;
     }
 
+    function resetEstadoModalProximoPago() {
+        formProximoPago.reset();
+        inputsWrap.innerHTML = '';
+        resumenWrap.innerHTML = '';
+
+        submitBtn.disabled = false;
+        submitBtn.textContent = TEXTO_GUARDAR;
+
+        btnCancelar.textContent = TEXTO_CANCELAR;
+    }
+
     let proximoPagoProcesado = false;
 
     btnProximoPago.addEventListener('click', () => {
@@ -405,6 +437,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     $('#modalProximoPago').on('show.bs.modal', function () {
+        proximoPagoProcesado = false;
+        resetEstadoModalProximoPago();
         renderSeleccionados();
     });
 
@@ -416,16 +450,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (proximoPagoProcesado) {
             proximoPagoProcesado = false;
             location.reload();
+            return;
         }
+
+        resetEstadoModalProximoPago();
     });
 
     formProximoPago.addEventListener('submit', (e) => {
         e.preventDefault();
 
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Procesando...';
-        }
+        submitBtn.disabled = true;
+        submitBtn.textContent = TEXTO_PROCESANDO;
 
         const formData = new FormData(formProximoPago);
 
@@ -459,18 +494,18 @@ document.addEventListener('DOMContentLoaded', () => {
             clearSeleccionados();
             proximoPagoProcesado = true;
 
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Próximo pago guardado';
-            }
+            submitBtn.disabled = true;
+            submitBtn.textContent = TEXTO_GUARDADO;
+
+            btnCancelar.textContent = TEXTO_CERRAR;
         })
         .catch(err => {
             alert(err?.message || 'Error procesando próximo pago');
 
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Guardar próximo pago';
-            }
+            submitBtn.disabled = false;
+            submitBtn.textContent = TEXTO_GUARDAR;
+
+            btnCancelar.textContent = TEXTO_CANCELAR;
         });
     });
 });

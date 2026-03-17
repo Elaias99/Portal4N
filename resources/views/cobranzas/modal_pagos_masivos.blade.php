@@ -72,7 +72,15 @@
                             <div id="pm-totales-empresa" class="small text-muted"></div>
                         </div>
 
-                        <div class="text-end">
+                        <div class="text-end d-flex gap-2">
+                            <button
+                                type="button"
+                                id="btn-cerrar-pagos-masivos"
+                                class="btn btn-outline-secondary btn-sm"
+                                data-bs-dismiss="modal">
+                                Cancelar
+                            </button>
+
                             <button type="submit" id="btn-registrar-pagos" class="btn btn-success btn-sm">
                                 <i class="bi bi-check-circle"></i> Registrar Pagos Seleccionados
                             </button>
@@ -94,10 +102,9 @@
 <script>
 (() => {
 
-    // Estado interno
     let documentosSeleccionados = {};
+    let pagosMasivosProcesados = false;
 
-    // Helpers
     const $ = (sel, root = document) => root.querySelector(sel);
     const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
@@ -159,7 +166,6 @@
         const cont = $('#contenedor-montos-hidden');
         if (!cont) return;
 
-        // documentos[] (array)
         if (!cont.querySelector(`input[name="documentos[]"][value="${id}"]`)) {
             const input = document.createElement('input');
             input.type = 'hidden';
@@ -206,23 +212,18 @@
         cont.querySelector(`input[name="montos[${id}]"]`)?.remove();
     }
 
-    // Tomar selección desde la tabla principal
     function collectFromMainTable() {
-
         documentosSeleccionados = {};
 
         const seleccion = JSON.parse(localStorage.getItem('documentosSeleccionados')) || {};
-
         const checks = document.querySelectorAll('.check-documento');
 
-        // Si no hay checkboxes visibles en la tabla, limpiar memoria
         if (checks.length === 0) {
             localStorage.removeItem('documentosSeleccionados');
             return;
         }
 
         Object.values(seleccion).forEach(doc => {
-
             documentosSeleccionados[doc.id] = {
                 id: doc.id,
                 empresa: doc.empresa || '',
@@ -236,9 +237,7 @@
                 operacion: 'pago',
                 monto: Number(doc.saldo)
             };
-
         });
-
     }
 
     function renderResumen() {
@@ -269,7 +268,6 @@
         ids.forEach(id => {
             const doc = documentosSeleccionados[id];
 
-            // Hidden base
             upsertHiddenDocumento(id);
             upsertHiddenOperacion(id, doc.operacion);
             upsertHiddenMonto(id, doc.monto);
@@ -320,16 +318,13 @@
     }
 
     function quitarDocumento(id) {
-        // eliminar interno
         delete documentosSeleccionados[id];
         removeHiddenFor(id);
 
-        // actualizar localStorage también
         const seleccion = JSON.parse(localStorage.getItem('documentosSeleccionados')) || {};
         delete seleccion[id];
         localStorage.setItem('documentosSeleccionados', JSON.stringify(seleccion));
 
-        // desmarcar checkbox en tabla principal (si está visible)
         $$('.check-documento').forEach(cb => {
             const cbId = String(cb.dataset.id || cb.value);
             if (cbId === String(id)) cb.checked = false;
@@ -338,7 +333,41 @@
         renderResumen();
     }
 
-    // Events del modal
+    function setEstadoInicialModal() {
+        pagosMasivosProcesados = false;
+
+        $('#msg-pagos-ok')?.remove();
+        $('#msg-pagos-error')?.remove();
+
+        const btnCerrar = $('#btn-cerrar-pagos-masivos');
+        const btnRegistrar = $('#btn-registrar-pagos');
+
+        if (btnCerrar) {
+            btnCerrar.textContent = 'Cancelar';
+        }
+
+        if (btnRegistrar) {
+            btnRegistrar.innerHTML = '<i class="bi bi-check-circle"></i> Registrar Pagos Seleccionados';
+            btnRegistrar.disabled = Object.keys(documentosSeleccionados).length === 0;
+        }
+    }
+
+    function setEstadoFinalModal() {
+        pagosMasivosProcesados = true;
+
+        const btnCerrar = $('#btn-cerrar-pagos-masivos');
+        const btnRegistrar = $('#btn-registrar-pagos');
+
+        if (btnCerrar) {
+            btnCerrar.textContent = 'Cerrar';
+        }
+
+        if (btnRegistrar) {
+            btnRegistrar.disabled = true;
+            btnRegistrar.innerHTML = '<i class="bi bi-check-circle"></i> Pagos registrados';
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         const modalEl = $('#modalPagosMasivos');
         const form = $('#form-pagos-masivos');
@@ -347,9 +376,7 @@
 
         if (!modalEl) return;
 
-        // Al abrir modal: cargar selección desde la tabla y renderizar
         modalEl.addEventListener('show.bs.modal', () => {
-            // set fecha hoy por defecto si está vacío
             if (fecha && !fecha.value) {
                 const today = new Date();
                 const yyyy = today.getFullYear();
@@ -360,18 +387,9 @@
 
             collectFromMainTable();
             renderResumen();
-
-            // reset mensaje success anterior si existe
-            $('#msg-pagos-ok')?.remove();
-            $('#msg-pagos-error')?.remove();
-
-            if (btn) {
-                btn.disabled = Object.keys(documentosSeleccionados).length === 0;
-                btn.innerHTML = '<i class="bi bi-check-circle"></i> Registrar Pagos Seleccionados';
-            }
+            setEstadoInicialModal();
         });
 
-        // Delegación: cambio operación / monto / quitar
         modalEl.addEventListener('change', (e) => {
             const opSel = e.target.closest('.pm-op');
             if (opSel) {
@@ -386,9 +404,6 @@
                 const inputMonto = modalEl.querySelector(`.pm-monto[data-id="${id}"]`);
                 if (!inputMonto) return;
 
-
-
-
                 if (op === 'pago') {
                     documentosSeleccionados[id].monto = documentosSeleccionados[id].saldoInicial;
                     inputMonto.value = documentosSeleccionados[id].saldoInicial;
@@ -402,12 +417,6 @@
                 }
 
                 renderTotales();
-
-
-
-
-
-
             }
         });
 
@@ -420,7 +429,6 @@
 
             let v = Number(montoInp.value || 0);
 
-            // clamp básico por UX
             const max = Number(montoInp.max || 0);
             if (max > 0 && v > max) v = max;
             if (v < 1) v = 1;
@@ -440,14 +448,11 @@
             }
         });
 
-        // Submit por fetch (igual que antes)
         if (form) {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
 
                 if (!btn) return;
-
-                // Si no hay docs, no enviar
                 if (Object.keys(documentosSeleccionados).length === 0) return;
 
                 btn.disabled = true;
@@ -467,10 +472,8 @@
                 .then(data => {
                     if (!data.ok) throw new Error('Respuesta inválida');
 
-                    // limpiar selección guardada
                     localStorage.removeItem('documentosSeleccionados');
 
-                    // descargar x empresa
                     if (Array.isArray(data.downloads)) {
                         data.downloads.forEach((item, index) => {
                             setTimeout(() => {
@@ -479,7 +482,8 @@
                         });
                     }
 
-                    // feedback
+                    $('#msg-pagos-error')?.remove();
+
                     if (!$('#msg-pagos-ok')) {
                         const msg = document.createElement('div');
                         msg.id = 'msg-pagos-ok';
@@ -488,8 +492,7 @@
                         form.prepend(msg);
                     }
 
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="bi bi-check-circle"></i> Registrar Pagos Seleccionados';
+                    setEstadoFinalModal();
                 })
                 .catch(err => {
                     $('#msg-pagos-ok')?.remove();
@@ -508,9 +511,13 @@
             });
         }
 
-        // Reload al cerrar (igual que antes)
         modalEl.addEventListener('hidden.bs.modal', () => {
-            window.location.reload();
+            if (pagosMasivosProcesados) {
+                window.location.reload();
+            } else {
+                $('#msg-pagos-ok')?.remove();
+                $('#msg-pagos-error')?.remove();
+            }
         });
     });
 
