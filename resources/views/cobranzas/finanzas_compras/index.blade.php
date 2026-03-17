@@ -6,8 +6,6 @@
 
     {{-- Mensajes de estado --}}
     <x-finanzas.flash-messages />
-
-
     {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
     {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
     {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
@@ -19,10 +17,6 @@
             :back-route="route('cobranzas.general')"
             title="Reporte Cuentas por Pagar"
         />
-
-
-
-        
         {{-- === FILTROS + GESTIÓN MASIVA === --}}
         <x-finanzas.top-section>
             <x-slot:filters>
@@ -536,6 +530,7 @@
 
 @vite('resources/js/finanzas_compras_proximo_pago.js')
 @vite('resources/js/finanzas_compras_index.js')
+@vite('resources/js/modal_pagos_masivos.js')
 
 
 

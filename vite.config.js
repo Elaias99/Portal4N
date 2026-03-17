@@ -27,6 +27,7 @@ export default defineConfig({
                 'resources/js/cobranzas_documentos.js',
                 'resources/js/finanzas_compras_index.js',
                 'resources/js/boleta_mensual_index.js',
+                'resources/js/modal_pagos_masivos.js',
 
                 
 
