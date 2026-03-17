@@ -21,6 +21,9 @@ export default defineConfig({
                 'resources/js/reports/delivery-links.js',
                 'resources/js/index.js',
                 'resources/js/finanzas_compras_proximo_pago.js',
+                'resources/js/finanzas_general.js',
+                'resources/js/boleta_mensual_panel.js',
+                
 
             ],
             refresh: true,
