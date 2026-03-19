@@ -2,3 +2,90 @@
     background-color: #e9f2ff;
     border-left: 3px solid #3b82f6;
 }
+
+/* ===== TABLA PLANA BASE ===== */
+.table-responsive {
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.custom-table th {
+    background-color: #f9fafb;
+    color: #495057;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 14px;
+    border-bottom: 2px solid #e9ecef;
+    white-space: nowrap;
+}
+
+.custom-table td {
+    padding: 12px;
+    font-size: 0.9rem;
+    vertical-align: middle;
+    border-top: 1px solid #f1f3f5;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.custom-table tr:nth-child(odd) {
+    background-color: #fcfcfc;
+}
+
+.custom-table tr:hover td {
+    background-color: #f4f8ff;
+}
+
+/* ===== AJUSTES DE CELDAS ===== */
+.custom-table td.text-end,
+.custom-table th.text-end {
+    text-align: right;
+}
+
+.custom-table td.text-center,
+.custom-table th.text-center {
+    text-align: center;
+}
+
+.custom-table .fw-bold,
+.custom-table .fw-semibold {
+    font-weight: 600;
+}
+
+/* ===== CHECKBOX ===== */
+.custom-table th:first-child,
+.custom-table td:first-child {
+    width: 40px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* ===== BADGES / CONTENIDO LARGO ===== */
+.custom-table .badge {
+    vertical-align: middle;
+}
+
+.custom-table td.text-start {
+    text-align: left;
+}
+
+.custom-table td.text-nowrap,
+.custom-table th.text-nowrap {
+    white-space: nowrap;
+}
+
+/* ===== SCROLL HORIZONTAL SI LLEGARA A SER NECESARIO ===== */
+.table-responsive::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background-color: #ced4da;
+    border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background-color: #adb5bd;
+}

@@ -267,11 +267,12 @@
         {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
         {{-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --}}
         {{-- Tabla de registros limpia y responsiva sin scroll --}}
-        <x-finanzas.table-card title="Documentos Importados">
 
                 @if($documentosCompras->count() > 0)
-                    <div class="table-responsive-sm">
-                        <table class="table table-striped table-hover table-sm align-middle text-center">
+
+
+
+                    <x-finanzas.plain-table>
 
                             
                             <thead class="table-light text-uppercase align-middle">
@@ -507,8 +508,16 @@
                                     </tr>
                                 @endforeach
                             </tbody>
-                        </table>
-                    </div>
+
+
+
+
+                    </x-finanzas.plain-table>
+
+
+
+
+
 
                     {{-- Paginación --}}
                     <div class="mt-3 d-flex justify-content-center">
@@ -517,7 +526,19 @@
                 @else
                     <p class="text-muted text-center mb-0">Aún no hay registros importados.</p>
                 @endif
-        </x-finanzas.table-card>
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     </div>
 

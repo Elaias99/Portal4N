@@ -99,259 +99,211 @@
 
     <div class="container-fluid" style="max-width: 100%;">
 
-        <div class="mb-3">
-            <a href="{{ route('cobranzas.general') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="fa fa-arrow-left"></i> Volver al Panel Principal
-            </a>
-        </div>
+        <x-finanzas.header
+            :back-route="route('cobranzas.general')"
+            title="Reporte Cuentas por Cobrar"
+        />
 
-        <div class="mb-1">
-            <h1 class="text-center mb-3" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);">
-                Reporte Cuentas por Cobrar
-            </h1>
-        </div>
+        <x-finanzas.top-section>
+            <x-slot:filters>
+                <x-finanzas.filters-card>
+                    <form method="GET" action="{{ route('cobranzas.documentos') }}">
+                        <input type="hidden" name="page" value="{{ request('page', 1) }}">
 
-        {{-- === FILTROS + GESTIÓN MASIVA === --}}
-        <div class="d-flex justify-content-between align-items-start gap-3 mb-4" style="align-items: stretch;">
+                        <div class="row g-3 align-items-end">
+                            
+                            <div class="col-md-2">
+                                <label class="form-label small text-muted">Razón Social</label>
+                                <input type="text" name="razon_social" class="form-control form-control-sm"
+                                    placeholder="" value="{{ request('razon_social') }}">
+                            </div>
 
-            {{-- TARJETA DE FILTROS --}}
-            <div class="flex-grow-1">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-body">
-                        <form method="GET"  action="{{ route('cobranzas.documentos') }}" >
-                            <input type="hidden" name="page" value="{{ request('page', 1) }}">
-                            <div class="row g-3 align-items-end">
-                                
-                                <div class="col-md-2">
-                                    <label class="form-label small text-muted">Razón Social</label>
-                                    <input type="text" name="razon_social" class="form-control form-control-sm"
-                                        placeholder="" value="{{ request('razon_social') }}">
-                                </div>
+                            <div class="col-md-1">
+                                <label class="form-label small text-muted">RUT Cliente</label>
+                                <input type="text" name="rut_cliente" class="form-control form-control-sm"
+                                    placeholder="" value="{{ request('rut_cliente') }}">
+                            </div>
 
-                                <div class="col-md-1">
-                                    <label class="form-label small text-muted">RUT Cliente</label>
-                                    <input type="text" name="rut_cliente" class="form-control form-control-sm"
-                                        placeholder="" value="{{ request('rut_cliente') }}">
-                                </div>
+                            <div class="col-md-1">
+                                <label class="form-label small text-muted">Folio</label>
+                                <input type="text" name="folio" class="form-control form-control-sm"
+                                    placeholder="N°" value="{{ request('folio') }}">
+                            </div>
 
-                                <div class="col-md-1">
-                                    <label class="form-label small text-muted">Folio</label>
-                                    <input type="text" name="folio" class="form-control form-control-sm"
-                                        placeholder="N°" value="{{ request('folio') }}">
-                                </div>
+                            <div class="col-md-1 dropdown-saldo">
+                                <label class="form-label small text-muted">Saldo</label>
 
+                                <div class="dropdown w-100">
+                                    <button
+                                        class="form-control form-control-sm dropdown-toggle text-start"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false"
+                                    >
+                                        Buscar saldo por
+                                    </button>
 
-
-                                <div class="col-md-1 dropdown-saldo">
-                                    <label class="form-label small text-muted">Saldo</label>
-
-                                    <div class="dropdown w-100">
-                                        <button
-                                            class="form-control form-control-sm dropdown-toggle text-start"
-                                            type="button"
-                                            data-bs-toggle="dropdown"
-                                            aria-expanded="false"
+                                    <div class="dropdown-menu p-3" style="min-width: 220px;">
+                                        <label class="form-label small text-muted mb-1">Tipo</label>
+                                        <select
+                                            name="saldo_tipo"
+                                            class="form-select form-select-sm mb-2"
                                         >
-                                            Buscar saldo por
-                                        </button>
-
-                                        <div class="dropdown-menu p-3" style="min-width: 220px;">
-                                            
-                                            {{-- Tipo de saldo --}}
-                                            <label class="form-label small text-muted mb-1">Tipo</label>
-                                            <select
-                                                name="saldo_tipo"
-                                                class="form-select form-select-sm mb-2"
-                                            >
-                                                <option value="saldo_pendiente"
-                                                    {{ request('saldo_tipo', 'saldo_pendiente') === 'saldo_pendiente' ? 'selected' : '' }}>
-                                                    Saldo pendiente
-                                                </option>
-
-                                                <option value="monto_total"
-                                                    {{ request('saldo_tipo') === 'monto_total' ? 'selected' : '' }}>
-                                                    Monto original
-                                                </option>
-                                            </select>
-
-                                            {{-- Valor --}}
-                                            <label class="form-label small text-muted mb-1">Monto</label>
-                                            <input
-                                                type="text"
-                                                name="saldo_valor"
-                                                class="form-control form-control-sm"
-                                                placeholder="Ej: $260000"
-                                                value="{{ request('saldo_valor') }}"
-                                                min="0"
-                                            >
-                                        </div>
-                                    </div>
-                                </div>
-
-
-
-
-
-                                {{-- Filtro solo con dos opciones --}}
-                                <div class="col-md-1">
-                                    <label class="form-label small text-muted">Estado Original</label>
-
-
-                                        <select name="status" class="form-select form-select-sm">
-                                            <option value="">Todos</option>
-                                            <option value="Al día" {{ request('status') == 'Al día' ? 'selected' : '' }}>
-                                                Al día ({{ $totalAlDia ?? 0 }})
+                                            <option value="saldo_pendiente"
+                                                {{ request('saldo_tipo', 'saldo_pendiente') === 'saldo_pendiente' ? 'selected' : '' }}>
+                                                Saldo pendiente
                                             </option>
-                                            <option value="Vencido" {{ request('status') == 'Vencido' ? 'selected' : '' }}>
-                                                Vencido ({{ $totalVencido ?? 0 }})
+
+                                            <option value="monto_total"
+                                                {{ request('saldo_tipo') === 'monto_total' ? 'selected' : '' }}>
+                                                Monto original
                                             </option>
                                         </select>
-                                </div>
 
-
-                                {{-- Filtro por estado actual (manual) --}}
-                                <div class="col-md-2">
-                                    <label class="form-label small text-muted">Estado de Pago</label>
-                                    <select name="estado_pago" class="form-select form-select-sm">
-                                        <option value="">Todos</option>
-                                        <option value="Pagado" {{ request('estado_pago') == 'Pagado' ? 'selected' : '' }}>
-                                            Pagado ({{ $totalPagados ?? 0 }})
-                                        </option>
-                                        <option value="Pendiente" {{ request('estado_pago') == 'Pendiente' ? 'selected' : '' }}>
-                                            Pendiente ({{ $totalPendientes ?? 0 }})
-                                        </option>
-                                    </select>
-                                </div>
-
-
-
-
-
-                                <div class="col-md-1 dropdown-fechas">
-                                    <label class="form-label small text-muted">Fecha Origen</label>
-                                    <div class="dropdown w-100">
-                                        <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
-                                                id="dropdownFechas" data-bs-toggle="dropdown" aria-expanded="false">
-                                            <i class="bi bi-calendar3"></i> Fecha Dcto.
-                                        </button>
-
-                                        <div class="dropdown-menu p-3">
-                                            <label class="form-label small text-muted">Desde</label>
-                                            <input type="date" name="fecha_inicio" class="form-control form-control-sm mb-2"
-                                                value="{{ request('fecha_inicio') }}">
-
-                                            <label class="form-label small text-muted">Hasta</label>
-                                            <input type="date" name="fecha_fin" class="form-control form-control-sm mb-2"
-                                                value="{{ request('fecha_fin') }}">
-                                        </div>
+                                        <label class="form-label small text-muted mb-1">Monto</label>
+                                        <input
+                                            type="text"
+                                            name="saldo_valor"
+                                            class="form-control form-control-sm"
+                                            placeholder="Ej: $260000"
+                                            value="{{ request('saldo_valor') }}"
+                                            min="0"
+                                        >
                                     </div>
                                 </div>
+                            </div>
 
+                            <div class="col-md-1">
+                                <label class="form-label small text-muted">Estado Original</label>
+                                <select name="status" class="form-select form-select-sm">
+                                    <option value="">Todos</option>
+                                    <option value="Al día" {{ request('status') == 'Al día' ? 'selected' : '' }}>
+                                        Al día ({{ $totalAlDia ?? 0 }})
+                                    </option>
+                                    <option value="Vencido" {{ request('status') == 'Vencido' ? 'selected' : '' }}>
+                                        Vencido ({{ $totalVencido ?? 0 }})
+                                    </option>
+                                </select>
+                            </div>
 
-                                <div class="col-md-1 dropdown-fechas">
-                                    <label class="form-label small text-muted">Fecha Vencimiento</label>
-                                    <div class="dropdown w-100">
-                                        <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
-                                                id="dropdownVencimiento" data-bs-toggle="dropdown" aria-expanded="false">
-                                            <i class="bi bi-calendar-event"></i>Fecha Venc.
-                                        </button>
+                            <div class="col-md-2">
+                                <label class="form-label small text-muted">Estado de Pago</label>
+                                <select name="estado_pago" class="form-select form-select-sm">
+                                    <option value="">Todos</option>
+                                    <option value="Pagado" {{ request('estado_pago') == 'Pagado' ? 'selected' : '' }}>
+                                        Pagado ({{ $totalPagados ?? 0 }})
+                                    </option>
+                                    <option value="Pendiente" {{ request('estado_pago') == 'Pendiente' ? 'selected' : '' }}>
+                                        Pendiente ({{ $totalPendientes ?? 0 }})
+                                    </option>
+                                </select>
+                            </div>
 
-                                        <div class="dropdown-menu p-3">
-                                            <label class="form-label small text-muted">Desde</label>
-                                            <input type="date" name="vencimiento_inicio" class="form-control form-control-sm mb-2"
-                                                value="{{ request('vencimiento_inicio') }}">
+                            <div class="col-md-1 dropdown-fechas">
+                                <label class="form-label small text-muted">Fecha Origen</label>
+                                <div class="dropdown w-100">
+                                    <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
+                                            id="dropdownFechas" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-calendar3"></i> Fecha Dcto.
+                                    </button>
 
-                                            <label class="form-label small text-muted">Hasta</label>
-                                            <input type="date" name="vencimiento_fin" class="form-control form-control-sm mb-2"
-                                                value="{{ request('vencimiento_fin') }}">
-                                        </div>
+                                    <div class="dropdown-menu p-3">
+                                        <label class="form-label small text-muted">Desde</label>
+                                        <input type="date" name="fecha_inicio" class="form-control form-control-sm mb-2"
+                                            value="{{ request('fecha_inicio') }}">
+
+                                        <label class="form-label small text-muted">Hasta</label>
+                                        <input type="date" name="fecha_fin" class="form-control form-control-sm mb-2"
+                                            value="{{ request('fecha_fin') }}">
                                     </div>
                                 </div>
-
-
-
-
                             </div>
 
-                            <div class="d-flex justify-content-end gap-2 mt-3">
-                                <a href="{{ route('cobranzas.documentos') }}" class="btn btn-outline-secondary btn-sm">
-                                    <i class="bi bi-x-circle"></i> Limpiar
-                                </a>
-                                <button type="submit" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-search"></i> Buscar
-                                </button>
-                                
-                            </div>
+                            <div class="col-md-1 dropdown-fechas">
+                                <label class="form-label small text-muted">Fecha Vencimiento</label>
+                                <div class="dropdown w-100">
+                                    <button class="btn dropdown-toggle btn-sm w-100 text-start" type="button"
+                                            id="dropdownVencimiento" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-calendar-event"></i>Fecha Venc.
+                                    </button>
 
-                            <div class="d-flex justify-content-between align-items-center mt-3">
-                                {{-- Texto alineado a la izquierda --}}
-                                <div>
-                                    <strong>Saldo pendiente total:</strong> 
-                                    <span class="text-success fw-semibold">
-                                        ${{ number_format($totalSaldoPendiente, 0, ',', '.') }}
-                                    </span>
+                                    <div class="dropdown-menu p-3">
+                                        <label class="form-label small text-muted">Desde</label>
+                                        <input type="date" name="vencimiento_inicio" class="form-control form-control-sm mb-2"
+                                            value="{{ request('vencimiento_inicio') }}">
+
+                                        <label class="form-label small text-muted">Hasta</label>
+                                        <input type="date" name="vencimiento_fin" class="form-control form-control-sm mb-2"
+                                            value="{{ request('vencimiento_fin') }}">
+                                    </div>
                                 </div>
-
-                                {{-- Botón alineado a la derecha --}}
-                                <a href="{{ route('cobranzas.index') }}" class="btn btn-outline-secondary btn-sm">
-                                    Detalle Cliente
-                                </a>
                             </div>
+                        </div>
 
-
-
-
-
-
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            {{-- TARJETA DE GESTIÓN MASIVA --}}
-        
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-body text-center d-flex flex-column justify-content-center">
-                        <h6 class="fw-bold mb-3">Gestión Masiva</h6>
-
-                        {{-- Nuevo botón de Historial de Movimientos --}}
-                        @if (Auth::id() != 375)
-                            <a href="{{ route('panelfinanza.show') }}" 
-                            class="btn btn-outline-secondary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
-                                <i class="fa-solid fa-clock-rotate-left"></i> 
-                                <span>Historial de Movimientos</span>
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <a href="{{ route('cobranzas.documentos') }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-x-circle"></i> Limpiar
                             </a>
-                        @endif
-
-                        {{-- Importación de Excel --}}
-                        @if (Auth::id() != 375)
-                            <form action="{{ route('cobranzas.import') }}" method="POST" enctype="multipart/form-data" class="mb-3">
-                                @csrf
-                                <input type="file" name="file" class="form-control form-control-sm mb-2" required>
-                                <button type="submit" class="btn btn-success btn-sm w-100">
-                                    <i class="bi bi-file-earmark-arrow-up"></i> Importar Excel
-                                </button>
-                            </form>
-                        @endif
-
-                        
-                            <button type="button"
-                                    class="btn btn-outline-success btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
-                                    data-bs-toggle="modal" data-bs-target="#modalExportarVenta">
-                                <i class="bi bi-file-earmark-arrow-down"></i>
-                                <span>Exportar Excel</span>
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="bi bi-search"></i> Buscar
                             </button>
+                        </div>
 
-                    </div>
-                </div>
-          
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div>
+                                <strong>Saldo pendiente total:</strong>
+                                <span class="text-success fw-semibold">
+                                    ${{ number_format($totalSaldoPendiente, 0, ',', '.') }}
+                                </span>
+                            </div>
 
-        </div>
+                            <a href="{{ route('cobranzas.index') }}" class="btn btn-outline-secondary btn-sm">
+                                Detalle Cliente
+                            </a>
+                        </div>
+                    </form>
+                </x-finanzas.filters-card>
+            </x-slot:filters>
+
+            <x-slot:actions>
+                <x-finanzas.mass-actions-card title="Gestión Masiva">
+                    @if (Auth::id() != 375)
+                        <a href="{{ route('panelfinanza.show') }}"
+                        class="btn btn-outline-secondary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                            <span>Historial de Movimientos</span>
+                        </a>
+                    @endif
+
+                    @if (Auth::id() != 375)
+                        <form action="{{ route('cobranzas.import') }}" method="POST" enctype="multipart/form-data" class="mb-3">
+                            @csrf
+                            <input type="file" name="file" class="form-control form-control-sm mb-2" required>
+                            <button type="submit" class="btn btn-success btn-sm w-100">
+                                <i class="bi bi-file-earmark-arrow-up"></i> Importar Excel
+                            </button>
+                        </form>
+                    @endif
+
+                    <button type="button"
+                            class="btn btn-outline-success btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
+                            data-bs-toggle="modal" data-bs-target="#modalExportarVenta">
+                        <i class="bi bi-file-earmark-arrow-down"></i>
+                        <span>Exportar Excel</span>
+                    </button>
+                </x-finanzas.mass-actions-card>
+            </x-slot:actions>
+        </x-finanzas.top-section>
+
+
+        
+
+
+
+
 
         {{-- === TABLA DE REGISTROS === --}}
-        <div class="table-responsive rounded shadow-sm">
-            <table class="table table-hover align-middle custom-table">
-
+        <x-finanzas.plain-table>
 
             @include('cobranzas.partials.filtros')
 
@@ -381,7 +333,7 @@
 
                     <td title="{{ $doc->tipoDocumento?->nombre }}">
                         {{ \Illuminate\Support\Str::limit($doc->tipoDocumento?->nombre ?? '-', 18) }}
-                    </td>                    
+                    </td>
 
                     {{-- RUT Proveedor --}}
                     <td class="text-nowrap">
@@ -399,7 +351,6 @@
                             class="fw-semibold text-decoration-none">
                                 {{ $doc->folio }}
                         </a>
-
 
                         @if($doc->referenciados->count() > 0)
                             <small class="badge bg-info text-dark ms-1">
@@ -449,16 +400,11 @@
                             : '-' }}
                     </td>
 
-
                 </tr>
             @endforeach
             </tbody>
 
-
-
-
-            </table>
-        </div>
+        </x-finanzas.plain-table>
 
         {{-- Paginación --}}
         <div class="mt-3 d-flex justify-content-center">
