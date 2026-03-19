@@ -332,6 +332,16 @@
                             Buscar
                         </button>
                     </div>
+
+
+
+                    <div class="d-flex justify-content-end mt-3">
+                        <a href="{{ route('cobranzas-compras.index', ['origen' => 'honorarios']) }}"
+                        class="btn btn-outline-secondary btn-sm">
+                            Detalle Proveedor
+                        </a>
+                    </div>
+
                 </form>
             </x-finanzas.filters-card>
         </x-slot:filters>
@@ -339,10 +349,7 @@
         <x-slot:actions>
             <x-finanzas.mass-actions-card title="Gestión Masiva">
 
-                <a href="{{ route('cobranzas-compras.index', ['origen' => 'honorarios']) }}"
-                   class="btn btn-outline-secondary btn-sm w-100 mb-2">
-                    Detalle Proveedor
-                </a>
+
 
                 <a href="{{ route('movimientos.honorarios.historial') }}"
                    class="btn btn-outline-secondary btn-sm w-100 mb-2">
@@ -584,187 +591,195 @@
                 <p class="text-muted mb-0">No hay honorarios registrados.</p>
             </div>
         @else
-            <div class="table-responsive">
-                <table class="table table-sm table-striped table-hover table-bordered align-middle">
 
-                    <thead>
+
+
+
+            <x-finanzas.plain-table>
+
+                <thead>
+                    <tr>
+                        <th class="hm-nowrap text-center">
+                            <input type="checkbox" id="check-all-honorarios">
+                        </th>
+                        <th class="hm-nowrap">Empresa</th>
+                        <th class="hm-nowrap">Tipo boleta</th>
+                        <th class="hm-nowrap">Estado</th>
+                        <th class="hm-nowrap">RUT</th>
+                        <th class="hm-nowrap">Emisor</th>
+                        <th class="hm-nowrap">Folio</th>
+                        <th class="hm-nowrap">Servicio</th>
+                        <th class="hm-nowrap">Servicio Final</th>
+                        <th class="hm-nowrap">Fecha Emisión</th>
+                        <th class="hm-nowrap">Fecha Vencimiento</th>
+                        <th class="hm-nowrap">Estado SII</th>
+                        <th class="hm-nowrap">Fecha Anulación</th>
+                        <th class="hm-nowrap text-end">Monto Pagado</th>
+                        <th class="hm-nowrap text-end">Saldo pendiente</th>
+                        <th class="hm-nowrap">Fecha Último Movimiento</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach($registros as $r)
+                        @php
+                            $estadoActual = $r->estado_financiero ?? $r->estado_financiero_inicial;
+                            $estaVencido = $r->fecha_vencimiento && $r->fecha_vencimiento->isPast();
+                            $tieneCobranza = (bool) $r->cobranzaCompra;
+                            $servicioCobranza = $tieneCobranza ? $r->cobranzaCompra->servicio : null;
+                            $esServicioOtro = $tieneCobranza && $servicioCobranza === 'Otro';
+                            $montoPagado = (int) ($r->monto_pagado ?? 0);
+                            $saldoPendiente = (int) ($r->saldo_pendiente ?? 0);
+                        @endphp
+
                         <tr>
-                            <th class="hm-nowrap text-center">
-                                <input type="checkbox" id="check-all-honorarios">
-                            </th>
-                            <th class="hm-nowrap">Empresa</th>
-                            <th class="hm-nowrap">Tipo boleta</th>
-                            <th class="hm-nowrap">Estado</th>
-                            <th class="hm-nowrap">RUT</th>
-                            <th class="hm-nowrap">Emisor</th>
-                            <th class="hm-nowrap">Folio</th>
-                            <th class="hm-nowrap">Servicio</th>
-                            <th class="hm-nowrap">Servicio Final</th>
-                            <th class="hm-nowrap">Fecha Emisión</th>
-                            <th class="hm-nowrap">Fecha Vencimiento</th>
-                            <th class="hm-nowrap">Estado SII</th>
-                            <th class="hm-nowrap">Fecha Anulación</th>
-                            <th class="hm-nowrap text-end">Monto Pagado</th>
-                            <th class="hm-nowrap text-end">Saldo pendiente</th>
-                            <th class="hm-nowrap">Fecha Último Movimiento</th>
-                        </tr>
-                    </thead>
 
-                    <tbody>
-                        @foreach($registros as $r)
-                            @php
-                                $estadoActual = $r->estado_financiero ?? $r->estado_financiero_inicial;
-                                $estaVencido = $r->fecha_vencimiento && $r->fecha_vencimiento->isPast();
-                                $tieneCobranza = (bool) $r->cobranzaCompra;
-                                $servicioCobranza = $tieneCobranza ? $r->cobranzaCompra->servicio : null;
-                                $esServicioOtro = $tieneCobranza && $servicioCobranza === 'Otro';
-                                $montoPagado = (int) ($r->monto_pagado ?? 0);
-                                $saldoPendiente = (int) ($r->saldo_pendiente ?? 0);
-                            @endphp
+                            <td class="hm-nowrap text-center {{ ($r->pagoProgramado && $saldoPendiente > 0 && $r->pagos->isEmpty() && $r->prontoPagos->isEmpty()) ? 'hm-programado' : '' }}">
+                                @if($saldoPendiente > 0 && $r->estado !== 'NULA')
+                                    <input type="checkbox"
+                                        class="chk-honorario"
+                                        value="{{ $r->id }}"
+                                        data-id="{{ $r->id }}"
+                                        data-empresa="{{ $r->empresa->Nombre }}"
+                                        data-rut="{{ $r->rut_emisor }}"
+                                        data-emisor="{{ $r->razon_social_emisor }}"
+                                        data-folio="{{ $r->folio }}"
+                                        data-fecha-emision="{{ $r->fecha_emision?->format('d-m-Y') }}"
+                                        data-fecha-vencimiento="{{ $r->fecha_vencimiento?->format('d-m-Y') }}"
+                                        data-monto="{{ $montoPagado }}"
+                                        data-saldo="{{ $saldoPendiente }}">
+                                @else
+                                    <input type="checkbox" disabled>
+                                @endif
+                            </td>
 
-                            <tr>
+                            <td class="hm-nowrap">
+                                <span class="hm-ellipsis-sm" title="{{ $r->empresa->Nombre }}">
+                                    {{ $r->empresa->Nombre }}
+                                </span>
+                            </td>
 
-                                <td class="hm-nowrap text-center {{ ($r->pagoProgramado && $saldoPendiente > 0 && $r->pagos->isEmpty() && $r->prontoPagos->isEmpty()) ? 'hm-programado' : '' }}">
-                                    @if($saldoPendiente > 0 && $r->estado !== 'NULA')
-                                        <input type="checkbox"
-                                            class="chk-honorario"
-                                            value="{{ $r->id }}"
-                                            data-id="{{ $r->id }}"
-                                            data-empresa="{{ $r->empresa->Nombre }}"
-                                            data-rut="{{ $r->rut_emisor }}"
-                                            data-emisor="{{ $r->razon_social_emisor }}"
-                                            data-folio="{{ $r->folio }}"
-                                            data-fecha-emision="{{ $r->fecha_emision?->format('d-m-Y') }}"
-                                            data-fecha-vencimiento="{{ $r->fecha_vencimiento?->format('d-m-Y') }}"
-                                            data-monto="{{ $montoPagado }}"
-                                            data-saldo="{{ $saldoPendiente }}">
-                                    @else
-                                        <input type="checkbox" disabled>
-                                    @endif
-                                </td>
-
-                                <td class="hm-nowrap">
-                                    <span class="hm-ellipsis-sm" title="{{ $r->empresa->Nombre }}">
-                                        {{ $r->empresa->Nombre }}
+                            <td class="hm-nowrap">
+                                @if($r->tipo_boleta === 'Boleta de Terceros')
+                                    <span class="hm-chip hm-chip-info">
+                                        {{ $r->tipo_boleta }}
                                     </span>
-                                </td>
-
-                                <td class="hm-nowrap">
-                                    @if($r->tipo_boleta === 'Boleta de Terceros')
-                                        <span class="hm-chip hm-chip-info">
-                                            {{ $r->tipo_boleta }}
-                                        </span>
-                                    @else
-                                        <span class="hm-chip hm-chip-ok">
-                                            {{ $r->tipo_boleta ?? 'Boleta Honorario' }}
-                                        </span>
-                                    @endif
-                                </td>
-
-                                <td class="hm-nowrap">
-                                    <span class="hm-chip {{ $estaVencido ? 'hm-chip-bad' : 'hm-chip-ok' }}">
-                                        {{ $estadoActual }}
+                                @else
+                                    <span class="hm-chip hm-chip-ok">
+                                        {{ $r->tipo_boleta ?? 'Boleta Honorario' }}
                                     </span>
-                                </td>
+                                @endif
+                            </td>
 
-                                <td class="hm-nowrap">{{ $r->rut_emisor }}</td>
+                            <td class="hm-nowrap">
+                                <span class="hm-chip {{ $estaVencido ? 'hm-chip-bad' : 'hm-chip-ok' }}">
+                                    {{ $estadoActual }}
+                                </span>
+                            </td>
 
-                                <td>
-                                    @if($tieneCobranza)
-                                        <span class="hm-ellipsis" title="{{ $r->cobranzaCompra->razon_social }}">
-                                            {{ $r->cobranzaCompra->razon_social }}
-                                        </span>
-                                    @else
-                                        <span class="text-muted">Sin proveedor</span>
-                                    @endif
-                                </td>
+                            <td class="hm-nowrap">{{ $r->rut_emisor }}</td>
 
-                                <td class="hm-nowrap">
-                                    <a href="{{ route('honorarios.mensual.show', $r->id) }}" class="fw-semibold text-decoration-none">
-                                        {{ $r->folio }}
+                            <td>
+                                @if($tieneCobranza)
+                                    <span class="hm-ellipsis" title="{{ $r->cobranzaCompra->razon_social }}">
+                                        {{ $r->cobranzaCompra->razon_social }}
+                                    </span>
+                                @else
+                                    <span class="text-muted">Sin proveedor</span>
+                                @endif
+                            </td>
+
+                            <td class="hm-nowrap">
+                                <a href="{{ route('honorarios.mensual.show', $r->id) }}" class="fw-semibold text-decoration-none">
+                                    {{ $r->folio }}
+                                </a>
+                            </td>
+
+                            <td class="hm-nowrap">
+                                @if($tieneCobranza)
+                                    {{ $r->cobranzaCompra->servicio }}
+                                @else
+                                    <span class="text-muted">Sin Servicio</span>
+                                @endif
+                            </td>
+
+                            <td class="hm-nowrap">
+                                @if($esServicioOtro)
+                                    <a href="#"
+                                    class="hm-link-editable"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalServicio"
+                                    data-update-url="{{ route('honorarios.mensual.servicio.update', $r->id) }}"
+                                    data-folio="{{ $r->folio }}"
+                                    data-servicio="{{ $r->servicio_manual ?? '' }}"
+                                    title="Definir servicio">
+
+                                        @if($r->servicio_manual)
+                                            <span class="hm-chip hm-chip-info">
+                                                {{ $r->servicio_manual }}
+                                            </span>
+                                        @else
+                                            <span class="text-muted">Otro</span>
+                                        @endif
                                     </a>
-                                </td>
+                                @else
+                                    {{ $r->servicio_final ?? '—' }}
+                                @endif
+                            </td>
 
-                                <td class="hm-nowrap">
-                                    @if($tieneCobranza)
-                                        {{ $r->cobranzaCompra->servicio }}
-                                    @else
-                                        <span class="text-muted">Sin Servicio</span>
-                                    @endif
-                                </td>
+                            <td class="hm-nowrap">{{ $r->fecha_emision?->format('d-m-Y') }}</td>
+                            <td class="hm-nowrap">{{ $r->fecha_vencimiento?->format('d-m-Y') }}</td>
 
-                                <td class="hm-nowrap">
-                                    @if($esServicioOtro)
-                                        <a href="#"
-                                           class="hm-link-editable"
-                                           data-bs-toggle="modal"
-                                           data-bs-target="#modalServicio"
-                                           data-update-url="{{ route('honorarios.mensual.servicio.update', $r->id) }}"
-                                           data-folio="{{ $r->folio }}"
-                                           data-servicio="{{ $r->servicio_manual ?? '' }}"
-                                           title="Definir servicio">
+                            <td class="hm-nowrap">
+                                <span class="{{ $r->estado === 'ANULADA' ? 'text-danger' : 'text-success' }}">
+                                    {{ $r->estado }}
+                                </span>
+                            </td>
 
-                                            @if($r->servicio_manual)
-                                                <span class="hm-chip hm-chip-info">
-                                                    {{ $r->servicio_manual }}
-                                                </span>
-                                            @else
-                                                <span class="text-muted">Otro</span>
-                                            @endif
-                                        </a>
-                                    @else
-                                        {{ $r->servicio_final ?? '—' }}
-                                    @endif
-                                </td>
+                            <td class="hm-nowrap">{{ $r->fecha_anulacion?->format('d-m-Y') }}</td>
 
-                                <td class="hm-nowrap">{{ $r->fecha_emision?->format('d-m-Y') }}</td>
-                                <td class="hm-nowrap">{{ $r->fecha_vencimiento?->format('d-m-Y') }}</td>
+                            <td class="hm-nowrap text-end fw-semibold">
+                                {{ number_format($montoPagado, 0, ',', '.') }}
+                            </td>
 
-                                <td class="hm-nowrap">
-                                    <span class="{{ $r->estado === 'ANULADA' ? 'text-danger' : 'text-success' }}">
-                                        {{ $r->estado }}
-                                    </span>
-                                </td>
+                            <td class="hm-nowrap text-end fw-semibold {{ $saldoPendiente === 0 ? 'text-success' : 'text-danger' }}">
+                                {{ number_format($saldoPendiente, 0, ',', '.') }}
+                            </td>
 
-                                <td class="hm-nowrap">{{ $r->fecha_anulacion?->format('d-m-Y') }}</td>
+                            <td class="hm-nowrap">
+                                <div>
+                                    {{ $r->fecha_ultima_gestion
+                                        ? \Carbon\Carbon::parse($r->fecha_ultima_gestion)->format('d-m-Y')
+                                        : '-' }}
+                                </div>
 
-                                <td class="hm-nowrap text-end fw-semibold">
-                                    {{ number_format($montoPagado, 0, ',', '.') }}
-                                </td>
-
-                                <td class="hm-nowrap text-end fw-semibold {{ $saldoPendiente === 0 ? 'text-success' : 'text-danger' }}">
-                                    {{ number_format($saldoPendiente, 0, ',', '.') }}
-                                </td>
-
-                                <td class="hm-nowrap">
-                                    <div>
-                                        {{ $r->fecha_ultima_gestion
-                                            ? \Carbon\Carbon::parse($r->fecha_ultima_gestion)->format('d-m-Y')
-                                            : '-' }}
+                                @if(
+                                    $r->pagoProgramado &&
+                                    $r->pagos->isEmpty() &&
+                                    $r->prontoPagos->isEmpty() &&
+                                    (int) $r->saldo_pendiente > 0
+                                )
+                                    <div class="small text-primary fw-semibold mt-1">
+                                        Próx. pago: {{ $r->pagoProgramado->fecha_programada?->format('d-m-Y') }}
                                     </div>
+                                @endif
+                            </td>
 
-                                    @if(
-                                        $r->pagoProgramado &&
-                                        $r->pagos->isEmpty() &&
-                                        $r->prontoPagos->isEmpty() &&
-                                        (int) $r->saldo_pendiente > 0
-                                    )
-                                        <div class="small text-primary fw-semibold mt-1">
-                                            Próx. pago: {{ $r->pagoProgramado->fecha_programada?->format('d-m-Y') }}
-                                        </div>
-                                    @endif
-                                </td>
+                        </tr>
+                    @endforeach
+                </tbody>
 
-                            </tr>
-                        @endforeach
-                    </tbody>
+            </x-finanzas.plain-table>
 
-                </table>
-
-                <div class="py-3 d-flex justify-content-center">
-                    {{ $registros->links('pagination::bootstrap-4') }}
-                </div>
+            <div class="py-3 d-flex justify-content-center">
+                {{ $registros->links('pagination::bootstrap-4') }}
             </div>
+
+
+
+
+
+
         @endif
     </div>
 
