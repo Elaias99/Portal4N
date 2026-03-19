@@ -251,7 +251,9 @@ Schedule::call(function () {
 })->everyMinute();
 
 
-
+Schedule::command('backup:database')
+    ->dailyAt('23:00')
+    ->timezone('America/Santiago');
 
 
 
