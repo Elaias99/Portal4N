@@ -101,37 +101,6 @@ route::post('/notifications/mark-all-read', function () {
     return back();
 })->name('notifications.markAllAsRead');
 
-//agregar una ruta para consultar notificaciones
-// Route::get('/notificaciones/recientes', function () {
-//     // Mantener vivos los flashes para el siguiente request
-//     session()->reflash();
-
-//     // Log de verificación temporal
-//     Log::info('Reflash ejecutado en /notificaciones/recientes', [
-//         'session_flash' => session()->get('_flash'),
-//         'session_keys'  => array_keys(session()->all()),
-//     ]);
-
-//     $notificaciones = Auth::user()->unreadNotifications
-//         ->sortByDesc('created_at')
-//         ->take(5)
-//         ->map(function ($n) {
-//             return [
-//                 'id'      => $n->id,
-//                 'mensaje' => $n->data['mensaje'],
-//                 'link'    => $n->data['link'] . '?notificacion_id=' . $n->id,
-//                 'tipo'    => $n->type,
-//             ];
-//         });
-
-//     return response()->json([
-//         'total' => $notificaciones->count(),
-//         'items' => $notificaciones->values()
-//     ]);
-// })->middleware('auth');
-
-
-
 
 Route::get('/notificaciones/empleado', function () {
     $tiposPermitidos = [
@@ -1050,7 +1019,13 @@ Route::get('/test-mail', function () {
 // BACKCOFFE
 // 
 
+Route::get('/react-test', function () {
+    return view('landing-react');
+})->name('react.test');
 
+Route::get('/sitio-4n', function () {
+    return view('landing-react');
+})->name('sitio.4n');
 
 
 

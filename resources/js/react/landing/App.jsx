@@ -1,0 +1,887 @@
+import React, { useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  BadgeCheck,
+  Building2,
+  ChevronRight,
+  Clock3,
+  Globe2,
+  HeartHandshake,
+  Layers3,
+  MapPinned,
+  Menu,
+  MessageSquareMore,
+  Package,
+  Search,
+  Send,
+  ShieldCheck,
+  Truck,
+  Warehouse,
+  X,
+  Route,
+  Users,
+  Boxes,
+  Phone,
+  Mail,
+  MapPin,
+  ExternalLink,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import chileMapRaw from "./assets/chile.svg?raw";
+
+const palette = {
+  dark: "#231F21",
+  gray: "#AFAFAF",
+  light: "#B0FFF8",
+  teal: "#5CBABC",
+};
+
+const navItems = [
+  "Inicio",
+  "Empresa",
+  "Servicios",
+  "Cobertura",
+  "Tracking",
+  "Contacto",
+];
+
+const reasons = [
+  {
+    icon: Globe2,
+    title: "Cobertura nacional real",
+    text: "Operación de norte a sur con conocimiento del territorio y rutas definidas.",
+  },
+  {
+    icon: Layers3,
+    title: "Soluciones a medida",
+    text: "Servicios adaptados según volumen, industria y urgencia.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Operación confiable",
+    text: "Cumplimiento de plazos exigentes, incluyendo entregas de 24 a 48 horas.",
+  },
+  {
+    icon: Users,
+    title: "Escala humana",
+    text: "Trato directo, respuestas claras y responsables reales a cargo de cada operación.",
+  },
+  {
+    icon: HeartHandshake,
+    title: "Equipo Postventa",
+    text: "Atención directa, sin bots ni respuestas impersonales.",
+  },
+  {
+    icon: Search,
+    title: "Trackeo permanente",
+    text: "Seguimiento continuo y trazabilidad de cada envío desde origen a destino.",
+  },
+  {
+    icon: Truck,
+    title: "Flota propia",
+    text: "Flota propia desde furgones de 7 m³ hasta ramplas de 100 m³.",
+  },
+];
+
+const services = [
+  {
+    icon: Truck,
+    title: "Transporte",
+    description:
+      "Transporte troncal y distribución nacional con control de rutas, tiempos y trazabilidad.",
+  },
+  {
+    icon: Warehouse,
+    title: "Almacenaje",
+    description:
+      "Bodegas estratégicas, control de inventario, trazabilidad y escalabilidad.",
+  },
+  {
+    icon: Boxes,
+    title: "Fulfillment",
+    description:
+      "Preparación de pedidos, integración con transporte y operación sin intermediarios.",
+  },
+  {
+    icon: Route,
+    title: "Última milla",
+    description:
+      "Entrega final con seguimiento, control del último tramo y postventa humana.",
+  },
+  {
+    icon: MapPinned,
+    title: " Servicio Punto a punto",
+    description:
+      "Traslados dedicados entre ubicaciones específicas con coordinación operativa directa.",
+  },
+  {
+    icon: BadgeCheck,
+    title: "Valijas y encomiendas",
+    description:
+      "Valijas o encomiendas entre puntos fijos con rutas y frecuencia definidas.",
+  },
+];
+
+const regions = [
+  "Arica y Parinacota",
+  "Tarapacá",
+  "Antofagasta",
+  "Atacama",
+  "Coquimbo",
+  "Valparaíso",
+  "Metropolitana",
+  "O’Higgins",
+  "Maule",
+  "Ñuble",
+  "Biobío",
+  "Araucanía",
+  "Los Ríos",
+  "Los Lagos",
+  "Aysén",
+  "Magallanes",
+];
+
+
+
+
+const coverageMarkers = [
+  { label: "Arica", x: 578, y: 18 },
+  { label: "Antofagasta", x: 586, y: 92 },
+  { label: "Atacama", x: 575, y: 152 },
+  { label: "Valparaíso", x: 560, y: 238 },
+  { label: "RM", x: 560, y: 254 },
+  { label: "Maule", x: 548, y: 289 },
+  { label: "Concepción", x: 536, y: 322 },
+  { label: "Araucanía", x: 534, y: 343 },
+  { label: "Los Lagos", x: 525, y: 405 },
+  { label: "Magallanes", x: 540, y: 626 },
+];
+
+
+const chileMapInner = chileMapRaw
+  .replace(/<\?xml[\s\S]*?\?>/g, "")
+  .replace(/<svg[^>]*>/i, "")
+  .replace(/<\/svg>\s*$/i, "");
+
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0 },
+};
+
+function SectionHeader({ eyebrow, title, description, light = false }) {
+  return (
+    <div className="max-w-3xl space-y-4">
+      <Badge
+        variant="outline"
+        className={`rounded-full border px-4 py-1 text-xs uppercase tracking-[0.22em] ${
+          light ? "border-white/20 text-[#B0FFF8]" : "border-[#5CBABC]/30 text-[#231F21]"
+        }`}
+      >
+        {eyebrow}
+      </Badge>
+      <h2
+        className={`font-['Kanit'] text-3xl font-semibold tracking-tight sm:text-4xl ${
+          light ? "text-white" : "text-[#231F21]"
+        }`}
+      >
+        {title}
+      </h2>
+      <p className={`max-w-2xl text-base leading-7 ${light ? "text-white/75" : "text-[#231F21]/70"}`}>
+        {description}
+      </p>
+    </div>
+  );
+}
+
+function Logo() {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex items-end leading-none">
+        <span className="font-['Kanit'] text-3xl font-bold tracking-tight text-[#231F21]">4</span>
+        <span className="font-['Kanit'] text-3xl font-bold tracking-tight text-[#5CBABC]">N</span>
+      </div>
+      <div className="-mb-1 text-[11px] font-semibold uppercase tracking-[0.35em] text-[#231F21]/80">
+        Logística
+      </div>
+    </div>
+  );
+}
+
+function ChileRouteGraphic() {
+  const points = useMemo(
+    () => [
+      { top: "5%", left: "50%", label: "Arica" },
+      { top: "14%", left: "48%", label: "Antofagasta" },
+      { top: "22%", left: "49%", label: "Atacama" },
+      { top: "33%", left: "50%", label: "Valparaíso" },
+      { top: "38%", left: "53%", label: "RM" },
+      { top: "49%", left: "51%", label: "Maule" },
+      { top: "58%", left: "52%", label: "Concepción" },
+      { top: "67%", left: "50%", label: "Araucanía" },
+      { top: "79%", left: "47%", label: "Los Lagos" },
+      { top: "92%", left: "43%", label: "Magallanes" },
+    ],
+    []
+  );
+
+  return (
+    <div className="relative mx-auto h-[560px] w-full max-w-[260px] rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur">
+      <div className="absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_top,_rgba(92,186,188,0.18),_transparent_55%)]" />
+      <svg viewBox="0 0 120 520" className="relative z-10 h-full w-full">
+        <defs>
+          <linearGradient id="chileStroke" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#B0FFF8" />
+            <stop offset="55%" stopColor="#5CBABC" />
+            <stop offset="100%" stopColor="#AFAFAF" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M61 9c-6 14-14 18-11 34 2 12 1 24-6 35-6 10-9 20-5 31 5 15 5 24-2 38-6 12-6 22 0 33 7 13 7 27 0 40-8 16-7 29-1 43 7 16 6 32-1 48-9 18-8 34 0 51 8 17 9 31 2 46-6 12-7 24 1 37 6 11 6 21-2 30-8 10-10 19-5 31 4 10 2 20-5 31-8 13-9 26-4 40 4 11 3 20-2 29-6 12-8 21-2 32"
+          fill="none"
+          stroke="url(#chileStroke)"
+          strokeWidth="10"
+          strokeLinecap="round"
+        />
+        <path
+          d="M78 363c8 12 11 28 3 42-6 11-7 24-1 36 5 11 3 20-5 30-7 9-9 18-5 30 3 8 1 14-3 19"
+          fill="none"
+          stroke="url(#chileStroke)"
+          strokeWidth="8"
+          strokeLinecap="round"
+        />
+      </svg>
+      {points.map((point) => (
+        <div
+          key={point.label}
+          className="absolute z-20 flex items-center gap-2"
+          style={{ top: point.top, left: point.left }}
+        >
+          <span className="h-3 w-3 rounded-full bg-[#B0FFF8] shadow-[0_0_0_6px_rgba(176,255,248,0.12)]" />
+          <span className="whitespace-nowrap text-xs font-medium text-white/80">{point.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function FourNLogisticaWebsite() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [tracking, setTracking] = useState("");
+
+  return (
+    <div
+      className="min-h-screen bg-[#F7F9F9] text-[#231F21]"
+      style={{ fontFamily: "Montserrat, system-ui, sans-serif" }}
+    >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap');
+        html { scroll-behavior: smooth; }
+        body { background: #F7F9F9; }
+      `}</style>
+
+
+      <style>{`
+        .coverage-map-shapes path {
+          transition:
+            transform 180ms ease,
+            fill 180ms ease,
+            opacity 180ms ease,
+            filter 180ms ease;
+          transform-box: fill-box;
+          transform-origin: center;
+          cursor: pointer;
+        }
+
+        .coverage-map-shapes:hover path {
+          opacity: 0.72;
+        }
+
+        .coverage-map-shapes path:hover {
+          opacity: 1;
+          transform: translateY(-4px) scale(1.03);
+          fill: #B0FFF8;
+          filter: drop-shadow(0 0 10px rgba(176,255,248,0.35));
+        }
+      `}</style>
+
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#F7F9F9]/88 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+          <Logo />
+
+          <nav className="hidden items-center gap-7 lg:flex">
+            {navItems.map((item) => (
+              <a
+                key={item}
+                href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
+                className="text-sm font-medium text-[#231F21]/72 transition hover:text-[#231F21]"
+              >
+                {item}
+              </a>
+            ))}
+          </nav>
+
+          <div className="hidden items-center gap-3 lg:flex">
+            <Button className="rounded-full bg-[#231F21] px-5 text-white hover:bg-[#231F21]/90">
+              Cotizar servicio
+            </Button>
+          </div>
+
+          <button
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#231F21]/10 bg-white text-[#231F21] lg:hidden"
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-label="Abrir menú"
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
+
+        {mobileOpen && (
+          <div className="border-t border-[#231F21]/8 bg-white lg:hidden">
+            <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 sm:px-6 lg:px-8">
+              {navItems.map((item) => (
+                <a
+                  key={item}
+                  href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-xl px-3 py-3 text-sm font-medium text-[#231F21]/75 transition hover:bg-[#5CBABC]/10 hover:text-[#231F21]"
+                >
+                  {item}
+                </a>
+              ))}
+              <Button className="mt-2 rounded-full bg-[#231F21] text-white hover:bg-[#231F21]/90">
+                Cotizar servicio
+              </Button>
+            </div>
+          </div>
+        )}
+      </header>
+
+      <main>
+
+
+
+
+        <section id="inicio" className="relative overflow-hidden bg-[#231F21] text-white">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(176,255,248,0.16),_transparent_38%),radial-gradient(circle_at_90%_20%,_rgba(92,186,188,0.22),_transparent_26%),linear-gradient(180deg,rgba(35,31,33,0.92),rgba(35,31,33,1))]" />
+          <div className="absolute -left-20 top-24 h-64 w-64 rounded-full bg-[#B0FFF8]/10 blur-3xl" />
+          <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-[#5CBABC]/10 blur-3xl" />
+
+          <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 py-20 sm:px-6 md:py-24 lg:grid-cols-[1.15fr_0.85fr] lg:px-8 lg:py-28">
+            <motion.div initial="hidden" animate="visible" variants={fadeUp} transition={{ duration: 0.6 }} className="space-y-8">
+              <div className="space-y-5">
+                <Badge className="rounded-full border-0 bg-white/10 px-4 py-2 text-[#B0FFF8] shadow-none hover:bg-white/10">
+                  Logística en Chile · Distribución nacional · Última milla
+                </Badge>
+                <h1 className="max-w-4xl font-['Kanit'] text-4xl font-semibold leading-[1.02] tracking-tight sm:text-5xl lg:text-7xl">
+                  Logística y distribución confiable en todo Chile
+                </h1>
+                <p className="max-w-2xl text-lg leading-8 text-white/78 sm:text-xl">
+                  Transporte, almacenaje, fulfillment y última milla con flota propia, trackeo permanente y atención humana de verdad.
+                </p>
+                <p className="text-base font-medium text-[#B0FFF8]">
+                  Confianza, eficiencia y transparencia en cada gestión.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Button className="group h-12 rounded-full bg-[#5CBABC] px-6 text-[#231F21] hover:bg-[#B0FFF8]">
+                  Cotizar servicio
+                  <ArrowRight className="ml-2 h-4 w-4 transition group-hover:translate-x-0.5" />
+                </Button>
+                <Button variant="outline" className="h-12 rounded-full border-white/15 bg-white/5 px-6 text-white hover:bg-white/10">
+                  Ver servicios
+                </Button>
+              </div>
+
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.7, delay: 0.1 }}
+              className="relative"
+            >
+              <div className="absolute -left-6 -top-6 h-28 w-28 rounded-full border border-[#B0FFF8]/30" />
+              <div className="absolute -bottom-8 -right-8 h-44 w-44 rounded-full bg-[#5CBABC]/15 blur-2xl" />
+              <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-3 shadow-[0_30px_80px_rgba(0,0,0,0.32)] backdrop-blur-sm">
+                <div className="relative overflow-hidden rounded-[1.6rem] bg-[#161416]">
+                  <div className="absolute inset-0 bg-[linear-gradient(145deg,rgba(176,255,248,0.08),transparent_36%),linear-gradient(180deg,transparent,rgba(35,31,33,0.16))]" />
+                  <img
+                    src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80"
+                    alt="Operación logística y reparto"
+                    className="h-[520px] w-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(35,31,33,0.08),rgba(35,31,33,0.64))]" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+
+
+
+
+
+
+
+
+        {/* Tracking */}
+        <section id="tracking" className="bg-[#F7F9F9] text-[#231F21]">
+          <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+            <div className="overflow-hidden rounded-[2.2rem] border border-[#231F21]/8 bg-white p-6 shadow-[0_20px_60px_rgba(35,31,33,0.05)] sm:p-8 lg:p-10">
+              <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
+                <div>
+                  <div className="inline-flex rounded-full bg-[#5CBABC]/12 px-4 py-2 text-xs uppercase tracking-[0.22em] text-[#231F21]">
+                    Tracking / acceso
+                  </div>
+
+                  <h2 className="mt-5 font-['Kanit'] text-3xl font-semibold tracking-tight text-[#231F21] sm:text-4xl">
+                    Seguimiento de envíos
+                  </h2>
+
+                  <p className="mt-4 max-w-2xl text-base leading-8 text-[#231F21]/72">
+                    Revisa el estado de tu envío en un solo lugar. Ingresa tu número de seguimiento para consultar la información disponible de tu despacho de manera rápida, clara y segura.
+                  </p>
+                </div>
+
+                <div className="rounded-[1.8rem] border border-[#231F21]/10 bg-[#231F21] p-5 text-white shadow-[0_20px_50px_rgba(35,31,33,0.18)] backdrop-blur-sm">
+                  <label className="mb-3 block text-sm font-medium text-white/82">
+                    Ingresa tu número de seguimiento
+                  </label>
+
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <Input
+                      value={tracking}
+                      onChange={(e) => setTracking(e.target.value)}
+                      placeholder="Ej: 4N-000123"
+                      className="h-12 rounded-full border-white/10 bg-white/10 text-white placeholder:text-white/35"
+                    />
+                    <Button className="h-12 rounded-full bg-[#5CBABC] px-6 text-[#231F21] hover:bg-[#B0FFF8]">
+                      Rastrear envío
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        {/* Tracking */}
+
+
+
+
+        {/* Servicios */}
+        <section id="servicios" className="bg-white">
+          <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+              <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={fadeUp} transition={{ duration: 0.55 }}>
+                <SectionHeader
+                  eyebrow="Servicios"
+                  title="Soluciones logísticas pensadas para operar con continuidad"
+                  description="Transporte de carga, almacenaje logístico, fulfillment, última milla y servicios complementarios para operaciones B2B y B2C con enfoque práctico y comercial."
+                />
+              </motion.div>
+              <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={fadeUp} transition={{ duration: 0.55, delay: 0.05 }}>
+              </motion.div>
+            </div>
+
+            <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {services.map((service, index) => {
+                const Icon = service.icon;
+                return (
+                  <motion.div
+                    key={service.title}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, amount: 0.15 }}
+                    variants={fadeUp}
+                    transition={{ duration: 0.45, delay: index * 0.03 }}
+                  >
+                    <Card className="group h-full rounded-[1.75rem] border border-[#231F21]/8 bg-white shadow-[0_18px_50px_rgba(35,31,33,0.05)] transition hover:-translate-y-1 hover:shadow-[0_28px_65px_rgba(35,31,33,0.08)]">
+                      <CardHeader className="pb-4">
+                        <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#231F21] text-[#B0FFF8]">
+                          <Icon className="h-6 w-6" />
+                        </div>
+                        <CardTitle className="font-['Kanit'] text-2xl text-[#231F21]">{service.title}</CardTitle>
+                        <CardDescription className="text-sm leading-7 text-[#231F21]/68">{service.description}</CardDescription>
+                      </CardHeader>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+        {/* Servicios */}
+
+
+
+
+        {/* MAPA DE CHILE */}
+        <section id="cobertura" className="bg-[#231F21] text-white">
+
+          <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+              <div className="grid gap-12 lg:grid-cols-[1fr_0.95fr] lg:items-center">
+                <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={fadeUp} transition={{ duration: 0.55 }}>
+                  <SectionHeader
+                    eyebrow="Cobertura nacional"
+                    title="Cobertura desde Arica a Punta Arenas"
+                    description="4N Logística opera de norte a sur con una presencia pensada para responder con orden, trazabilidad y continuidad. con su casa matriz en La Región Metropolitana."
+                    light
+                  />
+
+                  <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                    {regions.map((region) => (
+                      <div key={region} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/82">
+                        {region}
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.6, delay: 0.05 }}
+                  className="grid gap-6"
+                >
+
+
+                <div className="relative mx-auto h-[560px] w-full overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 backdrop-blur">
+                  <div className="absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_top,_rgba(92,186,188,0.18),_transparent_55%)]" />
+                  <div className="absolute right-10 top-16 h-40 w-40 rounded-full bg-[#5CBABC]/10 blur-3xl" />
+                  <div className="absolute bottom-16 right-16 h-32 w-32 rounded-full bg-[#B0FFF8]/10 blur-3xl" />
+
+                  <svg
+                    viewBox="470 0 145 709"
+                    className="relative z-10 h-full w-full"
+                    preserveAspectRatio="xMidYMid meet"
+                  >
+                    <g
+                      className="coverage-map-shapes"
+                      dangerouslySetInnerHTML={{ __html: chileMapInner }}
+                    />
+
+                    {coverageMarkers.map((point) => (
+                      <g key={point.label}>
+                        <circle
+                          cx={point.x}
+                          cy={point.y}
+                          r="9"
+                          fill="rgba(176,255,248,0.16)"
+                        />
+                        <circle
+                          cx={point.x}
+                          cy={point.y}
+                          r="4.5"
+                          fill="#B0FFF8"
+                        />
+                        <text
+                          x={point.x + 8}
+                          y={point.y + 4}
+                          fill="rgba(255,255,255,0.85)"
+                          fontSize="11"
+                          fontWeight="500"
+                        >
+                          {point.label}
+                        </text>
+                      </g>
+                    ))}
+                  </svg>
+
+
+
+
+                </div>
+
+                </motion.div>
+              </div>
+          </div>
+        </section>
+        {/* MAPA DE CHILE */}
+
+
+
+        {/* Empresa */}
+        <section id="empresa" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+          <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={fadeUp} transition={{ duration: 0.5 }}>
+              <SectionHeader
+                eyebrow="Empresa"
+                title="Una operación que crece sin perder el trato directo"
+                description="4N Logística nace en marzo de 2021, impulsada por la oportunidad de continuar y proyectar la experiencia de Distribución Nacional META S.A., consolidando un servicio logístico basado en la confianza, la eficiencia y la transparencia."
+              />
+            </motion.div>
+
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
+              variants={fadeUp}
+              transition={{ duration: 0.55, delay: 0.05 }}
+              className="grid gap-5 sm:grid-cols-2"
+            >
+              {[
+                "Hoy contamos con un equipo de cerca de 80 personas y más de 100 colaboradores externos, distribuidos a lo largo de todo el país.",
+                "Su crecimiento ha sido impulsado por el compromiso del equipo humano y una forma responsable de operar.",
+              ].map((item, index) => (
+                <Card key={index} className="rounded-[1.75rem] border border-[#231F21]/8 bg-white shadow-[0_20px_50px_rgba(35,31,33,0.05)]">
+                  <CardContent className="p-6">
+                    <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#5CBABC]/12 text-[#231F21]">
+                      <ChevronRight className="h-5 w-5" />
+                    </div>
+                    <p className="text-sm leading-7 text-[#231F21]/75">{item}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+        {/* Empresa */}
+
+
+        {/* Visión de marca */}
+        <section id="visión-de-marca" className="bg-white">
+          <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+            <div className="grid gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:gap-14">
+
+
+
+            <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.2 }}
+                variants={fadeUp}
+                transition={{ duration: 0.6, delay: 0.05 }}
+                className="grid gap-4 sm:grid-cols-2"
+              >
+                {[
+                  ["Sustentabilidad", "Decisiones que buscan continuidad operativa y bienestar del equipo."],
+                  ["Crecimiento responsable", "Expandirse sin perder control, calidad y compromiso real."],
+                  ["Bienestar del equipo", "El desarrollo de la empresa también debe impactar a quienes la hacen posible."],
+                  ["Transparencia", "Información clara, trazabilidad y comunicación oportuna en cada gestión."],
+                  ["Cumplimiento real", "Prometer lo que se puede cumplir y ejecutar con seriedad."],
+                ].map(([title, text]) => (
+                  <div key={title} className="rounded-[1.75rem] border border-[#231F21]/8 bg-[#F7F9F9] p-6">
+                    <div className="mb-3 inline-flex rounded-full bg-[#5CBABC]/12 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#231F21]">
+                      {title}
+                    </div>
+                    <p className="text-sm leading-7 text-[#231F21]/72">{text}</p>
+                  </div>
+                ))}
+              </motion.div>
+
+
+
+              <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={fadeUp} transition={{ duration: 0.55 }}>
+                <SectionHeader
+                  eyebrow="Nuestra visión"
+                  title="Consolidarse como un partner logístico confiable en Chile"
+                  description="La visión de 4N Logística pone el foco en una operación transparente, cercana y sostenible, capaz de crecer con responsabilidad sin perder la escala humana que define su forma de trabajar."
+                />
+              </motion.div>
+
+
+
+
+
+            </div>
+          </div>
+        </section>
+        {/* Visión de marca */}
+
+        {/* Por qué elegir 4N Logística */}
+        <section id="por-qué-elegir-4n-logística" className="bg-[#F7F9F9]">
+          <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={fadeUp} transition={{ duration: 0.55 }}>
+              <SectionHeader
+                eyebrow="¿Por qué elegir 4N Logística?"
+                title="Diferenciales que se notan en la operación y también en la atención"
+                description="La propuesta de 4N Logística combina cobertura, control, trazabilidad y personas reales a cargo. Esa mezcla permite resolver operaciones con más claridad, menos fricción y mejor respuesta."
+              />
+            </motion.div>
+
+            <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+              {reasons.map((reason, index) => {
+                const Icon = reason.icon;
+                return (
+                  <motion.div
+                    key={reason.title}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, amount: 0.12 }}
+                    variants={fadeUp}
+                    transition={{ duration: 0.45, delay: index * 0.04 }}
+                  >
+                    <Card className="h-full rounded-[1.75rem] border border-[#231F21]/8 bg-white shadow-[0_20px_55px_rgba(35,31,33,0.05)] transition hover:-translate-y-1">
+                      <CardContent className="p-6">
+                        <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#5CBABC]/12 text-[#231F21]">
+                          <Icon className="h-6 w-6" />
+                        </div>
+                        <h3 className="font-['Kanit'] text-xl font-semibold text-[#231F21]">{reason.title}</h3>
+                        <p className="mt-3 text-sm leading-7 text-[#231F21]/72">{reason.text}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+        {/* Por qué elegir 4N Logística */}
+
+
+
+
+        <section id="contacto" className="bg-white">
+          <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+            <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
+              <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={fadeUp} transition={{ duration: 0.55 }}>
+                <SectionHeader
+                  eyebrow="Contacto"
+                  title="Conversemos sobre tu operación"
+                  description="Una sección visible, simple y comercial para recibir cotizaciones, consultas y oportunidades de trabajo conjunto sin fricción innecesaria."
+                />
+
+                <div className="mt-8 grid gap-4">
+                  <div className="rounded-[1.6rem] border border-[#231F21]/8 bg-[#F7F9F9] p-5">
+                    <div className="flex items-start gap-3">
+                      <Phone className="mt-1 h-5 w-5 text-[#5CBABC]" />
+                      <div>
+                        <div className="font-semibold text-[#231F21]">Teléfono</div>
+                        <div className="text-sm text-[#231F21]/68">+56 9 2682 6733</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-[1.6rem] border border-[#231F21]/8 bg-[#F7F9F9] p-5">
+                    <div className="flex items-start gap-3">
+                      <MapPin className="mt-1 h-5 w-5 text-[#5CBABC]" />
+                      <div>
+                        <div className="font-semibold text-[#231F21]">Dirección</div>
+                        <div className="text-sm text-[#231F21]/68">Galvarino 9215-A Quilicura, Santiago</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-[1.6rem] border border-[#231F21]/8 bg-[#F7F9F9] p-5">
+                    <div className="flex items-start gap-3">
+                      <Mail className="mt-1 h-5 w-5 text-[#5CBABC]" />
+                      <div>
+                        <div className="font-semibold text-[#231F21]">Sitio web</div>
+                        <div className="text-sm text-[#231F21]/68">www.4n.cl</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.2 }}
+                variants={fadeUp}
+                transition={{ duration: 0.6, delay: 0.05 }}
+              >
+                <Card className="rounded-[2rem] border border-[#231F21]/8 bg-[#231F21] text-white shadow-[0_28px_70px_rgba(35,31,33,0.12)]">
+                  <CardContent className="p-6 sm:p-8">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <label className="text-sm text-white/70">Nombre</label>
+                        <Input className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="Tu nombre" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm text-white/70">Apellido</label>
+                        <Input className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="Tu apellido" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm text-white/70">Correo</label>
+                        <Input type="email" className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="nombre@empresa.cl" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm text-white/70">Celular</label>
+                        <Input className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="+56 9" />
+                      </div>
+                      <div className="space-y-2 sm:col-span-2">
+                        <label className="text-sm text-white/70">Empresa</label>
+                        <Input className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="Nombre de tu empresa" />
+                      </div>
+                      <div className="space-y-2 sm:col-span-2">
+                        <label className="text-sm text-white/70">Mensaje</label>
+                        <Textarea className="min-h-[140px] rounded-[1.4rem] border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="Cuéntanos qué tipo de operación necesitas resolver" />
+                      </div>
+                    </div>
+
+                    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                      <Button className="h-12 rounded-full bg-[#5CBABC] px-6 text-[#231F21] hover:bg-[#B0FFF8]">
+                        Solicitar cotización
+                      </Button>
+                      <Button variant="outline" className="h-12 rounded-full border-white/12 bg-white/5 px-6 text-white hover:bg-white/10">
+                        Hablar con un ejecutivo
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-white/5 bg-[#231F21] text-white">
+        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.1fr_0.9fr_0.9fr] lg:px-8">
+          <div>
+            <Logo />
+            <p className="mt-5 max-w-md text-sm leading-7 text-white/68">
+              Operador logístico en Chile enfocado en transporte, almacenaje, fulfillment, paquetería y última milla con atención cercana y cumplimiento real.
+            </p>
+            <p className="mt-6 font-['Kanit'] text-xl leading-tight text-[#B0FFF8]">
+              Logística hecha por personas, para operaciones que no pueden fallar.
+            </p>
+          </div>
+
+          <div>
+            <div className="text-sm font-semibold uppercase tracking-[0.22em] text-[#B0FFF8]">Menú</div>
+            <div className="mt-5 grid grid-cols-2 gap-3 text-sm text-white/70">
+              {navItems.map((item) => (
+                <a key={item} href={`#${item.toLowerCase().replace(/\s+/g, '-')}`} className="transition hover:text-white">
+                  {item}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-sm font-semibold uppercase tracking-[0.22em] text-[#B0FFF8]">Contacto</div>
+            <div className="mt-5 space-y-4 text-sm text-white/70">
+              <div className="flex items-start gap-3">
+                <MapPin className="mt-1 h-4 w-4 text-[#B0FFF8]" />
+                <span>Galvarino 9215-A Quilicura, Santiago</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <Phone className="mt-1 h-4 w-4 text-[#B0FFF8]" />
+                <span>+56 9 2682 6733</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <ExternalLink className="mt-1 h-4 w-4 text-[#B0FFF8]" />
+                <span>Tracking y acceso de clientes</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <MessageSquareMore className="mt-1 h-4 w-4 text-[#B0FFF8]" />
+                <span>Espacio preparado para integrar redes sociales oficiales</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

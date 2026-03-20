@@ -1,8 +1,15 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-    // base: '/Portal4N/public/',
+    resolve: {
+        alias: {
+            '@': path.resolve(__dirname, 'resources/js/react'),
+        },
+    },
     plugins: [
         laravel({
             input: [
@@ -28,12 +35,13 @@ export default defineConfig({
                 'resources/js/finanzas_compras_index.js',
                 'resources/js/boleta_mensual_index.js',
                 'resources/js/modal_pagos_masivos.js',
-
-                
-
+                'resources/js/react/landing-test.jsx',
+                'resources/js/react/landing/main.jsx'
             ],
             refresh: true,
         }),
+        react(),
+        tailwindcss(),
     ],
     server: {
         watch: {
