@@ -36,7 +36,8 @@ export default defineConfig({
                 'resources/js/boleta_mensual_index.js',
                 'resources/js/modal_pagos_masivos.js',
                 'resources/js/react/landing-test.jsx',
-                'resources/js/react/landing/main.jsx'
+                'resources/js/react/landing/main.jsx',
+                'resources/js/react/tracking/main.jsx',
             ],
             refresh: true,
         }),

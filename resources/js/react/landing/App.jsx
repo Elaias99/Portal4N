@@ -26,13 +26,19 @@ import {
   Mail,
   MapPin,
   ExternalLink,
+  ImageIcon,
+  UserRound,
+  Box,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { fetchPublicTracking } from "../tracking/api.js";
+import TrackingStatusBadge from "../tracking/components/TrackingStatusBadge.jsx";
 import chileMapRaw from "./assets/chile.svg?raw";
+import cajaImage from "./assets/caja.png";
 
 const palette = {
   dark: "#231F21",
@@ -174,6 +180,27 @@ const fadeUp = {
   visible: { opacity: 1, y: 0 },
 };
 
+
+
+function formatTrackingDate(value) {
+  if (!value) return "Sin registro disponible";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("es-CL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(date);
+}
+
 function SectionHeader({ eyebrow, title, description, light = false }) {
   return (
     <div className="max-w-3xl space-y-4">
@@ -201,15 +228,14 @@ function SectionHeader({ eyebrow, title, description, light = false }) {
 
 function Logo() {
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex items-end leading-none">
-        <span className="font-['Kanit'] text-3xl font-bold tracking-tight text-[#231F21]">4</span>
-        <span className="font-['Kanit'] text-3xl font-bold tracking-tight text-[#5CBABC]">N</span>
-      </div>
-      <div className="-mb-1 text-[11px] font-semibold uppercase tracking-[0.35em] text-[#231F21]/80">
-        Logística
-      </div>
-    </div>
+    <a href="#inicio" className="flex items-center shrink-0">
+      <img
+        src="/images/logo.png"
+        alt="4N Logística"
+        className="h-9 w-auto sm:h-10 lg:h-12 object-contain"
+        loading="eager"
+      />
+    </a>
   );
 }
 
@@ -271,8 +297,44 @@ function ChileRouteGraphic() {
 }
 
 export default function FourNLogisticaWebsite() {
+
+
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [tracking, setTracking] = useState("");
+  const [trackingResult, setTrackingResult] = useState(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [trackingError, setTrackingError] = useState("");
+  const [trackingSearched, setTrackingSearched] = useState(false);
+  const [showProof, setShowProof] = useState(false);
+
+
+  async function handleTrackingSubmit(event) {
+    event.preventDefault();
+
+    const cleanTracking = tracking.trim();
+
+    setTrackingSearched(true);
+    setTrackingError("");
+    setTrackingResult(null);
+    setShowProof(false);
+
+    if (!cleanTracking) {
+      setTrackingError("Debes ingresar un número de seguimiento.");
+      return;
+    }
+
+    setTrackingLoading(true);
+
+    try {
+      const data = await fetchPublicTracking(cleanTracking);
+      setTrackingResult(data);
+    } catch (error) {
+      setTrackingError(error.message || "No fue posible consultar el tracking.");
+    } finally {
+      setTrackingLoading(false);
+    }
+  }
 
   return (
     <div
@@ -367,81 +429,14 @@ export default function FourNLogisticaWebsite() {
 
 
 
-        <section id="inicio" className="relative overflow-hidden bg-[#231F21] text-white">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(176,255,248,0.16),_transparent_38%),radial-gradient(circle_at_90%_20%,_rgba(92,186,188,0.22),_transparent_26%),linear-gradient(180deg,rgba(35,31,33,0.92),rgba(35,31,33,1))]" />
-          <div className="absolute -left-20 top-24 h-64 w-64 rounded-full bg-[#B0FFF8]/10 blur-3xl" />
-          <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-[#5CBABC]/10 blur-3xl" />
-
-          <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 py-20 sm:px-6 md:py-24 lg:grid-cols-[1.15fr_0.85fr] lg:px-8 lg:py-28">
-            <motion.div initial="hidden" animate="visible" variants={fadeUp} transition={{ duration: 0.6 }} className="space-y-8">
-              <div className="space-y-5">
-                <Badge className="rounded-full border-0 bg-white/10 px-4 py-2 text-[#B0FFF8] shadow-none hover:bg-white/10">
-                  Logística en Chile · Distribución nacional · Última milla
-                </Badge>
-                <h1 className="max-w-4xl font-['Kanit'] text-4xl font-semibold leading-[1.02] tracking-tight sm:text-5xl lg:text-7xl">
-                  Logística y distribución confiable en todo Chile
-                </h1>
-                <p className="max-w-2xl text-lg leading-8 text-white/78 sm:text-xl">
-                  Transporte, almacenaje, fulfillment y última milla con flota propia, trackeo permanente y atención humana de verdad.
-                </p>
-                <p className="text-base font-medium text-[#B0FFF8]">
-                  Confianza, eficiencia y transparencia en cada gestión.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button className="group h-12 rounded-full bg-[#5CBABC] px-6 text-[#231F21] hover:bg-[#B0FFF8]">
-                  Cotizar servicio
-                  <ArrowRight className="ml-2 h-4 w-4 transition group-hover:translate-x-0.5" />
-                </Button>
-                <Button variant="outline" className="h-12 rounded-full border-white/15 bg-white/5 px-6 text-white hover:bg-white/10">
-                  Ver servicios
-                </Button>
-              </div>
-
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 24, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.7, delay: 0.1 }}
-              className="relative"
-            >
-              <div className="absolute -left-6 -top-6 h-28 w-28 rounded-full border border-[#B0FFF8]/30" />
-              <div className="absolute -bottom-8 -right-8 h-44 w-44 rounded-full bg-[#5CBABC]/15 blur-2xl" />
-              <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-3 shadow-[0_30px_80px_rgba(0,0,0,0.32)] backdrop-blur-sm">
-                <div className="relative overflow-hidden rounded-[1.6rem] bg-[#161416]">
-                  <div className="absolute inset-0 bg-[linear-gradient(145deg,rgba(176,255,248,0.08),transparent_36%),linear-gradient(180deg,transparent,rgba(35,31,33,0.16))]" />
-                  <img
-                    src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80"
-                    alt="Operación logística y reparto"
-                    className="h-[520px] w-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(35,31,33,0.08),rgba(35,31,33,0.64))]" />
-                  <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </section>
-
-
-
-
-
-
-
-
-
-        {/* Tracking */}
-        <section id="tracking" className="bg-[#F7F9F9] text-[#231F21]">
-          <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-            <div className="overflow-hidden rounded-[2.2rem] border border-[#231F21]/8 bg-white p-6 shadow-[0_20px_60px_rgba(35,31,33,0.05)] sm:p-8 lg:p-10">
-              <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
+        {/* Hero + Tracking integrado */}
+        <section id="inicio" className="bg-[#F7F9F9] text-[#231F21]">
+          <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 sm:pt-10 lg:px-8 lg:pt-12">
+            <div className="relative z-20 overflow-hidden rounded-[2.2rem] border border-[#231F21]/8 bg-white p-6 shadow-[0_20px_60px_rgba(35,31,33,0.05)] sm:p-8 lg:p-10">
+              <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
                 <div>
                   <div className="inline-flex rounded-full bg-[#5CBABC]/12 px-4 py-2 text-xs uppercase tracking-[0.22em] text-[#231F21]">
-                    Tracking / acceso
+                    Seguimiento
                   </div>
 
                   <h2 className="mt-5 font-['Kanit'] text-3xl font-semibold tracking-tight text-[#231F21] sm:text-4xl">
@@ -449,32 +444,287 @@ export default function FourNLogisticaWebsite() {
                   </h2>
 
                   <p className="mt-4 max-w-2xl text-base leading-8 text-[#231F21]/72">
-                    Revisa el estado de tu envío en un solo lugar. Ingresa tu número de seguimiento para consultar la información disponible de tu despacho de manera rápida, clara y segura.
+                    Revisa el estado de tu envío en un solo lugar. Ingresa tu número de seguimiento para
+                    consultar la información disponible de tu despacho de manera rápida.
                   </p>
+
+                  <div className="mt-8 rounded-[1.8rem] border border-[#231F21]/10 bg-[#F7F9F9] p-4 sm:p-5">
+                    <form onSubmit={handleTrackingSubmit} className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-3 md:flex-row">
+                        <div className="relative flex-1">
+                          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#231F21]/35" />
+                          <Input
+                            value={tracking}
+                            onChange={(e) => setTracking(e.target.value)}
+                            placeholder="Ej: 4N202601123267"
+                            disabled={trackingLoading}
+                            className="h-12 rounded-2xl border-[#231F21]/10 bg-white pl-11 text-[#231F21] placeholder:text-[#231F21]/35"
+                          />
+                        </div>
+
+                        <Button
+                          type="submit"
+                          disabled={trackingLoading}
+                          className="h-12 rounded-full bg-[#5CBABC] px-8 text-[#231F21] hover:bg-[#B0FFF8] md:min-w-[160px]"
+                        >
+                          {trackingLoading ? "Consultando..." : "Consultar"}
+                        </Button>
+                      </div>
+                    </form>
+
+                    {trackingLoading && (
+                      <div className="mt-4 rounded-[1.2rem] border border-[#231F21]/8 bg-white px-4 py-4 text-sm text-[#231F21]/70">
+                        Consultando información del envío...
+                      </div>
+                    )}
+
+                    {!trackingLoading && trackingSearched && trackingError && (
+                      <div className="mt-4 rounded-[1.2rem] border border-[#E7B4B4] bg-[#FFF4F4] px-4 py-4">
+                        <p className="text-sm font-semibold text-[#9F2D2D]">No pudimos encontrar el envío</p>
+                        <p className="mt-1 text-sm text-[#231F21]/70">{trackingError}</p>
+                      </div>
+                    )}
+
+                    {!trackingLoading && trackingResult && (
+                      <div className="mt-4 rounded-[1.35rem] border border-[#231F21]/8 bg-white p-4 shadow-[0_10px_30px_rgba(35,31,33,0.05)]">
+
+
+
+
+
+                        <div className="mt-3 flex flex-col gap-4">
+                          <div className="min-w-0">
+                            <p className="text-xs uppercase tracking-[0.18em] text-[#231F21]/38">
+                              Número de seguimiento
+                            </p>
+
+                            <p
+                              title={trackingResult.tracking}
+                              className="mt-2 whitespace-nowrap font-['Kanit'] text-3xl font-semibold leading-[1.05] tracking-tight text-[#231F21] sm:text-4xl"
+                            >
+                              {trackingResult.tracking}
+                            </p>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-3">
+                            <div className="rounded-[1rem] bg-[#F7F9F9] px-4 py-3 text-sm text-[#231F21]">
+                              <p className="text-xs uppercase tracking-[0.16em] text-[#231F21]/45">
+                                Entregado el
+                              </p>
+                              <p className="mt-1 font-medium">{formatTrackingDate(trackingResult.delivered_at)}</p>
+                            </div>
+
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setShowProof((value) => !value)}
+                              className="h-11 rounded-[1rem] border-[#231F21]/12 bg-white px-5 text-[#231F21] hover:bg-[#231F21]/5"
+                            >
+                              Ver evidencia
+                            </Button>
+                          </div>
+                        </div>
+
+
+
+
+
+
+                        <div className="mt-4 grid gap-3 md:grid-cols-3">
+                          <div className="rounded-[1rem] bg-[#F7F9F9] px-4 py-3">
+                            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#231F21]/45">
+                              <Box className="h-4 w-4 text-[#5CBABC]" />
+                              Estado
+                            </div>
+                            <p className="mt-2 text-sm font-semibold text-[#231F21]">
+                              {trackingResult.status === "delivered"
+                                ? "Entregado"
+                                : trackingResult.status || "Sin información"}
+                            </p>
+                          </div>
+
+                          <div className="rounded-[1rem] bg-[#F7F9F9] px-4 py-3">
+                            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#231F21]/45">
+                              <UserRound className="h-4 w-4 text-[#5CBABC]" />
+                              Recibido por
+                            </div>
+                            <p className="mt-2 text-sm font-semibold text-[#231F21]">
+                              {trackingResult.received_by || "Sin registro disponible"}
+                            </p>
+                          </div>
+
+                          <div className="rounded-[1rem] bg-[#F7F9F9] px-4 py-3">
+                            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#231F21]/45">
+                              <ImageIcon className="h-4 w-4 text-[#5CBABC]" />
+                              Evidencia
+                            </div>
+                            <p className="mt-2 text-sm font-semibold text-[#231F21]">
+                              {Array.isArray(trackingResult.photos) && trackingResult.photos.length > 0
+                                ? `${trackingResult.photos.length} ${trackingResult.photos.length === 1 ? "imagen disponible" : "imágenes disponibles"}`
+                                : "Sin evidencia fotográfica"}
+                            </p>
+                          </div>
+                        </div>
+
+                        {showProof && (
+                          <div className="mt-5 border-t border-[#231F21]/8 pt-5">
+                            {Array.isArray(trackingResult.photos) && trackingResult.photos.length > 0 ? (
+                              <div className="grid gap-4 sm:grid-cols-2">
+                                {trackingResult.photos.map((photo, index) => (
+                                  <a
+                                    key={`${photo.url}-${index}`}
+                                    href={photo.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="group overflow-hidden rounded-[1.25rem] border border-[#231F21]/10 bg-[#F7F9F9] transition hover:border-[#5CBABC]/50"
+                                  >
+                                    <img
+                                      src={photo.preview_url || photo.url}
+                                      alt={`Foto de entrega ${index + 1}`}
+                                      className="h-52 w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                                      loading="lazy"
+                                    />
+                                    <div className="px-4 py-3">
+                                      <p className="text-sm font-semibold text-[#231F21]">
+                                        Evidencia {index + 1}
+                                      </p>
+                                      <p className="text-xs text-[#231F21]/50">
+                                        Abrir imagen completa
+                                      </p>
+                                    </div>
+                                  </a>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="rounded-[1rem] border border-dashed border-[#231F21]/12 bg-[#F7F9F9] px-4 py-4 text-sm text-[#231F21]/60">
+                                Este envío aún no tiene evidencia fotográfica disponible.
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="rounded-[1.8rem] border border-[#231F21]/10 bg-[#231F21] p-5 text-white shadow-[0_20px_50px_rgba(35,31,33,0.18)] backdrop-blur-sm">
-                  <label className="mb-3 block text-sm font-medium text-white/82">
-                    Ingresa tu número de seguimiento
-                  </label>
+                <div className="rounded-[2rem] border border-[#231F21]/8 bg-[#F7F9F9] p-6">
 
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <Input
-                      value={tracking}
-                      onChange={(e) => setTracking(e.target.value)}
-                      placeholder="Ej: 4N-000123"
-                      className="h-12 rounded-full border-white/10 bg-white/10 text-white placeholder:text-white/35"
-                    />
-                    <Button className="h-12 rounded-full bg-[#5CBABC] px-6 text-[#231F21] hover:bg-[#B0FFF8]">
-                      Rastrear envío
-                    </Button>
+
+                    <div className="mx-auto flex justify-center">
+                      <img
+                        src={cajaImage}
+                        alt="Caja 4N Logística"
+                        className="h-auto w-full max-w-[230px] object-contain"
+                        loading="lazy"
+                      />
+                    </div>
+
+
+
+
+                  <h3 className="mt-6 font-['Kanit'] text-3xl font-semibold tracking-tight text-[#231F21]">
+                    ¿Qué verás al consultar?
+                  </h3>
+
+                  <div className="mt-6 space-y-4">
+                    {[
+                      "Estado actual del envío",
+                      "Fecha y hora de entrega",
+                      "Nombre de quien recibe",
+                      "Evidencia fotográfica disponible",
+                    ].map((item) => (
+                      <div key={item} className="flex items-start gap-3">
+                        <div className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#5CBABC]/18 text-[#231F21]">
+                          <BadgeCheck className="h-4 w-4" />
+                        </div>
+                        <p className="text-base leading-7 text-[#231F21]/75">{item}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
             </div>
           </div>
+
+          <div className="-mt-10 sm:-mt-12 lg:-mt-16">
+            <section className="relative overflow-hidden bg-[#231F21] text-white">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(176,255,248,0.16),_transparent_38%),radial-gradient(circle_at_90%_20%,_rgba(92,186,188,0.22),_transparent_26%),linear-gradient(180deg,rgba(35,31,33,0.92),rgba(35,31,33,1))]" />
+              <div className="absolute -left-20 top-24 h-64 w-64 rounded-full bg-[#B0FFF8]/10 blur-3xl" />
+              <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-[#5CBABC]/10 blur-3xl" />
+
+              <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 pb-20 pt-24 sm:px-6 md:pb-24 md:pt-28 lg:grid-cols-[1.15fr_0.85fr] lg:px-8 lg:pb-28 lg:pt-32">
+                <motion.div
+                  initial="hidden"
+                  animate="visible"
+                  variants={fadeUp}
+                  transition={{ duration: 0.6 }}
+                  className="space-y-8"
+                >
+                  <div className="space-y-5">
+                    <Badge className="rounded-full border-0 bg-white/10 px-4 py-2 text-[#B0FFF8] shadow-none hover:bg-white/10">
+                      Logística en Chile · Distribución nacional · Última milla
+                    </Badge>
+                    <h1 className="max-w-4xl font-['Kanit'] text-4xl font-semibold leading-[1.02] tracking-tight sm:text-5xl lg:text-7xl">
+                      Logística y distribución confiable en todo Chile
+                    </h1>
+                    <p className="max-w-2xl text-lg leading-8 text-white/78 sm:text-xl">
+                      Transporte, almacenaje, fulfillment y última milla con flota propia, trackeo permanente y atención humana de verdad.
+                    </p>
+                    <p className="text-base font-medium text-[#B0FFF8]">
+                      Confianza, eficiencia y transparencia en cada gestión.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <Button className="group h-12 rounded-full bg-[#5CBABC] px-6 text-[#231F21] hover:bg-[#B0FFF8]">
+                      Cotizar servicio
+                      <ArrowRight className="ml-2 h-4 w-4 transition group-hover:translate-x-0.5" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="h-12 rounded-full border-white/15 bg-white/5 px-6 text-white hover:bg-white/10"
+                    >
+                      Ver servicios
+                    </Button>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 24, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.7, delay: 0.1 }}
+                  className="relative"
+                >
+                  <div className="absolute -left-6 -top-6 h-28 w-28 rounded-full border border-[#B0FFF8]/30" />
+                  <div className="absolute -bottom-8 -right-8 h-44 w-44 rounded-full bg-[#5CBABC]/15 blur-2xl" />
+                  <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-3 shadow-[0_30px_80px_rgba(0,0,0,0.32)] backdrop-blur-sm">
+                    <div className="relative overflow-hidden rounded-[1.6rem] bg-[#161416]">
+                      <div className="absolute inset-0 bg-[linear-gradient(145deg,rgba(176,255,248,0.08),transparent_36%),linear-gradient(180deg,transparent,rgba(35,31,33,0.16))]" />
+                      <img
+                        src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80"
+                        alt="Operación logística y reparto"
+                        className="h-[520px] w-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(35,31,33,0.08),rgba(35,31,33,0.64))]" />
+                      <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8" />
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            </section>
+          </div>
         </section>
-        {/* Tracking */}
+        {/* Hero + Tracking integrado */}
+
+
+
+
+
+
+
+
+
+
 
 
 

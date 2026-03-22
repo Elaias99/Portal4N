@@ -42,6 +42,7 @@ use App\Http\Controllers\TrackingDeliveryLinksController;
 use App\Http\Controllers\HonorarioResumenAnualController;
 use App\Http\Controllers\HonorarioMensualRecController;
 use App\Http\Controllers\TrackingReportController;
+use App\Http\Controllers\PublicTrackingController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -1007,18 +1008,8 @@ Route::get('/assign-role-jefe-jp', function () {
 
 
 
-Route::get('/test-mail', function () {
-    Mail::raw('Este es un correo de prueba enviado desde Laravel usando Outlook SMTP.', function ($message) {
-        $message->to('eliascorrea@4nlogistica.cl') // <-- Reemplaza con un correo que puedas revisar
-                ->subject('Correo de Prueba - Laravel SMTP');
-    });
 
-    return 'Correo enviado (si todo salió bien).';
-});
-// Investigar API
-// BACKCOFFE
-// 
-
+// Sitio React
 Route::get('/react-test', function () {
     return view('landing-react');
 })->name('react.test');
@@ -1026,6 +1017,16 @@ Route::get('/react-test', function () {
 Route::get('/sitio-4n', function () {
     return view('landing-react');
 })->name('sitio.4n');
+
+
+
+Route::get('/tracking-data/{tracking}', [PublicTrackingController::class, 'data'])
+    ->where('tracking', '[A-Za-z0-9\-]+')
+    ->name('tracking.public.data');
+
+Route::get('/tracking/{tracking}', [PublicTrackingController::class, 'show'])
+    ->where('tracking', '[A-Za-z0-9\-]+')
+    ->name('tracking.public.show');
 
 
 
