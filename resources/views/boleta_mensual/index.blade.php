@@ -343,6 +343,9 @@
                     </div>
 
                 </form>
+
+
+                
             </x-finanzas.filters-card>
         </x-slot:filters>
 
