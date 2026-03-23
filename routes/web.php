@@ -48,17 +48,23 @@ Route::get('/', function () {
     if (Auth::check()) {
         $user = Auth::user();
 
-        // Si el usuario tiene el rol 'admin' o 'jefe'
         if ($user->roles->contains('name', 'admin') || $user->roles->contains('name', 'jefe')) {
-            return redirect('/empleados'); // Redirige a la página principal para administradores y jefes
+            return redirect('/empleados');
         }
 
-        // Si el usuario no tiene rol asignado, se asume que es un empleado
-        return redirect('/empleados/perfil'); // Redirige al perfil del empleado
+        return redirect('/empleados/perfil');
     }
 
-    return view('landing'); // Página para usuarios no autenticados
-});
+    return view('landing');
+})->name('home');
+
+Route::get('/sitio-4n', function () {
+    return view('landing-react');
+})->name('sitio.4n');
+
+Route::get('/acceso-trabajadores', function () {
+    return view('landing');
+})->name('acceso.trabajadores');
 
 
 
@@ -1005,19 +1011,6 @@ Route::get('/assign-role-jefe-jp', function () {
     $benjamin->assignRole('jefe');
     return "Rol 'jefe' asignado a jp.";
 });
-
-
-
-
-// Sitio React
-Route::get('/react-test', function () {
-    return view('landing-react');
-})->name('react.test');
-
-Route::get('/sitio-4n', function () {
-    return view('landing-react');
-})->name('sitio.4n');
-
 
 
 Route::get('/tracking-data/{tracking}', [PublicTrackingController::class, 'data'])

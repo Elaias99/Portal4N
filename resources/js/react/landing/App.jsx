@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
   BadgeCheck,
   Building2,
   ChevronRight,
+  ChevronDown,
   Clock3,
   Globe2,
   HeartHandshake,
@@ -38,7 +39,6 @@ import { Badge } from "@/components/ui/badge";
 import { fetchPublicTracking } from "../tracking/api.js";
 import TrackingStatusBadge from "../tracking/components/TrackingStatusBadge.jsx";
 import chileMapRaw from "./assets/chile.svg?raw";
-import cajaImage from "./assets/caja.png";
 
 const palette = {
   dark: "#231F21",
@@ -48,12 +48,12 @@ const palette = {
 };
 
 const navItems = [
-  "Inicio",
-  "Empresa",
-  "Servicios",
-  "Cobertura",
-  "Tracking",
-  "Contacto",
+  { label: "Inicio", href: "#inicio" },
+  { label: "Empresa", href: "#empresa" },
+  { label: "Servicios", href: "#servicios" },
+  { label: "Cobertura", href: "#cobertura" },
+  { label: "Tracking", href: "#inicio" },
+  { label: "Contacto", href: "#contacto" },
 ];
 
 const reasons = [
@@ -152,9 +152,6 @@ const regions = [
   "Magallanes",
 ];
 
-
-
-
 const coverageMarkers = [
   { label: "Arica", x: 578, y: 18 },
   { label: "Antofagasta", x: 586, y: 92 },
@@ -168,19 +165,15 @@ const coverageMarkers = [
   { label: "Magallanes", x: 540, y: 626 },
 ];
 
-
 const chileMapInner = chileMapRaw
   .replace(/<\?xml[\s\S]*?\?>/g, "")
   .replace(/<svg[^>]*>/i, "")
   .replace(/<\/svg>\s*$/i, "");
 
-
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
   visible: { opacity: 1, y: 0 },
 };
-
-
 
 function formatTrackingDate(value) {
   if (!value) return "Sin registro disponible";
@@ -297,16 +290,47 @@ function ChileRouteGraphic() {
 }
 
 export default function FourNLogisticaWebsite() {
-
-
-
   const [mobileOpen, setMobileOpen] = useState(false);
   const [tracking, setTracking] = useState("");
   const [trackingResult, setTrackingResult] = useState(null);
+  const quoteFormRef = useRef(null);
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [trackingError, setTrackingError] = useState("");
   const [trackingSearched, setTrackingSearched] = useState(false);
   const [showProof, setShowProof] = useState(false);
+
+  const [accessOpen, setAccessOpen] = useState(false);
+  const accessMenuRef = useRef(null);
+
+  useEffect(() => {
+  function handleClickOutside(event) {
+      if (accessMenuRef.current && !accessMenuRef.current.contains(event.target)) {
+        setAccessOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+
+
+  function scrollToQuoteForm() {
+    setMobileOpen(false);
+    setAccessOpen(false);
+
+    requestAnimationFrame(() => {
+      quoteFormRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+  }
+
+
+
 
 
   async function handleTrackingSubmit(event) {
@@ -347,7 +371,6 @@ export default function FourNLogisticaWebsite() {
         body { background: #F7F9F9; }
       `}</style>
 
-
       <style>{`
         .coverage-map-shapes path {
           transition:
@@ -379,19 +402,70 @@ export default function FourNLogisticaWebsite() {
           <nav className="hidden items-center gap-7 lg:flex">
             {navItems.map((item) => (
               <a
-                key={item}
-                href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
+                key={item.label}
+                href={item.href}
                 className="text-sm font-medium text-[#231F21]/72 transition hover:text-[#231F21]"
               >
-                {item}
+                {item.label}
               </a>
             ))}
           </nav>
 
           <div className="hidden items-center gap-3 lg:flex">
-            <Button className="rounded-full bg-[#231F21] px-5 text-white hover:bg-[#231F21]/90">
-              Cotizar servicio
-            </Button>
+            <div ref={accessMenuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setAccessOpen((value) => !value)}
+                className="inline-flex h-11 items-center gap-2 rounded-full border border-[#231F21]/10 bg-white px-5 text-sm font-medium text-[#231F21] transition hover:bg-[#231F21]/5"
+              >
+                Acceso
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${accessOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {accessOpen && (
+                <div className="absolute right-0 top-full z-50 mt-3 w-64 overflow-hidden rounded-2xl border border-[#231F21]/10 bg-white shadow-[0_20px_50px_rgba(35,31,33,0.12)]">
+                  <a
+                    href="/acceso-trabajadores"
+                    onClick={() => setAccessOpen(false)}
+                    className="block px-4 py-3 text-sm text-[#231F21] transition hover:bg-[#5CBABC]/10"
+                  >
+                    Acceso trabajadores
+                  </a>
+
+                  <a
+                    href="https://cliente.4nortes.app/login"
+                    onClick={() => setAccessOpen(false)}
+                    className="block border-t border-[#231F21]/8 px-4 py-3 text-sm text-[#231F21] transition hover:bg-[#5CBABC]/10"
+                  >
+                    Acceso clientes
+                  </a>
+
+                  <a
+                    href="https://admin.4nortes.app/login"
+                    onClick={() => setAccessOpen(false)}
+                    className="block border-t border-[#231F21]/8 px-4 py-3 text-sm text-[#231F21] transition hover:bg-[#5CBABC]/10"
+                  >
+                    Acceso proveedores
+                  </a>
+                </div>
+              )}
+            </div>
+
+
+
+              <Button
+                type="button"
+                onClick={scrollToQuoteForm}
+                className="rounded-full bg-[#231F21] px-5 text-white hover:bg-[#231F21]/90"
+              >
+                Cotizar servicio
+              </Button>
+
+
+
+
           </div>
 
           <button
@@ -408,15 +482,50 @@ export default function FourNLogisticaWebsite() {
             <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 sm:px-6 lg:px-8">
               {navItems.map((item) => (
                 <a
-                  key={item}
-                  href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
+                  key={item.label}
+                  href={item.href}
                   onClick={() => setMobileOpen(false)}
                   className="rounded-xl px-3 py-3 text-sm font-medium text-[#231F21]/75 transition hover:bg-[#5CBABC]/10 hover:text-[#231F21]"
                 >
-                  {item}
+                  {item.label}
                 </a>
               ))}
-              <Button className="mt-2 rounded-full bg-[#231F21] text-white hover:bg-[#231F21]/90">
+
+              <div className="mt-2 rounded-2xl border border-[#231F21]/8 bg-[#F7F9F9] p-2">
+                <div className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#231F21]/45">
+                  Acceso
+                </div>
+
+                <a
+                  href="/acceso-trabajadores"
+                  onClick={() => setMobileOpen(false)}
+                  className="block rounded-xl px-3 py-3 text-sm font-medium text-[#231F21]/75 transition hover:bg-[#5CBABC]/10 hover:text-[#231F21]"
+                >
+                  Acceso trabajadores
+                </a>
+
+                <a
+                  href="https://cliente.4nortes.app/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="block rounded-xl px-3 py-3 text-sm font-medium text-[#231F21]/75 transition hover:bg-[#5CBABC]/10 hover:text-[#231F21]"
+                >
+                  Acceso clientes
+                </a>
+
+                <a
+                  href="https://admin.4nortes.app/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="block rounded-xl px-3 py-3 text-sm font-medium text-[#231F21]/75 transition hover:bg-[#5CBABC]/10 hover:text-[#231F21]"
+                >
+                  Acceso proveedores
+                </a>
+              </div>
+
+              <Button
+                type="button"
+                onClick={scrollToQuoteForm}
+                className="mt-2 rounded-full bg-[#231F21] text-white hover:bg-[#231F21]/90"
+              >
                 Cotizar servicio
               </Button>
             </div>
@@ -425,10 +534,6 @@ export default function FourNLogisticaWebsite() {
       </header>
 
       <main>
-
-
-
-
         {/* Hero + Tracking integrado */}
         <section id="inicio" className="bg-[#F7F9F9] text-[#231F21]">
           <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 sm:pt-10 lg:px-8 lg:pt-12">
@@ -487,11 +592,6 @@ export default function FourNLogisticaWebsite() {
 
                     {!trackingLoading && trackingResult && (
                       <div className="mt-4 rounded-[1.35rem] border border-[#231F21]/8 bg-white p-4 shadow-[0_10px_30px_rgba(35,31,33,0.05)]">
-
-
-
-
-
                         <div className="mt-3 flex flex-col gap-4">
                           <div className="min-w-0">
                             <p className="text-xs uppercase tracking-[0.18em] text-[#231F21]/38">
@@ -524,11 +624,6 @@ export default function FourNLogisticaWebsite() {
                             </Button>
                           </div>
                         </div>
-
-
-
-
-
 
                         <div className="mt-4 grid gap-3 md:grid-cols-3">
                           <div className="rounded-[1rem] bg-[#F7F9F9] px-4 py-3">
@@ -608,19 +703,18 @@ export default function FourNLogisticaWebsite() {
                 </div>
 
                 <div className="rounded-[2rem] border border-[#231F21]/8 bg-[#F7F9F9] p-6">
-
-
-                    <div className="mx-auto flex justify-center">
-                      <img
-                        src={cajaImage}
-                        alt="Caja 4N Logística"
-                        className="h-auto w-full max-w-[230px] object-contain"
-                        loading="lazy"
-                      />
-                    </div>
-
-
-
+                  <div className="mx-auto flex justify-center">
+                    <img
+                      src="/images/caja.webp"
+                      alt="Caja 4N Logística"
+                      width="230"
+                      height="153"
+                      loading="eager"
+                      fetchPriority="high"
+                      decoding="async"
+                      className="h-auto w-full max-w-[230px] object-contain"
+                    />
+                  </div>
 
                   <h3 className="mt-6 font-['Kanit'] text-3xl font-semibold tracking-tight text-[#231F21]">
                     ¿Qué verás al consultar?
@@ -654,11 +748,13 @@ export default function FourNLogisticaWebsite() {
 
               <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 pb-20 pt-24 sm:px-6 md:pb-24 md:pt-28 lg:grid-cols-[1.15fr_0.85fr] lg:px-8 lg:pb-28 lg:pt-32">
                 <motion.div
+                  id="cotizacion-formulario"
+                  className="scroll-mt-28"
                   initial="hidden"
-                  animate="visible"
+                  whileInView="visible"
+                  viewport={{ once: true, amount: 0.2 }}
                   variants={fadeUp}
-                  transition={{ duration: 0.6 }}
-                  className="space-y-8"
+                  transition={{ duration: 0.6, delay: 0.05 }}
                 >
                   <div className="space-y-5">
                     <Badge className="rounded-full border-0 bg-white/10 px-4 py-2 text-[#B0FFF8] shadow-none hover:bg-white/10">
@@ -673,19 +769,6 @@ export default function FourNLogisticaWebsite() {
                     <p className="text-base font-medium text-[#B0FFF8]">
                       Confianza, eficiencia y transparencia en cada gestión.
                     </p>
-                  </div>
-
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <Button className="group h-12 rounded-full bg-[#5CBABC] px-6 text-[#231F21] hover:bg-[#B0FFF8]">
-                      Cotizar servicio
-                      <ArrowRight className="ml-2 h-4 w-4 transition group-hover:translate-x-0.5" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-12 rounded-full border-white/15 bg-white/5 px-6 text-white hover:bg-white/10"
-                    >
-                      Ver servicios
-                    </Button>
                   </div>
                 </motion.div>
 
@@ -715,19 +798,6 @@ export default function FourNLogisticaWebsite() {
           </div>
         </section>
         {/* Hero + Tracking integrado */}
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         {/* Servicios */}
         <section id="servicios" className="bg-white">
@@ -773,40 +843,34 @@ export default function FourNLogisticaWebsite() {
         </section>
         {/* Servicios */}
 
-
-
-
         {/* MAPA DE CHILE */}
         <section id="cobertura" className="bg-[#231F21] text-white">
-
           <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-              <div className="grid gap-12 lg:grid-cols-[1fr_0.95fr] lg:items-center">
-                <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={fadeUp} transition={{ duration: 0.55 }}>
-                  <SectionHeader
-                    eyebrow="Cobertura nacional"
-                    title="Cobertura desde Arica a Punta Arenas"
-                    description="4N Logística opera de norte a sur con una presencia pensada para responder con orden, trazabilidad y continuidad. con su casa matriz en La Región Metropolitana."
-                    light
-                  />
+            <div className="grid gap-12 lg:grid-cols-[1fr_0.95fr] lg:items-center">
+              <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={fadeUp} transition={{ duration: 0.55 }}>
+                <SectionHeader
+                  eyebrow="Cobertura nacional"
+                  title="Cobertura desde Arica a Punta Arenas"
+                  description="4N Logística opera de norte a sur con una presencia pensada para responder con orden, trazabilidad y continuidad. con su casa matriz en La Región Metropolitana."
+                  light
+                />
 
-                  <div className="mt-8 grid gap-3 sm:grid-cols-2">
-                    {regions.map((region) => (
-                      <div key={region} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/82">
-                        {region}
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
+                <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                  {regions.map((region) => (
+                    <div key={region} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/82">
+                      {region}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 24 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.2 }}
-                  transition={{ duration: 0.6, delay: 0.05 }}
-                  className="grid gap-6"
-                >
-
-
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.6, delay: 0.05 }}
+                className="grid gap-6"
+              >
                 <div className="relative mx-auto h-[560px] w-full overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 backdrop-blur">
                   <div className="absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_top,_rgba(92,186,188,0.18),_transparent_55%)]" />
                   <div className="absolute right-10 top-16 h-40 w-40 rounded-full bg-[#5CBABC]/10 blur-3xl" />
@@ -848,19 +912,12 @@ export default function FourNLogisticaWebsite() {
                       </g>
                     ))}
                   </svg>
-
-
-
-
                 </div>
-
-                </motion.div>
-              </div>
+              </motion.div>
+            </div>
           </div>
         </section>
         {/* MAPA DE CHILE */}
-
-
 
         {/* Empresa */}
         <section id="empresa" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
@@ -899,15 +956,11 @@ export default function FourNLogisticaWebsite() {
         </section>
         {/* Empresa */}
 
-
         {/* Visión de marca */}
         <section id="visión-de-marca" className="bg-white">
           <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
             <div className="grid gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:gap-14">
-
-
-
-            <motion.div
+              <motion.div
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.2 }}
@@ -931,8 +984,6 @@ export default function FourNLogisticaWebsite() {
                 ))}
               </motion.div>
 
-
-
               <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} variants={fadeUp} transition={{ duration: 0.55 }}>
                 <SectionHeader
                   eyebrow="Nuestra visión"
@@ -940,11 +991,6 @@ export default function FourNLogisticaWebsite() {
                   description="La visión de 4N Logística pone el foco en una operación transparente, cercana y sostenible, capaz de crecer con responsabilidad sin perder la escala humana que define su forma de trabajar."
                 />
               </motion.div>
-
-
-
-
-
             </div>
           </div>
         </section>
@@ -990,9 +1036,6 @@ export default function FourNLogisticaWebsite() {
         </section>
         {/* Por qué elegir 4N Logística */}
 
-
-
-
         <section id="contacto" className="bg-white">
           <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
             <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
@@ -1027,60 +1070,70 @@ export default function FourNLogisticaWebsite() {
                       <Mail className="mt-1 h-5 w-5 text-[#5CBABC]" />
                       <div>
                         <div className="font-semibold text-[#231F21]">Sitio web</div>
-                        <div className="text-sm text-[#231F21]/68">www.4n.cl</div>
+                        <div className="text-sm text-[#231F21]/68">https:4n.pmcb.cl</div>
                       </div>
                     </div>
                   </div>
                 </div>
               </motion.div>
 
-              <motion.div
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, amount: 0.2 }}
-                variants={fadeUp}
-                transition={{ duration: 0.6, delay: 0.05 }}
-              >
-                <Card className="rounded-[2rem] border border-[#231F21]/8 bg-[#231F21] text-white shadow-[0_28px_70px_rgba(35,31,33,0.12)]">
-                  <CardContent className="p-6 sm:p-8">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <label className="text-sm text-white/70">Nombre</label>
-                        <Input className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="Tu nombre" />
+              <div ref={quoteFormRef} className="scroll-mt-28">
+                <motion.div
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, amount: 0.2 }}
+                  variants={fadeUp}
+                  transition={{ duration: 0.6, delay: 0.05 }}
+                >
+                  <Card className="rounded-[2rem] border border-[#231F21]/8 bg-[#231F21] text-white shadow-[0_28px_70px_rgba(35,31,33,0.12)]">
+                    <CardContent className="p-6 sm:p-8">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <label className="text-sm text-white/70">Nombre</label>
+                          <Input className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="Tu nombre" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm text-white/70">Apellido</label>
+                          <Input className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="Tu apellido" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm text-white/70">Correo</label>
+                          <Input type="email" className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="nombre@empresa.cl" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm text-white/70">Celular</label>
+                          <Input className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="+56 9" />
+                        </div>
+                        <div className="space-y-2 sm:col-span-2">
+                          <label className="text-sm text-white/70">Empresa</label>
+                          <Input className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="Nombre de tu empresa" />
+                        </div>
+                        <div className="space-y-2 sm:col-span-2">
+                          <label className="text-sm text-white/70">Mensaje</label>
+                          <Textarea className="min-h-[140px] rounded-[1.4rem] border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="Cuéntanos qué tipo de operación necesitas resolver" />
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-sm text-white/70">Apellido</label>
-                        <Input className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="Tu apellido" />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm text-white/70">Correo</label>
-                        <Input type="email" className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="nombre@empresa.cl" />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm text-white/70">Celular</label>
-                        <Input className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="+56 9" />
-                      </div>
-                      <div className="space-y-2 sm:col-span-2">
-                        <label className="text-sm text-white/70">Empresa</label>
-                        <Input className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="Nombre de tu empresa" />
-                      </div>
-                      <div className="space-y-2 sm:col-span-2">
-                        <label className="text-sm text-white/70">Mensaje</label>
-                        <Textarea className="min-h-[140px] rounded-[1.4rem] border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="Cuéntanos qué tipo de operación necesitas resolver" />
-                      </div>
-                    </div>
 
-                    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                      <Button className="h-12 rounded-full bg-[#5CBABC] px-6 text-[#231F21] hover:bg-[#B0FFF8]">
-                        Solicitar cotización
-                      </Button>
-                      <Button variant="outline" className="h-12 rounded-full border-white/12 bg-white/5 px-6 text-white hover:bg-white/10">
-                        Hablar con un ejecutivo
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                        <Button
+                          type="button"
+                          className="h-12 rounded-full bg-[#5CBABC] px-6 text-[#231F21] hover:bg-[#B0FFF8]"
+                        >
+                          Solicitar cotización
+                        </Button>
+
+                        <Button variant="outline" className="h-12 rounded-full border-white/12 bg-white/5 px-6 text-white hover:bg-white/10">
+                          Hablar con un ejecutivo
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </div>
+
+
+
+              
             </div>
           </div>
         </section>
@@ -1102,8 +1155,8 @@ export default function FourNLogisticaWebsite() {
             <div className="text-sm font-semibold uppercase tracking-[0.22em] text-[#B0FFF8]">Menú</div>
             <div className="mt-5 grid grid-cols-2 gap-3 text-sm text-white/70">
               {navItems.map((item) => (
-                <a key={item} href={`#${item.toLowerCase().replace(/\s+/g, '-')}`} className="transition hover:text-white">
-                  {item}
+                <a key={item.label} href={item.href} className="transition hover:text-white">
+                  {item.label}
                 </a>
               ))}
             </div>
