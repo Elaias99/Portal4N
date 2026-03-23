@@ -175,6 +175,11 @@ const fadeUp = {
   visible: { opacity: 1, y: 0 },
 };
 
+
+
+
+
+
 function formatTrackingDate(value) {
   if (!value) return "Sin registro disponible";
 
@@ -299,6 +304,15 @@ export default function FourNLogisticaWebsite() {
   const [trackingSearched, setTrackingSearched] = useState(false);
   const [showProof, setShowProof] = useState(false);
 
+  const [contactForm, setContactForm] = useState({
+    nombre: "",
+    apellido: "",
+    correo: "",
+    celular: "",
+    empresa: "",
+    mensaje: "",
+  });
+
   const [accessOpen, setAccessOpen] = useState(false);
   const accessMenuRef = useRef(null);
 
@@ -329,6 +343,43 @@ export default function FourNLogisticaWebsite() {
     });
   }
 
+
+
+
+
+  function handleContactChange(event) {
+    const { name, value } = event.target;
+
+    setContactForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }
+
+  function openWhatsAppContact(type = "cotizacion") {
+    const phone = "56926826733";
+
+    const intro =
+      type === "ejecutivo"
+        ? "Hola, quiero hablar con un ejecutivo."
+        : "Hola, quiero solicitar una cotización.";
+
+    const details = [
+      intro,
+      contactForm.nombre ? `Nombre: ${contactForm.nombre}` : null,
+      contactForm.apellido ? `Apellido: ${contactForm.apellido}` : null,
+      contactForm.correo ? `Correo: ${contactForm.correo}` : null,
+      contactForm.celular ? `Celular: ${contactForm.celular}` : null,
+      contactForm.empresa ? `Empresa: ${contactForm.empresa}` : null,
+      contactForm.mensaje ? `Mensaje: ${contactForm.mensaje}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(details)}`;
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
 
 
 
@@ -1036,6 +1087,9 @@ export default function FourNLogisticaWebsite() {
         </section>
         {/* Por qué elegir 4N Logística */}
 
+
+
+
         <section id="contacto" className="bg-white">
           <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
             <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
@@ -1090,42 +1144,95 @@ export default function FourNLogisticaWebsite() {
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
                           <label className="text-sm text-white/70">Nombre</label>
-                          <Input className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="Tu nombre" />
+                          <Input
+                            name="nombre"
+                            value={contactForm.nombre}
+                            onChange={handleContactChange}
+                            className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30"
+                            placeholder="Tu nombre"
+                          />
                         </div>
+
                         <div className="space-y-2">
                           <label className="text-sm text-white/70">Apellido</label>
-                          <Input className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="Tu apellido" />
+                          <Input
+                            name="apellido"
+                            value={contactForm.apellido}
+                            onChange={handleContactChange}
+                            className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30"
+                            placeholder="Tu apellido"
+                          />
                         </div>
+
                         <div className="space-y-2">
                           <label className="text-sm text-white/70">Correo</label>
-                          <Input type="email" className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="nombre@empresa.cl" />
+                          <Input
+                            type="email"
+                            name="correo"
+                            value={contactForm.correo}
+                            onChange={handleContactChange}
+                            className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30"
+                            placeholder="nombre@empresa.cl"
+                          />
                         </div>
+
                         <div className="space-y-2">
                           <label className="text-sm text-white/70">Celular</label>
-                          <Input className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="+56 9" />
+                          <Input
+                            name="celular"
+                            value={contactForm.celular}
+                            onChange={handleContactChange}
+                            className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30"
+                            placeholder="+56 9"
+                          />
                         </div>
+
                         <div className="space-y-2 sm:col-span-2">
                           <label className="text-sm text-white/70">Empresa</label>
-                          <Input className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="Nombre de tu empresa" />
+                          <Input
+                            name="empresa"
+                            value={contactForm.empresa}
+                            onChange={handleContactChange}
+                            className="h-12 rounded-2xl border-white/10 bg-white/8 text-white placeholder:text-white/30"
+                            placeholder="Nombre de tu empresa"
+                          />
                         </div>
+
                         <div className="space-y-2 sm:col-span-2">
                           <label className="text-sm text-white/70">Mensaje</label>
-                          <Textarea className="min-h-[140px] rounded-[1.4rem] border-white/10 bg-white/8 text-white placeholder:text-white/30" placeholder="Cuéntanos qué tipo de operación necesitas resolver" />
+                          <Textarea
+                            name="mensaje"
+                            value={contactForm.mensaje}
+                            onChange={handleContactChange}
+                            className="min-h-[140px] rounded-[1.4rem] border-white/10 bg-white/8 text-white placeholder:text-white/30"
+                            placeholder="Cuéntanos qué tipo de operación necesitas resolver"
+                          />
                         </div>
                       </div>
 
-                      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                        <Button
-                          type="button"
-                          className="h-12 rounded-full bg-[#5CBABC] px-6 text-[#231F21] hover:bg-[#B0FFF8]"
-                        >
-                          Solicitar cotización
-                        </Button>
 
-                        <Button variant="outline" className="h-12 rounded-full border-white/12 bg-white/5 px-6 text-white hover:bg-white/10">
-                          Hablar con un ejecutivo
-                        </Button>
-                      </div>
+
+                        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                          <Button
+                            type="button"
+                            onClick={() => openWhatsAppContact("cotizacion")}
+                            className="h-12 rounded-full bg-[#5CBABC] px-6 text-[#231F21] hover:bg-[#B0FFF8]"
+                          >
+                            Solicitar cotización
+                          </Button>
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => openWhatsAppContact("ejecutivo")}
+                            className="h-12 rounded-full border-white/12 bg-white/5 px-6 text-white hover:bg-white/10"
+                          >
+                            Hablar con un ejecutivo
+                          </Button>
+                        </div>
+
+
+
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -1137,6 +1244,13 @@ export default function FourNLogisticaWebsite() {
             </div>
           </div>
         </section>
+
+
+
+
+
+
+
       </main>
 
       <footer className="border-t border-white/5 bg-[#231F21] text-white">
