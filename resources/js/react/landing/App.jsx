@@ -177,6 +177,19 @@ const fadeUp = {
 
 
 
+const heroImages = [
+  {
+    src: "/images/Bodega/bodega-_1_.webp",
+    alt: "Bodega 4N Logística",
+  },
+  {
+    src: "/images/Bodega/pasillo-_1_.webp",
+    alt: "Pasillo de bodega 4N Logística",
+  },
+];
+
+
+
 
 
 
@@ -303,6 +316,7 @@ export default function FourNLogisticaWebsite() {
   const [trackingError, setTrackingError] = useState("");
   const [trackingSearched, setTrackingSearched] = useState(false);
   const [showProof, setShowProof] = useState(false);
+  const [heroImageIndex, setHeroImageIndex] = useState(0);
 
   const [contactForm, setContactForm] = useState({
     nombre: "",
@@ -327,6 +341,16 @@ export default function FourNLogisticaWebsite() {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
+  }, []);
+
+
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setHeroImageIndex((prev) => (prev + 1) % heroImages.length);
+    }, 6500);
+
+    return () => window.clearInterval(interval);
   }, []);
 
 
@@ -724,6 +748,9 @@ export default function FourNLogisticaWebsite() {
                                     rel="noreferrer"
                                     className="group overflow-hidden rounded-[1.25rem] border border-[#231F21]/10 bg-[#F7F9F9] transition hover:border-[#5CBABC]/50"
                                   >
+
+
+
                                     <img
                                       src={photo.preview_url || photo.url}
                                       alt={`Foto de entrega ${index + 1}`}
@@ -834,11 +861,28 @@ export default function FourNLogisticaWebsite() {
                   <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-3 shadow-[0_30px_80px_rgba(0,0,0,0.32)] backdrop-blur-sm">
                     <div className="relative overflow-hidden rounded-[1.6rem] bg-[#161416]">
                       <div className="absolute inset-0 bg-[linear-gradient(145deg,rgba(176,255,248,0.08),transparent_36%),linear-gradient(180deg,transparent,rgba(35,31,33,0.16))]" />
-                      <img
-                        src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80"
-                        alt="Operación logística y reparto"
-                        className="h-[520px] w-full object-cover"
-                      />
+
+
+                      <div className="relative h-[520px] w-full overflow-hidden">
+                        {heroImages.map((image, index) => (
+                          <img
+                            key={image.src}
+                            src={image.src}
+                            alt={image.alt}
+                            className={`absolute inset-0 h-full w-full object-cover transition-all duration-[1600ms] ease-in-out ${
+                              index === heroImageIndex
+                                ? "scale-100 opacity-100"
+                                : "scale-[1.015] opacity-0"
+                            }`}
+                            loading={index === 0 ? "eager" : "lazy"}
+                            fetchPriority={index === 0 ? "high" : "auto"}
+                            decoding="async"
+                          />
+                        ))}
+                      </div>
+
+
+
                       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(35,31,33,0.08),rgba(35,31,33,0.64))]" />
                       <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8" />
                     </div>
@@ -1115,7 +1159,7 @@ export default function FourNLogisticaWebsite() {
                       <MapPin className="mt-1 h-5 w-5 text-[#5CBABC]" />
                       <div>
                         <div className="font-semibold text-[#231F21]">Dirección</div>
-                        <div className="text-sm text-[#231F21]/68">Galvarino 9215-A Quilicura, Santiago</div>
+                        <div className="text-sm text-[#231F21]/68">Galvarino 9440-A Quilicura, Santiago</div>
                       </div>
                     </div>
                   </div>
@@ -1281,7 +1325,7 @@ export default function FourNLogisticaWebsite() {
             <div className="mt-5 space-y-4 text-sm text-white/70">
               <div className="flex items-start gap-3">
                 <MapPin className="mt-1 h-4 w-4 text-[#B0FFF8]" />
-                <span>Galvarino 9215-A Quilicura, Santiago</span>
+                <span>Galvarino 9440-A Quilicura, Santiago</span>
               </div>
               <div className="flex items-start gap-3">
                 <Phone className="mt-1 h-4 w-4 text-[#B0FFF8]" />
