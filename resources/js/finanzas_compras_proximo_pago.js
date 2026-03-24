@@ -93,6 +93,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return seleccion;
     }
 
+
+
+
     function renderSeleccionados() {
         const seleccion = getSeleccion();
 
@@ -101,18 +104,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const docs = Object.values(seleccion);
 
-        docs.forEach(doc => {
-            const card = document.createElement('div');
-            card.className = 'border rounded p-2 mb-2 bg-light';
-
-            card.innerHTML = `
-                <div><strong>Folio:</strong> ${doc.folio ?? '-'}</div>
-                <div><strong>Razón social:</strong> ${doc.razon ?? '-'}</div>
-                <div><strong>RUT:</strong> ${doc.rut ?? '-'}</div>
-                <div><strong>Saldo:</strong> ${Number(doc.saldo || 0).toLocaleString('es-CL')}</div>
+        if (docs.length === 0) {
+            resumenWrap.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center text-muted py-3">
+                        No hay documentos seleccionados.
+                    </td>
+                </tr>
             `;
 
-            resumenWrap.appendChild(card);
+            return docs;
+        }
+
+        docs.forEach(doc => {
+            const row = document.createElement('tr');
+
+            row.innerHTML = `
+                <td>${doc.folio ?? '-'}</td>
+                <td>${doc.razon ?? '-'}</td>
+                <td>${doc.rut ?? '-'}</td>
+                <td class="text-end">${Number(doc.saldo || 0).toLocaleString('es-CL')}</td>
+            `;
+
+            resumenWrap.appendChild(row);
 
             const input = document.createElement('input');
             input.type = 'hidden';
@@ -124,6 +138,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return docs;
     }
+
+
+
+
+
 
     btnProximoPago.addEventListener('click', () => {
         const docs = Object.values(getSeleccion());

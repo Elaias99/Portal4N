@@ -4,11 +4,11 @@
      aria-labelledby="modalProximoPagoComprasLabel"
      aria-hidden="true">
 
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 92vw;">
+        <div class="modal-content border-0 shadow-sm rounded-3">
 
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold" id="modalProximoPagoComprasLabel">
+            <div class="modal-header px-4 py-3 border-bottom">
+                <h5 class="modal-title fw-bold mb-0" id="modalProximoPagoComprasLabel">
                     Definir próximo pago
                 </h5>
 
@@ -24,42 +24,53 @@
                   action="{{ route('finanzas_compras.proximo_pago.exportar') }}">
                 @csrf
 
-                <div class="modal-body">
+                <div class="modal-body px-4 py-4">
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">
+                    <div class="border rounded-3 mb-4 p-3">
+                        <label class="form-label fw-semibold mb-3">
                             Documentos seleccionados
                         </label>
 
-                        <div id="proximos-pagos-compras-seleccionados"
-                             class="border rounded p-2 bg-light"
-                             style="min-height: 120px;">
+                        <div class="table-responsive rounded border">
+                            <table class="table table-sm table-borderless mb-0 align-middle"
+                                   style="white-space: nowrap;">
+                                <thead>
+                                    <tr>
+                                        <th class="px-2 py-2 fw-semibold text-dark">Folio</th>
+                                        <th class="px-2 py-2 fw-semibold text-dark">Razón social</th>
+                                        <th class="px-2 py-2 fw-semibold text-dark">RUT</th>
+                                        <th class="px-2 py-2 fw-semibold text-dark text-end">Saldo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="proximos-pagos-compras-seleccionados">
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
                     <div id="inputs-proximos-pagos-compras-seleccionados"></div>
 
-                    <hr>
+                    <div class="border rounded-3 p-3">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Fecha programada</label>
+                            <input type="date"
+                                   name="fecha_programada"
+                                   class="form-control"
+                                   required>
+                        </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Fecha programada</label>
-                        <input type="date"
-                               name="fecha_programada"
-                               class="form-control"
-                               required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Observación</label>
-                        <textarea name="observacion"
-                                  class="form-control"
-                                  rows="3"
-                                  placeholder="Opcional"></textarea>
+                        <div class="mb-0">
+                            <label class="form-label fw-semibold">Observación</label>
+                            <textarea name="observacion"
+                                      class="form-control"
+                                      rows="3"
+                                      placeholder="Opcional"></textarea>
+                        </div>
                     </div>
 
                 </div>
 
-                <div class="modal-footer">
+                <div class="modal-footer px-4 py-3 border-top">
                     <button type="button"
                             class="btn btn-outline-secondary"
                             id="btn-cancelar-proximo-pago-compras">
