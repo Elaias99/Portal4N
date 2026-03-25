@@ -1,87 +1,54 @@
-<div class="modal fade"
-     id="modalProximoPago"
-     tabindex="-1"
-     aria-labelledby="modalProximoPagoLabel"
-     aria-hidden="true">
+@component('components.finanzas.modal_documentos_masivos', [
+    'modalId' => 'modalProximoPago',
+    'labelId' => 'modalProximoPagoLabel',
+    'title' => 'Definir próximo pago',
 
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
+    'showCount' => false,
 
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalProximoPagoLabel">
-                    Definir próximo pago
-                </h5>
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"
-                        aria-label="Cerrar">
-                </button>
-            </div>
+    'sinSeleccionId' => 'honorarios-proximo-pago-sin-seleccion',
+    'sinSeleccionTexto' => 'No hay honorarios seleccionados.',
 
-            <form method="POST"
-                  id="form-proximo-pago"
-                  action="{{ route('honorarios.mensual.proximo-pago.exportar') }}">
-                @csrf
+    'formId' => 'form-proximo-pago',
+    'action' => route('honorarios.mensual.proximo-pago.exportar'),
+    'method' => 'POST',
 
-                <div class="modal-body">
+    'cancelId' => 'btn-cancelar-proximo-pago',
+    'cancelText' => 'Cancelar',
 
-                    <div class="mb-3">
-                        <label class="form-label">
-                            Honorarios seleccionados
-                        </label>
+    'submitId' => 'btn-submit-proximo-pago',
+    'submitText' => 'Guardar próximo pago',
+    'submitClass' => 'btn btn-primary',
 
-                        <div id="proximos-pagos-seleccionados"
-                             class="border rounded p-2"
-                             style="min-height: 120px;">
-                        </div>
-                    </div>
+    'tableBodyId' => 'proximos-pagos-seleccionados',
+    'hiddenContainerId' => 'inputs-proximos-pagos-seleccionados',
 
-                    <div id="inputs-proximos-pagos-seleccionados"></div>
+    'showDateField' => true,
+    'dateLabel' => 'Fecha programada',
+    'dateName' => 'fecha_programada',
+    'dateId' => 'fecha-programada-honorarios',
+    'dateRequired' => true,
 
-                    <hr>
+    'showTotals' => false,
 
-                    <div class="mb-3">
-                        <label class="form-label">Fecha programada</label>
-                        <input type="date"
-                               name="fecha_programada"
-                               class="form-control"
-                               required>
-                    </div>
+    'maxWidth' => '92vw',
+])
+    @slot('tableHead')
+        <tr>
+            <th>Folio</th>
+            <th>Emisor</th>
+            <th>RUT</th>
+            <th class="text-end">Saldo</th>
+            <th class="text-center">Quitar</th>
+        </tr>
+    @endslot
 
-                    <div class="mb-3">
-                        <label class="form-label">Observación</label>
-                        <textarea name="observacion"
-                                  class="form-control"
-                                  rows="3"
-                                  placeholder="Opcional"></textarea>
-                    </div>
-
-                </div>
-
-
-
-
-                <div class="modal-footer">
-                    <button type="button"
-                            id="btn-cancelar-proximo-pago"
-                            class="btn btn-secondary"
-                            data-bs-dismiss="modal">
-                        Cancelar
-                    </button>
-
-                    <button type="submit"
-                            id="btn-submit-proximo-pago"
-                            class="btn btn-primary">
-                        Guardar próximo pago
-                    </button>
-                </div>
-
-
-
-
-
-            </form>
-
+    @slot('fields')
+        <div class="mb-3">
+            <label class="form-label">Observación</label>
+            <textarea name="observacion"
+                      class="form-control"
+                      rows="3"
+                      placeholder="Opcional"></textarea>
         </div>
-    </div>
-</div>
+    @endslot
+@endcomponent

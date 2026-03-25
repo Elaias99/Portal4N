@@ -1,153 +1,80 @@
-<div class="modal fade"
-     id="modalPagoMasivo"
-     tabindex="-1"
-     aria-labelledby="modalPagoMasivoLabel"
-     aria-hidden="true">
+@component('components.finanzas.modal_documentos_masivos', [
+    'modalId' => 'modalPagoMasivo',
+    'labelId' => 'modalPagoMasivoLabel',
+    'title' => 'Pago masivo de honorarios',
 
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
+    'showCount' => false,
 
-            {{-- =========================
-                HEADER
-            ========================== --}}
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalPagoMasivoLabel">
-                    Pago masivo de honorarios
-                </h5>
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"
-                        aria-label="Cerrar">
-                </button>
+    'sinSeleccionId' => 'honorarios-sin-seleccion',
+    'sinSeleccionTexto' => 'No hay honorarios seleccionados.',
+
+    'formId' => 'form-pago-masivo',
+    'action' => route('honorarios.mensual.pago.masivo.exportar'),
+    'method' => 'POST',
+
+    'cancelId' => 'btn-cancelar-pago-masivo',
+    'cancelText' => 'Cancelar',
+
+    'submitId' => 'btn-submit-pago-masivo',
+    'submitText' => 'Confirmar pago masivo',
+    'submitClass' => 'btn btn-success',
+
+    'tableBodyId' => 'honorarios-seleccionados',
+    'hiddenContainerId' => 'inputs-honorarios-seleccionados',
+
+    'showDateField' => true,
+    'dateLabel' => 'Fecha de pago',
+    'dateName' => 'fecha_pago',
+    'dateId' => 'fecha-pago-masivo-honorarios',
+    'dateRequired' => true,
+
+    'showTotals' => false,
+
+    'maxWidth' => '94vw',
+])
+    @slot('beforeTable')
+        <div id="bloque-buscador">
+
+            <div class="mb-3">
+                <label class="form-label">Buscar honorarios</label>
+                <input type="text"
+                       id="buscador-honorarios"
+                       class="form-control"
+                       placeholder="Buscar por folio, RUT o emisor">
             </div>
 
-            {{-- =========================
-                FORM
-            ========================== --}}
-            <form method="POST"
-                  id="form-pago-masivo"
-                  action="{{ route('honorarios.mensual.pago.masivo.exportar') }}">
-                @csrf
+            <div class="mb-3">
+                <label class="form-label">Resultados</label>
 
-                <div class="modal-body">
-
-                    {{-- =====================================================
-                        BLOQUE A: BUSCADOR (modo antiguo)
-                        Se ocultará cuando venga desde la tabla
-                    ====================================================== --}}
-                    <div id="bloque-buscador">
-
-                        <div class="mb-3">
-                            <label class="form-label">Buscar honorarios</label>
-                            <input type="text"
-                                   id="buscador-honorarios"
-                                   class="form-control"
-                                   placeholder="Buscar por folio, RUT o emisor">
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Resultados</label>
-
-                            <div id="resultados-honorarios"
-                                 class="border rounded p-2"
-                                 style="max-height: 200px; overflow-y: auto;">
-                            </div>
-                        </div>
-
-                        <hr>
-                    </div>
-
-                    {{-- =====================================================
-                        BLOQUE B: RESUMEN (siempre visible)
-                        Desde tabla o desde buscador
-                    ====================================================== --}}
-                    <div id="bloque-resumen">
-
-                        <div class="mb-3">
-                            <label class="form-label">
-                                Honorarios que quedarán como pagados
-                            </label>
-
-                            <div class="table-responsive border rounded">
-                                <table class="table table-sm table-bordered align-middle mb-0">
-
-
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Empresa</th>
-                                            <th>Rut</th>
-                                            <th>Emisión</th>
-                                            <th>Folio</th>
-                                            <th>Fecha Emisión</th>
-                                            <th>Fecha Vencimiento</th>
-                                            <th class="text-end">Monto</th>
-                                            <th class="text-center">Quitar</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="honorarios-seleccionados"></tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        {{-- Inputs hidden generados por JS --}}
-                        <div id="inputs-honorarios-seleccionados"></div>
-
-                        <hr>
-                    </div>
-
-                    {{-- =====================================================
-                        BLOQUE C: CONFIRMACIÓN
-                    ====================================================== --}}
-                    <div id="bloque-confirmacion">
-
-                        <div class="mb-3">
-                            <label class="form-label">Fecha de pago</label>
-                            <input type="date"
-                                   name="fecha_pago"
-                                   class="form-control"
-                                   required>
-                        </div>
-
-                    </div>
-
+                <div id="resultados-honorarios"
+                     class="border rounded p-2"
+                     style="max-height: 200px; overflow-y: auto;">
                 </div>
+            </div>
 
-                {{-- =========================
-                    FOOTER
-                ========================== --}}
-                <div class="modal-footer d-flex justify-content-between align-items-end">
-                    <div>
-                        <div class="fw-semibold mb-1">
-                            Total a pagar:
-                            <span id="total-pago-masivo">$0</span>
-                        </div>
-
-                        <div id="empresa-totales-pago-masivo" class="small text-muted"></div>
-                    </div>
-
-                    <div class="d-flex gap-2">
-                        <button type="button"
-                                id="btn-cancelar-pago-masivo"
-                                class="btn btn-secondary"
-                                data-bs-dismiss="modal">
-                            Cancelar
-                        </button>
-
-                        <button type="submit"
-                                id="btn-submit-pago-masivo"
-                                class="btn btn-success">
-                            Confirmar pago masivo
-                        </button>
-                    </div>
-                </div>
-
-            </form>
-
+            <hr>
         </div>
-    </div>
+    @endslot
 
+    @slot('tableHead')
+        <tr>
+            <th>Empresa</th>
+            <th>Rut</th>
+            <th>Emisión</th>
+            <th>Folio</th>
+            <th>Fecha Emisión</th>
+            <th>Fecha Vencimiento</th>
+            <th class="text-end">Monto</th>
+            <th class="text-center">Quitar</th>
+        </tr>
+    @endslot
 
+    @slot('footerLeft')
+        <div class="fw-semibold mb-1">
+            Total a pagar:
+            <span id="total-pago-masivo">$0</span>
+        </div>
 
-
-    
-</div>
+        <div id="empresa-totales-pago-masivo" class="small text-muted"></div>
+    @endslot
+@endcomponent

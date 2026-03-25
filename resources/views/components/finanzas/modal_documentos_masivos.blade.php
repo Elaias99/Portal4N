@@ -114,6 +114,11 @@
                         @method($methodUpper)
                     @endif
 
+                    @isset($beforeTable)
+                        {{ $beforeTable }}
+                    @endisset
+
+
                     {{-- Tabla de seleccionados --}}
                     <div class="border rounded-3 mb-4 p-3">
                         <label class="form-label fw-semibold mb-3">

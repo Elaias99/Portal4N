@@ -338,6 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 
+
 document.addEventListener('DOMContentLoaded', () => {
 
     const btnProximoPago   = document.getElementById('btn-proximo-pago-seleccionados');
@@ -382,24 +383,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function saveSeleccionados(map) {
+        const obj = Object.fromEntries(map);
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+    }
+
     function renderSeleccionados() {
         const seleccionados = loadSeleccionados();
 
         inputsWrap.innerHTML = '';
         resumenWrap.innerHTML = '';
 
-        seleccionados.forEach(h => {
-            const card = document.createElement('div');
-            card.className = 'border rounded p-2 mb-2 bg-light';
+        if (seleccionados.size === 0) {
+            resumenWrap.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-3">
+                        No hay honorarios seleccionados.
+                    </td>
+                </tr>
+            `;
+            return seleccionados;
+        }
 
-            card.innerHTML = `
-                <div><strong>Folio:</strong> ${h.folio}</div>
-                <div><strong>RUT:</strong> ${h.rut}</div>
-                <div><strong>Emisor:</strong> ${h.emisor}</div>
-                <div><strong>Saldo:</strong> ${h.saldo}</div>
+        seleccionados.forEach(h => {
+            const tr = document.createElement('tr');
+
+            tr.innerHTML = `
+                <td>${h.folio || ''}</td>
+                <td>${h.emisor || ''}</td>
+                <td>${h.rut || ''}</td>
+                <td class="text-end">${Number(h.saldo || 0).toLocaleString('es-CL')}</td>
+                <td class="text-center">
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger btn-quitar-proximo-pago-modal"
+                            data-id="${h.id}">
+                        ×
+                    </button>
+                </td>
             `;
 
-            resumenWrap.appendChild(card);
+            resumenWrap.appendChild(tr);
 
             const input = document.createElement('input');
             input.type = 'hidden';
@@ -439,6 +462,30 @@ document.addEventListener('DOMContentLoaded', () => {
     $('#modalProximoPago').on('show.bs.modal', function () {
         proximoPagoProcesado = false;
         resetEstadoModalProximoPago();
+        renderSeleccionados();
+    });
+
+    document.addEventListener('click', (e) => {
+        const btnQuitar = e.target.closest('.btn-quitar-proximo-pago-modal');
+        if (!btnQuitar) return;
+
+        const id = btnQuitar.dataset.id;
+        if (!id) return;
+
+        const seleccionados = loadSeleccionados();
+        seleccionados.delete(id);
+        saveSeleccionados(seleccionados);
+
+        const chkTabla = document.querySelector(`.chk-honorario[value="${id}"]`);
+        if (chkTabla) {
+            chkTabla.checked = false;
+        }
+
+        if (seleccionados.size === 0) {
+            $('#modalProximoPago').modal('hide');
+            return;
+        }
+
         renderSeleccionados();
     });
 
