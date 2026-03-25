@@ -19,6 +19,8 @@
         />
         {{-- === FILTROS + GESTIÓN MASIVA === --}}
         <x-finanzas.top-section>
+
+            {{-- Sección de filtros --}}
             <x-slot:filters>
                 <x-finanzas.filters-card>
                     <form method="GET" action="{{ route('finanzas_compras.index') }}">
@@ -221,6 +223,7 @@
                 </x-finanzas.filters-card>
             </x-slot:filters>
 
+            {{-- Sección de acciones masivas --}}
             <x-slot:actions>
                 <x-finanzas.mass-actions-card title="Gestión Masiva">
                     @if (Auth::id() != 375)
@@ -255,6 +258,9 @@
                     </button>
                 </x-finanzas.mass-actions-card>
             </x-slot:actions>
+
+
+
         </x-finanzas.top-section>
 
 
@@ -415,6 +421,7 @@
                                                     data-fecha-vencimiento="{{ $doc->fecha_vencimiento ? \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') : '' }}"
                                                     data-saldo="{{ $doc->saldo_pendiente }}"
                                                     data-total="{{ $doc->monto_total }}"
+                                                    data-programado-id="{{ $doc->pagoProgramado?->id ?? '' }}"
                                                 >
                                             @endif
                                         </td>
@@ -526,18 +533,6 @@
                 @else
                     <p class="text-muted text-center mb-0">Aún no hay registros importados.</p>
                 @endif
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     </div>

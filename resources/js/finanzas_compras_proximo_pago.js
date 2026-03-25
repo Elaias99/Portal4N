@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('form-proximo-pago-compras');
     const resumenWrap = document.getElementById('proximos-pagos-compras-seleccionados');
     const inputsWrap = document.getElementById('inputs-proximos-pagos-compras-seleccionados');
+    const programadosWrap = document.getElementById('inputs-programados-eliminar-compras');
+    const btnEliminar = document.getElementById('btn-eliminar-proximo-pago-compras');
     const btnCerrarX = document.getElementById('btn-cerrar-x-proximo-pago-compras');
     const btnCancelar = document.getElementById('btn-cancelar-proximo-pago-compras');
     const submitBtn = document.getElementById('btn-submit-proximo-pago-compras');
@@ -27,6 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.textContent = 'Guardar próximo pago';
+        }
+
+        if (btnEliminar) {
+            btnEliminar.disabled = false;
+            btnEliminar.textContent = 'Eliminar próximos pagos';
         }
     }
 
@@ -73,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 rut: cb.dataset.rut || '',
                 saldo: Number(cb.dataset.saldo || 0),
                 total: Number(cb.dataset.total || 0),
+                programadoId: cb.dataset.programadoId ? Number(cb.dataset.programadoId) : null,
             };
         });
 
@@ -80,39 +88,75 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getSeleccion() {
-        let seleccion = getSeleccionStorage();
+        const seleccionStorage = getSeleccionStorage();
+        const seleccionCheckboxes = getSeleccionDesdeCheckboxes();
 
-        if (Object.keys(seleccion).length === 0) {
-            seleccion = getSeleccionDesdeCheckboxes();
+        const seleccion = {
+            ...seleccionStorage,
+            ...seleccionCheckboxes,
+        };
 
-            if (Object.keys(seleccion).length > 0) {
-                saveSeleccion(seleccion);
-            }
+        if (Object.keys(seleccion).length > 0) {
+            saveSeleccion(seleccion);
         }
 
         return seleccion;
     }
 
+    function quitarDocumento(id) {
+        const seleccion = getSeleccionStorage();
+        delete seleccion[id];
+        saveSeleccion(seleccion);
 
+        document.querySelectorAll('.check-documento').forEach(cb => {
+            const cbId = cb.dataset.id || cb.value;
+            if (String(cbId) === String(id)) {
+                cb.checked = false;
+            }
+        });
 
+        renderSeleccionados();
+    }
+
+    function getProgramadosSeleccionados(docs) {
+        return docs
+            .map(doc => Number(doc.programadoId || 0))
+            .filter(id => id > 0);
+    }
+
+    function actualizarBotonEliminar(docs) {
+        if (!btnEliminar) return;
+
+        const programados = getProgramadosSeleccionados(docs);
+
+        if (programados.length > 0) {
+            btnEliminar.classList.remove('d-none');
+        } else {
+            btnEliminar.classList.add('d-none');
+        }
+    }
 
     function renderSeleccionados() {
         const seleccion = getSeleccion();
 
         resumenWrap.innerHTML = '';
         inputsWrap.innerHTML = '';
+        if (programadosWrap) {
+            programadosWrap.innerHTML = '';
+        }
 
         const docs = Object.values(seleccion);
 
         if (docs.length === 0) {
             resumenWrap.innerHTML = `
                 <tr>
-                    <td colspan="4" class="text-center text-muted py-3">
+                    <td colspan="5" class="text-center text-muted py-3">
                         No hay documentos seleccionados.
                     </td>
                 </tr>
             `;
 
+            actualizarBotonEliminar(docs);
             return docs;
         }
 
@@ -124,6 +168,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${doc.razon ?? '-'}</td>
                 <td>${doc.rut ?? '-'}</td>
                 <td class="text-end">${Number(doc.saldo || 0).toLocaleString('es-CL')}</td>
+                <td class="text-center">
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-danger pp-quitar"
+                        data-id="${doc.id}">
+                        ✕
+                    </button>
+                </td>
             `;
 
             resumenWrap.appendChild(row);
@@ -132,17 +184,20 @@ document.addEventListener('DOMContentLoaded', () => {
             input.type = 'hidden';
             input.name = 'documentos[]';
             input.value = doc.id;
-
             inputsWrap.appendChild(input);
+
+            if (programadosWrap && doc.programadoId) {
+                const inputProgramado = document.createElement('input');
+                inputProgramado.type = 'hidden';
+                inputProgramado.name = 'programados[]';
+                inputProgramado.value = doc.programadoId;
+                programadosWrap.appendChild(inputProgramado);
+            }
         });
 
+        actualizarBotonEliminar(docs);
         return docs;
     }
-
-
-
-
-
 
     btnProximoPago.addEventListener('click', () => {
         const docs = Object.values(getSeleccion());
@@ -157,9 +212,55 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.show();
     });
 
+    modalEl.addEventListener('click', (e) => {
+        const btnQuitar = e.target.closest('.pp-quitar');
+        if (!btnQuitar) return;
 
+        quitarDocumento(btnQuitar.dataset.id);
+    });
 
+    btnEliminar?.addEventListener('click', () => {
+        const docs = Object.values(getSeleccion());
+        const programados = getProgramadosSeleccionados(docs);
 
+        if (programados.length === 0) {
+            alert('No hay próximos pagos programados para eliminar.');
+            return;
+        }
+
+        const ok = confirm('¿Seguro que deseas eliminar los próximos pagos seleccionados?');
+        if (!ok) return;
+
+        const formTmp = document.createElement('form');
+        formTmp.method = 'POST';
+        formTmp.action = btnEliminar.dataset.url;
+
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_token';
+        csrfInput.value = csrf || '';
+        formTmp.appendChild(csrfInput);
+
+        const methodInput = document.createElement('input');
+        methodInput.type = 'hidden';
+        methodInput.name = '_method';
+        methodInput.value = 'DELETE';
+        formTmp.appendChild(methodInput);
+
+        programados.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'programados[]';
+            input.value = id;
+            formTmp.appendChild(input);
+        });
+
+        clearSeleccion();
+        document.body.appendChild(formTmp);
+        formTmp.submit();
+    });
 
     btnCerrarX?.addEventListener('click', () => {
         modal.hide();
@@ -184,19 +285,15 @@ document.addEventListener('DOMContentLoaded', () => {
     modalEl.addEventListener('hidden.bs.modal', () => {
         resumenWrap.innerHTML = '';
         inputsWrap.innerHTML = '';
+        if (programadosWrap) {
+            programadosWrap.innerHTML = '';
+        }
         form.reset();
 
         if (!proximoPagoProcesado) {
             setEstadoInicialModal();
         }
     });
-
-
-
-
-
-
-
 
     form.addEventListener('submit', (e) => {
         e.preventDefault();

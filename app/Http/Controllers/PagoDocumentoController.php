@@ -9,7 +9,6 @@ use App\Models\MovimientoDocumento;
 use App\Models\MovimientoCompra;
 use App\Models\DocumentoCompra;
 use App\Models\Pago;
-use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Cache;
 use App\Exports\PagosMasivosDocumentoCompraExport;
@@ -199,7 +198,6 @@ class PagoDocumentoController extends Controller
 
     public function storeMasivo(Request $request)
     {
-
         $request->validate([
             'fecha_pago'      => 'required|date|before_or_equal:today',
             'documentos'      => 'required|array|min:1',
@@ -218,15 +216,6 @@ class PagoDocumentoController extends Controller
         $duplicados = 0;
         $errores    = [];
 
-        /**
-         * EXPORT AGRUPADO POR EMPRESA
-         * [
-         *   empresa_id => [
-         *       'empresa' => 'PMCB',
-         *       'items'   => [...]
-         *   ]
-         * ]
-         */
         $exportPorEmpresa = [];
 
         foreach ($ids as $id) {
@@ -244,6 +233,7 @@ class PagoDocumentoController extends Controller
             }
 
             $operacion = $request->operaciones[$id] ?? null;
+
             if (!$operacion) {
                 $errores[] = [
                     'documento_id' => $id,
@@ -293,7 +283,6 @@ class PagoDocumentoController extends Controller
 
                 $exportPorEmpresa[$empresaId]['empresa'] ??=
                     optional($documento->empresa)->Nombre ?? 'Empresa';
-
 
                 $exportPorEmpresa[$empresaId]['items'][] = [
                     'documento_id' => $documento->id,
@@ -353,11 +342,8 @@ class PagoDocumentoController extends Controller
 
                 $empresaId = $documento->empresa_id;
 
-
                 $exportPorEmpresa[$empresaId]['empresa'] ??=
                     optional($documento->empresa)->Nombre ?? 'Empresa';
-
-
 
                 $exportPorEmpresa[$empresaId]['items'][] = [
                     'documento_id' => $documento->id,
@@ -370,9 +356,6 @@ class PagoDocumentoController extends Controller
             }
         }
 
-        /**
-         *Generar tokens por empresa
-         */
         $downloads = [];
 
         foreach ($exportPorEmpresa as $empresaId => $data) {
@@ -407,28 +390,16 @@ class PagoDocumentoController extends Controller
 
     public function exportPagosMasivos()
     {
-
-
         $ids = session('pagos_masivos_export');
 
-
-
         if (!$ids || !is_array($ids) || count($ids) === 0) {
-
-
-
             abort(404, 'No hay pagos masivos para exportar.');
         }
-
-
 
         // Limpiar sesión para evitar descargas duplicadas
         session()->forget('pagos_masivos_export');
 
-
         $nombreArchivo = 'pagos_masivos_' . now()->format('Ymd_His') . '.xlsx';
-
-
 
         return Excel::download(
             new \App\Exports\PagosMasivosDocumentoCompraExport($ids),
@@ -436,15 +407,11 @@ class PagoDocumentoController extends Controller
         );
     }
 
-
-
     public function downloadPagosMasivosEmpresa(string $token)
     {
         $cacheKey = "pagos_masivos_empresa:{$token}";
 
         $data = Cache::get($cacheKey);
-
-        
 
         if (!$data || empty($data['items'])) {
             abort(404, 'No hay pagos masivos para exportar.');
@@ -452,17 +419,15 @@ class PagoDocumentoController extends Controller
 
         Cache::forget($cacheKey);
 
-        $empresa   = str_replace(' ', '_', $data['empresa']);
-        $fecha     = now()->format('Ymd_His');
-        $nombre    = "{$empresa}_Pago_Proveedores_{$fecha}.xlsx";
+        $empresa = str_replace(' ', '_', $data['empresa']);
+        $fecha   = now()->format('Ymd_His');
+        $nombre  = "{$empresa}_Pago_Proveedores_{$fecha}.xlsx";
 
         return Excel::download(
             new \App\Exports\PagosMasivosDocumentoCompraExport($data['items']),
             $nombre
         );
     }
-
-
 
     public function storeMasivoDesdePanel(Request $request)
     {

@@ -373,11 +373,24 @@
                         localStorage.removeItem('documentosSeleccionados');
 
                         if (Array.isArray(data.downloads)) {
-                            data.downloads.forEach((item, index) => {
-                                setTimeout(() => {
-                                    window.location.href = item.url;
-                                }, index * 800);
-                            });
+
+
+
+
+                        data.downloads.forEach((item, index) => {
+                            setTimeout(() => {
+                                const link = document.createElement('a');
+                                link.href = item.url;
+                                link.download = '';
+                                document.body.appendChild(link);
+                                link.click();
+                                link.remove();
+                            }, index * 800);
+                        });
+
+
+
+
                         }
 
                         $('#msg-pagos-error')?.remove();

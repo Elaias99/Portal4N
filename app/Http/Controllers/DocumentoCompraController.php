@@ -637,9 +637,6 @@ class DocumentoCompraController extends Controller
     }
 
 
-
-
-
     public function quitarReferencia($id)
     {
         $documento = DocumentoCompra::with(['referencia', 'referenciados'])->findOrFail($id);
@@ -753,9 +750,6 @@ class DocumentoCompraController extends Controller
             ->route('finanzas_compras.show', $documento->id)
             ->with('success', 'Nueva referencia asignada correctamente.');
     }
-
-
-
 
 
 

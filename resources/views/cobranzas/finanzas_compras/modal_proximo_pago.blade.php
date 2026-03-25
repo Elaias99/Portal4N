@@ -1,91 +1,74 @@
-<div class="modal fade"
-     id="modalProximoPagoCompras"
-     tabindex="-1"
-     aria-labelledby="modalProximoPagoComprasLabel"
-     aria-hidden="true">
+@component('components.finanzas.modal_documentos_masivos', [
+    'modalId' => 'modalProximoPagoCompras',
+    'labelId' => 'modalProximoPagoComprasLabel',
+    'title' => 'Definir próximo pago',
 
-    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 92vw;">
-        <div class="modal-content border-0 shadow-sm rounded-3">
+    'showCount' => false,
 
-            <div class="modal-header px-4 py-3 border-bottom">
-                <h5 class="modal-title fw-bold mb-0" id="modalProximoPagoComprasLabel">
-                    Definir próximo pago
-                </h5>
+    'sinSeleccionId' => 'proximos-pagos-sin-seleccion',
+    'sinSeleccionTexto' => 'No hay documentos seleccionados.',
 
-                <button type="button"
-                        class="btn-close"
-                        id="btn-cerrar-x-proximo-pago-compras"
-                        aria-label="Cerrar">
-                </button>
-            </div>
+    'formId' => 'form-proximo-pago-compras',
+    'action' => route('finanzas_compras.proximo_pago.exportar'),
+    'method' => 'POST',
 
-            <form method="POST"
-                  id="form-proximo-pago-compras"
-                  action="{{ route('finanzas_compras.proximo_pago.exportar') }}">
-                @csrf
+    'closeXId' => 'btn-cerrar-x-proximo-pago-compras',
 
-                <div class="modal-body px-4 py-4">
+    'cancelId' => 'btn-cancelar-proximo-pago-compras',
+    'cancelText' => 'Cancelar',
 
-                    <div class="border rounded-3 mb-4 p-3">
-                        <label class="form-label fw-semibold mb-3">
-                            Documentos seleccionados
-                        </label>
+    'submitId' => 'btn-submit-proximo-pago-compras',
+    'submitText' => 'Guardar próximo pago',
+    'submitClass' => 'btn btn-primary',
 
-                        <div class="table-responsive rounded border">
-                            <table class="table table-sm table-borderless mb-0 align-middle"
-                                   style="white-space: nowrap;">
-                                <thead>
-                                    <tr>
-                                        <th class="px-2 py-2 fw-semibold text-dark">Folio</th>
-                                        <th class="px-2 py-2 fw-semibold text-dark">Razón social</th>
-                                        <th class="px-2 py-2 fw-semibold text-dark">RUT</th>
-                                        <th class="px-2 py-2 fw-semibold text-dark text-end">Saldo</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="proximos-pagos-compras-seleccionados">
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+    'tableBodyId' => 'proximos-pagos-compras-seleccionados',
+    'hiddenContainerId' => 'inputs-proximos-pagos-compras-seleccionados',
 
-                    <div id="inputs-proximos-pagos-compras-seleccionados"></div>
+    'showDateField' => true,
+    'dateLabel' => 'Fecha programada',
+    'dateName' => 'fecha_programada',
+    'dateId' => 'fecha-programada-proximo-pago-compras',
+    'dateRequired' => true,
 
-                    <div class="border rounded-3 p-3">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Fecha programada</label>
-                            <input type="date"
-                                   name="fecha_programada"
-                                   class="form-control"
-                                   required>
-                        </div>
+    'showTotals' => false,
 
-                        <div class="mb-0">
-                            <label class="form-label fw-semibold">Observación</label>
-                            <textarea name="observacion"
-                                      class="form-control"
-                                      rows="3"
-                                      placeholder="Opcional"></textarea>
-                        </div>
-                    </div>
+    'maxWidth' => '92vw',
+])
+    @slot('tableHead')
+        <tr>
+            <th class="px-2 py-2 fw-semibold text-dark">Folio</th>
+            <th class="px-2 py-2 fw-semibold text-dark">Razón social</th>
+            <th class="px-2 py-2 fw-semibold text-dark">RUT</th>
+            <th class="px-2 py-2 fw-semibold text-dark text-end">Saldo</th>
+            <th class="px-2 py-2 fw-semibold text-dark text-center" style="min-width: 70px;">Quitar</th>
+        </tr>
+    @endslot
 
-                </div>
+    @slot('hiddenInputs')
+        <div id="inputs-proximos-pagos-compras-seleccionados"></div>
+        <div id="inputs-programados-eliminar-compras"></div>
+    @endslot
 
-                <div class="modal-footer px-4 py-3 border-top">
-                    <button type="button"
-                            class="btn btn-outline-secondary"
-                            id="btn-cancelar-proximo-pago-compras">
-                        Cancelar
-                    </button>
-
-                    <button type="submit"
-                            id="btn-submit-proximo-pago-compras"
-                            class="btn btn-primary">
-                        Guardar próximo pago
-                    </button>
-                </div>
-
-            </form>
-
+    @slot('fields')
+        <div class="mb-0">
+            <label class="form-label fw-semibold">Observación</label>
+            <textarea
+                name="observacion"
+                class="form-control"
+                rows="3"
+                placeholder="Opcional"
+            ></textarea>
         </div>
-    </div>
-</div>
+    @endslot
+
+    @slot('footerButtonsBefore')
+        <button
+            type="button"
+            id="btn-eliminar-proximo-pago-compras"
+            class="btn btn-outline-danger d-none"
+            data-url="{{ route('finanzas_compras.pago-programado.destroy.masivo') }}"
+        >
+            Eliminar próximos pagos
+        </button>
+    @endslot
+@endcomponent
