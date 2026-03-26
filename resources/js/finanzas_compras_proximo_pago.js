@@ -12,12 +12,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCancelar = document.getElementById('btn-cancelar-proximo-pago-compras');
     const submitBtn = document.getElementById('btn-submit-proximo-pago-compras');
 
+    const totalGeneralEl = document.getElementById('proximos-pagos-total-general');
+    const totalesEmpresaEl = document.getElementById('proximos-pagos-totales-empresa');
+
     if (!btnProximoPago || !modalEl || !form || !resumenWrap || !inputsWrap) {
         return;
     }
 
     const modal = new bootstrap.Modal(modalEl);
     let proximoPagoProcesado = false;
+
+    function formatMonto(valor) {
+        return '$' + Number(valor || 0).toLocaleString('es-CL');
+    }
 
     function setEstadoInicialModal() {
         proximoPagoProcesado = false;
@@ -73,15 +80,24 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.check-documento:checked').forEach(cb => {
             const id = cb.dataset.id || cb.value;
 
+
+
             seleccion[id] = {
                 id: id,
                 folio: cb.dataset.folio || '',
                 razon: cb.dataset.razon || '',
                 rut: cb.dataset.rut || '',
+                empresa: cb.dataset.empresa || 'Sin empresa',
+                fechaDocto: cb.dataset.fechaDocto || '',
+                fechaVencimiento: cb.dataset.fechaVencimiento || '',
                 saldo: Number(cb.dataset.saldo || 0),
                 total: Number(cb.dataset.total || 0),
                 programadoId: cb.dataset.programadoId ? Number(cb.dataset.programadoId) : null,
             };
+
+
+
+
         });
 
         return seleccion;
@@ -91,10 +107,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const seleccionStorage = getSeleccionStorage();
         const seleccionCheckboxes = getSeleccionDesdeCheckboxes();
 
-        const seleccion = {
-            ...seleccionStorage,
-            ...seleccionCheckboxes,
-        };
+        const seleccion = { ...seleccionStorage };
+
+        Object.entries(seleccionCheckboxes).forEach(([id, doc]) => {
+            seleccion[id] = {
+                ...(seleccion[id] || {}),
+                ...doc,
+            };
+        });
 
         if (Object.keys(seleccion).length > 0) {
             saveSeleccion(seleccion);
@@ -136,6 +156,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function renderTotales(docs) {
+        if (totalGeneralEl) {
+            const totalGeneral = docs.reduce((acc, doc) => acc + Number(doc.saldo || 0), 0);
+            totalGeneralEl.textContent = formatMonto(totalGeneral);
+        }
+
+        if (totalesEmpresaEl) {
+            if (docs.length === 0) {
+                totalesEmpresaEl.innerHTML = '';
+                return;
+            }
+
+            const agrupados = docs.reduce((acc, doc) => {
+                const empresa = doc.empresa || 'Sin empresa';
+                acc[empresa] = (acc[empresa] || 0) + Number(doc.saldo || 0);
+                return acc;
+            }, {});
+
+            totalesEmpresaEl.innerHTML = Object.entries(agrupados)
+                .map(([empresa, total]) => {
+                    return `<div>${empresa}: <strong>${formatMonto(total)}</strong></div>`;
+                })
+                .join('');
+        }
+    }
+
     function renderSeleccionados() {
         const seleccion = getSeleccion();
 
@@ -156,6 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </tr>
             `;
 
+            renderTotales([]);
             actualizarBotonEliminar(docs);
             return docs;
         }
@@ -164,10 +211,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const row = document.createElement('tr');
 
             row.innerHTML = `
-                <td>${doc.folio ?? '-'}</td>
-                <td>${doc.razon ?? '-'}</td>
-                <td>${doc.rut ?? '-'}</td>
-                <td class="text-end">${Number(doc.saldo || 0).toLocaleString('es-CL')}</td>
+                <td class="text-start">${doc.folio ?? '-'}</td>
+                <td class="text-start">${doc.razon ?? '-'}</td>
+                <td class="text-start">${doc.rut ?? '-'}</td>
+                <td class="text-end">${formatMonto(doc.saldo || 0)}</td>
                 <td class="text-center">
                     <button
                         type="button"
@@ -195,6 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        renderTotales(docs);
         actualizarBotonEliminar(docs);
         return docs;
     }
@@ -289,6 +337,8 @@ document.addEventListener('DOMContentLoaded', () => {
             programadosWrap.innerHTML = '';
         }
         form.reset();
+
+        renderTotales([]);
 
         if (!proximoPagoProcesado) {
             setEstadoInicialModal();

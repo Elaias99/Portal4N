@@ -28,7 +28,10 @@
     'dateId' => 'fecha-programada-honorarios',
     'dateRequired' => true,
 
-    'showTotals' => false,
+    'showTotals' => true,
+    'totalGeneralLabel' => 'Total próximo pago',
+    'totalGeneralId' => 'honorarios-proximo-pago-total-general',
+    'totalesEmpresaId' => 'honorarios-proximo-pago-totales-empresa',
 
     'maxWidth' => '92vw',
 ])

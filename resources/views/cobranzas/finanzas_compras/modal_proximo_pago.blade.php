@@ -30,17 +30,20 @@
     'dateId' => 'fecha-programada-proximo-pago-compras',
     'dateRequired' => true,
 
-    'showTotals' => false,
+    'showTotals' => true,
+    'totalGeneralLabel' => 'Total próximo pago',
+    'totalGeneralId' => 'proximos-pagos-total-general',
+    'totalesEmpresaId' => 'proximos-pagos-totales-empresa',
 
     'maxWidth' => '92vw',
 ])
     @slot('tableHead')
         <tr>
-            <th class="px-2 py-2 fw-semibold text-dark">Folio</th>
-            <th class="px-2 py-2 fw-semibold text-dark">Razón social</th>
-            <th class="px-2 py-2 fw-semibold text-dark">RUT</th>
-            <th class="px-2 py-2 fw-semibold text-dark text-end">Saldo</th>
-            <th class="px-2 py-2 fw-semibold text-dark text-center" style="min-width: 70px;">Quitar</th>
+            <th class="hm-nowrap text-start">Folio</th>
+            <th class="hm-nowrap text-start">Razón social</th>
+            <th class="hm-nowrap text-start">RUT</th>
+            <th class="hm-nowrap text-end">Saldo</th>
+            <th class="hm-nowrap text-center">Quitar</th>
         </tr>
     @endslot
 

@@ -57,7 +57,6 @@
     <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: {{ $maxWidth }};">
         <div class="modal-content border-0 shadow-sm rounded-3">
 
-            {{-- HEADER --}}
             <div class="modal-header px-4 py-3 border-bottom">
                 <div>
                     <h5 class="modal-title fw-bold mb-0" id="{{ $labelId }}">
@@ -92,15 +91,11 @@
                 ></button>
             </div>
 
-            {{-- BODY --}}
             <div class="modal-body px-4 py-4">
-
-                {{-- Mensaje sin selección --}}
                 <div id="{{ $sinSeleccionId }}" class="alert alert-warning d-none mb-4">
                     {{ $sinSeleccionTexto }}
                 </div>
 
-                {{-- FORM --}}
                 <form
                     id="{{ $formId }}"
                     action="{{ $action }}"
@@ -118,52 +113,46 @@
                         {{ $beforeTable }}
                     @endisset
 
-
-                    {{-- Tabla de seleccionados --}}
                     <div class="border rounded-3 mb-4 p-3">
                         <label class="form-label fw-semibold mb-3">
                             Documentos seleccionados
                         </label>
 
-                        <div class="table-responsive rounded border">
-                            <table class="table table-sm table-borderless mb-0 align-middle" style="white-space: nowrap;">
-                                <thead>
-                                    @isset($tableHead)
-                                        {{ $tableHead }}
-                                    @else
-                                        <tr>
-                                            <th class="px-2 py-2 fw-semibold text-dark">Empresa</th>
-                                            <th class="px-2 py-2 fw-semibold text-dark">RUT</th>
-                                            <th class="px-2 py-2 fw-semibold text-dark">Razón social</th>
-                                            <th class="px-2 py-2 fw-semibold text-dark">Folio</th>
-                                            <th class="px-2 py-2 fw-semibold text-dark">Fecha emisión</th>
-                                            <th class="px-2 py-2 fw-semibold text-dark">Fecha vencimiento</th>
-                                            <th class="px-2 py-2 fw-semibold text-dark text-end">Monto</th>
-                                            <th class="px-2 py-2 fw-semibold text-dark" style="min-width: 160px;">Operación</th>
-                                            <th class="px-2 py-2 fw-semibold text-dark" style="min-width: 180px;">Monto a pagar</th>
-                                            <th class="px-2 py-2 fw-semibold text-dark text-end">Saldo pendiente</th>
-                                            <th class="px-2 py-2 fw-semibold text-dark text-center" style="min-width: 70px;">Quitar</th>
-                                        </tr>
-                                    @endisset
-                                </thead>
+                        <x-finanzas.plain-table>
+                            <thead>
+                                @isset($tableHead)
+                                    {{ $tableHead }}
+                                @else
+                                    <tr>
+                                        <th class="hm-nowrap">Empresa</th>
+                                        <th class="hm-nowrap">RUT</th>
+                                        <th class="hm-nowrap">Razón social</th>
+                                        <th class="hm-nowrap">Folio</th>
+                                        <th class="hm-nowrap">Fecha emisión</th>
+                                        <th class="hm-nowrap">Fecha vencimiento</th>
+                                        <th class="hm-nowrap text-end">Monto</th>
+                                        <th class="hm-nowrap" style="min-width: 160px;">Operación</th>
+                                        <th class="hm-nowrap" style="min-width: 180px;">Monto a pagar</th>
+                                        <th class="hm-nowrap text-end">Saldo pendiente</th>
+                                        <th class="hm-nowrap text-center" style="min-width: 70px;">Quitar</th>
+                                    </tr>
+                                @endisset
+                            </thead>
 
-                                <tbody id="{{ $tableBodyId }}">
-                                    @isset($tableBody)
-                                        {{ $tableBody }}
-                                    @endisset
-                                </tbody>
-                            </table>
-                        </div>
+                            <tbody id="{{ $tableBodyId }}">
+                                @isset($tableBody)
+                                    {{ $tableBody }}
+                                @endisset
+                            </tbody>
+                        </x-finanzas.plain-table>
                     </div>
 
-                    {{-- Hidden inputs --}}
                     @isset($hiddenInputs)
                         {{ $hiddenInputs }}
                     @else
                         <div id="{{ $hiddenContainerId }}"></div>
                     @endisset
 
-                    {{-- Bloque inferior --}}
                     <div class="border rounded-3 p-3">
 
                         @if ($showDateField)
@@ -237,8 +226,8 @@
                         </div>
                     </div>
                 </form>
-
             </div>
+
         </div>
     </div>
 </div>

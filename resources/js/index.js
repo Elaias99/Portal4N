@@ -340,14 +340,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 document.addEventListener('DOMContentLoaded', () => {
-
-    const btnProximoPago   = document.getElementById('btn-proximo-pago-seleccionados');
+    const btnProximoPago = document.getElementById('btn-proximo-pago-seleccionados');
     const modalProximoPago = document.getElementById('modalProximoPago');
-    const formProximoPago  = document.getElementById('form-proximo-pago');
-    const inputsWrap       = document.getElementById('inputs-proximos-pagos-seleccionados');
-    const resumenWrap      = document.getElementById('proximos-pagos-seleccionados');
-    const submitBtn        = document.getElementById('btn-submit-proximo-pago');
-    const btnCancelar      = document.getElementById('btn-cancelar-proximo-pago');
+    const formProximoPago = document.getElementById('form-proximo-pago');
+    const inputsWrap = document.getElementById('inputs-proximos-pagos-seleccionados');
+    const resumenWrap = document.getElementById('proximos-pagos-seleccionados');
+    const submitBtn = document.getElementById('btn-submit-proximo-pago');
+    const btnCancelar = document.getElementById('btn-cancelar-proximo-pago');
+    const totalGeneralWrap = document.getElementById('honorarios-proximo-pago-total-general');
+    const totalesEmpresaWrap = document.getElementById('honorarios-proximo-pago-totales-empresa');
 
     if (
         !btnProximoPago ||
@@ -356,7 +357,9 @@ document.addEventListener('DOMContentLoaded', () => {
         !inputsWrap ||
         !resumenWrap ||
         !submitBtn ||
-        !btnCancelar
+        !btnCancelar ||
+        !totalGeneralWrap ||
+        !totalesEmpresaWrap
     ) {
         return;
     }
@@ -367,6 +370,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const TEXTO_GUARDAR = 'Guardar próximo pago';
     const TEXTO_PROCESANDO = 'Procesando...';
     const TEXTO_GUARDADO = 'Próximo pago guardado';
+
+    function formatMonto(valor) {
+        return '$' + Number(valor || 0).toLocaleString('es-CL');
+    }
 
     function clearSeleccionados() {
         sessionStorage.removeItem(STORAGE_KEY);
@@ -393,6 +400,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         inputsWrap.innerHTML = '';
         resumenWrap.innerHTML = '';
+        totalGeneralWrap.textContent = '$0';
+        totalesEmpresaWrap.innerHTML = '';
 
         if (seleccionados.size === 0) {
             resumenWrap.innerHTML = `
@@ -405,14 +414,28 @@ document.addEventListener('DOMContentLoaded', () => {
             return seleccionados;
         }
 
+        let totalGeneral = 0;
+        const totalesPorEmpresa = new Map();
+
         seleccionados.forEach(h => {
+            const saldo = Number(h.saldo || 0);
+            const empresa = h.empresa || 'Sin empresa';
+
+            totalGeneral += saldo;
+
+            if (!totalesPorEmpresa.has(empresa)) {
+                totalesPorEmpresa.set(empresa, 0);
+            }
+
+            totalesPorEmpresa.set(empresa, totalesPorEmpresa.get(empresa) + saldo);
+
             const tr = document.createElement('tr');
 
             tr.innerHTML = `
                 <td>${h.folio || ''}</td>
                 <td>${h.emisor || ''}</td>
                 <td>${h.rut || ''}</td>
-                <td class="text-end">${Number(h.saldo || 0).toLocaleString('es-CL')}</td>
+                <td class="text-end">${saldo.toLocaleString('es-CL')}</td>
                 <td class="text-center">
                     <button type="button"
                             class="btn btn-sm btn-outline-danger btn-quitar-proximo-pago-modal"
@@ -432,6 +455,19 @@ document.addEventListener('DOMContentLoaded', () => {
             inputsWrap.appendChild(input);
         });
 
+        totalGeneralWrap.textContent = formatMonto(totalGeneral);
+
+        let htmlTotalesEmpresa = '';
+        totalesPorEmpresa.forEach((monto, empresa) => {
+            htmlTotalesEmpresa += `
+                <div>
+                    <strong>${empresa}:</strong> ${formatMonto(monto)}
+                </div>
+            `;
+        });
+
+        totalesEmpresaWrap.innerHTML = htmlTotalesEmpresa;
+
         return seleccionados;
     }
 
@@ -439,6 +475,8 @@ document.addEventListener('DOMContentLoaded', () => {
         formProximoPago.reset();
         inputsWrap.innerHTML = '';
         resumenWrap.innerHTML = '';
+        totalGeneralWrap.textContent = '$0';
+        totalesEmpresaWrap.innerHTML = '';
 
         submitBtn.disabled = false;
         submitBtn.textContent = TEXTO_GUARDAR;
@@ -492,6 +530,8 @@ document.addEventListener('DOMContentLoaded', () => {
     $('#modalProximoPago').on('hidden.bs.modal', function () {
         inputsWrap.innerHTML = '';
         resumenWrap.innerHTML = '';
+        totalGeneralWrap.textContent = '$0';
+        totalesEmpresaWrap.innerHTML = '';
         formProximoPago.reset();
 
         if (proximoPagoProcesado) {
