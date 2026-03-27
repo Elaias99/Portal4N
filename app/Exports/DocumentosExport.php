@@ -50,16 +50,6 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping, Sho
             })->join(', ');
         }
 
-        $fechaPago = $doc->pagos && $doc->pagos->isNotEmpty()
-            ? $doc->pagos->max('fecha_pago')
-            : null;
-
-        $fechaProntoPago = $doc->prontoPagos && $doc->prontoPagos->isNotEmpty()
-            ? $doc->prontoPagos->max('fecha_pronto_pago')
-            : null;
-
-        $fechaUltimaGestion = $doc->fecha_ultima_transaccion ?? null;
-
         return [
             $doc->id,
             $doc->empresa?->Nombre,
@@ -75,7 +65,9 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping, Sho
 
             $doc->status_original,
             $doc->status,
-            $this->format($doc->fecha_estado_manual),
+
+            // Fecha en que se ingresa el registro
+            $this->format($doc->created_at),
 
             $doc->monto_exento,
             $doc->monto_neto,
@@ -91,11 +83,10 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping, Sho
             $this->format($doc->fecha_acuse_recibo),
             $this->format($doc->fecha_reclamo),
 
-            $this->format($fechaPago),
-            $this->format($fechaProntoPago),
-            $this->format($fechaUltimaGestion),
+            // Fecha que se indica como pago
+            $this->format($doc->fecha_estado_manual),
 
-            $this->format($doc->created_at),
+            $this->format($doc->fecha_ultima_transaccion),
             $this->format($doc->updated_at),
         ];
     }
@@ -127,9 +118,7 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping, Sho
             'Fecha Acuse Recibo',
             'Fecha Reclamo',
             'Fecha Pago',
-            'Fecha Pronto Pago',
             'Fecha Última Gestión',
-            'Creado en',
             'Actualizado en',
         ];
     }
