@@ -443,9 +443,11 @@ class PagoDocumentoController extends Controller
         $procesados = 0;
         $omitidos   = 0;
 
+        $exportPorEmpresa = [];
+
         foreach ($ids as $id) {
 
-            $documento = \App\Models\DocumentoCompra::find($id);
+            $documento = \App\Models\DocumentoCompra::with('empresa')->find($id);
 
             if (!$documento) {
                 $omitidos++;
@@ -465,7 +467,7 @@ class PagoDocumentoController extends Controller
             }
 
             $estadoAnterior = $documento->estado;
-            $saldoAnterior  = $documento->saldo_pendiente;
+            $saldoAnterior  = (int) $documento->saldo_pendiente;
 
             $documento->pagos()->create([
                 'fecha_pago' => $fechaPago,
@@ -498,13 +500,50 @@ class PagoDocumentoController extends Controller
                 ],
             ]);
 
+            $empresaId = $documento->empresa_id;
+
+            $exportPorEmpresa[$empresaId]['empresa'] ??=
+                optional($documento->empresa)->Nombre ?? 'Empresa';
+
+            $exportPorEmpresa[$empresaId]['items'][] = [
+                'documento_id' => $documento->id,
+                'tipo'         => 'pago',
+                'monto'        => $saldoAnterior,
+                'fecha'        => $fechaPago,
+            ];
+
             $procesados++;
         }
 
-        return back()->with(
-            'success',
-            "Pagos registrados correctamente. Procesados: {$procesados}. Omitidos: {$omitidos}."
-        );
+        $downloads = [];
+
+        foreach ($exportPorEmpresa as $empresaId => $data) {
+
+            if (empty($data['items'])) {
+                continue;
+            }
+
+            $token = (string) \Illuminate\Support\Str::uuid();
+
+            \Illuminate\Support\Facades\Cache::put(
+                "pagos_masivos_empresa:{$token}",
+                $data,
+                now()->addMinutes(10)
+            );
+
+            $downloads[] = [
+                'empresa' => $data['empresa'],
+                'url'     => route('documentos.pagos.masivo.empresa.descargar', $token),
+            ];
+        }
+
+        return response()->json([
+            'ok'         => true,
+            'procesados' => $procesados,
+            'omitidos'   => $omitidos,
+            'downloads'  => $downloads,
+            'message'    => "Pagos registrados correctamente. Procesados: {$procesados}. Omitidos: {$omitidos}.",
+        ]);
     }
 
 

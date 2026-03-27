@@ -40,7 +40,7 @@
                     <button type="button"
                             class="btn btn-sm btn-success rounded-pill px-3"
                             id="btn-pagar-compras-programadas-hoy">
-                        Registrar pago
+                        Pagar seleccionadas
                     </button>
 
                     <button type="button"
@@ -112,56 +112,6 @@
             </div>
         </section>
 
-        <div class="modal fade" id="modalPagoComprasProgramadasHoy" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
-                <form method="POST"
-                    action="{{ route('documentos.pagos.masivo.panel_hoy') }}"
-                    id="form-pago-compras-programadas-hoy"
-                    class="modal-content">
-                    @csrf
-
-                    <div class="modal-header">
-                        <h5 class="modal-title">Registrar pago de compras programadas para hoy</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                    </div>
-
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Documentos seleccionados</label>
-                            <div id="resumen-compras-programadas-hoy"
-                                class="border rounded p-2"
-                                style="min-height: 120px;">
-                            </div>
-                        </div>
-
-                        <div id="inputs-compras-programadas-hoy"></div>
-
-                        <hr>
-
-                        <div class="mb-3">
-                            <label class="form-label">Fecha de pago</label>
-                            <input type="date"
-                                name="fecha_pago"
-                                class="form-control"
-                                required>
-                        </div>
-                    </div>
-
-                    <div class="modal-footer">
-                        <button type="button"
-                                class="btn btn-secondary"
-                                data-bs-dismiss="modal">
-                            Cancelar
-                        </button>
-
-                        <button type="submit"
-                                class="btn btn-success">
-                            Confirmar pago
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
     @endif
 
     @if($comprasProgramadasAtrasadas->isNotEmpty())
@@ -185,6 +135,12 @@
                     <span class="panel-soft-chip panel-soft-chip--danger">
                         {{ $comprasProgramadasAtrasadas->count() }} pendiente(s)
                     </span>
+
+                    <button type="button"
+                            class="btn btn-sm btn-success rounded-pill px-3"
+                            id="btn-pagar-compras-programadas-atrasadas">
+                        Pagar seleccionadas
+                    </button>
 
                     <button type="button"
                             class="btn btn-sm btn-outline-danger rounded-pill px-3"
@@ -222,7 +178,8 @@
                                         <td class="text-center">
                                             <input type="checkbox"
                                                 class="chk-compra-programada-atrasada"
-                                                value="{{ $programado->id }}"
+                                                value="{{ $d->id }}"
+                                                data-id="{{ $d->id }}"
                                                 data-programado-id="{{ $programado->id }}"
                                                 data-folio="{{ $d->folio }}"
                                                 data-proveedor="{{ $d->razon_social }}"
@@ -340,5 +297,8 @@
     </footer>
 </div>
 
+@include('cobranzas.modal_pago_compras_programadas')
 @vite('resources/js/finanzas_general.js')
+@vite('resources/js/finanzas_general_pagos_programados.js')
+
 @endsection

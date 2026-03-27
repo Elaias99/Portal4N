@@ -38,6 +38,7 @@ export default defineConfig({
                 'resources/js/react/landing-test.jsx',
                 'resources/js/react/landing/main.jsx',
                 'resources/js/react/tracking/main.jsx',
+                'resources/js/finanzas_general_pagos_programados.js',
             ],
             refresh: true,
         }),

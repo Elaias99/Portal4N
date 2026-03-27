@@ -43,12 +43,6 @@
                         {{ $programadosHoy->count() }} programado(s)
                     </span>
 
-                    {{-- <button type="button"
-                            class="btn btn-sm btn-success rounded-pill px-3"
-                            id="btn-pagar-programados-hoy">
-                        Registrar pago
-                    </button> --}}
-
                     <button type="button"
                             class="btn btn-sm btn-outline-danger rounded-pill px-3"
                             id="btn-eliminar-programados-hoy">
@@ -119,56 +113,6 @@
             </div>
         </section>
 
-        <div class="modal fade" id="modalPagoProgramadosHoy" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
-                <form method="POST"
-                    action="{{ route('honorarios.mensual.pago.masivo') }}"
-                    id="form-pago-programados-hoy"
-                    class="modal-content">
-                    @csrf
-
-                    <div class="modal-header">
-                        <h5 class="modal-title">Registrar pago de programados para hoy</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                    </div>
-
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Honorarios seleccionados</label>
-                            <div id="resumen-programados-hoy"
-                                class="border rounded p-2"
-                                style="min-height: 120px;">
-                            </div>
-                        </div>
-
-                        <div id="inputs-programados-hoy"></div>
-
-                        <hr>
-
-                        <div class="mb-3">
-                            <label class="form-label">Fecha de pago</label>
-                            <input type="date"
-                                name="fecha_pago"
-                                class="form-control"
-                                required>
-                        </div>
-                    </div>
-
-                    <div class="modal-footer">
-                        <button type="button"
-                                class="btn btn-secondary"
-                                data-bs-dismiss="modal">
-                            Cancelar
-                        </button>
-
-                        <button type="submit"
-                                class="btn btn-success">
-                            Confirmar pago
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
     @endif
 
 
