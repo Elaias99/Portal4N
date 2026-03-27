@@ -587,12 +587,14 @@ class DocumentoFinancieroController extends Controller
         // === Construcción de la query base ===
         $query = DocumentoFinanciero::with([
             'empresa',
-            'abonos',
-            'cruces',
             'tipoDocumento',
-            'referencia',
-            'referenciados',
-            'cobranza'
+            'referencia.tipoDocumento',
+            'referenciados.tipoDocumento',
+            'abonos:id,documento_financiero_id,monto,fecha_abono',
+            'cruces:id,documento_financiero_id,monto,fecha_cruce',
+            'pagos:id,documento_financiero_id,fecha_pago',
+            'prontoPagos:id,documento_financiero_id,fecha_pronto_pago',
+            'cobranza',
         ]);
 
         // === Aplicar los mismos filtros que en index() ===
@@ -701,12 +703,14 @@ class DocumentoFinancieroController extends Controller
         // ===Construcción de la query base ===
         $query = DocumentoFinanciero::with([
             'empresa',
-            'abonos',
-            'cruces',
             'tipoDocumento',
-            'referencia',
-            'referenciados',
-            'cobranza'
+            'referencia.tipoDocumento',
+            'referenciados.tipoDocumento',
+            'abonos:id,documento_financiero_id,monto,fecha_abono',
+            'cruces:id,documento_financiero_id,monto,fecha_cruce',
+            'pagos:id,documento_financiero_id,fecha_pago',
+            'prontoPagos:id,documento_financiero_id,fecha_pronto_pago',
+            'cobranza',
         ]);
 
         // ===Filtros base (idénticos al index) ===
