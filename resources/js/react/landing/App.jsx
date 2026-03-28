@@ -250,6 +250,31 @@ function Logo() {
   );
 }
 
+
+
+
+
+function LogoFooter() {
+  return (
+    <a
+      href="#inicio"
+      className="inline-flex items-center shrink-0"
+      aria-label="Ir al inicio"
+    >
+      <img
+        src="/images/logo-footer2.jpg"
+        alt="4N Logística"
+        className="block h-auto w-[190px] sm:w-[220px] lg:w-[250px] object-contain"
+        loading="eager"
+      />
+    </a>
+  );
+}
+
+
+
+
+
 function ChileRouteGraphic() {
   const points = useMemo(
     () => [
@@ -1298,51 +1323,75 @@ export default function FourNLogisticaWebsite() {
       </main>
 
       <footer className="border-t border-white/5 bg-[#231F21] text-white">
-        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.1fr_0.9fr_0.9fr] lg:px-8">
-          <div>
-            <Logo />
-            <p className="mt-5 max-w-md text-sm leading-7 text-white/68">
-              Operador logístico en Chile enfocado en transporte, almacenaje, fulfillment, paquetería y última milla con atención cercana y cumplimiento real.
-            </p>
-            <p className="mt-6 font-['Kanit'] text-xl leading-tight text-[#B0FFF8]">
-              Logística hecha por personas, para operaciones que no pueden fallar.
-            </p>
-          </div>
+        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+          <div className="grid gap-14 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
+            <div>
+              <p className="max-w-2xl text-sm leading-7 text-white/68 sm:text-base">
+                Operador logístico en Chile enfocado en transporte, almacenaje, fulfillment, paquetería y última milla con atención cercana y cumplimiento real.
+              </p>
 
-          <div>
-            <div className="text-sm font-semibold uppercase tracking-[0.22em] text-[#B0FFF8]">Menú</div>
-            <div className="mt-5 grid grid-cols-2 gap-3 text-sm text-white/70">
-              {navItems.map((item) => (
-                <a key={item.label} href={item.href} className="transition hover:text-white">
-                  {item.label}
-                </a>
-              ))}
+              <p className="mt-6 max-w-2xl font-['Kanit'] text-2xl leading-tight text-[#B0FFF8] sm:text-3xl">
+                Logística hecha por personas, para operaciones que no pueden fallar.
+              </p>
+
+              <div className="mt-10">
+                <div className="text-sm font-semibold uppercase tracking-[0.22em] text-[#B0FFF8]">
+                  Menú
+                </div>
+
+                <div className="mt-5 grid max-w-md grid-cols-2 gap-x-10 gap-y-4 text-sm text-white/70">
+                  {navItems.map((item) => (
+                    <a
+                      key={item.label}
+                      href={item.href}
+                      className="transition hover:text-white"
+                    >
+                      {item.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div>
-            <div className="text-sm font-semibold uppercase tracking-[0.22em] text-[#B0FFF8]">Contacto</div>
-            <div className="mt-5 space-y-4 text-sm text-white/70">
-              <div className="flex items-start gap-3">
-                <MapPin className="mt-1 h-4 w-4 text-[#B0FFF8]" />
-                <span>Galvarino 9440-A Quilicura, Santiago</span>
+            <div className="w-full max-w-[360px] lg:ml-auto">
+              <div className="flex justify-start lg:justify-end">
+                <LogoFooter />
               </div>
-              <div className="flex items-start gap-3">
-                <Phone className="mt-1 h-4 w-4 text-[#B0FFF8]" />
-                <span>+56 9 2682 6733</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <ExternalLink className="mt-1 h-4 w-4 text-[#B0FFF8]" />
-                <span>Tracking y acceso de clientes</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <MessageSquareMore className="mt-1 h-4 w-4 text-[#B0FFF8]" />
-                <span>Espacio preparado para integrar redes sociales oficiales</span>
+
+              <div className="mt-10">
+                <div className="text-sm font-semibold uppercase tracking-[0.22em] text-[#B0FFF8]">
+                  Contacto
+                </div>
+
+                <div className="mt-5 space-y-4 text-sm text-white/70">
+                  <div className="flex items-start gap-3">
+                    <MapPin className="mt-1 h-4 w-4 shrink-0 text-[#B0FFF8]" />
+                    <span>Galvarino 9440-A Quilicura, Santiago</span>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <Phone className="mt-1 h-4 w-4 shrink-0 text-[#B0FFF8]" />
+                    <span>+56 9 2682 6733</span>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <ExternalLink className="mt-1 h-4 w-4 shrink-0 text-[#B0FFF8]" />
+                    <span>Tracking y acceso de clientes</span>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <MessageSquareMore className="mt-1 h-4 w-4 shrink-0 text-[#B0FFF8]" />
+                    <span>Espacio preparado para integrar redes sociales oficiales</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </footer>
+
+
+
     </div>
   );
 }

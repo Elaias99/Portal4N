@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Landing React 4N</title>
+    <title>4Nortes</title>
 
     @viteReactRefresh
     @vite('resources/js/react/landing/main.jsx')
