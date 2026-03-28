@@ -262,7 +262,7 @@ function LogoFooter() {
       aria-label="Ir al inicio"
     >
       <img
-        src="/images/logo-footer2.jpg"
+        src="/images/logo-footer2.JPG"
         alt="4N Logística"
         className="block h-auto w-[190px] sm:w-[220px] lg:w-[250px] object-contain"
         loading="eager"
