@@ -1193,7 +1193,7 @@ export default function FourNLogisticaWebsite() {
                       <Mail className="mt-1 h-5 w-5 text-[#5CBABC]" />
                       <div>
                         <div className="font-semibold text-[#231F21]">Sitio web</div>
-                        <div className="text-sm text-[#231F21]/68">https:4n.pmcb.cl</div>
+                        <div className="text-sm text-[#231F21]/68">https:4nlogistica.cl</div>
                       </div>
                     </div>
                   </div>
