@@ -6,6 +6,7 @@ storage/framework/views/
 /storage/app/public/uploads
 /public/storage/uploads
 /public/build
+.env
 public/reclamos_comentarios_fotos/
 public/reclamos_fotos/
 .phpunit.result.cache
