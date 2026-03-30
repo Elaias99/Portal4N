@@ -25,18 +25,30 @@ class PublicTrackingController extends Controller
             ], 422);
         }
 
+        $baseUrl = rtrim(config('services.tracking.base_url'), '/');
+        $token = config('services.tracking.token');
+        $timeout = (int) config('services.tracking.timeout', 15);
+
+        if (!$baseUrl || !$token) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La integración de tracking no está configurada.',
+            ], 500);
+        }
+
         try {
             $response = Http::acceptJson()
-                ->timeout(20)
-                ->get('https://4nlogistica.cl/tracking-proxy.php', [
-                    'tracking' => $tracking,
-                ]);
+                ->withToken($token)
+                ->timeout($timeout)
+                ->get($baseUrl . '/' . urlencode($tracking));
 
             if ($response->failed()) {
+                $json = $response->json();
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'No fue posible consultar el tracking en este momento.',
-                ], 502);
+                    'message' => $json['message'] ?? 'No fue posible consultar el tracking en este momento.',
+                ], $response->status() ?: 502);
             }
 
             $json = $response->json();
@@ -44,26 +56,14 @@ class PublicTrackingController extends Controller
             if (!is_array($json) || empty($json['success'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tracking no encontrado.',
+                    'message' => $json['message'] ?? 'Tracking no encontrado.',
                 ], 404);
             }
-
-
 
             return response()->json([
                 'success' => true,
                 'data' => $this->transformProxyResponse($tracking, $json),
             ]);
-
-
-            
-
-
-
-
-
-
-
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
@@ -96,7 +96,6 @@ class PublicTrackingController extends Controller
             ->filter(fn ($photo) => !empty($photo['url']))
             ->values()
             ->all();
-
 
         $deliveredTimeline = collect($data['timeline'] ?? [])
             ->firstWhere('state', 'delivered');

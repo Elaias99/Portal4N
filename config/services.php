@@ -18,6 +18,11 @@ return [
         'key' => env('INTERNAL_TRACKING_KEY'),
     ],
 
+    'tracking' => [
+        'base_url' => env('TRACKING_API_BASE_URL', 'https://admin.4nortes.app/api/v1/tracking'),
+        'token' => env('TRACKING_API_TOKEN'),
+        'timeout' => env('TRACKING_API_TIMEOUT', 15),
+    ],
 
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
@@ -43,6 +48,5 @@ return [
     'ors' => [
         'key' => env('ORS_API_KEY'),
     ],
-
 
 ];
