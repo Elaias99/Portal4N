@@ -55,7 +55,7 @@ Route::get('/', function () {
         return redirect('/empleados/perfil');
     }
 
-    return view('landing');
+    return redirect('/sitio-4n');
 })->name('home');
 
 Route::get('/sitio-4n', function () {
