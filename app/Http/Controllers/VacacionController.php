@@ -13,6 +13,8 @@ use Carbon\Carbon;
 use App\Mail\VacacionesSolicitadas;
 use Illuminate\Support\Facades\Mail;
 use App\Notifications\NotificacionAdminVacaciones;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\VacacionDisponibleExport;
@@ -64,14 +66,9 @@ class VacacionController extends Controller
         ]);
 
         $tipoDia = $request->input('tipo_dia');
-
-
         $user = Auth::user();
-
-        // 2. Resolver correo interno del perfil trabajador
         $resolvedEmail = resolvePerfilEmail($user->email);
 
-        // 3. Obtener el trabajador real asociado al perfil
         $trabajador = Trabajador::whereHas('user', function ($q) use ($resolvedEmail) {
                 $q->where('email', $resolvedEmail);
             })
@@ -81,57 +78,122 @@ class VacacionController extends Controller
         if (!$trabajador) {
             return redirect()->back()->withErrors([
                 'msg' => 'No se pudo encontrar el perfil del trabajador asociado.'
-            ]);
+            ])->withInput();
         }
 
-        if ($tipoDia === 'vacaciones') {
-            $diasProporcionales = $this->diaProporcional($trabajador);
-            if ($request->dias > $diasProporcionales) {
-                return redirect()->back()->withErrors(['msg' => 'No puedes solicitar más días de los que tienes acumulados.']);
+        $resultado = DB::transaction(function () use ($request, $trabajador, $tipoDia) {
+            // Bloquea el trabajador para evitar doble inserción en solicitudes concurrentes
+            $trabajadorBloqueado = Trabajador::where('id', $trabajador->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$trabajadorBloqueado) {
+                throw ValidationException::withMessages([
+                    'msg' => 'No se pudo encontrar el perfil del trabajador asociado.'
+                ]);
             }
-            $trabajador->update([
-                'dias_proporcionales' => max(0, $trabajador->dias_proporcionales - $request->dias)
+
+            // 1) Validar si ya tiene una solicitud pendiente en este módulo de días/vacaciones
+            $tienePendiente = Solicitud::where('trabajador_id', $trabajadorBloqueado->id)
+                ->where('campo', 'Vacaciones')
+                ->where('estado', 'pendiente')
+                ->exists();
+
+            if ($tienePendiente) {
+                throw ValidationException::withMessages([
+                    'msg' => 'Ya tienes una solicitud pendiente. Debes esperar la respuesta antes de crear otra.'
+                ]);
+            }
+
+            // 2) Validar duplicado exacto
+            $duplicadaExacta = Vacacion::where('trabajador_id', $trabajadorBloqueado->id)
+                ->whereDate('fecha_inicio', $request->fecha_inicio)
+                ->whereDate('fecha_fin', $request->fecha_fin)
+                ->where('dias', $request->dias)
+                ->whereHas('solicitud', function ($q) use ($tipoDia) {
+                    $q->where('campo', 'Vacaciones')
+                    ->where('tipo_dia', $tipoDia)
+                    ->whereIn('estado', ['pendiente', 'aprobado']);
+                })
+                ->exists();
+
+            if ($duplicadaExacta) {
+                throw ValidationException::withMessages([
+                    'msg' => 'Ya existe una solicitud igual para esas fechas.'
+                ]);
+            }
+
+            // 3) Validar traslape de fechas con solicitudes pendientes o aprobadas
+            $tieneTraslape = Vacacion::where('trabajador_id', $trabajadorBloqueado->id)
+                ->whereDate('fecha_inicio', '<=', $request->fecha_fin)
+                ->whereDate('fecha_fin', '>=', $request->fecha_inicio)
+                ->whereHas('solicitud', function ($q) {
+                    $q->where('campo', 'Vacaciones')
+                    ->whereIn('estado', ['pendiente', 'aprobado']);
+                })
+                ->exists();
+
+            if ($tieneTraslape) {
+                throw ValidationException::withMessages([
+                    'msg' => 'Las fechas solicitadas se cruzan con otra solicitud ya registrada.'
+                ]);
+            }
+
+            // 4) Validar saldo disponible solo para vacaciones
+            if ($tipoDia === 'vacaciones') {
+                $diasProporcionales = $this->diaProporcional($trabajadorBloqueado);
+
+                if ((int) $request->dias > $diasProporcionales) {
+                    throw ValidationException::withMessages([
+                        'msg' => 'No puedes solicitar más días de los que tienes acumulados.'
+                    ]);
+                }
+            }
+
+            // 5) Guardar archivo si existe
+            $archivoPath = null;
+            if ($request->hasFile('archivo')) {
+                $archivoPath = $request->file('archivo')->store('solicitudes_adjuntos/vacaciones');
+            }
+
+            // 6) Crear solicitud
+            $solicitud = Solicitud::create([
+                'trabajador_id' => $trabajadorBloqueado->id,
+                'campo' => 'Vacaciones',
+                'descripcion' => 'Solicitud de ' . $tipoDia . ' del ' . $request->fecha_inicio . ' al ' . $request->fecha_fin,
+                'estado' => 'pendiente',
+                'tipo_dia' => $tipoDia,
             ]);
-        }
 
-        $solicitud = Solicitud::create([
-            'trabajador_id' => $trabajador->id,
-            'campo' => 'Vacaciones',
-            'descripcion' => 'Solicitud de ' . $tipoDia . ' del ' . $request->fecha_inicio . ' al ' . $request->fecha_fin,
-            'estado' => 'pendiente',
-            'tipo_dia' => $tipoDia,
-        ]);
+            // 7) Crear registro de vacación / petición de día
+            $vacacion = Vacacion::create([
+                'trabajador_id' => $trabajadorBloqueado->id,
+                'fecha_inicio' => $request->fecha_inicio,
+                'fecha_fin' => $request->fecha_fin,
+                'dias' => $request->dias,
+                'solicitud_id' => $solicitud->id,
+                'archivo' => $archivoPath,
+            ]);
 
+            return [
+                'solicitud' => $solicitud,
+                'vacacion' => $vacacion,
+                'trabajador' => $trabajadorBloqueado,
+            ];
+        });
 
-        $archivoPath = null;
-        if ($request->hasFile('archivo')) {
-            $archivoOriginal = $request->file('archivo')->getClientOriginalName();
-            $archivoPath = $request->file('archivo')->storeAs('solicitudes_adjuntos/vacaciones', $archivoOriginal);
-        }
-
-        Vacacion::create([
-            'trabajador_id' => $trabajador->id,
-            'fecha_inicio' => $request->fecha_inicio,
-            'fecha_fin' => $request->fecha_fin,
-            'dias' => $request->dias,
-            'estado' => 'pendiente',
-            'solicitud_id' => $solicitud->id,
-            'archivo' => $archivoPath,
-        ]);
+        $solicitud = $resultado['solicitud'];
+        $trabajador = $resultado['trabajador'];
 
         $jefe = $trabajador->jefe->user ?? null;
-        if ($jefe) {
-            // Notificación interna (ya está)
-            $jefe->notify(new NotificacionAdminVacaciones($solicitud));
-        
-            // Enviar correo al jefe directo
-            Mail::to($jefe->email)
-                
-                ->send(new VacacionesSolicitadas($solicitud));
 
-        }
+        // if ($jefe) {
+        //     $jefe->notify(new NotificacionAdminVacaciones($solicitud));
+        //     Mail::to($jefe->email)->send(new VacacionesSolicitadas($solicitud));
+        // }
 
-        return redirect()->route('vacaciones.create')->with('success', 'Solicitud de días enviada correctamente.');
+        return redirect()->route('vacaciones.create')
+            ->with('success', 'Solicitud de días enviada correctamente.');
     }
 
 

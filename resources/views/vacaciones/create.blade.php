@@ -9,11 +9,9 @@
         </a>
     </div>
 
-
-    <!-- Mostrar mensajes de error -->
     @if ($errors->any())
         <div class="alert alert-danger">
-            <ul>
+            <ul class="mb-0">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
@@ -21,39 +19,33 @@
         </div>
     @endif
 
-    <!-- Mostrar mensaje de éxito -->
     @if (session('success'))
         <div class="alert alert-success">
             {{ session('success') }}
         </div>
     @endif
 
-    <!-- Mostrar siempre los días proporcionales acumulados -->
-    <!-- Mostrar siempre los días proporcionales acumulados -->
     <div class="alert alert-info d-flex align-items-center justify-content-between">
         <div>
             <strong>Días Proporcionales Acumulados:</strong> {{ $diasProporcionales }}
         </div>
-        <!-- Botón con ícono de información -->
         <button type="button" class="btn btn-link p-0 ml-2" data-toggle="modal" data-target="#infoDiasModal">
             <i class="fa fa-info-circle fa-lg text-dark"></i>
         </button>
     </div>
 
     @if ($solicitudPendiente)
-        <!-- Mensaje si ya hay una solicitud pendiente -->
         <div class="alert alert-warning">
             Ya tienes una solicitud de vacaciones pendiente. Debes esperar la respuesta antes de hacer otra.
         </div>
     @else
-        <!-- Formulario de Solicitud de Vacaciones -->
         <div class="card shadow-sm p-4">
-            <form action="{{ route('vacaciones.store') }}" method="POST" enctype="multipart/form-data">
+            <form id="formSolicitudVacaciones" action="{{ route('vacaciones.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
 
                 <div class="form-group mb-3">
                     <label for="tipo_dia" class="form-label">Tipo de Solicitud de Día</label>
-                    <select name="tipo_dia" class="form-control" required>
+                    <select name="tipo_dia" id="tipo_dia" class="form-control" required>
                         <option value="vacaciones">Días de Vacaciones</option>
                         <option value="administrativo">Días Administrativos</option>
                         <option value="sin_goce_de_sueldo">Permiso sin goce de sueldo</option>
@@ -61,22 +53,21 @@
                         <option value="licencia_medica">Licencia Médica</option>
                     </select>
                     <small class="form-text text-muted">
-                        * Nota: Solo los <strong>Días de Vacaciones</strong> afectan el saldo de días proporcionales acumulados. 
+                        * Nota: Solo los <strong>Días de Vacaciones</strong> afectan el saldo de días proporcionales acumulados.
                         Los demás tipos de permisos no afectan tu saldo.
                     </small>
                 </div>
-                
+
                 <div class="form-group mb-3">
                     <label for="fecha_inicio" class="form-label">Fecha de Inicio</label>
-                    <input type="date" class="form-control" name="fecha_inicio" required>
+                    <input type="date" class="form-control" name="fecha_inicio" id="fecha_inicio" required>
                 </div>
 
                 <div class="form-group mb-3">
                     <label for="fecha_fin" class="form-label">Fecha de Fin</label>
-                    <input type="date" class="form-control" name="fecha_fin" required>
+                    <input type="date" class="form-control" name="fecha_fin" id="fecha_fin" required>
                 </div>
 
-                <!-- Nueva sección para adjuntar archivo -->
                 <div class="form-group">
                     <label for="archivo">Adjuntar archivo (opcional):</label>
                     <input type="file" name="archivo" class="form-control" id="archivo">
@@ -90,7 +81,9 @@
                     </small>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-block">Enviar Solicitud</button>
+                <button type="submit" id="btnEnviarSolicitud" class="btn btn-primary btn-block">
+                    Enviar Solicitud
+                </button>
             </form>
         </div>
     @endif
@@ -100,5 +93,18 @@
 
 @include('vacaciones.modal_info_dias')
 
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('formSolicitudVacaciones');
+        const btn = document.getElementById('btnEnviarSolicitud');
 
+        if (!form || !btn) return;
+
+        form.addEventListener('submit', function () {
+            btn.disabled = true;
+            btn.innerText = 'Enviando solicitud...';
+            btn.classList.add('disabled');
+        });
+    });
+</script>
 @endsection
