@@ -18,40 +18,38 @@ use Illuminate\Validation\ValidationException;
 
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\VacacionDisponibleExport;
+use App\Services\CalendarioChileService;
+
 
 class VacacionController extends Controller
 {
 
+    protected $calendarioChileService;
+
+    public function __construct(CalendarioChileService $calendarioChileService)
+    {
+        $this->calendarioChileService = $calendarioChileService;
+    }
+
+
+
     public function create()
     {
-        // 1. Usuario autenticado (puede ser correo administrativo o interno)
-        $user = Auth::user();
+        $trabajador = $this->obtenerTrabajadorAutenticado();
 
-        // 2. Resolver correo interno del perfil trabajador
-        $resolvedEmail = resolvePerfilEmail($user->email);
-
-        // 3. Obtener el trabajador real asociado al perfil
-        $trabajador = Trabajador::whereHas('user', function ($q) use ($resolvedEmail) {
-                $q->where('email', $resolvedEmail);
-            })
-            ->whereNull('deleted_at')
-            ->first();
-
-        // 4. Blindaje: si no se encuentra trabajador, no continuar
         if (!$trabajador) {
             return redirect()->route('home')->withErrors([
                 'msg' => 'No se pudo encontrar el perfil del trabajador asociado.'
             ]);
         }
 
-        // 5. Buscar si existe una solicitud de vacaciones pendiente
         $solicitudPendiente = Vacacion::solicitudesPendientes($trabajador->id);
-
-        // 6. Calcular días proporcionales
         $diasProporcionales = $this->diaProporcional($trabajador);
 
-        // 7. Retornar vista
-        return view('vacaciones.create', compact('diasProporcionales', 'solicitudPendiente'));
+        return view('vacaciones.create', compact(
+            'diasProporcionales',
+            'solicitudPendiente'
+        ));
     }
 
 
@@ -61,19 +59,11 @@ class VacacionController extends Controller
             'fecha_inicio' => 'required|date',
             'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
             'tipo_dia' => 'required|in:vacaciones,administrativo,sin_goce_de_sueldo,Permiso_fuerza_mayor,licencia_medica',
-            'dias' => 'required|integer|min:1',
             'archivo' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
         ]);
 
         $tipoDia = $request->input('tipo_dia');
-        $user = Auth::user();
-        $resolvedEmail = resolvePerfilEmail($user->email);
-
-        $trabajador = Trabajador::whereHas('user', function ($q) use ($resolvedEmail) {
-                $q->where('email', $resolvedEmail);
-            })
-            ->whereNull('deleted_at')
-            ->first();
+        $trabajador = $this->obtenerTrabajadorAutenticado();
 
         if (!$trabajador) {
             return redirect()->back()->withErrors([
@@ -82,7 +72,6 @@ class VacacionController extends Controller
         }
 
         $resultado = DB::transaction(function () use ($request, $trabajador, $tipoDia) {
-            // Bloquea el trabajador para evitar doble inserción en solicitudes concurrentes
             $trabajadorBloqueado = Trabajador::where('id', $trabajador->id)
                 ->lockForUpdate()
                 ->first();
@@ -93,7 +82,6 @@ class VacacionController extends Controller
                 ]);
             }
 
-            // 1) Validar si ya tiene una solicitud pendiente en este módulo de días/vacaciones
             $tienePendiente = Solicitud::where('trabajador_id', $trabajadorBloqueado->id)
                 ->where('campo', 'Vacaciones')
                 ->where('estado', 'pendiente')
@@ -105,11 +93,24 @@ class VacacionController extends Controller
                 ]);
             }
 
-            // 2) Validar duplicado exacto
+            // Calcular días reales usando el service
+            $calculo = $this->calendarioChileService->calcularDiasHabiles(
+                $request->fecha_inicio,
+                $request->fecha_fin
+            );
+
+            $diasCalculados = $calculo['dias_habiles'];
+
+            if ($diasCalculados <= 0) {
+                throw ValidationException::withMessages([
+                    'msg' => 'El rango seleccionado no contiene días hábiles válidos para solicitar.'
+                ]);
+            }
+
             $duplicadaExacta = Vacacion::where('trabajador_id', $trabajadorBloqueado->id)
                 ->whereDate('fecha_inicio', $request->fecha_inicio)
                 ->whereDate('fecha_fin', $request->fecha_fin)
-                ->where('dias', $request->dias)
+                ->where('dias', $diasCalculados)
                 ->whereHas('solicitud', function ($q) use ($tipoDia) {
                     $q->where('campo', 'Vacaciones')
                     ->where('tipo_dia', $tipoDia)
@@ -123,7 +124,6 @@ class VacacionController extends Controller
                 ]);
             }
 
-            // 3) Validar traslape de fechas con solicitudes pendientes o aprobadas
             $tieneTraslape = Vacacion::where('trabajador_id', $trabajadorBloqueado->id)
                 ->whereDate('fecha_inicio', '<=', $request->fecha_fin)
                 ->whereDate('fecha_fin', '>=', $request->fecha_inicio)
@@ -139,24 +139,21 @@ class VacacionController extends Controller
                 ]);
             }
 
-            // 4) Validar saldo disponible solo para vacaciones
             if ($tipoDia === 'vacaciones') {
                 $diasProporcionales = $this->diaProporcional($trabajadorBloqueado);
 
-                if ((int) $request->dias > $diasProporcionales) {
+                if ($diasCalculados > $diasProporcionales) {
                     throw ValidationException::withMessages([
                         'msg' => 'No puedes solicitar más días de los que tienes acumulados.'
                     ]);
                 }
             }
 
-            // 5) Guardar archivo si existe
             $archivoPath = null;
             if ($request->hasFile('archivo')) {
                 $archivoPath = $request->file('archivo')->store('solicitudes_adjuntos/vacaciones');
             }
 
-            // 6) Crear solicitud
             $solicitud = Solicitud::create([
                 'trabajador_id' => $trabajadorBloqueado->id,
                 'campo' => 'Vacaciones',
@@ -165,12 +162,11 @@ class VacacionController extends Controller
                 'tipo_dia' => $tipoDia,
             ]);
 
-            // 7) Crear registro de vacación / petición de día
             $vacacion = Vacacion::create([
                 'trabajador_id' => $trabajadorBloqueado->id,
                 'fecha_inicio' => $request->fecha_inicio,
                 'fecha_fin' => $request->fecha_fin,
-                'dias' => $request->dias,
+                'dias' => $diasCalculados,
                 'solicitud_id' => $solicitud->id,
                 'archivo' => $archivoPath,
             ]);
@@ -179,6 +175,7 @@ class VacacionController extends Controller
                 'solicitud' => $solicitud,
                 'vacacion' => $vacacion,
                 'trabajador' => $trabajadorBloqueado,
+                'calculo' => $calculo,
             ];
         });
 
@@ -195,7 +192,6 @@ class VacacionController extends Controller
         return redirect()->route('vacaciones.create')
             ->with('success', 'Solicitud de días enviada correctamente.');
     }
-
 
 
     public function diaProporcional(Trabajador $trabajador)
@@ -401,6 +397,23 @@ class VacacionController extends Controller
         $nombreArchivo = 'vacaciones_disponibles_' . now()->format('Ymd_His') . '.xlsx';
         return Excel::download(new VacacionDisponibleExport, $nombreArchivo);
     }
+
+
+    private function obtenerTrabajadorAutenticado()
+    {
+        $user = Auth::user();
+        $resolvedEmail = resolvePerfilEmail($user->email);
+
+        return Trabajador::whereHas('user', function ($q) use ($resolvedEmail) {
+                $q->where('email', $resolvedEmail);
+            })
+            ->whereNull('deleted_at')
+            ->first();
+    }
+
+
+
+    
 
 
 

@@ -385,14 +385,14 @@ class SolicitudController extends Controller
 
         $vacacion->save();
         // Notificar solo si el estado cambió a "aprobado"
-        if ($notificar) {
-            $solicitud->trabajador->user->notify(new SolicitudActualizada('aprobada', $solicitud));
+        // if ($notificar) {
+        //     $solicitud->trabajador->user->notify(new SolicitudActualizada('aprobada', $solicitud));
 
 
-            $correoDestino = resolveCorreoNotificacion($solicitud->trabajador->user);
-            Mail::to($correoDestino)->send(new EstadoVacacionesActualizado($solicitud, 'aprobada', $pdfPath));
+        //     $correoDestino = resolveCorreoNotificacion($solicitud->trabajador->user);
+        //     Mail::to($correoDestino)->send(new EstadoVacacionesActualizado($solicitud, 'aprobada', $pdfPath));
 
-        }
+        // }
 
         return redirect()->route('solicitudes.vacaciones')->with('success', 'Solicitud procesada con éxito.');
     }
@@ -430,13 +430,13 @@ class SolicitudController extends Controller
         $vacacion->save();
 
         // Notificar solo si el estado cambió a "rechazado"
-        if ($notificar) {
-            $solicitud->trabajador->user->notify(new SolicitudActualizada('rechazada', $solicitud));
+        // if ($notificar) {
+        //     $solicitud->trabajador->user->notify(new SolicitudActualizada('rechazada', $solicitud));
 
-            $correoDestino = resolveCorreoNotificacion($solicitud->trabajador->user);
-            Mail::to($correoDestino)->send(new EstadoVacacionesActualizado($solicitud, 'rechazada'));
+        //     $correoDestino = resolveCorreoNotificacion($solicitud->trabajador->user);
+        //     Mail::to($correoDestino)->send(new EstadoVacacionesActualizado($solicitud, 'rechazada'));
    
-        }
+        // }
 
         return redirect()->route('solicitudes.vacaciones')->with('success', 'Solicitud rechazada con éxito.');
     }
