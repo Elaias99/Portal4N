@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -19,92 +20,92 @@ class HonorariosPagoMasivoExport implements
 {
     protected Collection $honorarios;
 
-    /**
-     * Recibe los honorarios ya pagados
-     */
     public function __construct(Collection $honorarios)
     {
         $this->honorarios = $honorarios;
     }
 
-    /**
-     * Colección base del export
-     */
     public function collection(): Collection
     {
         return $this->honorarios;
     }
 
-    /**
-     * Mapeo: 1 fila = 1 honorario
-     */
     public function map($honorario): array
     {
         $honorario->loadMissing([
             'empresa',
             'cobranzaCompra.banco',
+            'pagos',
         ]);
 
         $cobranza = $honorario->cobranzaCompra;
 
-        // =========================
-        // CUENTA ORIGEN
-        // =========================
         $cuentaOrigen = $honorario?->empresa?->cta_corriente ?? '0';
-        $moneda       = 'CLP';
+        $moneda = 'CLP';
 
-        // =========================
-        // CUENTA DESTINO
-        // =========================
         $cuentaDestino = $cobranza?->numero_cuenta ?? '';
 
-        // =========================
-        // BANCO
-        // =========================
         $codigoBanco = $cobranza?->banco_id
             ? str_pad($cobranza->banco_id, 2, '0', STR_PAD_LEFT)
             : '';
 
-        // =========================
-        // BENEFICIARIO
-        // =========================
-        $rutBeneficiario = $cobranza?->rut_cliente
-            ? preg_replace('/[^0-9kK]/', '', $cobranza->rut_cliente)
+        $rutBeneficiario = $honorario->rut_emisor
+            ? preg_replace('/[^0-9kK]/', '', $honorario->rut_emisor)
             : '';
 
         $nombreBeneficiario = $cobranza?->razon_social ?? '';
 
-        // =========================
-        // MONTO
-        // =========================
         $monto = (int) $honorario->monto_pagado;
 
-        // =========================
-        // GLOSA (ÚNICA FUENTE)
-        // =========================
-        $glosa = "Pago honorario {$rutBeneficiario} folio {$honorario->folio}";
+        $correoBeneficiario = $this->resolverCorreoBeneficiario(
+            $cobranza?->responsable
+        );
+
+        $fechaPago = $honorario->pagos
+            ->sortByDesc('fecha_pago')
+            ->first()?->fecha_pago;
+
+        $fechaPagoFormateada = $fechaPago
+            ? Carbon::parse($fechaPago)->format('dmY')
+            : now()->format('dmY');
+
+        $glosaPago = "Pago Honorarios {$fechaPagoFormateada}";
+        $glosaFolio = "Pago Folio N {$honorario->folio}";
 
         return [
-            $cuentaOrigen,        // Cuenta origen
-            $moneda,              // Moneda origen
-            $cuentaDestino,       // Cuenta destino
-            $moneda,              // Moneda destino
-            $codigoBanco,         // Código banco destino
-            $rutBeneficiario,     // RUT beneficiario
-            $nombreBeneficiario,  // Nombre beneficiario
-            $monto,               // Monto transferencia
-            $glosa,               // Glosa personalizada transferencia
-            null,                 // Correo beneficiario
-            null,                 // Mensaje correo beneficiario
-            $glosa,               // Glosa cartola originador
-            $glosa,               // Glosa cartola beneficiario (MISMA glosa)
+            $cuentaOrigen,         // A Cuenta origen
+            $moneda,               // B Moneda origen
+            $cuentaDestino,        // C Cuenta destino
+            $moneda,               // D Moneda destino
+            $codigoBanco,          // E Código banco destino
+            $rutBeneficiario,      // F RUT beneficiario
+            $nombreBeneficiario,   // G Nombre beneficiario
+            $monto,                // H Monto transferencia
+            $glosaPago,            // I Glosa personalizada transferencia
+            $correoBeneficiario,   // J Correo beneficiario
+            $glosaFolio,           // K Mensaje correo beneficiario
+            $glosaPago,            // L Glosa cartola originador
+            $glosaFolio,           // M Glosa cartola beneficiario
         ];
     }
 
+    private function resolverCorreoBeneficiario(?string $responsable): ?string
+    {
+        if (!$responsable) {
+            return null;
+        }
 
-    /**
-     * Encabezados (idénticos al archivo del otro sistema)
-     */
+        $responsableNormalizado = mb_strtolower(
+            preg_replace('/\s+/', ' ', trim($responsable))
+        );
+
+        return match ($responsableNormalizado) {
+            'luis de la barra' => 'proveedores@4nlogistica.cl',
+            'natalia leyton' => 'finanzas@4nlogistica.cl',
+            default => null,
+        };
+    }
+
     public function headings(): array
     {
         return [
@@ -124,9 +125,6 @@ class HonorariosPagoMasivoExport implements
         ];
     }
 
-    /**
-     * Estilos
-     */
     public function styles(Worksheet $sheet)
     {
         return [
