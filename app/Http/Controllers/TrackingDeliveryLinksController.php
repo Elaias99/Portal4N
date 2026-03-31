@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\SystemEvents;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use App\Exports\TrackingPhotosExport;
 use App\Exports\TrackingBatchExport;
-use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\TrackingPhotosExport;
+use App\Models\SystemEvents;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
-
+use Maatwebsite\Excel\Facades\Excel;
 
 class TrackingDeliveryLinksController extends Controller
 {
@@ -38,172 +39,127 @@ class TrackingDeliveryLinksController extends Controller
         return view('reports.delivery-links', compact('trackings'));
     }
 
-    /**
-     * Buscar tracking manualmente (input)
-     */
-    public function search(Request $request)
+    public function search(Request $request): JsonResponse
     {
         $request->validate([
             'tracking' => 'required|string|max:100',
         ]);
 
-        $tracking = trim($request->tracking);
+        $tracking = trim((string) $request->tracking);
 
-        try {
-            $response = file_get_contents(
-                'https://4nlogistica.cl/tracking-proxy.php?tracking=' . urlencode($tracking)
-            );
-
-            if (!$response) {
-                throw new \Exception('Sin respuesta del proxy');
-            }
-
-            $data = json_decode($response, true);
-
-            if (!$data || !$data['success']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Tracking no encontrado',
-                ]);
-            }
-
-            return response()->json([
-                'success' => true,
-                'source'  => 'proxy',
-                'data'    => [
-                    'delivery_state' => $data['data']['delivery_state'] ?? null,
-                    'photos' => collect($data['data']['delivery_proof']['photos'] ?? [])
-                        ->pluck('url')
-                        ->toArray(),
-                ],
-            ]);
-
-        } catch (\Throwable $e) {
+        if ($tracking === '') {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al consultar el servicio',
-            ], 500);
+                'message' => 'Número de seguimiento inválido.',
+            ], 422);
         }
+
+        $result = $this->fetchTracking($tracking);
+
+        if (!$result['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'],
+            ], $result['status']);
+        }
+
+        return response()->json([
+            'success' => true,
+            'source'  => 'api',
+            'data'    => [
+                'delivery_state' => $result['data']['delivery_state'] ?? null,
+                'photos' => collect($result['data']['photos'] ?? [])
+                    ->pluck('url')
+                    ->filter()
+                    ->values()
+                    ->all(),
+            ],
+        ]);
     }
 
-
-    public function searchBatch(Request $request)
+    public function searchBatch(Request $request): JsonResponse
     {
-        /*
-        |--------------------------------------------------------------------------
-        |Ver qué llega desde la vista
-        |--------------------------------------------------------------------------
-        */
         $request->validate([
             'trackings' => 'required|string',
         ]);
 
-        $rawInput = $request->input('trackings');
+        $rawInput = (string) $request->input('trackings');
 
-        /*
-        |--------------------------------------------------------------------------
-        |Normalizar input (split por línea)
-        |--------------------------------------------------------------------------
-        */
-        $lines = preg_split('/\r\n|\r|\n/', $rawInput);
-        /*
-        |--------------------------------------------------------------------------
-        |Limpieza: trim, quitar vacíos, unique
-        |--------------------------------------------------------------------------
-        */
-        $trackings = collect($lines)
-            ->map(fn ($line) => trim($line))
+        $trackings = collect(preg_split('/\r\n|\r|\n/', $rawInput))
+            ->map(fn ($line) => trim((string) $line))
             ->filter()
             ->unique()
             ->values();
 
-        /*
-        |--------------------------------------------------------------------------
-        | Procesar cada tracking (PARALELO)
-        |--------------------------------------------------------------------------
-        */
-        $results = [];
+        if ($trackings->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debes ingresar al menos un tracking.',
+            ], 422);
+        }
 
-        /**
-         * Ejecutamos todas las consultas en paralelo
-         */
-        $responses = Http::pool(function ($pool) use ($trackings) {
+        $config = $this->getTrackingConfig();
+
+        if (!$config['configured']) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La integración de tracking no está configurada.',
+            ], 500);
+        }
+
+        $responses = Http::pool(function ($pool) use ($trackings, $config) {
             foreach ($trackings as $tracking) {
-                $pool->get('https://4nlogistica.cl/tracking-proxy.php', [
-                    'tracking' => $tracking,
-                ]);
+                $pool->as($tracking)
+                    ->acceptJson()
+                    ->withToken($config['token'])
+                    ->timeout($config['timeout'])
+                    ->get($config['base_url'] . '/' . urlencode($tracking));
             }
         });
 
-        /**
-         * Procesamos las respuestas manteniendo el orden
-         */
-        foreach ($responses as $index => $response) {
+        $results = $trackings->map(function ($tracking) use ($responses) {
+            $response = $responses[$tracking] ?? null;
 
-            $tracking = $trackings[$index];
-
-            if ($response->failed()) {
-
-                $results[] = [
+            if (!$response instanceof Response) {
+                return [
                     'tracking' => $tracking,
-                    'success'  => false,
-                    'message'  => 'Error al consultar el servicio',
+                    'success' => false,
+                    'message' => 'Error al consultar el servicio',
                     'delivery_state' => null,
-                    'photos'   => [],
+                    'photos' => [],
                 ];
-                continue;
             }
 
-            $json = $response->json();
+            $result = $this->parseTrackingResponse($tracking, $response);
 
-            if (empty($json['success'])) {
-                $results[] = [
+            if (!$result['success']) {
+                return [
                     'tracking' => $tracking,
-                    'success'  => false,
-                    'message'  => $json['message'] ?? 'Tracking no encontrado',
+                    'success' => false,
+                    'message' => $result['message'],
                     'delivery_state' => null,
-                    'photos'   => [],
+                    'photos' => [],
                 ];
-                continue;
             }
 
-            $data = $json['data'] ?? [];
-
-            $photos = collect($data['delivery_proof']['photos'] ?? [])
-                ->map(function ($photo) {
-                    return [
-                        'url' => $photo['url'] ?? null,
-                        'preview_url' => $photo['preview_url'] ?? null,
-                    ];
-                })
-                ->filter(fn ($photo) => !empty($photo['url']))
-                ->values()
-                ->toArray();
-
-            $results[] = [
+            return [
                 'tracking' => $tracking,
-                'success'  => true,
-                'delivery_state' => $data['delivery_state'] ?? null,
-                'photos'   => $photos,
+                'success' => true,
+                'delivery_state' => $result['data']['delivery_state'] ?? null,
+                'photos' => $result['data']['photos'] ?? [],
             ];
-        }
-
-
-
-
+        })->values()->all();
 
         session([
-            'tracking_batch_results' => $results
+            'tracking' => $results,
         ]);
 
         return response()->json([
             'success' => true,
-            'count'   => $trackings->count(),
+            'count' => $trackings->count(),
             'results' => $results,
         ]);
     }
-
-
 
     public function export(Request $request)
     {
@@ -211,24 +167,21 @@ class TrackingDeliveryLinksController extends Controller
             'tracking' => 'required|string|max:100',
         ]);
 
-        $tracking = trim($request->tracking);
+        $tracking = trim((string) $request->tracking);
 
-        //reutilizamos el MISMO flujo que search()
-        $response = file_get_contents(
-            'https://4nlogistica.cl/tracking-proxy.php?tracking=' . urlencode($tracking)
-        );
+        $result = $this->fetchTracking($tracking);
 
-        $data = json_decode($response, true);
-
-        if (!$data || !$data['success']) {
-            abort(404, 'Tracking no encontrado');
+        if (!$result['success']) {
+            abort($result['status'], $result['message']);
         }
 
-        $state = $data['data']['delivery_state'] ?? '-';
+        $state = $result['data']['delivery_state'] ?? '-';
 
-        $photos = collect($data['data']['delivery_proof']['photos'] ?? [])
+        $photos = collect($result['data']['photos'] ?? [])
             ->pluck('url')
-            ->toArray();
+            ->filter()
+            ->values()
+            ->all();
 
         if (empty($photos)) {
             abort(404, 'No existen fotos de entrega');
@@ -240,27 +193,21 @@ class TrackingDeliveryLinksController extends Controller
         );
     }
 
-
-
-
-    // Exportación masiva
     public function exportBatch(Request $request)
     {
-
         $request->validate([
             'items' => 'required|array|min:1',
             'items.*.tracking' => 'required|string',
-            'items.*.state'    => 'nullable|string',
-            'items.*.url'      => 'required|url',
+            'items.*.state' => 'nullable|string',
+            'items.*.url' => 'required|url',
         ]);
 
-        // Normalizar y limpiar filas
         $rows = collect($request->items)
             ->map(function ($item) {
                 return [
-                    'tracking' => trim($item['tracking']),
-                    'state'    => $item['state'] ?? '-',
-                    'url'      => trim($item['url']),
+                    'tracking' => trim((string) $item['tracking']),
+                    'state' => $item['state'] ?? '-',
+                    'url' => trim((string) $item['url']),
                 ];
             })
             ->filter(fn ($row) => !empty($row['url']))
@@ -273,15 +220,133 @@ class TrackingDeliveryLinksController extends Controller
 
         return Excel::download(
             new TrackingBatchExport($rows),
-            'tracking_batch_pod_' . now()->format('Ymd_His') . '.xlsx'
+            'tracking_pruebas_entrega_' . now()->format('Ymd_His') . '.xlsx'
         );
     }
 
+    private function fetchTracking(string $tracking): array
+    {
+        $config = $this->getTrackingConfig();
 
+        if (!$config['configured']) {
+            return [
+                'success' => false,
+                'message' => 'La integración de tracking no está configurada.',
+                'status' => 500,
+                'data' => null,
+            ];
+        }
 
+        try {
+            $response = Http::acceptJson()
+                ->withToken($config['token'])
+                ->timeout($config['timeout'])
+                ->get($config['base_url'] . '/' . urlencode($tracking));
 
+            return $this->parseTrackingResponse($tracking, $response);
+        } catch (\Throwable $e) {
+            return [
+                'success' => false,
+                'message' => 'Ocurrió un error al consultar el tracking.',
+                'status' => 500,
+                'data' => null,
+            ];
+        }
+    }
 
+    private function parseTrackingResponse(string $tracking, Response $response): array
+    {
+        $json = $response->json();
 
+        if ($response->failed()) {
+            return [
+                'success' => false,
+                'message' => is_array($json)
+                    ? ($json['message'] ?? 'No fue posible consultar el tracking en este momento.')
+                    : 'No fue posible consultar el tracking en este momento.',
+                'status' => $response->status() ?: 502,
+                'data' => null,
+            ];
+        }
 
+        if (!is_array($json) || empty($json['success'])) {
+            return [
+                'success' => false,
+                'message' => is_array($json)
+                    ? ($json['message'] ?? 'Tracking no encontrado.')
+                    : 'Tracking no encontrado.',
+                'status' => 404,
+                'data' => null,
+            ];
+        }
 
+        return [
+            'success' => true,
+            'message' => null,
+            'status' => 200,
+            'data' => $this->normalizeTrackingPayload($tracking, $json),
+        ];
+    }
+
+    private function normalizeTrackingPayload(string $tracking, array $payload): array
+    {
+        $data = $payload['data'] ?? [];
+        $proof = is_array($data['delivery_proof'] ?? null)
+            ? $data['delivery_proof']
+            : [];
+
+        $photos = collect($proof['photos'] ?? [])
+            ->map(function ($photo) {
+                if (is_string($photo)) {
+                    return [
+                        'url' => $photo,
+                        'preview_url' => $photo,
+                    ];
+                }
+
+                return [
+                    'url' => $photo['url'] ?? null,
+                    'preview_url' => $photo['preview_url'] ?? ($photo['url'] ?? null),
+                ];
+            })
+            ->filter(fn ($photo) => !empty($photo['url']))
+            ->values()
+            ->all();
+
+        return [
+            'tracking' => $tracking,
+            'delivery_state' => $data['delivery_state'] ?? $data['status'] ?? null,
+            'delivered_at' =>
+                $data['delivery_date']
+                ?? $proof['created_at']
+                ?? $proof['delivered_at']
+                ?? $proof['date']
+                ?? $proof['datetime']
+                ?? $data['delivered_at']
+                ?? $data['updated_at']
+                ?? null,
+            'received_by' =>
+                $proof['recipient_name']
+                ?? $proof['received_by']
+                ?? $proof['receiver_name']
+                ?? $data['received_by']
+                ?? null,
+            'photos' => $photos,
+            'has_pod' => count($photos) > 0,
+        ];
+    }
+
+    private function getTrackingConfig(): array
+    {
+        $baseUrl = rtrim((string) config('services.tracking.base_url'), '/');
+        $token = (string) config('services.tracking.token');
+        $timeout = (int) config('services.tracking.timeout', 15);
+
+        return [
+            'base_url' => $baseUrl,
+            'token' => $token,
+            'timeout' => $timeout > 0 ? $timeout : 15,
+            'configured' => $baseUrl !== '' && $token !== '',
+        ];
+    }
 }
