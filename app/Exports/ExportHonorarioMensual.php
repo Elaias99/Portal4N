@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\Models\HonorarioMensualRec;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -28,9 +29,9 @@ class ExportHonorarioMensual implements
     public function collection()
     {
         $query = HonorarioMensualRec::with([
-                'empresa',
-                'cobranzaCompra',
-            ]);
+            'empresa',
+            'cobranzaCompra',
+        ]);
 
         // =========================
         // FILTRO: EMPRESA
@@ -138,8 +139,8 @@ class ExportHonorarioMensual implements
             $h->anio,
             $h->mes,
             $h->folio,
-            $h->fecha_emision,
-            $h->fecha_vencimiento,
+            $this->format($h->fecha_emision),
+            $this->format($h->fecha_vencimiento),
             $h->estado,
             $h->estado_financiero_inicial,
             $h->estado_financiero_final,
@@ -151,10 +152,10 @@ class ExportHonorarioMensual implements
             $h->monto_retenido,
             $h->monto_pagado,
             $h->saldo_pendiente,
-            $h->fecha_estado_financiero,
-            $h->fecha_anulacion,
-            $h->created_at,
-            $h->updated_at,
+            $this->format($h->fecha_estado_financiero),
+            $this->format($h->fecha_anulacion),
+            $this->format($h->created_at),
+            $this->format($h->updated_at),
         ];
     }
 
@@ -166,24 +167,13 @@ class ExportHonorarioMensual implements
                 $sheet = $event->sheet->getDelegate();
 
                 // Encabezados en negrita
-                $sheet->getStyle('A1:V1')->getFont()->setBold(true);
-
-                // Formato fechas
-                $sheet->getStyle('F:F')->getNumberFormat()
-                    ->setFormatCode('yyyy-mm-dd');
-
-                $sheet->getStyle('G:G')->getNumberFormat()
-                    ->setFormatCode('yyyy-mm-dd');
-
-                $sheet->getStyle('S:S')->getNumberFormat()
-                    ->setFormatCode('yyyy-mm-dd hh:mm:ss');
-
-                $sheet->getStyle('T:T')->getNumberFormat()
-                    ->setFormatCode('yyyy-mm-dd');
-
-                $sheet->getStyle('U:V')->getNumberFormat()
-                    ->setFormatCode('yyyy-mm-dd hh:mm:ss');
+                $sheet->getStyle('A1:U1')->getFont()->setBold(true);
             },
         ];
+    }
+
+    private function format($date)
+    {
+        return $date ? Carbon::parse($date)->format('d-m-Y') : null;
     }
 }

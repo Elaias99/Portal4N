@@ -60,7 +60,7 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
      */
     public function map($mov): array
     {
-        $fechaMovimiento = optional($mov->created_at)->format('d-m-Y H:i');
+        $fechaMovimiento = optional($mov->created_at)->format('d-m-Y');
         $tipoOriginal    = $mov->tipo_movimiento ?? '—';
         $tipo            = strtolower($tipoOriginal);
 
@@ -69,6 +69,7 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
         $cliente    = $mov->documento->razon_social ?? '—';
         $empresa    = $mov->documento->empresa->Nombre ?? '—';
         $usuario    = $mov->user->name ?? '—';
+        
         $descripcion = $mov->descripcion ?? '—';
 
         // ===== MONTO DEL MOVIMIENTO =====

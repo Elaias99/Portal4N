@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\MovimientoHonorarioMensualRec;
+use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -64,9 +65,9 @@ class ExportMovimientoHonorarioMensual implements
             $movimiento->descripcion,
             $datosAnteriores['saldo'] ?? null,
             $datosNuevos['saldo'] ?? null,
-            $movimiento->fecha_cambio,
-            $movimiento->created_at,
-            $movimiento->updated_at,
+            $this->format($movimiento->fecha_cambio),
+            $this->format($movimiento->created_at),
+            $this->format($movimiento->updated_at),
         ];
     }
 
@@ -77,16 +78,14 @@ class ExportMovimientoHonorarioMensual implements
 
                 $sheet = $event->sheet->getDelegate();
 
-                // Formato fecha
-                $sheet->getStyle('L:L')->getNumberFormat()
-                    ->setFormatCode('yyyy-mm-dd hh:mm:ss');
-
-                $sheet->getStyle('M:N')->getNumberFormat()
-                    ->setFormatCode('yyyy-mm-dd hh:mm:ss');
-
                 // Encabezados en negrita
                 $sheet->getStyle('A1:N1')->getFont()->setBold(true);
             },
         ];
+    }
+
+    private function format($date)
+    {
+        return $date ? Carbon::parse($date)->format('d-m-Y') : null;
     }
 }

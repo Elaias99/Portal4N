@@ -125,6 +125,6 @@ class DocumentosExport implements FromCollection, WithHeadings, WithMapping, Sho
 
     private function format($date)
     {
-        return $date ? Carbon::parse($date)->format('Y-m-d') : null;
+        return $date ? Carbon::parse($date)->format('d-m-Y') : null;
     }
 }

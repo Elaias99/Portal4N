@@ -48,7 +48,7 @@ class DocumentoCompraExport implements FromCollection, WithHeadings, WithMapping
             $ref = $doc->referencia;
             $documentoReferencia = "{$ref->tipoDocumento?->nombre} folio {$ref->folio}";
             if ($ref->fecha_docto) {
-                $documentoReferencia .= " ({$ref->fecha_docto})";
+                $documentoReferencia .= " ({$this->format($ref->fecha_docto)})";
             }
         }
 
@@ -143,6 +143,6 @@ class DocumentoCompraExport implements FromCollection, WithHeadings, WithMapping
      */
     private function format($date)
     {
-        return $date ? Carbon::parse($date)->format('Y-m-d') : null;
+        return $date ? Carbon::parse($date)->format('d-m-Y') : null;
     }
 }
