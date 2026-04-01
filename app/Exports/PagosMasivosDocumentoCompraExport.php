@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\DocumentoCompra;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -26,8 +27,6 @@ class PagosMasivosDocumentoCompraExport implements
      */
     public function __construct(array $operacionesExport)
     {
-
-
         $this->operaciones = collect($operacionesExport);
     }
 
@@ -36,8 +35,6 @@ class PagosMasivosDocumentoCompraExport implements
      */
     public function collection(): Collection
     {
-
-
         return $this->operaciones;
     }
 
@@ -47,7 +44,6 @@ class PagosMasivosDocumentoCompraExport implements
     public function map($op): array
     {
         if (!isset($op['documento_id'])) {
-
             return [];
         }
 
@@ -57,7 +53,6 @@ class PagosMasivosDocumentoCompraExport implements
         ])->find($op['documento_id']);
 
         if (!$documento || !$documento->cobranzaCompra) {
-
             return [];
         }
 
@@ -84,6 +79,7 @@ class PagosMasivosDocumentoCompraExport implements
         // =========================
         // BENEFICIARIO
         // =========================
+        // Debe salir desde la ficha del proveedor (cobranza_compras.rut_cliente)
         $rutBeneficiario = $cobranza->rut_cliente
             ? preg_replace('/[^0-9kK]/', '', $cobranza->rut_cliente)
             : '';
@@ -96,10 +92,24 @@ class PagosMasivosDocumentoCompraExport implements
         $monto = (int) ($op['monto'] ?? 0);
 
         // =========================
-        // GLOSA ÚNICA (MISMA PARA TODO)
+        // CORREO BENEFICIARIO
         // =========================
-        $tipo  = ($op['tipo'] ?? '') === 'abono' ? 'Abono' : 'Pago';
-        $glosa = "{$tipo} documento {$documento->folio} RUT {$rutBeneficiario}";
+        $correoBeneficiario = $this->resolverCorreoBeneficiario(
+            $cobranza->responsable ?? null
+        );
+
+        // =========================
+        // FECHA DE PAGO / EXPORTACIÓN
+        // =========================
+        $fechaPagoFormateada = !empty($op['fecha'])
+            ? Carbon::parse($op['fecha'])->format('dmY')
+            : now()->format('dmY');
+
+        // =========================
+        // GLOSAS
+        // =========================
+        $glosaPago  = "Pago Proveedores {$fechaPagoFormateada}";
+        $glosaFolio = "Pago Folio N {$documento->folio}";
 
         return [
             $cuentaOrigen,        // Cuenta origen
@@ -110,12 +120,29 @@ class PagosMasivosDocumentoCompraExport implements
             $rutBeneficiario,     // RUT beneficiario
             $nombreBeneficiario,  // Nombre beneficiario
             $monto,               // Monto transferencia
-            $glosa,               // Glosa personalizada transferencia
-            null,                 // Correo beneficiario
-            null,                 // Mensaje correo beneficiario
-            $glosa,               // Glosa cartola originador
-            $glosa,               // Glosa cartola beneficiario (CORREGIDO)
+            $glosaPago,           // Glosa personalizada transferencia
+            $correoBeneficiario,  // Correo beneficiario
+            $glosaFolio,          // Mensaje correo beneficiario
+            $glosaPago,           // Glosa cartola originador
+            $glosaFolio,          // Glosa cartola beneficiario
         ];
+    }
+
+    private function resolverCorreoBeneficiario(?string $responsable): ?string
+    {
+        if (!$responsable) {
+            return null;
+        }
+
+        $responsableNormalizado = mb_strtolower(
+            preg_replace('/\s+/', ' ', trim($responsable))
+        );
+
+        return match ($responsableNormalizado) {
+            'luis de la barra' => 'proveedores@4nlogistica.cl',
+            'natalia leyton' => 'finanzas@4nlogistica.cl',
+            default => null,
+        };
     }
 
     /**
