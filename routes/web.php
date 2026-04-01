@@ -338,9 +338,11 @@ Route::get('/cobranzas/general', [App\Http\Controllers\DocumentoFinancieroContro
         ->name('cobranzas.general');
 
 
-
 Route::get('/cobranzas/documentos/column-filter', [DocumentoFinancieroController::class, 'filtrarColumnas'])
     ->name('cobranzas.column_filter');
+
+Route::get('/cobranzas/documentos/exportar-al-corte', [DocumentoFinancieroController::class, 'exportAlCorte'])
+    ->name('cobranzas.documentos.exportar_al_corte');
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////

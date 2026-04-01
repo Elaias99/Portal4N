@@ -17,6 +17,8 @@ use App\Models\Cobranza;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\DocumentoCompraPagoProgramado;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
+use App\Exports\DocumentosAlCorteExport;
 
 class DocumentoFinancieroController extends Controller
 {
@@ -33,6 +35,13 @@ class DocumentoFinancieroController extends Controller
 
         // === BASE QUERY (para totales dinámicos) ===
         $baseQuery = DocumentoFinanciero::query();
+
+
+        $fechaCorte = $this->resolverFechaCorte($request);
+        $this->aplicarFiltroFechaCorte($baseQuery, $fechaCorte);
+
+
+
 
         // === APLICAR FILTROS GENERALES ANTES DE CONTAR ===
         if ($request->filled('razon_social')) {
@@ -991,6 +1000,58 @@ class DocumentoFinancieroController extends Controller
         ]);
 
         return back()->with('success', 'Cruce registrado correctamente.');
+    }
+
+
+
+
+
+
+
+
+
+
+    private function resolverFechaCorte(Request $request): ?Carbon
+    {
+        if (!$request->filled('fecha_corte')) {
+            return null;
+        }
+
+        return Carbon::parse($request->input('fecha_corte'))->endOfDay();
+    }
+
+
+
+    private function aplicarFiltroFechaCorte(Builder $query, ?Carbon $fechaCorte): void
+    {
+        if (!$fechaCorte) {
+            return;
+        }
+
+        $query->whereDate('fecha_docto', '<=', $fechaCorte->toDateString());
+    }
+
+
+    public function exportAlCorte(Request $request)
+    {
+        $usuariosFinanzas = [1, 405, 374, 375];
+
+        if (!in_array(Auth::id(), $usuariosFinanzas)) {
+            abort(403, 'Acceso denegado. No tienes permiso para exportar este módulo.');
+        }
+
+        $fechaCorte = $this->resolverFechaCorte($request);
+
+        if (!$fechaCorte) {
+            return back()->with('error', 'Debe seleccionar una fecha de corte para generar este archivo.');
+        }
+
+        $nombreArchivo = 'Cuentas_Por_Cobrar_Al_Corte_' . $fechaCorte->format('Y-m-d') . '.xlsx';
+
+        return Excel::download(
+            new DocumentosAlCorteExport($request, $fechaCorte),
+            $nombreArchivo
+        );
     }
 
 }

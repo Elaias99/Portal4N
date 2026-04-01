@@ -238,6 +238,30 @@
                                     </div>
                                 </div>
                             </div>
+
+
+
+                            <div class="col-md-2">
+                                <label class="form-label small text-muted">Fecha de Corte</label>
+                                <input
+                                    type="date"
+                                    name="fecha_corte"
+                                    class="form-control form-control-sm"
+                                    value="{{ request('fecha_corte') }}"
+                                >
+                            </div>
+
+
+
+
+
+
+
+
+
+
+
+
                         </div>
 
                         <div class="d-flex justify-content-end gap-2 mt-3">
@@ -291,6 +315,38 @@
                         <i class="bi bi-file-earmark-arrow-down"></i>
                         <span>Exportar Excel</span>
                     </button>
+
+                    @if(request()->filled('fecha_corte'))
+                        <form method="GET"
+                            action="{{ route('cobranzas.documentos.exportar_al_corte') }}"
+                            class="mb-3">
+                            
+                            <input type="hidden" name="fecha_corte" value="{{ request('fecha_corte') }}">
+                            <input type="hidden" name="razon_social" value="{{ request('razon_social') }}">
+                            <input type="hidden" name="rut_cliente" value="{{ request('rut_cliente') }}">
+                            <input type="hidden" name="folio" value="{{ request('folio') }}">
+                            <input type="hidden" name="fecha_inicio" value="{{ request('fecha_inicio') }}">
+                            <input type="hidden" name="fecha_fin" value="{{ request('fecha_fin') }}">
+                            <input type="hidden" name="vencimiento_inicio" value="{{ request('vencimiento_inicio') }}">
+                            <input type="hidden" name="vencimiento_fin" value="{{ request('vencimiento_fin') }}">
+                            <input type="hidden" name="saldo_tipo" value="{{ request('saldo_tipo') }}">
+                            <input type="hidden" name="saldo_valor" value="{{ request('saldo_valor') }}">
+                            <input type="hidden" name="status" value="{{ request('status') }}">
+                            <input type="hidden" name="estado_pago" value="{{ request('estado_pago') }}">
+
+                            <button type="submit"
+                                    class="btn btn-warning btn-sm w-100 d-flex align-items-center justify-content-center gap-2">
+                                <i class="bi bi-file-earmark-spreadsheet"></i>
+                                <span>Exportar Excel al corte</span>
+                            </button>
+                        </form>
+                    @endif
+
+                    
+
+
+
+
                 </x-finanzas.mass-actions-card>
             </x-slot:actions>
         </x-finanzas.top-section>
