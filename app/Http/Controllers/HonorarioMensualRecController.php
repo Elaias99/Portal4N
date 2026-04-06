@@ -1,29 +1,31 @@
 <?php
 
+
+
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+
+use App\Services\Sii\HonorarioMensualTerceroRecParser;
 use App\Models\HonorarioMensualRec;
-use App\Services\Sii\HonorarioMensualRecParser;
 use App\Models\HonorarioMensualRecTotal;
-use Illuminate\Support\Facades\Auth;
 use App\Models\Empresa;
 use App\Models\MovimientoHonorarioMensualRec;
-use Illuminate\Support\Facades\Log;
-use App\Models\CobranzaCompra;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 use App\Models\Abono;
 use App\Models\Cruce;
 use App\Models\Pago;
 use App\Models\ProntoPago;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\HonorariosPagoMasivoExport;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
-use App\Services\Sii\HonorarioMensualTerceroRecParser;
-use App\Exports\ExportHonorarioMensual;
+use App\Models\CobranzaCompra;
 use App\Models\HonorarioPagoProgramado;
+use App\Services\Sii\HonorarioMensualRecParser;
+use App\Exports\HonorariosPagoMasivoExport;
+use App\Exports\ExportHonorarioMensual;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
 
 
 
@@ -78,6 +80,9 @@ class HonorarioMensualRecController extends Controller
 
 
 
+    // =========================
+    // Muesta listado general con filtros + detalle individual + importación
+    // =========================
     public function index(Request $request)
     {
         $query = HonorarioMensualRec::with([
@@ -286,7 +291,9 @@ class HonorarioMensualRecController extends Controller
 
 
 
-
+    // =========================
+    // Indica en detalle individual + formulario de ediciónn de estado financiero manual
+    // =========================
     public function show(HonorarioMensualRec $honorario)
     {
         // Cargar relaciones financieras necesarias para el detalle
@@ -307,6 +314,9 @@ class HonorarioMensualRecController extends Controller
 
 
 
+    // =========================
+    // Método para procesar la importación de archivos desde el SII, previsualizar y guardar
+    // =========================
     public function import(Request $request)
     {
         $request->validate([
@@ -469,6 +479,10 @@ class HonorarioMensualRecController extends Controller
             ->with('info', 'Archivo analizado correctamente. Revisa la previsualización.');
     }
 
+
+    // =========================
+    // Almacena los registros importados desde el SII, creando o actualizando según corresponda
+    // =========================
     public function store(Request $request)
     {
         $data = json_decode(
@@ -586,17 +600,6 @@ class HonorarioMensualRecController extends Controller
 
             } else {
 
-                Log::info('CREANDO HONORARIO', [
-                    'tipo_boleta' => $tipoBoleta,
-                    'folio' => $r['folio'],
-                    'rut_contribuyente' => $rutContribuyenteDocumento,
-                    'razon_social' => $razonSocialDocumento,
-                    'rut_emisor' => $rutEmisor,
-                    'cobranza_compra_id' => $cobranza?->id,
-                    'estado_financiero_inicial' => $estadoFinancieroInicial,
-                    'fecha_vencimiento' => $fechaVencimiento,
-                ]);
-
                 HonorarioMensualRec::create([
                     'empresa_id'        => $empresaId,
                     'tipo_boleta'       => $tipoBoleta,
@@ -661,8 +664,34 @@ class HonorarioMensualRecController extends Controller
 
 
 
-    // GUARDADO DE LOS ESTADOS MANUALES
+    // Actualización manual del estado financiero (abono, cruce, pago, pronto pago)
+    public function storeEstado(Request $request)
+    {
 
+    
+        $honorario = HonorarioMensualRec::findOrFail($request->honorario_id);
+
+        switch ($request->estado_financiero) {
+
+            case 'Abono':
+                return $this->storeAbono($request, $honorario);
+
+            case 'Cruce':
+                return $this->storeCruce($request, $honorario);
+
+            case 'Pago':
+                return $this->storePago($request, $honorario);
+
+            case 'Pronto pago':
+                return $this->storeProntoPago($request, $honorario);
+        }
+
+        return back()->withErrors('Estado no válido');
+    }
+
+
+
+    // GUARDADO DE LOS ESTADOS MANUALES(ABONO, CRUCE, PAGO, PRONTO PAGO)
     public function storeAbono(Request $request, HonorarioMensualRec $honorario)
     {
         $request->validate([
@@ -821,6 +850,58 @@ class HonorarioMensualRecController extends Controller
     }
 
 
+    public function storeProntoPago(Request $request, HonorarioMensualRec $honorario)
+    {
+        $request->validate([
+            'fecha_pronto_pago' => 'required|date|before_or_equal:today',
+        ]);
+
+        if ($honorario->prontoPagos()->exists()) {
+            return back()->withErrors([
+                'fecha_pronto_pago' => 'Este honorario ya tiene un pronto pago registrado.'
+            ]);
+        }
+
+        $estadoAnterior = $honorario->estado_financiero_final;
+        $saldoAnterior  = $honorario->saldo_pendiente;
+
+        $honorario->prontoPagos()->create([
+            'fecha_pronto_pago' => $request->fecha_pronto_pago,
+            'user_id'           => Auth::id(),
+        ]);
+
+        $honorario->update([
+            'estado_financiero'       => 'Pronto pago',
+            'fecha_estado_financiero' => now(),
+            'saldo_pendiente'         => 0,
+        ]);
+
+        $honorario->refresh();
+
+        $honorario->movimientos()->create([
+            'usuario_id'      => Auth::id(),
+            'estado_anterior' => $estadoAnterior,
+            'nuevo_estado'    => 'Pronto pago',
+            'fecha_cambio'    => now(),
+            'tipo_movimiento' => 'Registro de pronto pago',
+            'descripcion'     => "Se registró el pronto pago del honorario.",
+            'datos_anteriores'=> [
+                'saldo' => $saldoAnterior,
+            ],
+            'datos_nuevos'    => [
+                'saldo' => 0,
+            ],
+        ]);
+
+        return back()->with('success', 'Pronto pago registrado correctamente.');
+    }
+
+
+
+
+    // =========================
+    // Método para registrar pagos masivos desde el modal 
+    // =========================
     public function storePagoMasivo(Request $request)
     {
         $request->validate([
@@ -899,6 +980,9 @@ class HonorarioMensualRecController extends Controller
 
 
 
+    // =========================
+    // Métodos para exportar pagos masivos a Excel, agrupados por empresa, con detalle de cada pago incluido 
+    // =========================
     public function storePagoMasivoExport(Request $request)
     {
         $request->validate([
@@ -994,11 +1078,6 @@ class HonorarioMensualRecController extends Controller
             }
         });
 
-        Log::info('HM agrupación resultante', [
-            'empresas_distintas' => $honorariosPorEmpresa->count(),
-            'empresa_ids'        => $honorariosPorEmpresa->keys()->values()->all(),
-            'por_empresa'        => $honorariosPorEmpresa->map(fn($c) => $c->count())->all(),
-        ]);
         // =========================
         // SIN ZIP: generar tokens y devolver URLs de descarga
         // =========================
@@ -1065,23 +1144,6 @@ class HonorarioMensualRecController extends Controller
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     public function buscarHonorarios(Request $request)
     {
         $q = trim($request->get('q'));
@@ -1115,80 +1177,6 @@ class HonorarioMensualRecController extends Controller
 
 
 
-
-    public function storeProntoPago(Request $request, HonorarioMensualRec $honorario)
-    {
-        $request->validate([
-            'fecha_pronto_pago' => 'required|date|before_or_equal:today',
-        ]);
-
-        if ($honorario->prontoPagos()->exists()) {
-            return back()->withErrors([
-                'fecha_pronto_pago' => 'Este honorario ya tiene un pronto pago registrado.'
-            ]);
-        }
-
-        $estadoAnterior = $honorario->estado_financiero_final;
-        $saldoAnterior  = $honorario->saldo_pendiente;
-
-        $honorario->prontoPagos()->create([
-            'fecha_pronto_pago' => $request->fecha_pronto_pago,
-            'user_id'           => Auth::id(),
-        ]);
-
-        $honorario->update([
-            'estado_financiero'       => 'Pronto pago',
-            'fecha_estado_financiero' => now(),
-            'saldo_pendiente'         => 0,
-        ]);
-
-        $honorario->refresh();
-
-        $honorario->movimientos()->create([
-            'usuario_id'      => Auth::id(),
-            'estado_anterior' => $estadoAnterior,
-            'nuevo_estado'    => 'Pronto pago',
-            'fecha_cambio'    => now(),
-            'tipo_movimiento' => 'Registro de pronto pago',
-            'descripcion'     => "Se registró el pronto pago del honorario.",
-            'datos_anteriores'=> [
-                'saldo' => $saldoAnterior,
-            ],
-            'datos_nuevos'    => [
-                'saldo' => 0,
-            ],
-        ]);
-
-        return back()->with('success', 'Pronto pago registrado correctamente.');
-    }
-
-
-
-    public function storeEstado(Request $request)
-    {
-
-    
-        $honorario = HonorarioMensualRec::findOrFail($request->honorario_id);
-
-        switch ($request->estado_financiero) {
-
-            case 'Abono':
-                return $this->storeAbono($request, $honorario);
-
-            case 'Cruce':
-                return $this->storeCruce($request, $honorario);
-
-            case 'Pago':
-                return $this->storePago($request, $honorario);
-
-            case 'Pronto pago':
-                return $this->storeProntoPago($request, $honorario);
-        }
-
-        return back()->withErrors('Estado no válido');
-    }
-
-
     public function historial()
     {
         $movimientos = MovimientoHonorarioMensualRec::with([
@@ -1200,20 +1188,6 @@ class HonorarioMensualRecController extends Controller
 
         return view('boleta_mensual.historial', compact('movimientos'));
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1569,6 +1543,7 @@ class HonorarioMensualRecController extends Controller
 
 
 
+    // Definir servicio manualmente para honorarios sin servicio asociado (solo si cobranzaCompra->servicio es "Otro")
     public function updateServicio(Request $request, HonorarioMensualRec $honorario)
     {
         // Validación básica
@@ -1681,10 +1656,6 @@ class HonorarioMensualRecController extends Controller
 
             DB::commit();
 
-            Log::info('PROVEEDORES CREADOS DESDE IMPORTACION HONORARIOS', [
-                'cantidad' => count($proveedores),
-                'usuario_id' => Auth::id(),
-            ]);
 
             return redirect()
                 ->route('honorarios.mensual.index')
@@ -1693,10 +1664,6 @@ class HonorarioMensualRecController extends Controller
         } catch (\Exception $e) {
 
             DB::rollBack();
-
-            Log::error('ERROR CREANDO PROVEEDORES DESDE IMPORTACION', [
-                'error' => $e->getMessage(),
-            ]);
 
             return redirect()
                 ->route('honorarios.mensual.index')
@@ -1761,6 +1728,7 @@ class HonorarioMensualRecController extends Controller
 
 
 
+    // Programar próximo pago masivo para honorarios 
 
     public function storePagoProgramadoMasivo(Request $request)
     {
@@ -1827,6 +1795,7 @@ class HonorarioMensualRecController extends Controller
 
 
 
+    // Eliminar programación de próximo pago masivo (individual o múltiple)
     public function destroyPagoProgramadoMasivo(Request $request)
     {
         $usuariosFinanzas = [1, 405];
@@ -1869,6 +1838,7 @@ class HonorarioMensualRecController extends Controller
 
 
 
+    // Méotodo para exportar en Excel los honorarios que se programaron para próximo pago masivo, agrupados por empresa (una hoja por empresa)
     public function storePagoProgramadoMasivoExport(Request $request)
     {
         $request->validate([
@@ -1961,6 +1931,7 @@ class HonorarioMensualRecController extends Controller
     }
 
 
+    // Descargar Excel de honorarios programados para próximo pago masivo (una hoja por empresa)
     public function downloadPagoProgramadoExcel(string $token)
     {
         $honorariosProgramados = Cache::get("proximo_pago_honorarios_excel:$token");

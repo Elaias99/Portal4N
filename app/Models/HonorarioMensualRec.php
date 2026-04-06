@@ -93,17 +93,12 @@ class HonorarioMensualRec extends Model
 
     public function movimientos()
     {
-        return $this->hasMany(
-            MovimientoHonorarioMensualRec::class,
-            'honorario_mensual_rec_id');
+        return $this->hasMany( MovimientoHonorarioMensualRec::class, 'honorario_mensual_rec_id');
     }
 
     public function pagoProgramado()
     {
-        return $this->hasOne(
-            HonorarioPagoProgramado::class,
-            'honorario_mensual_rec_id'
-        );
+        return $this->hasOne( HonorarioPagoProgramado::class, 'honorario_mensual_rec_id' );
     }
 
 
