@@ -525,14 +525,22 @@ export default function FourNLogisticaWebsite() {
               </button>
 
               {accessOpen && (
+
+
                 <div className="absolute right-0 top-full z-50 mt-3 w-64 overflow-hidden rounded-2xl border border-[#231F21]/10 bg-white shadow-[0_20px_50px_rgba(35,31,33,0.12)]">
+
+
+{/* 
                   <a
                     href="/acceso-trabajadores"
                     onClick={() => setAccessOpen(false)}
                     className="block px-4 py-3 text-sm text-[#231F21] transition hover:bg-[#5CBABC]/10"
                   >
                     Acceso trabajadores
-                  </a>
+                  </a> */}
+
+
+
 
                   <a
                     href="https://cliente.4nortes.app/login"
@@ -1323,6 +1331,9 @@ export default function FourNLogisticaWebsite() {
       </main>
 
       <footer className="border-t border-white/5 bg-[#231F21] text-white">
+
+
+
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
           <div className="grid gap-14 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
             <div>
@@ -1374,10 +1385,13 @@ export default function FourNLogisticaWebsite() {
                     <span>+56 9 2682 6733</span>
                   </div>
 
-                  <div className="flex items-start gap-3">
+                  <a
+                    href="/acceso-trabajadores"
+                    className="flex items-start gap-3 text-white/70 transition hover:text-white"
+                  >
                     <ExternalLink className="mt-1 h-4 w-4 shrink-0 text-[#B0FFF8]" />
-                    <span>Tracking y acceso de clientes</span>
-                  </div>
+                    <span>Acceso trabajadores</span>
+                  </a>
 
                   <div className="flex items-start gap-3">
                     <MessageSquareMore className="mt-1 h-4 w-4 shrink-0 text-[#B0FFF8]" />
@@ -1388,6 +1402,9 @@ export default function FourNLogisticaWebsite() {
             </div>
           </div>
         </div>
+
+
+        
       </footer>
 
 
