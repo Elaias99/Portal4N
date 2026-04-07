@@ -1,91 +1,266 @@
-.doc-programado {
-    background-color: #e9f2ff;
-    border-left: 3px solid #3b82f6;
+/* =========================================================
+REPORTE CUENTAS POR PAGAR
+Estilo alineado con Boletas Honorarios
+========================================================= */
+
+.fc {
+    --fc-tone: #f5f7fa;
+    --fc-tone-soft: #edf1f4;
+    --fc-line: #d7dde3;
+    --fc-line-strong: #c8d0d8;
+    --fc-text: #2f3a45;
+    --fc-muted: #6b7280;
+    --fc-white: #f5f7fa;
+
+    background: var(--fc-tone) !important;
+    color: var(--fc-text);
 }
 
-/* ===== TABLA PLANA BASE ===== */
-.table-responsive {
-    border-radius: 14px;
+/* Contenedor principal */
+.fc.container {
+    max-width: 100%;
+    background: var(--fc-tone) !important;
+    padding-top: 0.9rem !important;
+    padding-bottom: 0.9rem !important;
+}
+
+/* =========================================================
+UNIFICAR TONO GENERAL
+========================================================= */
+.fc .card,
+.fc .table-responsive,
+.fc .custom-table,
+.fc .custom-table thead th,
+.fc .custom-table tbody tr,
+.fc .custom-table td {
+    background: var(--fc-tone) !important;
+}
+
+.fc .card,
+.fc .table-responsive {
+    border: 1px solid var(--fc-line) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+}
+
+/* =========================================================
+TIPOGRAFÍA GENERAL
+========================================================= */
+.fc .text-muted,
+.fc .form-label.small.text-muted {
+    color: var(--fc-muted) !important;
+}
+
+.fc .form-label {
+    margin-bottom: 0.22rem !important;
+    font-size: 0.74rem !important;
+    line-height: 1.1;
+}
+
+.fc .btn-sm,
+.fc .form-control-sm,
+.fc .form-select-sm {
+    font-size: 0.77rem;
+}
+
+.fc .form-control-sm,
+.fc .form-select-sm {
+    min-height: calc(1.5em + 0.42rem + 2px);
+    padding: 0.22rem 0.45rem;
+    border-color: var(--fc-line-strong);
+    background-color: var(--fc-white);
+}
+
+.fc .form-control-sm:focus,
+.fc .form-select-sm:focus {
+    box-shadow: none;
+    border-color: #9fb3c8;
+}
+
+.fc .btn-sm {
+    padding: 0.26rem 0.55rem;
+}
+
+/* =========================================================
+TOP SECTION / FILTROS / GESTIÓN MASIVA
+========================================================= */
+.fc .card-body {
+    padding: 0.8rem 0.9rem !important;
+}
+
+.fc form {
+    margin-bottom: 0 !important;
+}
+
+.fc form .row.g-3 {
+    --bs-gutter-x: 0.75rem;
+    --bs-gutter-y: 0.45rem;
+}
+
+/* Menos aire bajo filtros */
+.fc form .d-flex.justify-content-end.gap-2.mt-3,
+.fc form .d-flex.justify-content-between.align-items-center.mt-3 {
+    margin-top: 0.6rem !important;
+}
+
+/* Dropdowns */
+.fc .dropdown-menu {
+    border: 1px solid var(--fc-line);
+    border-radius: 6px;
+    box-shadow: none;
+    padding: 0.65rem !important;
     background: #fff;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
 }
 
-.custom-table th {
-    background-color: #f9fafb;
-    color: #495057;
+/* Fila saldo total */
+.fc .text-success.fw-semibold {
     font-weight: 600;
-    font-size: 0.9rem;
+}
+
+/* =========================================================
+TABLA PLANA
+========================================================= */
+.fc .table-responsive {
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+}
+
+.fc .custom-table {
+    width: 100%;
+    margin: 0;
+    table-layout: auto;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.fc .custom-table th {
+    position: static;
+    top: auto;
+    z-index: auto;
+    background-color: var(--fc-tone) !important;
+    color: #3f4a56;
+    font-weight: 600;
+    font-size: 0.75rem;
     text-align: center;
-    padding: 14px;
-    border-bottom: 2px solid #e9ecef;
+    padding: 0.48rem 0.38rem;
+    border-bottom: 1px solid var(--fc-line);
     white-space: nowrap;
+    line-height: 1.1;
+    text-transform: none;
 }
 
-.custom-table td {
-    padding: 12px;
-    font-size: 0.9rem;
+.fc .custom-table td {
+    padding: 0.42rem 0.38rem;
+    font-size: 0.77rem;
     vertical-align: middle;
-    border-top: 1px solid #f1f3f5;
-    transition: background-color 0.2s ease-in-out;
+    border-top: 1px solid #dde3e8;
+    white-space: nowrap;
+    line-height: 1.15;
+    transition: none;
 }
 
-.custom-table tr:nth-child(odd) {
-    background-color: #fcfcfc;
+.fc .custom-table tbody tr:nth-child(odd) {
+    background: var(--fc-tone-soft) !important;
 }
 
-.custom-table tr:hover td {
-    background-color: #f4f8ff;
+.fc .custom-table tbody tr:nth-child(even) {
+    background: var(--fc-tone) !important;
 }
 
-/* ===== AJUSTES DE CELDAS ===== */
-.custom-table td.text-end,
-.custom-table th.text-end {
+.fc .custom-table tbody tr:hover td {
+    background: #e8edf1 !important;
+}
+
+/* Alineaciones */
+.fc .custom-table td.text-end,
+.fc .custom-table th.text-end {
     text-align: right;
 }
 
-.custom-table td.text-center,
-.custom-table th.text-center {
+.fc .custom-table td.text-center,
+.fc .custom-table th.text-center {
     text-align: center;
 }
 
-.custom-table .fw-bold,
-.custom-table .fw-semibold {
-    font-weight: 600;
-}
-
-/* ===== CHECKBOX ===== */
-.custom-table th:first-child,
-.custom-table td:first-child {
-    width: 40px;
-    text-align: center;
-    white-space: nowrap;
-}
-
-/* ===== BADGES / CONTENIDO LARGO ===== */
-.custom-table .badge {
-    vertical-align: middle;
-}
-
-.custom-table td.text-start {
+.fc .custom-table td.text-start,
+.fc .custom-table th.text-start {
     text-align: left;
 }
 
-.custom-table td.text-nowrap,
-.custom-table th.text-nowrap {
+.fc .custom-table .fw-bold,
+.fc .custom-table .fw-semibold {
+    font-weight: 600;
+}
+
+/* Checkbox */
+.fc .custom-table th:first-child,
+.fc .custom-table td:first-child {
+    width: 30px;
+    min-width: 30px;
+    text-align: center;
+    white-space: nowrap;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.fc .custom-table input[type="checkbox"] {
+    transform: scale(0.9);
+    margin: 0;
+}
+
+/* =========================================================
+BADGES Y CONTENIDO
+========================================================= */
+.fc .custom-table .badge {
+    vertical-align: middle;
+    font-size: 0.66rem;
+    padding: 1px 6px;
+    border-radius: 10px;
+    line-height: 1.15;
     white-space: nowrap;
 }
 
-/* ===== SCROLL HORIZONTAL SI LLEGARA A SER NECESARIO ===== */
-.table-responsive::-webkit-scrollbar {
+/* Evitar que estado meta demasiado alto por el <br> */
+.fc .custom-table td .badge + br {
+    display: none;
+}
+
+/* Links en folio */
+.fc .custom-table a.fw-semibold.text-decoration-none {
+    white-space: nowrap;
+}
+
+/* Badges de referencia */
+.fc .custom-table td .badge.bg-info,
+.fc .custom-table td .badge.bg-warning,
+.fc .custom-table td .badge.bg-secondary {
+    margin-left: 4px !important;
+}
+
+/* =========================================================
+PROGRAMADO
+========================================================= */
+.fc .doc-programado {
+    background-color: #e3edf9 !important;
+    border-left: 2px solid #3b82f6;
+}
+
+.fc .custom-table tr:hover .doc-programado {
+    background-color: #e3edf9 !important;
+}
+
+/* =========================================================
+SCROLLBAR
+========================================================= */
+.fc .table-responsive::-webkit-scrollbar {
     height: 8px;
 }
 
-.table-responsive::-webkit-scrollbar-thumb {
+.fc .table-responsive::-webkit-scrollbar-thumb {
     background-color: #ced4da;
     border-radius: 10px;
 }
 
-.table-responsive::-webkit-scrollbar-thumb:hover {
+.fc .table-responsive::-webkit-scrollbar-thumb:hover {
     background-color: #adb5bd;
 }

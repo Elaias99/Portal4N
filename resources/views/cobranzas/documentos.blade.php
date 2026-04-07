@@ -97,7 +97,7 @@
 
 
 
-    <div class="container-fluid" style="max-width: 100%;">
+    <div class="container-fluid cc" style="max-width: 100%;">
 
         <x-finanzas.header
             :back-route="route('cobranzas.general')"

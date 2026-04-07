@@ -578,7 +578,7 @@
 
     <div class="hm-table-wrap">
 
-        <div class="hm-table-toolbar">
+        {{-- <div class="hm-table-toolbar">
             <p class="hm-table-title">Reporte Honorarios Mensuales</p>
             <div class="hm-subtle">
                 @if(method_exists($registros, 'total'))
@@ -587,7 +587,7 @@
                     Registros: {{ $registros->count() }}
                 @endif
             </div>
-        </div>
+        </div> --}}
 
         @if($registros->isEmpty())
             <div class="p-3">
@@ -605,21 +605,21 @@
                         <th class="hm-nowrap text-center">
                             <input type="checkbox" id="check-all-honorarios">
                         </th>
-                        <th class="hm-nowrap">Empresa</th>
-                        <th class="hm-nowrap">Tipo boleta</th>
-                        <th class="hm-nowrap">Estado</th>
-                        <th class="hm-nowrap">RUT</th>
-                        <th class="hm-nowrap">Emisor</th>
-                        <th class="hm-nowrap">Folio</th>
-                        <th class="hm-nowrap">Servicio</th>
-                        <th class="hm-nowrap">Servicio Final</th>
-                        <th class="hm-nowrap">Fecha Emisión</th>
-                        <th class="hm-nowrap">Fecha Vencimiento</th>
-                        <th class="hm-nowrap">Estado SII</th>
-                        <th class="hm-nowrap">Fecha Anulación</th>
-                        <th class="hm-nowrap text-end">Monto Pagado</th>
-                        <th class="hm-nowrap text-end">Saldo pendiente</th>
-                        <th class="hm-nowrap">Fecha Último Movimiento</th>
+                        <th>Empresa</th>
+                        <th>Tipo boleta</th>
+                        <th>Estado</th>
+                        <th>RUT</th>
+                        <th>Emisor</th>
+                        <th>Folio</th>
+                        <th>Servicio</th>
+                        <th>Servicio Final</th>
+                        <th>Fecha Emisión</th>
+                        <th>Fecha Vencimiento</th>
+                        <th>Estado SII</th>
+                        <th>Fecha Anulación</th>
+                        <th class="text-end">Monto Pagado</th>
+                        <th class="text-end">Saldo pendiente</th>
+                        <th>Fecha Último Movimiento</th>
                     </tr>
                 </thead>
 

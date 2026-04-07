@@ -1,134 +1,219 @@
-/* =========================
-BASE DEL MÓDULO
-========================= */
+/* =========================================================
+OVERRIDES FINALES: vista compacta + tono único + filtros más bajos
+Pegar al FINAL del archivo CSS
+========================================================= */
+
 .hm {
-    background: #f4f6f8;
+    --hm-tone: #f5f7fa;
+    --hm-tone-soft: #f5f7fa;
+    --hm-line: #d7dde3;
+    --hm-line-strong: #c8d0d8;
+    --hm-text: #2f3a45;
+    --hm-muted: #6b7280;
+    --hm-white: #f5f7fa;
+
+    background: var(--hm-tone) !important;
+    color: var(--hm-text);
 }
 
+/* El contenedor principal también toma el tono */
+.hm.container-fluid {
+    background: var(--hm-tone) !important;
+    padding-top: 0.9rem !important;
+    padding-bottom: 0.9rem !important;
+}
+
+/* =========================================================
+UNIFICAR TONO EN TODA LA VISTA
+========================================================= */
+.hm .hm-block,
+.hm .hm-table-wrap,
+.hm .hm-table-toolbar,
+.hm .hm-table-wrap > .table-responsive,
+.hm .custom-table,
+.hm .custom-table thead th,
+.hm .custom-table tbody tr,
+.hm .custom-table td {
+    background: var(--hm-tone) !important;
+}
+
+.hm .hm-block,
+.hm .hm-table-wrap {
+    border: 1px solid var(--hm-line) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+}
+
+/* Si los componentes x-finanzas internamente usan .card */
+.hm .card {
+    background: var(--hm-tone) !important;
+    border: 1px solid var(--hm-line) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+}
+
+/* =========================================================
+TIPOGRAFÍA GENERAL
+========================================================= */
 .hm .hm-subtle {
-    color: #6c757d;
-    font-size: 0.9rem;
+    color: var(--hm-muted);
+    font-size: 0.8rem;
+    line-height: 1.15;
 }
 
 .hm .hm-summary-badge {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.55rem;
+    font-size: 0.68rem;
+    padding: 0.12rem 0.42rem;
     border-radius: 999px;
     background: rgba(13, 110, 253, 0.08);
     color: #0d6efd;
-}
-
-/* =========================
-BLOQUES PREVIEW / REGULARIZACIÓN
-========================= */
-.hm .hm-block {
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 12px;
-    background: #f7f8fa;
-    padding: 12px;
-}
-
-.hm .hm-block-warning {
-    border-color: rgba(255, 193, 7, 0.35);
-    background: rgba(255, 193, 7, 0.06);
-}
-
-.hm .hm-block-title {
-    font-weight: 600;
-    margin: 0 0 10px;
-}
-
-.hm .hm-block .table {
-    margin: 0;
-    background: transparent;
-}
-
-.hm .hm-block .table thead th {
-    background: #eef0f3;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
     white-space: nowrap;
-    font-size: 0.82rem;
 }
 
-.hm .hm-block .table td {
-    vertical-align: middle;
-    font-size: 0.88rem;
+/* =========================================================
+FILTROS: MÁS COMPACTOS Y MENOS ALTOS
+========================================================= */
+
+/* Compactar cualquier card/body que rendericen los componentes */
+.hm .card-body,
+.hm .hm-block {
+    padding: 0.8rem 0.9rem !important;
 }
 
-/* =========================
-TABLA PRINCIPAL
-========================= */
-.hm .hm-table-wrap {
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 12px;
-    overflow: hidden;
-    background: #f7f8fa;
+/* El grid del formulario ocupa menos espacio vertical */
+.hm form .row.g-3 {
+    --bs-gutter-x: 0.75rem;
+    --bs-gutter-y: 0.45rem;
 }
 
+.hm .form-label {
+    margin-bottom: 0.22rem !important;
+    font-size: 0.74rem !important;
+    color: var(--hm-muted) !important;
+    line-height: 1.1;
+}
+
+.hm .form-control-sm,
+.hm .form-select-sm {
+    min-height: calc(1.5em + 0.42rem + 2px);
+    padding: 0.22rem 0.45rem;
+    font-size: 0.77rem;
+    border-color: var(--hm-line-strong);
+    background-color: var(--hm-white);
+}
+
+.hm .form-control-sm:focus,
+.hm .form-select-sm:focus {
+    box-shadow: none;
+    border-color: #9fb3c8;
+}
+
+/* Botones del formulario más compactos */
+.hm .btn-sm {
+    padding: 0.26rem 0.55rem;
+    font-size: 0.76rem;
+}
+
+/* Reducir espacio bajo los filtros */
+.hm form .d-flex.justify-content-end.gap-2.mt-3,
+.hm form .d-flex.justify-content-end.mt-3 {
+    margin-top: 0.55rem !important;
+}
+
+/* Dropdowns de fechas/servicio/saldo más pequeños */
+.hm .dropdown-menu {
+    border: 1px solid var(--hm-line);
+    border-radius: 6px;
+    box-shadow: none;
+    padding: 0.65rem !important;
+    background: var(--hm-white);
+}
+
+/* =========================================================
+TABLA: MÁS PAREJA CON LOS FILTROS
+========================================================= */
 .hm .hm-table-toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 10px 12px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    background: #f7f8fa;
+    gap: 8px;
+    padding: 0.65rem 0.85rem;
+    border-bottom: 1px solid var(--hm-line);
 }
 
 .hm .hm-table-title {
     font-weight: 600;
+    font-size: 0.95rem;
     margin: 0;
 }
 
-/* Integra el componente reutilizable dentro del bloque HM */
 .hm .hm-table-wrap > .table-responsive {
-    background: #fff;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    margin: 0;
+    padding: 0;
     border-radius: 0 !important;
     box-shadow: none !important;
-    overflow: hidden;
 }
 
-/* Estilo base tomado de la tabla plana */
 .hm .custom-table {
+    width: 100%;
     margin: 0;
-    background: #fff;
+    table-layout: auto;
+    border-collapse: separate;
+    border-spacing: 0;
 }
 
 .hm .custom-table thead th {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    background-color: #f9fafb;
-    color: #495057;
+    position: static;
+    top: auto;
+    z-index: auto;
+    color: #3f4a56;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.75rem;
     text-align: center;
-    padding: 14px;
-    border-bottom: 2px solid #e9ecef;
+    padding: 0.48rem 0.38rem;
+    border-bottom: 1px solid var(--hm-line);
     white-space: nowrap;
+    line-height: 1.1;
 }
 
 .hm .custom-table td {
-    padding: 12px;
-    font-size: 0.88rem;
+    padding: 0.42rem 0.38rem;
+    font-size: 0.77rem;
     vertical-align: middle;
-    border-top: 1px solid #f1f3f5;
-    transition: background-color 0.2s ease-in-out;
+    border-top: 1px solid #dde3e8;
+    white-space: nowrap;
+    line-height: 1.15;
+    transition: none;
 }
 
-.hm .custom-table tr:nth-child(odd) {
-    background-color: #fcfcfc;
+/* Filas muy sutiles, misma familia tonal */
+.hm .custom-table tbody tr:nth-child(odd) {
+    background: #edf1f4 !important;
 }
 
-.hm .custom-table tr:hover td {
-    background-color: #f4f8ff;
+.hm .custom-table tbody tr:nth-child(even) {
+    background: var(--hm-tone) !important;
+}
+
+.hm .custom-table tbody tr:hover td {
+    background: #e8edf1 !important;
 }
 
 .hm .custom-table th:first-child,
 .hm .custom-table td:first-child {
-    width: 40px;
+    width: 30px;
+    min-width: 30px;
     text-align: center;
     white-space: nowrap;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.hm .custom-table input[type="checkbox"] {
+    transform: scale(0.9);
+    margin: 0;
 }
 
 .hm .custom-table td.text-end,
@@ -146,63 +231,78 @@ TABLA PRINCIPAL
     font-weight: 600;
 }
 
-/* Mantener resaltado de próximos pagos */
+/* Próximo pago, sin romper el tono general */
 .hm .custom-table td.hm-programado {
-    background-color: #e9f2ff;
-    border-left: 3px solid #3b82f6;
+    background-color: #e3edf9 !important;
+    border-left: 2px solid #3b82f6;
 }
 
 .hm .custom-table tr:hover td.hm-programado {
-    background-color: #e9f2ff;
+    background-color: #e3edf9 !important;
 }
 
-/* Scroll horizontal del componente */
-.hm .hm-table-wrap > .table-responsive::-webkit-scrollbar {
-    height: 8px;
+/* =========================================================
+PREVIEW / REGULARIZACIÓN
+========================================================= */
+.hm .hm-block-warning {
+    border-color: #e3d39d !important;
+    background: #f1f0ea !important;
 }
 
-.hm .hm-table-wrap > .table-responsive::-webkit-scrollbar-thumb {
-    background-color: #ced4da;
-    border-radius: 10px;
+.hm .hm-block-title {
+    font-weight: 600;
+    font-size: 0.94rem;
+    margin: 0 0 0.55rem;
 }
 
-.hm .hm-table-wrap > .table-responsive::-webkit-scrollbar-thumb:hover {
-    background-color: #adb5bd;
+.hm .hm-block .table {
+    margin: 0;
 }
 
-/* =========================
+.hm .hm-block .table thead th {
+    background: #e7ecef !important;
+    border-bottom: 1px solid var(--hm-line);
+    white-space: nowrap;
+    font-size: 0.76rem;
+    padding: 0.38rem 0.48rem;
+    vertical-align: middle;
+}
+
+.hm .hm-block .table td {
+    vertical-align: middle;
+    font-size: 0.78rem;
+    padding: 0.34rem 0.48rem;
+    white-space: nowrap;
+    background: transparent !important;
+}
+
+/* =========================================================
 HELPERS
-========================= */
+========================================================= */
 .hm .hm-nowrap {
     white-space: nowrap;
 }
 
-.hm .hm-ellipsis {
-    max-width: 260px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    display: block;
-}
-
+/* Mostrar texto completo en una sola línea */
+.hm .hm-ellipsis,
 .hm .hm-ellipsis-sm {
-    max-width: 160px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    display: block;
+    max-width: none !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    display: inline !important;
 }
 
-/* =========================
-ESTADOS / CHIPS
-========================= */
+/* =========================================================
+CHIPS
+========================================================= */
 .hm .hm-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 0.25rem 0.55rem;
-    border-radius: 999px;
-    font-size: 0.75rem;
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 0.66rem;
+    line-height: 1.15;
+    white-space: nowrap;
 }
 
 .hm .hm-chip-ok {
@@ -220,12 +320,13 @@ ESTADOS / CHIPS
     color: #087990;
 }
 
-/* =========================
+/* =========================================================
 LINKS EDITABLES
-========================= */
+========================================================= */
 .hm .hm-link-editable {
     text-decoration: none;
     color: inherit;
+    white-space: nowrap;
 }
 
 .hm .hm-link-editable:hover {
