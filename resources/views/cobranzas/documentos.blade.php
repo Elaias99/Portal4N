@@ -308,6 +308,7 @@
                             </button>
                         </form>
                     @endif
+                    <br>
 
                     <button type="button"
                             class="btn btn-outline-success btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"

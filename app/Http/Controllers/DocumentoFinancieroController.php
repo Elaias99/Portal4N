@@ -14,8 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Cobranza;
-use Illuminate\Pagination\LengthAwarePaginator;
-use App\Models\DocumentoCompraPagoProgramado;
+use App\Services\Ventas\DocumentoFinancieroImportService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use App\Exports\DocumentosAlCorteExport;
@@ -415,7 +414,7 @@ class DocumentoFinancieroController extends Controller
     }
 
 
-    public function import(Request $request)
+    public function import(Request $request, DocumentoFinancieroImportService $importService)
     {
         $request->validate([
             'file' => 'required|mimetypes:text/plain,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -423,27 +422,10 @@ class DocumentoFinancieroController extends Controller
 
         $filename = $request->file('file')->getClientOriginalName();
 
-        // Detectar RUT en el nombre del archivo
-        $rut = null;
-        if (preg_match('/(\d{7,8}-[0-9Kk])/', $filename, $matches)) {
-            $rut = $this->normalizarRut($matches[1]);
-        }
-
-        //Buscar empresa con ese RUT
-        $empresa = null;
-        if ($rut) {
-            $empresa = \App\Models\Empresa::whereRaw("REPLACE(REPLACE(rut, '.', ''), '-', '-') = ?", [$rut])->first();
-        }
-
-        // Ejecutar importación
-        $import = new DocumentosImport($empresa?->id);
-        Excel::import($import, $request->file('file'));
-
-        $import->afterImport();
+        $import = $importService->execute($request->file('file'));
 
         $mensajes = [];
 
-        // Errores estructurales
         if (count($import->errores) > 0) {
             foreach ($import->errores as $error) {
                 $mensajes[] = "⚠️ " . $error;
@@ -454,76 +436,54 @@ class DocumentoFinancieroController extends Controller
                 ->with('detalles_errores', $mensajes);
         }
 
-        // Mensajes informativos
         if (count($import->importados) > 0) {
-            $mensajes[] = count($import->importados) . " documentos importados correctamente: " 
-                        . implode(', ', $import->importados) . ".";
+            $mensajes[] = count($import->importados) . " documentos importados correctamente: "
+                . implode(', ', $import->importados) . ".";
         }
 
         if (count($import->duplicados) > 0) {
-            $mensajes[] = "Los siguientes folios ya existían y no se importaron: " 
-                        . implode(', ', $import->duplicados);
+            $mensajes[] = "Los siguientes folios ya existían y no se importaron: "
+                . implode(', ', $import->duplicados);
         }
 
-        // Cobranzas faltantes (flujo guiado sin mostrar alerta)
         if (count($import->sinCobranza) > 0) {
-
-            // Guardar listas en sesión, pero sin mostrar mensajes duplicados
             session([
                 'sin_cobranza_guiada' => $import->sinCobranza,
                 'sin_cobranza_pendientes' => $import->sinCobranza,
             ]);
 
-            // Limpia alertas previas
             session()->forget(['sin_cobranza', 'detalles_errores']);
 
             return redirect()->route('cobranzas.documentos')
                 ->with('info', 'Se detectaron nuevos clientes sin cobranza. El sistema abrirá el formulario para crearlos.');
         } else {
-            // Si no hay pendientes, limpiar sesiones previas
             session()->forget(['sin_cobranza', 'sin_cobranza_guiada', 'sin_cobranza_pendientes']);
         }
 
-        // Notas de crédito
         if (count($import->notasCredito) > 0) {
             foreach ($import->notasCredito as $nota) {
                 $mensajes[] = $nota;
             }
         }
 
-        // Si hubo observaciones (pero no errores)
         if (count($mensajes) > 0) {
             return redirect()->route('cobranzas.documentos')
                 ->with('warning', 'La importación finalizó con observaciones.')
                 ->with('detalles_errores', $mensajes);
         }
 
-        // Registrar movimiento solo si todo fue correcto
         if (count($import->importados) > 0) {
-            MovimientoDocumento::create([
+            \App\Models\MovimientoDocumento::create([
                 'documento_financiero_id' => null,
                 'user_id' => Auth::id(),
                 'tipo_movimiento' => 'Importación masiva',
-                'descripcion' => "Se importaron " . count($import->importados) . 
-                                " documentos desde el archivo '{$filename}' el " . now()->format('d/m/Y H:i:s'),
+                'descripcion' => "Se importaron " . count($import->importados) .
+                    " documentos desde el archivo '{$filename}' el " . now()->format('d/m/Y H:i:s'),
             ]);
         }
 
-        // Mensaje final
         return redirect()->route('cobranzas.documentos')
             ->with('success', 'Archivo importado correctamente.');
-    }
-
-
-    private function normalizarRut($rut)
-    {
-        if (!$rut) return null;
-
-        // Quitar puntos y espacios
-        $rut = preg_replace('/[^0-9kK-]/', '', $rut);
-
-        // Pasar la K a mayúscula
-        return strtoupper($rut);
     }
 
 
