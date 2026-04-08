@@ -989,6 +989,32 @@ Route::get('empleados/{id}/exportar-cotizacion', [TrabajadorController::class, '
 Route::get('/asistencia', [AsistenciaController::class, 'index'])->name('asistencia.index');
 Route::post('/asistencia', [AsistenciaController::class, 'store'])->name('asistencia.store');
 
+
+
+// 
+use App\Http\Controllers\LatamTrackingController;
+
+Route::get('/latam-tracking', [LatamTrackingController::class, 'index'])->name('latam.tracking.index');
+Route::post('/latam-tracking', [LatamTrackingController::class, 'process'])->name('latam.tracking.process');
+
+
+
+
+use App\Http\Controllers\TrackingAlmacenadoController;
+
+Route::get('/tracking-almacenado/create', [TrackingAlmacenadoController::class, 'create'])
+    ->name('tracking-almacenado.create');
+
+Route::post('/tracking-almacenado', [TrackingAlmacenadoController::class, 'store'])
+    ->name('tracking-almacenado.store');
+
+
+
+
+
+
+
+
 // 9. Páginas especiales
 Route::get('/under-construction', function () {
     return view('under_construction');
