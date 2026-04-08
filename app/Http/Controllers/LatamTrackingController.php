@@ -7,9 +7,27 @@ use Illuminate\Http\Request;
 
 class LatamTrackingController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $rows = TrackingAlmacenado::orderByDesc('id')
+        $query = TrackingAlmacenado::query();
+
+        if ($request->filled('prefijo')) {
+            $query->where('prefijo', 'like', '%' . trim($request->prefijo) . '%');
+        }
+
+        if ($request->filled('codigo_tracking')) {
+            $query->where('codigo_tracking', 'like', '%' . trim($request->codigo_tracking) . '%');
+        }
+
+        if ($request->filled('destino')) {
+            $query->where('destino', 'like', '%' . trim($request->destino) . '%');
+        }
+
+        if ($request->filled('fecha_proceso')) {
+            $query->whereDate('fecha_proceso', $request->fecha_proceso);
+        }
+
+        $rows = $query->orderByDesc('id')
             ->get()
             ->map(function ($item) {
                 return [
@@ -27,10 +45,5 @@ class LatamTrackingController extends Controller
             });
 
         return view('latam-tracking.index', compact('rows'));
-    }
-
-    public function process(Request $request)
-    {
-        return redirect()->route('latam.tracking.index');
     }
 }
