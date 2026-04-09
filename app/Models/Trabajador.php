@@ -13,7 +13,7 @@ class Trabajador extends Model
 
     use SoftDeletes;
 
-    protected $table = 'trabajadors'; // O ajusta el nombre si es diferente
+    protected $table = 'trabajadors';
 
 
     protected $fillable = [
@@ -26,10 +26,10 @@ class Trabajador extends Model
     ];
 
 
-    // Esto convierte fecha_inicio_trabajo en un objeto Carbon
+
     protected $casts = [
         'fecha_inicio_trabajo' => 'date',
-        'FechaNacimiento' => 'date', // Agregar este cast
+        'FechaNacimiento' => 'date',
     ];
     
 
@@ -84,7 +84,6 @@ class Trabajador extends Model
         return $this->belongsTo(Salud::class);
     }
 
-    // Nueva relación con Tallas
     public function tallas()
     {
         return $this->hasMany(Talla::class);
@@ -114,13 +113,13 @@ class Trabajador extends Model
         return $this->hasMany(Solicitud::class);
     }
 
-    // Relación con el modelo Vacacion (un trabajador puede tener muchas solicitudes de vacaciones)
+
     public function vacaciones()
     {
         return $this->hasMany(Vacacion::class);
     }
 
-    // Relación con el modelo Jefe
+
     public function jefe()
     {
         return $this->belongsTo(Jefe::class, 'id_jefe');
@@ -154,7 +153,7 @@ class Trabajador extends Model
 
     public function calcularCotizacion()
     {
-        // Asegurarse de que el trabajador esté asociado a una AFP y que la AFP tenga una tasa asociada
+
         if ($this->afp && $this->afp->tasaAfp) {
             $tasaAfp = $this->afp->tasaAfp;
             

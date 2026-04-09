@@ -21,18 +21,20 @@ class LoginController extends Controller
      */
     protected function authenticated(Request $request, $user)
     {
+        if ($user->hasRole('externo')) {
+            return redirect()->route('tracking-almacenado.create');
+        }
+
         $usuariosFinanzas = [1, 405, 374];
-        // Si es la jefa de finanzas (usuario con ID 405), redirigir a cobranzas
+
         if (in_array($user->id, $usuariosFinanzas)) {
             return redirect()->route('cobranzas.general');
         }
 
-        // Verificamos si el usuario tiene un trabajador asociado
         if ($user->trabajador) {
             return redirect('/empleados/perfil');
         }
 
-        // Si es administrador o usuario sin trabajador, redirigir a la página general de empleados
         return redirect('/empleados');
     }
 

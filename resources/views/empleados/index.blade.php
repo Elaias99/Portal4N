@@ -14,7 +14,7 @@ $notificaciones = Auth::user()->unreadNotifications
 @endphp
 @section('content')
 
-<div class="container"> {{-- O si quieres ocupar todo el ancho: container-fluid --}}
+<div class="container"> 
 
 
        @if(Session::has('Mensaje'))
@@ -39,7 +39,6 @@ $notificaciones = Auth::user()->unreadNotifications
                     <div class="d-grid gap-2 mt-2">
 
 
-                        {{-- Nuevo acceso al Reporte de Documentos Financieros --}}
                         @if (in_array(Auth::id(), [1, 405, 374, 375]))
                             <a href="{{ route('cobranzas.general') }}" 
                             class="btn btn-outline-secondary text-start" 
@@ -49,18 +48,6 @@ $notificaciones = Auth::user()->unreadNotifications
                             </a>
                         @endif
 
-                        {{-- Acceso exclusivo para el usuario con ID = 1 --}}
-                        {{-- @if (Auth::check() && Auth::id() === 1)
-                            <a href="{{ route('admin.roles.index') }}" 
-                            class="btn btn-outline-secondary text-start"
-                            data-bs-toggle="tooltip"
-                            title="Gestión de Roles del Sistema">
-                                <i class="fa-solid fa-user-shield me-2"></i> Administración de Roles
-                            </a>
-                        @endif --}}
-
-
-
 
                         <a href="{{ route('solicitudes.vacaciones') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Vacaciones">
                             <i class="fa-solid fa-plane-departure me-2"></i> Vacaciones
@@ -68,6 +55,10 @@ $notificaciones = Auth::user()->unreadNotifications
 
                         <a href="{{ route('areas.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Áreas">
                             <i class="fa-solid fa-person me-2"></i> Áreas
+                        </a>
+
+                        <a href="{{ route('latam.tracking.index') }}" class="btn btn-outline-secondary text-start" data-bs-toggle="tooltip" title="Latam Tracking">
+                            <i class="fa-solid fa-plane me-2"></i> Latam Tracking
                         </a>
 
 
@@ -107,11 +98,7 @@ $notificaciones = Auth::user()->unreadNotifications
                     </div>
 
                     <div class="mb-3">
-                        {{-- <h6 class="fw-bold">Beneficios:</h6>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="casino" value="1" {{ request('casino') ? 'checked' : '' }}>
-                            <label class="form-check-label">Acceso al Casino</label>
-                        </div> --}}
+
 
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="mostrar_desvinculados" value="1" {{ request('mostrar_desvinculados') ? 'checked' : '' }}>
@@ -160,7 +147,6 @@ $notificaciones = Auth::user()->unreadNotifications
             </div>
 
             <!-- Listado de Empleados -->
-            <!-- NOTA: quitamos la columna col-lg-9 para aprovechar todo el ancho de col-lg-10 -->
             <div class="row">
                 @foreach($empleados as $empleado)
                     <div class="col-lg-3 col-md-4 col-sm-6 col-12 mb-3">

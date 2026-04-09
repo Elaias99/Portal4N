@@ -48,6 +48,10 @@ Route::get('/', function () {
     if (Auth::check()) {
         $user = Auth::user();
 
+        if ($user->hasRole('externo')) {
+            return redirect()->route('tracking-almacenado.create');
+        }
+
         if ($user->roles->contains('name', 'admin') || $user->roles->contains('name', 'jefe')) {
             return redirect('/empleados');
         }
