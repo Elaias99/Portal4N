@@ -4,16 +4,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnPagarHoy = document.getElementById('btn-pagar-programados-hoy');
     const btnEliminarHoy = document.getElementById('btn-eliminar-programados-hoy');
 
-    const modalEl = document.getElementById('modalPagoProgramadosHoy');
-    const resumenWrap = document.getElementById('resumen-programados-hoy');
-    const inputsWrap = document.getElementById('inputs-programados-hoy');
-
     const checkAllAtrasados = document.getElementById('check-all-programados-atrasados');
     const checksAtrasados = document.querySelectorAll('.chk-programado-atrasado');
+    const btnPagarAtrasados = document.getElementById('btn-pagar-programados-atrasados');
     const btnEliminarAtrasados = document.getElementById('btn-eliminar-programados-atrasados');
+
+    const modalEl = document.getElementById('modalPagoProgramadosHoy');
+    const resumenWrap = document.getElementById('programados-seleccionados');
+    const inputsWrap = document.getElementById('inputs-programados-hoy');
+    const inputFechaPago = document.getElementById('fecha_pago');
 
     const formEliminar = document.getElementById('form-eliminar-programados');
     const inputsEliminar = document.getElementById('inputs-eliminar-programados');
+
+
+
+    
 
     let modal = null;
 
@@ -53,44 +59,64 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (btnPagarHoy && modalEl && resumenWrap && inputsWrap && modal) {
-        btnPagarHoy.addEventListener('click', () => {
-            const seleccionados = Array.from(document.querySelectorAll('.chk-programado-hoy:checked'));
+    function abrirModalPago(selector) {
+        if (!modalEl || !resumenWrap || !inputsWrap || !modal) {
+            return;
+        }
 
-            if (seleccionados.length === 0) {
-                alert('Debes seleccionar al menos un honorario.');
-                return;
-            }
+        const seleccionados = Array.from(document.querySelectorAll(`${selector}:checked`));
 
-            resumenWrap.innerHTML = '';
-            inputsWrap.innerHTML = '';
+        if (seleccionados.length === 0) {
+            alert('Debes seleccionar al menos un honorario.');
+            return;
+        }
 
-            seleccionados.forEach(chk => {
-                const card = document.createElement('div');
-                card.className = 'border rounded p-2 mb-2 bg-light';
+        resumenWrap.innerHTML = '';
+        inputsWrap.innerHTML = '';
 
-                card.innerHTML = `
-                    <div><strong>Folio:</strong> ${chk.dataset.folio}</div>
-                    <div><strong>Emisor:</strong> ${chk.dataset.emisor}</div>
-                    <div><strong>Saldo:</strong> ${chk.dataset.saldo}</div>
-                `;
+        seleccionados.forEach(chk => {
+            const saldoFormateado = new Intl.NumberFormat('es-CL').format(Number(chk.dataset.saldo || 0));
 
-                resumenWrap.appendChild(card);
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${chk.dataset.folio}</td>
+                <td>${chk.dataset.emisor}</td>
+                <td class="text-end">$${saldoFormateado}</td>
+            `;
 
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'honorarios[]';
-                input.value = chk.value;
+            resumenWrap.appendChild(row);
 
-                inputsWrap.appendChild(input);
-            });
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'honorarios[]';
+            input.value = chk.value;
 
-            modal.show();
+            inputsWrap.appendChild(input);
         });
 
+        modal.show();
+    }
+
+    if (btnPagarHoy) {
+        btnPagarHoy.addEventListener('click', () => {
+            abrirModalPago('.chk-programado-hoy');
+        });
+    }
+
+    if (btnPagarAtrasados) {
+        btnPagarAtrasados.addEventListener('click', () => {
+            abrirModalPago('.chk-programado-atrasado');
+        });
+    }
+
+    if (modalEl) {
         modalEl.addEventListener('hidden.bs.modal', () => {
             resumenWrap.innerHTML = '';
             inputsWrap.innerHTML = '';
+
+            if (inputFechaPago) {
+                inputFechaPago.value = '';
+            }
         });
     }
 

@@ -530,6 +530,9 @@ class HonorarioMensualRecController extends Controller
             'user_id'    => Auth::id(),
         ]);
 
+        // Eliminar programación si existía
+        $honorario->pagoProgramado()?->delete();
+
         $honorario->update([
             'estado_financiero'       => 'Pago',
             'fecha_estado_financiero' => now(),
@@ -649,6 +652,11 @@ class HonorarioMensualRecController extends Controller
                 ]);
 
                 // =========================
+                // ELIMINAR PROGRAMACIÓN SI EXISTE
+                // =========================
+                $honorario->pagoProgramado()?->delete();
+
+                // =========================
                 // ACTUALIZAR HONORARIO
                 // =========================
                 $honorario->update([
@@ -677,9 +685,7 @@ class HonorarioMensualRecController extends Controller
             }
         });
 
-        return redirect()
-            ->route('honorarios.mensual.index')
-            ->with('success', 'Pago masivo registrado correctamente.');
+        return redirect()->back()->with('success', 'Pago masivo registrado correctamente.');
     }
 
 

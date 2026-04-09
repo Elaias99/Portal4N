@@ -39,6 +39,8 @@
                 </div>
 
                 <div class="panel-operativo-card__actions d-flex gap-2 flex-wrap">
+
+
                     <span class="panel-soft-chip panel-soft-chip--warning">
                         {{ $programadosHoy->count() }} programado(s)
                     </span>
@@ -49,10 +51,11 @@
                         Quitar programación
                     </button>
 
-                    {{-- <a href="{{ route('honorarios.mensual.index') }}"
-                    class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-                        Revisar honorarios
-                    </a> --}}
+                    <button type="button"
+                            class="btn btn-sm btn-outline-success rounded-pill px-3"
+                            id="btn-pagar-programados-hoy">
+                        Pagar seleccionados
+                    </button>
                 </div>
             </div>
 
@@ -145,6 +148,13 @@
                         Quitar programación
                     </button>
 
+
+                    <button type="button"
+                            class="btn btn-sm btn-outline-success rounded-pill px-3"
+                            id="btn-pagar-programados-atrasados">
+                        Pagar seleccionados
+                    </button>
+
                     <a href="{{ route('honorarios.mensual.index') }}"
                     class="btn btn-sm btn-outline-danger rounded-pill px-3">
                         Revisar pendientes
@@ -175,7 +185,7 @@
                                         <td class="text-center">
                                             <input type="checkbox"
                                                 class="chk-programado-atrasado"
-                                                value="{{ $programado->id }}"
+                                                value="{{ $h->id }}"
                                                 data-programado-id="{{ $programado->id }}"
                                                 data-folio="{{ $h->folio }}"
                                                 data-emisor="{{ $h->razon_social_emisor }}"
@@ -287,6 +297,53 @@
         <small class="text-muted">© 4NLogística — Área de Finanzas</small>
     </footer>
 </div>
+
+
+
+
+{{-- Modal pago programados hoy --}}
+@component('components.finanzas.modal_documentos_masivos', [
+    'modalId' => 'modalPagoProgramadosHoy',
+    'labelId' => 'modalPagoProgramadosHoyLabel',
+    'title' => 'Pago de honorarios programados',
+
+    'showCount' => false,
+
+    'sinSeleccionId' => 'programados-sin-seleccion',
+    'sinSeleccionTexto' => 'No hay honorarios seleccionados.',
+
+    'formId' => 'form-pago-programados-hoy',
+    'action' => route('honorarios.mensual.pago.masivo'),
+    'method' => 'POST',
+
+    'cancelId' => 'btn-cancelar-pago-programados-hoy',
+    'cancelText' => 'Cancelar',
+
+    'submitId' => 'btn-submit-pago-programados-hoy',
+    'submitText' => 'Confirmar pago',
+    'submitClass' => 'btn btn-success',
+
+    'tableBodyId' => 'programados-seleccionados',
+    'hiddenContainerId' => 'inputs-programados-hoy',
+
+    'showDateField' => true,
+    'dateLabel' => 'Fecha de pago',
+    'dateName' => 'fecha_pago',
+    'dateId' => 'fecha_pago',
+    'dateRequired' => true,
+
+    'showTotals' => false,
+
+    'maxWidth' => '900px',
+])
+    @slot('tableHead')
+        <tr>
+            <th>Folio</th>
+            <th>Emisor</th>
+            <th class="text-end">Saldo</th>
+        </tr>
+    @endslot
+@endcomponent
 
 
 
