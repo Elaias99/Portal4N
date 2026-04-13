@@ -14,7 +14,7 @@
         'resources/js/react/latam-tracking/main.jsx',
     ])
 </head>
-<body>
+<body class="latam-page">
     @php
         $currentPrefijo = request('prefijo', request('filter_prefijo', ''));
         $currentCodigoTracking = request('codigo_tracking', request('filter_codigo_tracking', ''));
@@ -22,7 +22,7 @@
         $currentFechaProceso = request('fecha_proceso', request('filter_fecha_proceso', ''));
     @endphp
 
-    <div class="container py-4">
+    <div class="container py-4 py-lg-5">
         <div class="mb-4">
             <h1 class="mb-1">LATAM Tracking</h1>
             <p class="text-muted mb-0">
@@ -31,7 +31,7 @@
         </div>
 
         @if($errors->any())
-            <div class="alert alert-danger">
+            <div class="alert alert-danger border-0 shadow-sm">
                 <strong>Revisa estos campos:</strong>
                 <ul class="mb-0 mt-2">
                     @foreach($errors->all() as $error)
@@ -41,14 +41,14 @@
             </div>
         @endif
 
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body">
+        <div class="card border-0 shadow-sm latam-filter-card mb-4">
+            <div class="card-body p-4">
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
                     <h2 class="h5 mb-0">Filtrar registros</h2>
 
                     @if($currentFechaProceso)
-                        <span class="badge text-bg-light border">
-                            Mostrando fecha proceso: {{ $currentFechaProceso }}
+                        <span class="latam-soft-badge">
+                            Fecha proceso: {{ $currentFechaProceso }}
                         </span>
                     @endif
                 </div>
@@ -104,8 +104,8 @@
                     </div>
 
                     <div class="mt-3 d-flex gap-2 flex-wrap">
-                        <button type="submit" class="btn btn-primary">Filtrar</button>
-                        <a href="{{ route('latam.tracking.index') }}" class="btn btn-secondary">Limpiar filtros</a>
+                        <button type="submit" class="btn btn-dark px-4">Filtrar</button>
+                        <a href="{{ route('latam.tracking.index') }}" class="btn btn-outline-secondary">Limpiar filtros</a>
                     </div>
 
                     <div class="form-text mt-2">
@@ -115,107 +115,42 @@
             </div>
         </div>
 
-        @if(isset($rows) && count($rows) > 0)
-            <div class="card mb-4 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
-                        <h2 class="h5 mb-0">Trackings almacenados</h2>
-                        <span class="badge text-bg-light border">
-                            {{ count($rows) }} registro(s)
-                        </span>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-striped table-sm align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Prefijo</th>
-                                    <th>Código</th>
-                                    <th>Destino</th>
-                                    <th>Fecha proceso</th>
-                                    <th style="width: 220px;">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($rows as $row)
-                                    <tr>
-                                        <td>{{ $row['prefix'] }}</td>
-                                        <td>{{ $row['code'] }}</td>
-                                        <td>{{ $row['destino'] }}</td>
-                                        <td>{{ $row['fecha_proceso'] }}</td>
-                                        <td>
-                                            <div class="d-flex gap-2 flex-wrap">
-                                                <form method="POST" action="{{ route('latam.tracking.process') }}" class="d-inline js-track-form">
-                                                    @csrf
-                                                    <input type="hidden" name="tracking_prefijo" value="{{ $row['prefix'] }}">
-                                                    <input type="hidden" name="tracking_codigo_tracking" value="{{ $row['code'] }}">
-                                                    <input type="hidden" name="tracking_doc_type" value="SO">
-
-                                                    <input type="hidden" name="filter_prefijo" value="{{ $currentPrefijo }}">
-                                                    <input type="hidden" name="filter_codigo_tracking" value="{{ $currentCodigoTracking }}">
-                                                    <input type="hidden" name="filter_destino" value="{{ $currentDestino }}">
-                                                    <input type="hidden" name="filter_fecha_proceso" value="{{ $currentFechaProceso }}">
-
-                                                    <button type="submit" class="btn btn-sm btn-primary js-track-submit">
-                                                        Consultar estado
-                                                    </button>
-                                                </form>
-
-                                                <a href="{{ $row['url'] }}" target="_blank" class="btn btn-sm btn-outline-secondary">
-                                                    Abrir LATAM
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        @else
-            <div class="alert alert-warning">
-                No se encontraron registros con esos filtros.
-            </div>
-        @endif
-
-        @if(!empty($trackingError) || data_get($trackingResult, 'ok'))
-            <div id="resultado-consulta">
-                <div id="latam-tracking-react"></div>
-
-                <script type="application/json" id="latam-tracking-react-props">{!!
-                    json_encode([
-                        'trackingLookup' => $trackingLookup,
-                        'trackingResult' => $trackingResult,
-                        'trackingError' => $trackingError,
-                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-                !!}</script>
-            </div>
-        @endif
+        <div id="latam-tracking-workspace"></div>
 
         <div class="mt-4">
-            <a href="{{ url('/empleados') }}" class="btn btn-secondary">
+            <a href="{{ url('/empleados') }}" class="btn btn-outline-secondary">
                 Volver a empleados
             </a>
         </div>
     </div>
 
+    <script type="application/json" id="latam-tracking-workspace-props">{!!
+        json_encode([
+            'rows' => $rows,
+            'actions' => [
+                'processUrl' => route('latam.tracking.process'),
+                'csrfToken' => csrf_token(),
+                'currentPrefijo' => $currentPrefijo,
+                'currentCodigoTracking' => $currentCodigoTracking,
+                'currentDestino' => $currentDestino,
+                'currentFechaProceso' => $currentFechaProceso,
+            ],
+            'trackingLookup' => $trackingLookup,
+            'trackingResult' => $trackingResult,
+            'trackingError' => $trackingError,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+    !!}</script>
+
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('.js-track-form').forEach(function (form) {
-                form.addEventListener('submit', function () {
-                    const button = form.querySelector('.js-track-submit');
-                    if (!button) return;
+        document.addEventListener('submit', function (event) {
+            const form = event.target.closest('.js-track-form');
+            if (!form) return;
 
-                    button.disabled = true;
-                    button.textContent = 'Consultando...';
-                });
-            });
+            const button = form.querySelector('.js-track-submit');
+            if (!button) return;
 
-            const resultado = document.getElementById('resultado-consulta');
-            if (resultado) {
-                resultado.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+            button.disabled = true;
+            button.textContent = 'Consultando...';
         });
     </script>
 </body>
