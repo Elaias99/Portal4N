@@ -100,6 +100,7 @@ class HonorariosPagoMasivoExport implements
         );
 
         return match ($responsableNormalizado) {
+            'hans de la barra' => 'proveedores@4nlogistica.cl',
             'luis de la barra' => 'proveedores@4nlogistica.cl',
             'natalia leyton' => 'finanzas@4nlogistica.cl',
             default => null,
