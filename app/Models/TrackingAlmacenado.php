@@ -17,4 +17,14 @@ class TrackingAlmacenado extends Model
         'fecha_proceso',
         'destino',
     ];
+
+    public function estadoActual()
+    {
+        return $this->hasOne(TrackingEstadoActual::class, 'tracking_almacenado_id');
+    }
+
+    public function consultas()
+    {
+        return $this->hasMany(TrackingConsulta::class, 'tracking_almacenado_id');
+    }
 }

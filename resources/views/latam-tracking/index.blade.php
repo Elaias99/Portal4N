@@ -20,6 +20,13 @@
         $currentCodigoTracking = request('codigo_tracking', request('filter_codigo_tracking', ''));
         $currentDestino = request('destino', request('filter_destino', ''));
         $currentFechaProceso = request('fecha_proceso', request('filter_fecha_proceso', ''));
+
+        // Nuevas variables con fallback para no romper la vista
+        $trackingEstadoActual = $trackingEstadoActual ?? null;
+        $trackingConsulta = $trackingConsulta ?? null;
+        $trackingCambioDetectado = $trackingCambioDetectado ?? false;
+        $trackingFallbackDisponible = $trackingFallbackDisponible ?? false;
+        $trackingPersisted = $trackingPersisted ?? false;
     @endphp
 
     <div class="container py-4 py-lg-5">
@@ -138,6 +145,13 @@
             'trackingLookup' => $trackingLookup,
             'trackingResult' => $trackingResult,
             'trackingError' => $trackingError,
+
+            // Nuevas props para fallback / snapshot
+            'trackingEstadoActual' => $trackingEstadoActual,
+            'trackingConsulta' => $trackingConsulta,
+            'trackingCambioDetectado' => $trackingCambioDetectado,
+            'trackingFallbackDisponible' => $trackingFallbackDisponible,
+            'trackingPersisted' => $trackingPersisted,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
     !!}</script>
 
