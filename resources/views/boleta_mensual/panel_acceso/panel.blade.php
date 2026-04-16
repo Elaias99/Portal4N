@@ -4,10 +4,6 @@
 
 @section('content')
 
-
-
-
-
 <div class="container-fluid mt-4" id="modulo-finanzas">
 
     {{-- ====== CABECERA ====== --}}
@@ -18,7 +14,6 @@
             Panel central de gestión — Documentos, abonos, cruces y movimientos
         </p>
     </div>
-
 
     @if($programadosHoy->isNotEmpty())
         <section class="panel-operativo-card panel-operativo-card--warning mb-4">
@@ -39,8 +34,6 @@
                 </div>
 
                 <div class="panel-operativo-card__actions d-flex gap-2 flex-wrap">
-
-
                     <span class="panel-soft-chip panel-soft-chip--warning">
                         {{ $programadosHoy->count() }} programado(s)
                     </span>
@@ -85,6 +78,7 @@
                                                 class="chk-programado-hoy"
                                                 value="{{ $h->id }}"
                                                 data-id="{{ $h->id }}"
+                                                data-empresa="{{ $h->empresa->Nombre ?? '-' }}"
                                                 data-programado-id="{{ $programado->id }}"
                                                 data-folio="{{ $h->folio }}"
                                                 data-emisor="{{ $h->razon_social_emisor }}"
@@ -94,7 +88,7 @@
                                         <td>{{ $h->razon_social_emisor }}</td>
                                         <td>
                                             <a href="{{ route('honorarios.mensual.show', $h->id) }}"
-                                            class="panel-table-link">
+                                               class="panel-table-link">
                                                 {{ $h->folio }}
                                             </a>
                                         </td>
@@ -115,10 +109,7 @@
                 </div>
             </div>
         </section>
-
     @endif
-
-
 
     @if($programadosAtrasados->isNotEmpty())
         <section class="panel-operativo-card panel-operativo-card--danger mb-4">
@@ -148,7 +139,6 @@
                         Quitar programación
                     </button>
 
-
                     <button type="button"
                             class="btn btn-sm btn-outline-success rounded-pill px-3"
                             id="btn-pagar-programados-atrasados">
@@ -156,7 +146,7 @@
                     </button>
 
                     <a href="{{ route('honorarios.mensual.index') }}"
-                    class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                       class="btn btn-sm btn-outline-danger rounded-pill px-3">
                         Revisar pendientes
                     </a>
                 </div>
@@ -186,6 +176,8 @@
                                             <input type="checkbox"
                                                 class="chk-programado-atrasado"
                                                 value="{{ $h->id }}"
+                                                data-id="{{ $h->id }}"
+                                                data-empresa="{{ $h->empresa->Nombre ?? '-' }}"
                                                 data-programado-id="{{ $programado->id }}"
                                                 data-folio="{{ $h->folio }}"
                                                 data-emisor="{{ $h->razon_social_emisor }}"
@@ -195,7 +187,7 @@
                                         <td>{{ $h->razon_social_emisor ?? '-' }}</td>
                                         <td>
                                             <a href="{{ route('honorarios.mensual.show', $h->id) }}"
-                                            class="panel-table-link">
+                                               class="panel-table-link">
                                                 {{ $h->folio }}
                                             </a>
                                         </td>
@@ -226,21 +218,13 @@
         <div id="inputs-eliminar-programados"></div>
     </form>
 
-
     {{-- ====== ACCESOS DIRECTOS ====== --}}
     <section class="panel-accesos-directos mb-4">
-        {{-- <div class="text-center mb-4">
-            <h5 class="fw-semibold mb-1">Accesos directos del módulo</h5>
-            <p class="text-muted mb-0">
-                Navega rápidamente entre la gestión mensual operativa y la revisión anual consolidada.
-            </p>
-        </div> --}}
-
         <div class="row justify-content-center g-4">
 
             <div class="col-12 col-md-6 col-xl-5">
                 <a href="{{ route('honorarios.mensual.index') }}"
-                class="panel-link-card panel-link-card--primary">
+                   class="panel-link-card panel-link-card--primary">
                     <div class="panel-link-card__top">
                         <span class="panel-soft-chip panel-soft-chip--date">Operación mensual</span>
                         <span class="panel-link-card__hint">Entrar</span>
@@ -261,7 +245,7 @@
 
             <div class="col-12 col-md-6 col-xl-5">
                 <a href="{{ route('honorarios.resumen.index') }}"
-                class="panel-link-card panel-link-card--secondary">
+                   class="panel-link-card panel-link-card--secondary">
                     <div class="panel-link-card__top">
                         <span class="panel-soft-chip panel-soft-chip--neutral">Vista consolidada</span>
                         <span class="panel-link-card__hint">Entrar</span>
@@ -289,17 +273,10 @@
         </a>
     </div>
 
-
-
-
-
     <footer class="text-center mt-5">
         <small class="text-muted">© 4NLogística — Área de Finanzas</small>
     </footer>
 </div>
-
-
-
 
 {{-- Modal pago programados hoy --}}
 @component('components.finanzas.modal_documentos_masivos', [
@@ -315,6 +292,8 @@
     'formId' => 'form-pago-programados-hoy',
     'action' => route('honorarios.mensual.pago.masivo'),
     'method' => 'POST',
+
+    'closeXId' => 'btn-cerrar-x-pago-programados-hoy',
 
     'cancelId' => 'btn-cancelar-pago-programados-hoy',
     'cancelText' => 'Cancelar',
@@ -343,9 +322,16 @@
             <th class="text-end">Saldo</th>
         </tr>
     @endslot
+
+    @slot('footerLeft')
+        <div class="fw-semibold mb-1">
+            Total a pagar:
+            <span id="panel-programados-total-general">$0</span>
+        </div>
+
+        <div id="panel-programados-totales-empresa" class="small text-muted"></div>
+    @endslot
 @endcomponent
-
-
 
 @vite('resources/js/boleta_mensual_panel.js')
 @endsection

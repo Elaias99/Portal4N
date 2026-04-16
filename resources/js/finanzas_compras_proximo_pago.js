@@ -26,6 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return '$' + Number(valor || 0).toLocaleString('es-CL');
     }
 
+    function textoDocumentos(cantidad) {
+        return `${cantidad} ${cantidad === 1 ? 'documento' : 'documentos'}`;
+    }
+
     function setEstadoInicialModal() {
         proximoPagoProcesado = false;
 
@@ -80,8 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.check-documento:checked').forEach(cb => {
             const id = cb.dataset.id || cb.value;
 
-
-
             seleccion[id] = {
                 id: id,
                 folio: cb.dataset.folio || '',
@@ -94,10 +96,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 total: Number(cb.dataset.total || 0),
                 programadoId: cb.dataset.programadoId ? Number(cb.dataset.programadoId) : null,
             };
-
-
-
-
         });
 
         return seleccion;
@@ -159,7 +157,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderTotales(docs) {
         if (totalGeneralEl) {
             const totalGeneral = docs.reduce((acc, doc) => acc + Number(doc.saldo || 0), 0);
-            totalGeneralEl.textContent = formatMonto(totalGeneral);
+            const totalDocumentos = docs.length;
+
+            totalGeneralEl.innerHTML = `
+                ${formatMonto(totalGeneral)}
+                <span class="small text-muted ms-1">(${textoDocumentos(totalDocumentos)})</span>
+            `;
         }
 
         if (totalesEmpresaEl) {
@@ -170,13 +173,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const agrupados = docs.reduce((acc, doc) => {
                 const empresa = doc.empresa || 'Sin empresa';
-                acc[empresa] = (acc[empresa] || 0) + Number(doc.saldo || 0);
+
+                if (!acc[empresa]) {
+                    acc[empresa] = {
+                        total: 0,
+                        cantidad: 0,
+                    };
+                }
+
+                acc[empresa].total += Number(doc.saldo || 0);
+                acc[empresa].cantidad += 1;
+
                 return acc;
             }, {});
 
             totalesEmpresaEl.innerHTML = Object.entries(agrupados)
-                .map(([empresa, total]) => {
-                    return `<div>${empresa}: <strong>${formatMonto(total)}</strong></div>`;
+                .map(([empresa, data]) => {
+                    return `
+                        <div>
+                            ${empresa}: <strong>${formatMonto(data.total)}</strong>
+                            <span class="small text-muted ms-1">(${textoDocumentos(data.cantidad)})</span>
+                        </div>
+                    `;
                 })
                 .join('');
         }

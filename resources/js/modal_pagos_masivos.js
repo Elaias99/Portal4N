@@ -20,6 +20,12 @@
             return '$' + num.toLocaleString('es-CL');
         }
 
+        function textoDocumentos(cantidad) {
+            return `${cantidad} ${cantidad === 1 ? 'documento' : 'documentos'}`;
+        }
+
+
+
         function renderTotales() {
             const totalGeneralEl = $('#pm-total-general');
             const totalesEmpresaEl = $('#pm-totales-empresa');
@@ -44,21 +50,35 @@
                 totalGeneral += monto;
 
                 if (!totalesPorEmpresa[empresa]) {
-                    totalesPorEmpresa[empresa] = 0;
+                    totalesPorEmpresa[empresa] = {
+                        monto: 0,
+                        cantidad: 0,
+                    };
                 }
 
-                totalesPorEmpresa[empresa] += monto;
+                totalesPorEmpresa[empresa].monto += monto;
+                totalesPorEmpresa[empresa].cantidad += 1;
             });
 
-            totalGeneralEl.textContent = fmtCLP(totalGeneral);
+            totalGeneralEl.innerHTML = `
+                ${fmtCLP(totalGeneral)}
+                <span class="small text-muted ms-1">(${textoDocumentos(docs.length)})</span>
+            `;
 
             let html = '';
-            Object.entries(totalesPorEmpresa).forEach(([empresa, monto]) => {
-                html += `<div><strong>${escapeHtml(empresa)}:</strong> ${fmtCLP(monto)}</div>`;
+            Object.entries(totalesPorEmpresa).forEach(([empresa, data]) => {
+                html += `
+                    <div>
+                        <strong>${escapeHtml(empresa)}:</strong> ${fmtCLP(data.monto)}
+                        <span class="small text-muted ms-1">(${textoDocumentos(data.cantidad)})</span>
+                    </div>
+                `;
             });
 
             totalesEmpresaEl.innerHTML = html;
         }
+
+
 
         function upsertHiddenDocumento(id) {
             const cont = $('#contenedor-montos-hidden');

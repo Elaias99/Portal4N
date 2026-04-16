@@ -71,6 +71,10 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCancelar.textContent = TEXTO_CANCELAR;
     }
 
+    function textoFolios(cantidad) {
+        return `${cantidad} ${cantidad === 1 ? 'folio' : 'folios'}`;
+    }
+
     // =========================
     // ESTADO INTERNO (PERSISTENTE)
     // =========================
@@ -85,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
         empresaTotalesWrap.innerHTML = '';
 
         let total = 0;
+        let totalFolios = 0;
         const totalesPorEmpresa = new Map();
 
         seleccionados.forEach(h => {
@@ -92,15 +97,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const empresa = h.empresa || 'Sin empresa';
 
             total += monto;
+            totalFolios += 1;
 
             if (!totalesPorEmpresa.has(empresa)) {
-                totalesPorEmpresa.set(empresa, 0);
+                totalesPorEmpresa.set(empresa, {
+                    monto: 0,
+                    cantidad: 0,
+                });
             }
 
-            totalesPorEmpresa.set(
-                empresa,
-                totalesPorEmpresa.get(empresa) + monto
-            );
+            const actual = totalesPorEmpresa.get(empresa);
+            actual.monto += monto;
+            actual.cantidad += 1;
 
             const tr = document.createElement('tr');
 
@@ -131,13 +139,17 @@ document.addEventListener('DOMContentLoaded', () => {
             inputsWrap.appendChild(input);
         });
 
-        totalPagoWrap.textContent = '$' + total.toLocaleString('es-CL');
+        totalPagoWrap.innerHTML = `
+            $${total.toLocaleString('es-CL')}
+            <span class="small text-muted ms-1">(${textoFolios(totalFolios)})</span>
+        `;
 
         let htmlTotalesEmpresa = '';
-        totalesPorEmpresa.forEach((monto, empresa) => {
+        totalesPorEmpresa.forEach((data, empresa) => {
             htmlTotalesEmpresa += `
                 <div>
-                    <strong>${empresa}:</strong> $${monto.toLocaleString('es-CL')}
+                    <strong>${empresa}:</strong> $${data.monto.toLocaleString('es-CL')}
+                    <span class="text-muted ms-1">(${textoFolios(data.cantidad)})</span>
                 </div>
             `;
         });
@@ -375,6 +387,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return '$' + Number(valor || 0).toLocaleString('es-CL');
     }
 
+    function textoFolios(cantidad) {
+        return `${cantidad} ${cantidad === 1 ? 'folio' : 'folios'}`;
+    }
+
     function clearSeleccionados() {
         sessionStorage.removeItem(STORAGE_KEY);
     }
@@ -415,6 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let totalGeneral = 0;
+        let totalFolios = 0;
         const totalesPorEmpresa = new Map();
 
         seleccionados.forEach(h => {
@@ -422,12 +439,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const empresa = h.empresa || 'Sin empresa';
 
             totalGeneral += saldo;
+            totalFolios += 1;
 
             if (!totalesPorEmpresa.has(empresa)) {
-                totalesPorEmpresa.set(empresa, 0);
+                totalesPorEmpresa.set(empresa, {
+                    monto: 0,
+                    cantidad: 0,
+                });
             }
 
-            totalesPorEmpresa.set(empresa, totalesPorEmpresa.get(empresa) + saldo);
+            const actual = totalesPorEmpresa.get(empresa);
+            actual.monto += saldo;
+            actual.cantidad += 1;
 
             const tr = document.createElement('tr');
 
@@ -455,13 +478,17 @@ document.addEventListener('DOMContentLoaded', () => {
             inputsWrap.appendChild(input);
         });
 
-        totalGeneralWrap.textContent = formatMonto(totalGeneral);
+        totalGeneralWrap.innerHTML = `
+            ${formatMonto(totalGeneral)}
+            <span class="small text-muted ms-1">(${textoFolios(totalFolios)})</span>
+        `;
 
         let htmlTotalesEmpresa = '';
-        totalesPorEmpresa.forEach((monto, empresa) => {
+        totalesPorEmpresa.forEach((data, empresa) => {
             htmlTotalesEmpresa += `
                 <div>
-                    <strong>${empresa}:</strong> ${formatMonto(monto)}
+                    <strong>${empresa}:</strong> ${formatMonto(data.monto)}
+                    <span class="text-muted ms-1">(${textoFolios(data.cantidad)})</span>
                 </div>
             `;
         });
