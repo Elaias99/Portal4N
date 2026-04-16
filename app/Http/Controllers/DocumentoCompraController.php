@@ -1351,6 +1351,7 @@ class DocumentoCompraController extends Controller
 
                 $documento = DocumentoCompra::with([
                     'empresa',
+                    'cobranzaCompra',
                     'pagosReales',
                     'pagosPorReferencia',
                     'prontoPagos',
@@ -1381,6 +1382,12 @@ class DocumentoCompraController extends Controller
                         'observacion'      => $request->observacion,
                     ]
                 );
+
+                $formaPago = mb_strtolower(trim((string) optional($documento->cobranzaCompra)->forma_pago));
+
+                if ($formaPago === 'portal proveedor') {
+                    continue;
+                }
 
                 $empresaId = $documento->empresa_id;
 

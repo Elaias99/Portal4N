@@ -220,7 +220,10 @@ class PagoDocumentoController extends Controller
 
         foreach ($ids as $id) {
 
-            $documento = \App\Models\DocumentoCompra::with('empresa')->find($id);
+            $documento = \App\Models\DocumentoCompra::with([
+                'empresa',
+                'cobranzaCompra',
+            ])->find($id);
 
             if (!$documento) {
                 $duplicados++;
@@ -278,6 +281,13 @@ class PagoDocumentoController extends Controller
                         'saldo_actual' => 0,
                     ],
                 ]);
+
+                $formaPago = mb_strtolower(trim((string) optional($documento->cobranzaCompra)->forma_pago));
+
+                if ($formaPago === 'portal proveedor') {
+                    $procesados++;
+                    continue;
+                }
 
                 $empresaId = $documento->empresa_id;
 
@@ -339,6 +349,13 @@ class PagoDocumentoController extends Controller
                         'nuevo_saldo' => $documento->saldo_pendiente,
                     ],
                 ]);
+
+                $formaPago = mb_strtolower(trim((string) optional($documento->cobranzaCompra)->forma_pago));
+
+                if ($formaPago === 'portal proveedor') {
+                    $procesados++;
+                    continue;
+                }
 
                 $empresaId = $documento->empresa_id;
 
@@ -447,7 +464,10 @@ class PagoDocumentoController extends Controller
 
         foreach ($ids as $id) {
 
-            $documento = \App\Models\DocumentoCompra::with('empresa')->find($id);
+            $documento = \App\Models\DocumentoCompra::with([
+                'empresa',
+                'cobranzaCompra',
+            ])->find($id);
 
             if (!$documento) {
                 $omitidos++;
@@ -499,6 +519,13 @@ class PagoDocumentoController extends Controller
                     'saldo_actual' => 0,
                 ],
             ]);
+
+            $formaPago = mb_strtolower(trim((string) optional($documento->cobranzaCompra)->forma_pago));
+
+            if ($formaPago === 'portal proveedor') {
+                $procesados++;
+                continue;
+            }
 
             $empresaId = $documento->empresa_id;
 

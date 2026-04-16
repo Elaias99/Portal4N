@@ -5,7 +5,6 @@ namespace App\Exports;
 use App\Models\DocumentoCompra;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -30,12 +29,32 @@ class PagosMasivosDocumentoCompraExport implements
         $this->operaciones = collect($operacionesExport);
     }
 
+    private function esPortalProveedor(?string $formaPago): bool
+    {
+        return mb_strtolower(trim((string) $formaPago)) === 'portal proveedor';
+    }
+
     /**
      * Colección base del export
      */
     public function collection(): Collection
     {
-        return $this->operaciones;
+        return $this->operaciones
+            ->filter(function ($op) {
+                if (!isset($op['documento_id'])) {
+                    return false;
+                }
+
+                $documento = DocumentoCompra::with('cobranzaCompra')
+                    ->find($op['documento_id']);
+
+                if (!$documento || !$documento->cobranzaCompra) {
+                    return false;
+                }
+
+                return !$this->esPortalProveedor($documento->cobranzaCompra->forma_pago ?? null);
+            })
+            ->values();
     }
 
     /**
@@ -58,6 +77,10 @@ class PagosMasivosDocumentoCompraExport implements
 
         $cobranza = $documento->cobranzaCompra;
 
+        if ($this->esPortalProveedor($cobranza->forma_pago ?? null)) {
+            return [];
+        }
+
         // =========================
         // CUENTA ORIGEN
         // =========================
@@ -79,7 +102,6 @@ class PagosMasivosDocumentoCompraExport implements
         // =========================
         // BENEFICIARIO
         // =========================
-        // Debe salir desde la ficha del proveedor (cobranza_compras.rut_cliente)
         $rutBeneficiario = $cobranza->rut_cliente
             ? preg_replace('/[^0-9kK]/', '', $cobranza->rut_cliente)
             : '';
