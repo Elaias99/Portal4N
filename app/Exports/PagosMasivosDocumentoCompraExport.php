@@ -102,11 +102,11 @@ class PagosMasivosDocumentoCompraExport implements
         // =========================
         // BENEFICIARIO
         // =========================
-        $rutBeneficiario = $cobranza->rut_cliente
-            ? preg_replace('/[^0-9kK]/', '', $cobranza->rut_cliente)
+        $rutBeneficiario = $cobranza->rut_cuenta
+            ? preg_replace('/[^0-9kK]/', '', $cobranza->rut_cuenta)
             : '';
 
-        $nombreBeneficiario = $cobranza->razon_social ?? '';
+        $nombreBeneficiario = $cobranza->nombre_cuenta ?? '';
 
         // =========================
         // MONTO REAL

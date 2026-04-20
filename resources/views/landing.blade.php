@@ -43,12 +43,12 @@
         </div>
 
 
-        <div class="image-container">
+        {{-- <div class="image-container">
             <a href="{{ route('login') }}">
                 <img src="{{ asset('images/imagen3.webp') }}" alt="Finanzas" loading="lazy">
                 <div class="text-overlay">Finanzas</div>
             </a>
-        </div>
+        </div> --}}
 
 
 
