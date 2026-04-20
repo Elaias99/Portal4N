@@ -91,6 +91,11 @@
           </form>
           @endrole
 
+          <a href="{{ route('historial-vacacion.index', ['trabajador_id' => $empleado->id]) }}" 
+             class="btn btn-outline-info btn-sm">
+              <i class="fa-solid fa-calendar-days me-1"></i> Historial de Días
+          </a>
+
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
       </div>
 

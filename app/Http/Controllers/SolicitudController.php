@@ -269,56 +269,64 @@ class SolicitudController extends Controller
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    //Método para mostrar todas las solicitudes de vacaciones que ha echo el empleado
+    // Método para mostrar las solicitudes de vacaciones
     public function vacaciones(Request $request)
     {
         $user = Auth::user();
         $estado = $request->get('estado');
+        $buscar = trim((string) $request->get('buscar'));
         $jefeId = $user->jefe->id ?? null;
 
+        $query = Solicitud::where('campo', 'Vacaciones')
+            ->whereHas('trabajador', function ($q) {
+                $q->whereNull('deleted_at');
+            })
+            ->with([
+                'vacacion',
+                'trabajador' => function ($q) {
+                    $q->whereNull('deleted_at');
+                }
+            ])
+            ->when($estado, function ($query, $estado) {
+                return $query->where('estado', $estado);
+            })
+            ->when($buscar, function ($query) use ($buscar) {
+                $query->whereHas('trabajador', function ($q) use ($buscar) {
+                    $q->where(function ($sub) use ($buscar) {
+                        $sub->where('Nombre', 'like', "%{$buscar}%")
+                            ->orWhere('ApellidoPaterno', 'like', "%{$buscar}%")
+                            ->orWhere('ApellidoMaterno', 'like', "%{$buscar}%")
+                            ->orWhere('Rut', 'like', "%{$buscar}%");
+                    });
+                });
+            });
+
         if ($user->roles->contains('name', 'admin')) {
-            // Admin ve todas las solicitudes de vacaciones con trabajadores no eliminados
-            $solicitudes = Solicitud::where('campo', 'Vacaciones')
-                ->whereHas('trabajador', function ($q) {
-                    $q->whereNull('deleted_at');
-                })
-                ->with(['trabajador' => function ($q) {
-                    $q->whereNull('deleted_at');
-                }])
-                ->when($estado, function ($query, $estado) {
-                    return $query->where('estado', $estado);
-                })
-                ->orderBy('created_at', 'desc')
-                ->get();
+            // Admin ve todas las solicitudes activas
         } elseif ($jefeId) {
-            // Jefe ve solo solicitudes de sus trabajadores activos
-            $solicitudes = Solicitud::where('campo', 'Vacaciones')
-                ->whereHas('trabajador', function ($q) use ($jefeId) {
-                    $q->where('id_jefe', $jefeId)
-                    ->whereNull('deleted_at');
-                })
-                ->with(['trabajador' => function ($q) use ($jefeId) {
-                    $q->where('id_jefe', $jefeId)
-                    ->whereNull('deleted_at');
-                }])
-                ->when($estado, function ($query, $estado) {
-                    return $query->where('estado', $estado);
-                })
-                ->orderBy('created_at', 'desc')
-                ->get();
+            // Jefe ve solo las solicitudes de sus trabajadores activos
+            $query->whereHas('trabajador', function ($q) use ($jefeId) {
+                $q->where('id_jefe', $jefeId)
+                ->whereNull('deleted_at');
+            });
         } else {
             // No es admin ni jefe
             $solicitudes = collect();
+            return view('solicitudes.vacaciones', compact('solicitudes'));
         }
 
-        // Añadir campo de días laborales solicitados
-        $solicitudes->each(function ($solicitud) {
+        $solicitudes = $query
+            ->orderBy('created_at', 'desc')
+            ->paginate(12)
+            ->withQueryString();
+
+        $solicitudes->getCollection()->transform(function ($solicitud) {
             $solicitud->dias_laborales = $solicitud->vacacion ? $solicitud->vacacion->dias : 0;
+            return $solicitud;
         });
 
         return view('solicitudes.vacaciones', compact('solicitudes'));
     }
-
 
 
 

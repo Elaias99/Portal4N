@@ -394,7 +394,7 @@ class VacacionController extends Controller
 
     public function exportarDisponibilidad()
     {
-        $nombreArchivo = 'vacaciones_disponibles_' . now()->format('Ymd_His') . '.xlsx';
+        $nombreArchivo = 'vacaciones_empleados_' . now()->format('Ymd_His') . '.xlsx';
         return Excel::download(new VacacionDisponibleExport, $nombreArchivo);
     }
 
