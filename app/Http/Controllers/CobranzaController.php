@@ -247,6 +247,23 @@ class CobranzaController extends Controller
 
 
 
+    public function cancelarPendientes(Request $request)
+    {
+        session()->forget([
+            'sin_cobranza',
+            'sin_cobranza_pendientes',
+            'sin_cobranza_guiada',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Flujo guiado de ventas cancelado correctamente.'
+        ]);
+    }
+
+
+
+
 
 
 

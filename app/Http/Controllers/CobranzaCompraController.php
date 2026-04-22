@@ -393,6 +393,21 @@ class CobranzaCompraController extends Controller
 
 
 
+    public function cancelarPendientesCompras(Request $request)
+    {
+        session()->forget([
+            'sin_compra_pendientes',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Flujo guiado de compras cancelado correctamente.'
+        ]);
+    }
+
+
+
+
 
 
 }

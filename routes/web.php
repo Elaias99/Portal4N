@@ -360,6 +360,9 @@ Route::post('/cobranzas/reprocesar-pendientes', [CobranzaController::class, 'rep
 Route::post('cobranzas/reprocesar-pendientes-compras', [CobranzaController::class, 'reprocesarPendientesCompras'])
     ->name('cobranzas.reprocesar-pendientes-compras');
 
+Route::post('/cobranzas/cancelar-pendientes', [App\Http\Controllers\CobranzaController::class, 'cancelarPendientes'])
+    ->name('cobranzas.cancelar-pendientes');
+
 Route::resource('cobranzas', CobranzaController::class);
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -378,6 +381,9 @@ Route::post('/cobranzas-compras/reprocesar-pendientes-compras', [CobranzaCompraC
 Route::get('/cobranzas-compras/salud', 
     [\App\Http\Controllers\CobranzaCompraController::class, 'salud']
 )->name('cobranzas-compras.salud');
+
+Route::post('/cobranzas-compras/cancelar-pendientes', [App\Http\Controllers\CobranzaCompraController::class, 'cancelarPendientesCompras'])
+    ->name('cobranzas-compras.cancelar-pendientes-compras');
 
 
 Route::resource('cobranzas-compras', CobranzaCompraController::class)
