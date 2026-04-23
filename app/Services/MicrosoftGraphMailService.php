@@ -158,8 +158,10 @@ class MicrosoftGraphMailService
     {
         $token = session('outlook_access_token');
 
+        $encodedMessageId = rawurlencode($messageId);
+
         $response = Http::withToken($token)
-            ->get("https://graph.microsoft.com/v1.0/me/messages/{$messageId}/attachments");
+            ->get("https://graph.microsoft.com/v1.0/me/messages/{$encodedMessageId}/attachments");
 
         if (!$response->successful()) {
             throw new \RuntimeException('No se pudieron consultar los adjuntos.');
@@ -196,8 +198,10 @@ class MicrosoftGraphMailService
             }
 
             if ($attachmentId !== '') {
+                $encodedAttachmentId = rawurlencode($attachmentId);
+
                 $rawResponse = Http::withToken($token)
-                    ->get("https://graph.microsoft.com/v1.0/me/messages/{$messageId}/attachments/{$attachmentId}/\$value");
+                    ->get("https://graph.microsoft.com/v1.0/me/messages/{$encodedMessageId}/attachments/{$encodedAttachmentId}/\$value");
 
                 if ($rawResponse->successful()) {
                     return [
@@ -210,7 +214,6 @@ class MicrosoftGraphMailService
 
         throw new \RuntimeException('El correo no contiene un PDF válido.');
     }
-
     private function formatGraphDateStart(string $date): string
     {
         return Carbon::parse($date)

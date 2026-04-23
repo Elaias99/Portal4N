@@ -149,9 +149,8 @@ class OutlookMailController extends Controller
                 'emails' => [],
                 'preview' => null,
                 'selectedMessageId' => $messageId,
-                'error' => 'No se pudo procesar el adjunto PDF del correo.',
+                'error' => 'No se pudo procesar el adjunto PDF del correo. ' . $e->getMessage(),
                 'isConnected' => true,
-                'filters' => $filters,
             ]);
         }
     }
