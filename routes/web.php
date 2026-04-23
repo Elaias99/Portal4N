@@ -1020,8 +1020,46 @@ Route::post('/tracking-almacenado', [TrackingAlmacenadoController::class, 'store
 
 
 
+use App\Http\Controllers\LatamGuideImportController;
+
+Route::get('/latam-guide-import', [LatamGuideImportController::class, 'index'])
+    ->name('latam-guide-import.index');
+
+Route::post('/latam-guide-import/preview-pdf', [LatamGuideImportController::class, 'previewPdf'])
+    ->name('latam-guide-import.preview-pdf');
+
+Route::post('/latam-guide-import/store-preview', [LatamGuideImportController::class, 'storePreview'])
+    ->name('latam-guide-import.store-preview');
+
+Route::get('/latam-guide-import/inbox', [LatamGuideImportController::class, 'inbox'])
+    ->name('latam-guide-import.inbox');
+
+Route::get('/latam-guide-import/inbox/{emailId}/preview', [LatamGuideImportController::class, 'previewInboxAttachment'])
+    ->name('latam-guide-import.inbox.preview');
+
+Route::post('/latam-guide-import/inbox/{emailId}/store', [LatamGuideImportController::class, 'storeInboxAttachment'])
+    ->name('latam-guide-import.inbox.store');
 
 
+use App\Http\Controllers\OutlookMailController;
+
+Route::get('/outlook-mails', [OutlookMailController::class, 'index'])
+    ->name('outlook-mails.index');
+
+Route::get('/outlook-mails/connect', [OutlookMailController::class, 'connect'])
+    ->name('outlook-mails.connect');
+
+Route::get('/outlook-mails/callback', [OutlookMailController::class, 'callback'])
+    ->name('outlook-mails.callback');
+
+Route::post('/outlook-mails/disconnect', [OutlookMailController::class, 'disconnect'])
+    ->name('outlook-mails.disconnect');
+
+Route::get('/outlook-mails/{messageId}/preview', [OutlookMailController::class, 'preview'])
+    ->name('outlook-mails.preview');
+
+Route::post('/outlook-mails/{messageId}/store', [OutlookMailController::class, 'store'])
+    ->name('outlook-mails.store');
 
 
 

@@ -18,6 +18,13 @@ return [
         'key' => env('INTERNAL_TRACKING_KEY'),
     ],
 
+
+    'microsoft' => [
+        'client_id' => env('MICROSOFT_CLIENT_ID'),
+        'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
+        'tenant_id' => env('MICROSOFT_TENANT_ID'),
+    ],
+
     'tracking' => [
         'base_url' => env('TRACKING_API_BASE_URL', 'https://admin.4nortes.app/api/v1/tracking'),
         'token' => env('TRACKING_API_TOKEN'),
