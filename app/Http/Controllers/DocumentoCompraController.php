@@ -5,19 +5,15 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\DocumentoCompra;
 use App\Imports\ComprasImport;
-use App\Models\Empresa;
 use App\Models\CobranzaCompra;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Auth;
 use App\Exports\DocumentoCompraExport;
 use App\Models\MovimientoCompra;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use App\Models\Banco;
 use App\Models\TipoCuenta;
 use App\Models\DocumentoCompraPagoProgramado;
-use App\Services\ReferenciaNotasCompraService;
-use App\Services\SincronizarPagoReferenciaCompraService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
@@ -73,7 +69,9 @@ class DocumentoCompraController extends Controller
         }
 
         if ($request->filled('folio')) {
-            $baseQuery->where('folio', 'like', "%{$request->folio}%");
+            $folio = trim($request->folio);
+
+            $baseQuery->where('folio', $folio);
         }
 
         if ($request->filled('empresa_id')) {
