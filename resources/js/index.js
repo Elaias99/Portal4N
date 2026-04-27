@@ -1,3 +1,6 @@
+// ============================================================
+// PAGO MASIVO
+// ============================================================
 document.addEventListener('DOMContentLoaded', () => {
 
     // =========================
@@ -49,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const raw = sessionStorage.getItem(STORAGE_KEY);
             if (!raw) return new Map();
+
             return new Map(Object.entries(JSON.parse(raw)));
         } catch (e) {
             console.error('Error cargando seleccionados', e);
@@ -73,6 +77,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function textoFolios(cantidad) {
         return `${cantidad} ${cantidad === 1 ? 'folio' : 'folios'}`;
+    }
+
+    function getDataHonorarioFromCheckbox(chk) {
+        return {
+            id: chk.value,
+            empresa: chk.dataset.empresa,
+            rut: chk.dataset.rut,
+            emisor: chk.dataset.emisor,
+            folio: chk.dataset.folio,
+            fecha_emision: chk.dataset.fechaEmision,
+            fecha_vencimiento: chk.dataset.fechaVencimiento,
+            monto: chk.dataset.monto,
+            saldo: chk.dataset.saldo,
+        };
+    }
+
+    function actualizarEstadoCheckAll() {
+        const checks = Array.from(document.querySelectorAll('.chk-honorario:not(:disabled)'));
+
+        if (checks.length === 0) {
+            checkAll.checked = false;
+            checkAll.indeterminate = false;
+            return;
+        }
+
+        const seleccionadosVisibles = checks.filter(chk => seleccionados.has(chk.value)).length;
+
+        checkAll.checked = seleccionadosVisibles === checks.length;
+        checkAll.indeterminate = seleccionadosVisibles > 0 && seleccionadosVisibles < checks.length;
     }
 
     // =========================
@@ -166,6 +199,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    actualizarEstadoCheckAll();
+
     // =========================
     // CHECKBOXES INDIVIDUALES
     // =========================
@@ -176,23 +211,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = chk.value;
 
         if (chk.checked) {
-            seleccionados.set(id, {
-                id: id,
-                empresa: chk.dataset.empresa,
-                rut: chk.dataset.rut,
-                emisor: chk.dataset.emisor,
-                folio: chk.dataset.folio,
-                fecha_emision: chk.dataset.fechaEmision,
-                fecha_vencimiento: chk.dataset.fechaVencimiento,
-                monto: chk.dataset.monto,
-                saldo: chk.dataset.saldo,
-            });
+            seleccionados.set(id, getDataHonorarioFromCheckbox(chk));
         } else {
             seleccionados.delete(id);
-            checkAll.checked = false;
         }
 
         saveSeleccionados(seleccionados);
+        actualizarEstadoCheckAll();
     });
 
     // =========================
@@ -201,29 +226,20 @@ document.addEventListener('DOMContentLoaded', () => {
     checkAll.addEventListener('change', () => {
         const checks = document.querySelectorAll('.chk-honorario:not(:disabled)');
 
-        seleccionados.clear();
-
         checks.forEach(chk => {
             chk.checked = checkAll.checked;
 
-            if (checkAll.checked) {
-                const id = chk.value;
+            const id = chk.value;
 
-                seleccionados.set(id, {
-                    id: id,
-                    empresa: chk.dataset.empresa,
-                    rut: chk.dataset.rut,
-                    emisor: chk.dataset.emisor,
-                    folio: chk.dataset.folio,
-                    fecha_emision: chk.dataset.fechaEmision,
-                    fecha_vencimiento: chk.dataset.fechaVencimiento,
-                    monto: chk.dataset.monto,
-                    saldo: chk.dataset.saldo,
-                });
+            if (checkAll.checked) {
+                seleccionados.set(id, getDataHonorarioFromCheckbox(chk));
+            } else {
+                seleccionados.delete(id);
             }
         });
 
         saveSeleccionados(seleccionados);
+        actualizarEstadoCheckAll();
     });
 
     // =========================
@@ -265,13 +281,13 @@ document.addEventListener('DOMContentLoaded', () => {
             chkTabla.checked = false;
         }
 
+        actualizarEstadoCheckAll();
+
         if (seleccionados.size === 0) {
-            checkAll.checked = false;
             $('#modalPagoMasivo').modal('hide');
             return;
         }
 
-        checkAll.checked = false;
         renderPagoMasivoSeleccionados();
     });
 
@@ -340,6 +356,8 @@ document.addEventListener('DOMContentLoaded', () => {
             btnCancelar.textContent = TEXTO_CERRAR;
         })
         .catch(err => {
+            console.error('[PAGO MASIVO] Error:', err);
+
             alert(err?.message || 'Error procesando pago masivo');
 
             submitBtn.disabled = false;
@@ -351,6 +369,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
+// ============================================================
+// PRÓXIMO PAGO
+// ============================================================
 document.addEventListener('DOMContentLoaded', () => {
     const btnProximoPago = document.getElementById('btn-proximo-pago-seleccionados');
     const modalProximoPago = document.getElementById('modalProximoPago');
@@ -399,6 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const raw = sessionStorage.getItem(STORAGE_KEY);
             if (!raw) return new Map();
+
             return new Map(Object.entries(JSON.parse(raw)));
         } catch (e) {
             console.error('Error cargando seleccionados para próximo pago', e);
@@ -614,6 +636,8 @@ document.addEventListener('DOMContentLoaded', () => {
             btnCancelar.textContent = TEXTO_CERRAR;
         })
         .catch(err => {
+            console.error('[PRÓXIMO PAGO] Error:', err);
+
             alert(err?.message || 'Error procesando próximo pago');
 
             submitBtn.disabled = false;
