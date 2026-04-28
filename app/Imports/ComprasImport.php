@@ -3,7 +3,6 @@
 namespace App\Imports;
 
 use App\Models\DocumentoCompra;
-use App\Models\Cobranza;
 use App\Models\CobranzaCompra;
 
 use Maatwebsite\Excel\Concerns\ToModel;
@@ -307,7 +306,7 @@ class ComprasImport implements ToModel, WithHeadingRow
             'fecha_vencimiento' => $fechaVencimiento,
             'status_original' => $statusOriginal,
             'estado' => $estadoInicial,
-            'saldo_pendiente' => $this->cleanNumber($row['monto_total'] ?? 0),
+            'saldo_pendiente' => $saldoInicial,
         ]);
 
         $documento->save();

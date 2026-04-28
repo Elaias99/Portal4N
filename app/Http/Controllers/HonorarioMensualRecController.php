@@ -94,6 +94,8 @@ class HonorarioMensualRecController extends Controller
     // =========================
     public function index(Request $request)
     {
+        $this->sincronizarEstadosFinancierosIniciales();
+
         $query = HonorarioMensualRec::with([
             'empresa:id,Nombre',
             'cobranzaCompra:id,servicio,razon_social',
@@ -944,27 +946,9 @@ class HonorarioMensualRecController extends Controller
         // =========================
         // RECALCULAR ESTADO FINANCIERO
         // =========================
-        if ($honorario->pagos()->exists() || $honorario->prontoPagos()->exists()) {
-            $nuevoEstado = 'Pago';
+        $nuevoEstado = $this->determinarEstadoFinancieroRecalculado($honorario);
 
-        } elseif ($honorario->abonos()->exists()) {
-            $nuevoEstado = 'Abono';
-
-        } elseif ($honorario->cruces()->exists()) {
-            $nuevoEstado = 'Cruce';
-
-        } else {
-            // Estado automático según vencimiento
-            $nuevoEstado = $honorario->fecha_vencimiento &&
-                        $honorario->fecha_vencimiento->isPast()
-                ? 'Vencido'
-                : 'Al día';
-        }
-
-        $honorario->update([
-            'estado_financiero'       => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
-            'fecha_estado_financiero' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
-        ]);
+        $this->aplicarEstadoFinancieroRecalculado($honorario, $nuevoEstado);
 
 
         $honorario->refresh();
@@ -1031,27 +1015,9 @@ class HonorarioMensualRecController extends Controller
         // =========================
         // RECALCULAR ESTADO FINANCIERO
         // =========================
-        if ($honorario->pagos()->exists() || $honorario->prontoPagos()->exists()) {
-            $nuevoEstado = 'Pago';
+        $nuevoEstado = $this->determinarEstadoFinancieroRecalculado($honorario);
 
-        } elseif ($honorario->abonos()->exists()) {
-            $nuevoEstado = 'Abono';
-
-        } elseif ($honorario->cruces()->exists()) {
-            $nuevoEstado = 'Cruce';
-
-        } else {
-            // Estado automático según vencimiento
-            $nuevoEstado = $honorario->fecha_vencimiento &&
-                        $honorario->fecha_vencimiento->isPast()
-                ? 'Vencido'
-                : 'Al día';
-        }
-
-        $honorario->update([
-            'estado_financiero'       => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
-            'fecha_estado_financiero' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
-        ]);
+        $this->aplicarEstadoFinancieroRecalculado($honorario, $nuevoEstado);
 
 
 
@@ -1119,28 +1085,9 @@ class HonorarioMensualRecController extends Controller
         // =========================
         // RECALCULAR ESTADO FINANCIERO
         // =========================
-        if ($honorario->pagos()->exists() || $honorario->prontoPagos()->exists()) {
-            // No debería pasar, pero se protege
-            $nuevoEstado = 'Pago';
+        $nuevoEstado = $this->determinarEstadoFinancieroRecalculado($honorario);
 
-        } elseif ($honorario->abonos()->exists()) {
-            $nuevoEstado = 'Abono';
-
-        } elseif ($honorario->cruces()->exists()) {
-            $nuevoEstado = 'Cruce';
-
-        } else {
-            // Volver a estado automático por fecha
-            $nuevoEstado = $honorario->fecha_vencimiento &&
-                        $honorario->fecha_vencimiento->isPast()
-                ? 'Vencido'
-                : 'Al día';
-        }
-
-        $honorario->update([
-            'estado_financiero'       => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
-            'fecha_estado_financiero' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
-        ]);
+        $this->aplicarEstadoFinancieroRecalculado($honorario, $nuevoEstado);
 
 
         $honorario->refresh();
@@ -1204,28 +1151,9 @@ class HonorarioMensualRecController extends Controller
         // =========================
         // RECALCULAR ESTADO FINANCIERO
         // =========================
-        if ($honorario->pagos()->exists() || $honorario->prontoPagos()->exists()) {
-            // No debería ocurrir tras eliminar, pero se protege
-            $nuevoEstado = 'Pago';
+        $nuevoEstado = $this->determinarEstadoFinancieroRecalculado($honorario);
 
-        } elseif ($honorario->abonos()->exists()) {
-            $nuevoEstado = 'Abono';
-
-        } elseif ($honorario->cruces()->exists()) {
-            $nuevoEstado = 'Cruce';
-
-        } else {
-            // Volver a estado automático según fecha
-            $nuevoEstado = $honorario->fecha_vencimiento &&
-                        $honorario->fecha_vencimiento->isPast()
-                ? 'Vencido'
-                : 'Al día';
-        }
-
-        $honorario->update([
-            'estado_financiero'       => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
-            'fecha_estado_financiero' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
-        ]);
+        $this->aplicarEstadoFinancieroRecalculado($honorario, $nuevoEstado);
 
 
         $honorario->refresh();
@@ -1287,6 +1215,8 @@ class HonorarioMensualRecController extends Controller
 
     public function export(Request $request)
     {
+        $this->sincronizarEstadosFinancierosIniciales();
+
         return Excel::download(
             new ExportHonorarioMensual($request),
             'honorarios_mensuales_rec.xlsx'
@@ -1680,6 +1610,83 @@ class HonorarioMensualRecController extends Controller
             new HonorariosPagoMasivoExport($honorariosProgramados),
             $nombreArchivo
         );
+    }
+
+
+    private function sincronizarEstadosFinancierosIniciales(): void
+    {
+        $hoy = Carbon::today();
+
+        // Honorarios pendientes vencidos
+        DB::table('honorarios_mensuales_rec')
+            ->whereNotNull('fecha_vencimiento')
+            ->whereDate('fecha_vencimiento', '<', $hoy)
+            ->where('saldo_pendiente', '>', 0)
+            ->where(function ($q) {
+                $q->whereNull('estado_financiero_inicial')
+                ->orWhere('estado_financiero_inicial', '!=', 'Vencido');
+            })
+            ->update([
+                'estado_financiero_inicial' => 'Vencido',
+                'updated_at' => now(),
+            ]);
+
+        // Honorarios pendientes aún al día
+        DB::table('honorarios_mensuales_rec')
+            ->whereNotNull('fecha_vencimiento')
+            ->whereDate('fecha_vencimiento', '>=', $hoy)
+            ->where('saldo_pendiente', '>', 0)
+            ->where(function ($q) {
+                $q->whereNull('estado_financiero_inicial')
+                ->orWhere('estado_financiero_inicial', '!=', 'Al día');
+            })
+            ->update([
+                'estado_financiero_inicial' => 'Al día',
+                'updated_at' => now(),
+            ]);
+    }
+
+    private function aplicarEstadoFinancieroRecalculado(HonorarioMensualRec $honorario, string $nuevoEstado): void 
+    {
+        if (in_array($nuevoEstado, ['Vencido', 'Al día'], true)) {
+            $honorario->update([
+                'estado_financiero_inicial' => $nuevoEstado,
+                'estado_financiero'         => null,
+                'fecha_estado_financiero'   => null,
+            ]);
+
+            return;
+        }
+
+        $honorario->update([
+            'estado_financiero'       => $nuevoEstado,
+            'fecha_estado_financiero' => now(),
+        ]);
+    }
+
+
+    private function determinarEstadoFinancieroRecalculado(HonorarioMensualRec $honorario): string
+    {
+        if ($honorario->pagos()->exists() || $honorario->prontoPagos()->exists()) {
+            return 'Pago';
+        }
+
+        if ($honorario->abonos()->exists()) {
+            return 'Abono';
+        }
+
+        if ($honorario->cruces()->exists()) {
+            return 'Cruce';
+        }
+
+        if (
+            $honorario->fecha_vencimiento &&
+            $honorario->fecha_vencimiento->lt(Carbon::today())
+        ) {
+            return 'Vencido';
+        }
+
+        return 'Al día';
     }
 
 
