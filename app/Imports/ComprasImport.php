@@ -9,7 +9,6 @@ use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 
 
@@ -128,7 +127,6 @@ class ComprasImport implements ToModel, WithHeadingRow
 
     if (!$cobranza) {
 
-
         // Evitar duplicados por RUT
         $yaRegistrado = collect($this->sinCobranza)
             ->contains(fn($item) => $item['rut_proveedor'] === ($row['rut_proveedor'] ?? null));
@@ -143,21 +141,18 @@ class ComprasImport implements ToModel, WithHeadingRow
             ];
         }
 
-        //Crear el documento con cobranza_id = null (para ser reprocesado luego)
-        \App\Models\DocumentoCompra::updateOrCreate(
 
-
-            
-
-
-            ['folio' => $row['folio']],
+        // Crear el documento con cobranza_id = null (para ser reprocesado luego)
+        $documentoSinCobranza = \App\Models\DocumentoCompra::updateOrCreate(
             [
                 'empresa_id'        => $this->empresaId ?? null,
                 'tipo_documento_id' => $tipoDocumento?->id,
-                'nro'               => $row['nro'] ?? null,
-                // 'tipo_doc'          => $row['tipo_doc'] ?? null,
-                'tipo_compra'       => $row['tipo_compra'] ?? null,
                 'rut_proveedor'     => $row['rut_proveedor'],
+                'folio'             => $row['folio'],
+            ],
+            [
+                'nro'               => $row['nro'] ?? null,
+                'tipo_compra'       => $row['tipo_compra'] ?? null,
                 'razon_social'      => $row['razon_social'],
 
                 'fecha_docto'       => $this->transformDate($row['fecha_docto']),
@@ -184,26 +179,10 @@ class ComprasImport implements ToModel, WithHeadingRow
                 'valor_otro_impuesto'  => $row['valor_otro_impuesto'] ?? 0,
                 'tasa_otro_impuesto'   => $row['tasa_otro_impuesto'] ?? 0,
 
-                //Estado manual debe ser null
                 'estado'            => null,
-
-
-
-
-               
                 'fecha_vencimiento' => null,
-                //Estado automático real
                 'status_original'   => 'Pendiente',
-
-
-
-
-
-
-                
-                // Saldo pendiente inicial
                 'saldo_pendiente'   => $this->cleanNumber($row['monto_total'] ?? 0),
-
                 'cobranza_compra_id' => null,
             ]
         );
