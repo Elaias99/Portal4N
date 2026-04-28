@@ -153,11 +153,9 @@ class CobranzaCompraController extends Controller
      */
     public function reprocesarPendientesCompras(Request $request)
     {
-        
         $pendientes = session('sin_compra_pendientes');
 
         if (!$pendientes || count($pendientes) === 0) {
-
             return response()->json([
                 'success' => false,
                 'message' => 'No hay documentos de compras pendientes para reprocesar.'
@@ -165,33 +163,43 @@ class CobranzaCompraController extends Controller
         }
 
         $procesados = [];
+        $procesadosIds = [];
         $omitidos = [];
-
 
         foreach ($pendientes as $item) {
 
             $rutProveedor = $item['rut_proveedor'] ?? null;
 
             if (!$rutProveedor) {
+                $omitidos[] = [
+                    'motivo' => 'RUT proveedor vacío',
+                    'item' => $item,
+                ];
+
                 continue;
             }
-
-        
 
             $cobranzaCompra = CobranzaCompra::where('rut_cliente', $rutProveedor)->first();
 
             if (!$cobranzaCompra) {
+                $omitidos[] = [
+                    'rut_proveedor' => $rutProveedor,
+                    'motivo' => 'No existe cobranza_compra asociada',
+                ];
 
                 continue;
             }
-
 
             $documentos = DocumentoCompra::where('rut_proveedor', $rutProveedor)
                 ->whereNull('cobranza_compra_id')
                 ->get();
 
             if ($documentos->isEmpty()) {
-   
+                $omitidos[] = [
+                    'rut_proveedor' => $rutProveedor,
+                    'motivo' => 'No hay documentos pendientes sin cobranza_compra_id',
+                ];
+
                 continue;
             }
 
@@ -207,44 +215,67 @@ class CobranzaCompraController extends Controller
                     ? 'Vencido'
                     : 'Al día';
 
-                $documento->update([
+                $formaPagoNormalizada = mb_strtoupper(
+                    trim((string) ($cobranzaCompra->forma_pago ?? ''))
+                );
+
+                $esPagoAutomatico = in_array($formaPagoNormalizada, [
+                    'CAJA CHICA',
+                    'FONDO POR RENDIR',
+                ], true);
+
+                $datosActualizar = [
                     'cobranza_compra_id' => $cobranzaCompra->id,
                     'fecha_vencimiento'  => $fechaVenc,
                     'status_original'    => $status,
-                    'estado'             => null,
-                ]);
+                ];
 
+                if ($esPagoAutomatico) {
+                    $datosActualizar['estado'] = 'Pago';
+                    $datosActualizar['fecha_estado_manual'] = now();
+                    $datosActualizar['saldo_pendiente'] = 0;
+                } else {
+                    $datosActualizar['estado'] = null;
+                }
 
-                // Movimiento por documento
+                $documento->update($datosActualizar);
+
+                if ($esPagoAutomatico && !$documento->pagos()->exists()) {
+                    $documento->pagos()->create([
+                        'fecha_pago' => Carbon::parse($documento->fecha_docto ?? now())->format('Y-m-d'),
+                        'user_id'    => Auth::id(),
+                        'origen'     => 'forma_pago_automatica',
+                    ]);
+                }
+
                 MovimientoCompra::create([
                     'documento_compra_id' => $documento->id,
                     'usuario_id'          => Auth::id(),
                     'tipo_movimiento'     => 'Reprocesamiento automático',
-                    'descripcion'         => "Documento reprocesado tras creación de cobranza de compras.",
+                    'descripcion'         => $esPagoAutomatico
+                        ? 'Documento reprocesado tras creación de cobranza de compras y cerrado automáticamente por forma de pago.'
+                        : 'Documento reprocesado tras creación de cobranza de compras.',
                     'datos_nuevos'        => [
                         'cobranza_compra_id' => $cobranzaCompra->id,
                         'fecha_vencimiento'  => $fechaVenc,
                         'creditos_aplicados' => $creditos,
+                        'forma_pago'         => $cobranzaCompra->forma_pago,
+                        'pago_automatico'    => $esPagoAutomatico,
+                        'estado'             => $esPagoAutomatico ? 'Pago' : null,
+                        'saldo_pendiente'    => $esPagoAutomatico ? 0 : $documento->saldo_pendiente,
                     ],
                     'fecha_cambio' => now(),
                 ]);
 
                 $procesados[] = $documento->folio;
+                $procesadosIds[] = $documento->id;
             }
         }
 
-
-
-
-
-
-
-
-        
         $service = new ReferenciaNotasCompraService();
         $sugerencias = [];
 
-        $notasCredito = DocumentoCompra::whereIn('folio', $procesados)
+        $notasCredito = DocumentoCompra::whereIn('id', $procesadosIds)
             ->where('tipo_documento_id', 61)
             ->get();
 
@@ -260,31 +291,25 @@ class CobranzaCompraController extends Controller
             }
         }
 
-        // Guardar sugerencias en sesión para el modal
         if (!empty($sugerencias)) {
             session(['sugerencias_notas_compras' => $sugerencias]);
         }
 
-
-
-        //  Limpiar sesión
         session()->forget('sin_compra_pendientes');
 
-
-        // Registrar movimiento general (con documento_compra_id = null)
         if (!empty($procesados)) {
             MovimientoCompra::create([
                 'documento_compra_id' => null,
                 'usuario_id' => Auth::id(),
                 'tipo_movimiento' => 'Reprocesamiento global automático',
-                'descripcion' => "Se reprocesaron " . count($procesados) . " documentos de compra tras crear nuevas cobranzas de compras.",
+                'descripcion' => 'Se reprocesaron ' . count($procesados) . ' documentos de compra tras crear nuevas cobranzas de compras.',
                 'datos_nuevos' => [
                     'folios_reprocesados' => $procesados,
+                    'documentos_reprocesados_ids' => $procesadosIds,
                 ],
                 'fecha_cambio' => now(),
             ]);
         }
-
 
         return response()->json([
             'success' => true,
