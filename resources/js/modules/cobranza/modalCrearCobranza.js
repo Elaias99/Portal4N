@@ -27,10 +27,6 @@ import { createAjaxService } from './ajaxService';
             csrf: window.cobranzaConfig.csrf
         });
 
-        /**
-         * Wrapper para que flujoService pueda usar modal.show()
-         * y modal.hide() sin tener que conocer jQuery.
-         */
         const modal = {
             show: () => modalService.show($),
             hide: () => modalService.hide($),
@@ -93,11 +89,101 @@ import { createAjaxService } from './ajaxService';
             $('#modalCrearCobranzaLabel').text(titulo);
         }
 
+        function syncDynamicSelect($select) {
+            const selectedValue = $select.val();
+            const hiddenSelector = $select.data('hidden-input');
+            const otherWrapperSelector = $select.data('other-wrapper');
+            const otherInputSelector = $select.data('other-input');
+
+            const $hidden = $(hiddenSelector);
+            const $otherWrapper = $(otherWrapperSelector);
+            const $otherInput = $(otherInputSelector);
+
+            if (selectedValue === '__otro__') {
+                $otherWrapper.show();
+
+                const otherValue = String($otherInput.val() ?? '').trim();
+                $hidden.val(otherValue);
+
+                return;
+            }
+
+            $otherWrapper.hide();
+            $otherInput.val('');
+            $hidden.val(selectedValue || '');
+        }
+
+        function syncDynamicOther($input) {
+            const hiddenSelector = $input.data('hidden-input');
+            const $hidden = $(hiddenSelector);
+
+            $hidden.val($input.val() || '');
+        }
+
+        function resetDynamicFields($form) {
+            $form.find('.js-provider-dynamic-select').each(function () {
+                syncDynamicSelect($(this));
+            });
+        }
+
+        function setDynamicFieldValue($form, name, value) {
+            const $field = $form.find(`[name="${name}"]`).first();
+
+            if (!$field.length) {
+                return false;
+            }
+
+            const fieldId = $field.attr('id');
+
+            if (!fieldId) {
+                return false;
+            }
+
+            const $select = $form
+                .find(`.js-provider-dynamic-select[data-hidden-input="#${fieldId}"]`)
+                .first();
+
+            if (!$select.length) {
+                return false;
+            }
+
+            const normalizedValue = String(value ?? '').trim().toLowerCase();
+            let foundOption = false;
+
+            $select.find('option').each(function () {
+                const $option = $(this);
+
+                if (String($option.val() ?? '').trim().toLowerCase() === normalizedValue) {
+                    $select.val($option.val());
+                    foundOption = true;
+                    return false;
+                }
+
+                return true;
+            });
+
+            if (foundOption) {
+                syncDynamicSelect($select);
+                return true;
+            }
+
+            $select.val('__otro__');
+            syncDynamicSelect($select);
+
+            const $otherInput = $($select.data('other-input'));
+
+            $otherInput.val(value);
+            syncDynamicOther($otherInput);
+
+            return true;
+        }
+
         function fillCurrentPending() {
             const item = state.pendientes[state.index] || {};
             const $form = getActiveForm();
 
             formService.reset($form);
+            resetDynamicFields($form);
 
             formService.fill($form, {
                 rut_cliente: item.rut_cliente || item.rut_proveedor || '',
@@ -133,7 +219,11 @@ import { createAjaxService } from './ajaxService';
 
                 const currentValue = String($field.val() ?? '').trim();
 
-                if (currentValue === '') {
+                if (currentValue !== '') return;
+
+                const wasDynamic = setDynamicFieldValue($form, name, value);
+
+                if (!wasDynamic) {
                     $field.val(value);
                 }
             });
@@ -167,6 +257,15 @@ import { createAjaxService } from './ajaxService';
             const tipo = $(this).hasClass('crear-compra-link') ? 'compra' : 'cobranza';
 
             flujo.openManual(tipo, rut, razon);
+            resetDynamicFields(getActiveForm());
+        });
+
+        $(document).on('change', '.js-provider-dynamic-select', function () {
+            syncDynamicSelect($(this));
+        });
+
+        $(document).on('input', '.js-provider-dynamic-other', function () {
+            syncDynamicOther($(this));
         });
 
         $(document).on('click', '.js-fill-proveedor-sin-registro', function (e) {
@@ -182,6 +281,7 @@ import { createAjaxService } from './ajaxService';
 
             const $form = $(this);
 
+            resetDynamicFields($form);
             formService.clearErrors($form);
 
             ajaxService.submitForm($form)
@@ -228,6 +328,8 @@ import { createAjaxService } from './ajaxService';
             formService.reset($(FORM_SELECTORS.cobranza));
             formService.reset($(FORM_SELECTORS.compra));
 
+            resetDynamicFields($(FORM_SELECTORS.compra));
+
             if (state.pendingActionAfterHide === 'next') {
 
                 state.pendingActionAfterHide = null;
@@ -248,6 +350,8 @@ import { createAjaxService } from './ajaxService';
         // -----------------------
         // Init
         // -----------------------
+
+        resetDynamicFields($(FORM_SELECTORS.compra));
 
         if (pendientesSesion.length > 0) {
             flujo.startGuided(tipoFlujoSesion, pendientesSesion);

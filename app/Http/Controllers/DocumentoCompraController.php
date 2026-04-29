@@ -81,7 +81,7 @@ class DocumentoCompraController extends Controller
         if ($request->filled('estado')) {
             $baseQuery->where(function ($q) use ($request) {
                 $q->where('status_original', $request->estado)
-                ->orWhere('estado', $request->estado);
+                    ->orWhere('estado', $request->estado);
             });
         }
 
@@ -102,22 +102,21 @@ class DocumentoCompraController extends Controller
             $baseQuery->whereDate('fecha_vencimiento', '<=', $request->fecha_venc_fin);
         }
 
-
         if ($request->filled('saldo_valor')) {
 
-            //Normalizar número (quita puntos y comas)
+            // Normalizar número (quita puntos y comas)
             $valor = (float) str_replace(['.', ','], '', $request->saldo_valor);
 
-            //Determinar tipo de saldo (default: saldo_pendiente)
+            // Determinar tipo de saldo (default: saldo_pendiente)
             $tipoSaldo = $request->input('saldo_tipo', 'saldo_pendiente');
 
-            //Whitelist de columnas permitidas
+            // Whitelist de columnas permitidas
             $columnasPermitidas = [
                 'saldo_pendiente',
                 'monto_total',
             ];
 
-            //Fallback de seguridad
+            // Fallback de seguridad
             if (!in_array($tipoSaldo, $columnasPermitidas, true)) {
                 $tipoSaldo = 'saldo_pendiente';
             }
@@ -134,6 +133,7 @@ class DocumentoCompraController extends Controller
             if ($request->estado_pago === 'Pagado') {
                 $baseQuery->where('saldo_pendiente', '<=', 0);
             }
+
             if ($request->estado_pago === 'Pendiente') {
                 $baseQuery->where('saldo_pendiente', '>', 0);
             }
@@ -152,19 +152,19 @@ class DocumentoCompraController extends Controller
 
                 case 'ambas':
                     $baseQuery->whereNotNull('referencia_id')
-                            ->whereHas('referenciados');
+                        ->whereHas('referenciados');
                     break;
 
                 case 'con_cualquier_referencia':
                     $baseQuery->where(function ($q) {
                         $q->whereNotNull('referencia_id')
-                        ->orWhereHas('referenciados');
+                            ->orWhereHas('referenciados');
                     });
                     break;
 
                 case 'sin_referencias':
                     $baseQuery->whereNull('referencia_id')
-                            ->whereDoesntHave('referenciados');
+                        ->whereDoesntHave('referenciados');
                     break;
             }
         }
@@ -200,12 +200,13 @@ class DocumentoCompraController extends Controller
         $documentosCompras = $baseQuery->orderBy('fecha_vencimiento', 'desc')->paginate(10);
 
         // === LISTAS AUXILIARES ===
-        $proveedores = \App\Models\Proveedor::select('id', 'razon_social', 'rut')->orderBy('razon_social')->get();
-
+        $proveedores = \App\Models\Proveedor::select('id', 'razon_social', 'rut')
+            ->orderBy('razon_social')
+            ->get();
 
         $cobranzasCompras = CobranzaCompra::select('id', 'razon_social', 'rut_cliente')
-        ->orderBy('razon_social')
-        ->get();
+            ->orderBy('razon_social')
+            ->get();
 
         $tiposDocumento = \App\Models\TipoDocumento::orderBy('nombre')->get();
         $empresas = \App\Models\Empresa::orderBy('Nombre')->get();
@@ -213,6 +214,8 @@ class DocumentoCompraController extends Controller
         $bancos = Banco::orderBy('nombre')->get();
         $tipoCuentas = TipoCuenta::orderBy('nombre')->get();
 
+        // === OPCIONES DINÁMICAS PARA FORMULARIO DE PROVEEDORES ===
+        $opcionesCobranzaCompra = $this->obtenerOpcionesCobranzaCompra();
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
@@ -229,7 +232,6 @@ class DocumentoCompraController extends Controller
                 $existe = $id
                     ? \App\Models\DocumentoCompra::where('id', $id)->exists()
                     : false;
-
             }
         }
 
@@ -237,7 +239,7 @@ class DocumentoCompraController extends Controller
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         return view('cobranzas.finanzas_compras.index', compact(
             'documentosCompras',
-            'proveedores',          
+            'proveedores',
             'cobranzasCompras',
             'tiposDocumento',
             'empresas',
@@ -248,6 +250,7 @@ class DocumentoCompraController extends Controller
             'totalSaldoPendiente',
             'bancos',
             'tipoCuentas',
+            'opcionesCobranzaCompra',
         ));
     }
 
@@ -1489,6 +1492,39 @@ class DocumentoCompraController extends Controller
             'success',
             "Fechas de próximo pago eliminadas correctamente. Eliminadas: {$eliminados}. Omitidas: {$omitidos}."
         );
+    }
+
+
+
+    private function obtenerOpcionesCobranzaCompra(): array
+    {
+        $campos = [
+            'servicio',
+            'tipo',
+            'facturacion',
+            'forma_pago',
+            'zona',
+            'importancia',
+            'responsable',
+            'nombre_cuenta',
+            'rut_cuenta',
+            'numero_cuenta',
+        ];
+
+        $opciones = [];
+
+        foreach ($campos as $campo) {
+            $opciones[$campo] = CobranzaCompra::query()
+                ->whereNotNull($campo)
+                ->pluck($campo)
+                ->map(fn ($valor) => trim((string) $valor))
+                ->filter(fn ($valor) => $valor !== '' && $valor !== '1')
+                ->unique(fn ($valor) => mb_strtolower($valor))
+                ->sortBy(fn ($valor) => mb_strtolower($valor))
+                ->values();
+        }
+
+        return $opciones;
     }
 
 

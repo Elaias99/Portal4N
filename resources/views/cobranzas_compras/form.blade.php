@@ -9,6 +9,21 @@
     $tipoCuentaSinRegistro = isset($tipoCuentas)
         ? $tipoCuentas->first(fn($tipo) => mb_strtolower(trim($tipo->nombre)) === 'sin registro')
         : null;
+
+    $opcionesCobranzaCompra = $opcionesCobranzaCompra ?? [];
+
+    $camposSelectDinamicos = [
+        'servicio' => 'Servicio / Detalle',
+        'tipo' => 'Tipo',
+        'facturacion' => 'Facturación',
+        'forma_pago' => 'Forma de Pago',
+        'zona' => 'Zona',
+        'importancia' => 'Importancia',
+        'responsable' => 'Responsable',
+        'nombre_cuenta' => 'Nombre Cuenta',
+        'rut_cuenta' => 'RUT Cuenta',
+        'numero_cuenta' => 'Número Cuenta',
+    ];
 @endphp
 
 @csrf
@@ -43,20 +58,80 @@
     @enderror
 </div>
 
-<div class="mb-3">
-    <label for="{{ $formIdPrefix }}_servicio" class="form-label">Servicio / Detalle</label>
-    <input
-        type="text"
-        name="servicio"
-        id="{{ $formIdPrefix }}_servicio"
-        class="form-control @error('servicio') is-invalid @enderror"
-        value="{{ old('servicio', $cobranzaCompra->servicio ?? '') }}"
-        required
-    >
-    @error('servicio')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
+@foreach($camposSelectDinamicos as $campo => $label)
+    @php
+        $valorActual = old($campo, $cobranzaCompra->{$campo} ?? '');
+        $valorNormalizado = mb_strtolower(trim((string) $valorActual));
+
+        $opcionesCampo = collect($opcionesCobranzaCompra[$campo] ?? [])
+            ->map(fn($valor) => trim((string) $valor))
+            ->filter(fn($valor) => $valor !== '')
+            ->values();
+
+        $existeEnOpciones = $valorActual === '' || $opcionesCampo->contains(function ($opcion) use ($valorNormalizado) {
+            return mb_strtolower(trim((string) $opcion)) === $valorNormalizado;
+        });
+    @endphp
+
+    <div class="mb-3">
+        <label for="{{ $formIdPrefix }}_{{ $campo }}_select" class="form-label">{{ $label }}</label>
+
+        <input
+            type="hidden"
+            name="{{ $campo }}"
+            id="{{ $formIdPrefix }}_{{ $campo }}"
+            class="js-provider-dynamic-value"
+            value="{{ $valorActual }}"
+        >
+
+        <select
+            id="{{ $formIdPrefix }}_{{ $campo }}_select"
+            class="form-select js-provider-dynamic-select @error($campo) is-invalid @enderror"
+            data-hidden-input="#{{ $formIdPrefix }}_{{ $campo }}"
+            data-other-wrapper="#{{ $formIdPrefix }}_{{ $campo }}_otro_wrap"
+            data-other-input="#{{ $formIdPrefix }}_{{ $campo }}_otro"
+            required
+        >
+            <option value="">Seleccione {{ mb_strtolower($label) }}</option>
+
+            @foreach($opcionesCampo as $opcion)
+                @php
+                    $opcionNormalizada = mb_strtolower(trim((string) $opcion));
+                @endphp
+
+                <option
+                    value="{{ $opcion }}"
+                    {{ $existeEnOpciones && $valorNormalizado === $opcionNormalizada ? 'selected' : '' }}
+                >
+                    {{ $opcion }}
+                </option>
+            @endforeach
+
+            <option value="__otro__" {{ !$existeEnOpciones ? 'selected' : '' }}>
+                Otro
+            </option>
+        </select>
+
+        <div
+            id="{{ $formIdPrefix }}_{{ $campo }}_otro_wrap"
+            class="mt-2 js-provider-dynamic-other-wrapper"
+            style="{{ !$existeEnOpciones ? '' : 'display:none;' }}"
+        >
+            <input
+                type="text"
+                id="{{ $formIdPrefix }}_{{ $campo }}_otro"
+                class="form-control js-provider-dynamic-other"
+                data-hidden-input="#{{ $formIdPrefix }}_{{ $campo }}"
+                value="{{ !$existeEnOpciones ? $valorActual : '' }}"
+                placeholder="Ingrese {{ mb_strtolower($label) }}"
+            >
+        </div>
+
+        @error($campo)
+            <div class="invalid-feedback d-block">{{ $message }}</div>
+        @enderror
+    </div>
+@endforeach
 
 <div class="mb-3">
     <label for="{{ $formIdPrefix }}_creditos" class="form-label">Créditos (días)</label>
@@ -70,141 +145,6 @@
         required
     >
     @error('creditos')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
-
-<div class="mb-3">
-    <label for="{{ $formIdPrefix }}_tipo" class="form-label">Tipo</label>
-    <input
-        type="text"
-        name="tipo"
-        id="{{ $formIdPrefix }}_tipo"
-        class="form-control @error('tipo') is-invalid @enderror"
-        value="{{ old('tipo', $cobranzaCompra->tipo ?? '') }}"
-        required
-    >
-    @error('tipo')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
-
-<div class="mb-3">
-    <label for="{{ $formIdPrefix }}_facturacion" class="form-label">Facturación</label>
-    <input
-        type="text"
-        name="facturacion"
-        id="{{ $formIdPrefix }}_facturacion"
-        class="form-control @error('facturacion') is-invalid @enderror"
-        value="{{ old('facturacion', $cobranzaCompra->facturacion ?? '') }}"
-        required
-    >
-    @error('facturacion')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
-
-<div class="mb-3">
-    <label for="{{ $formIdPrefix }}_forma_pago" class="form-label">Forma de Pago</label>
-    <input
-        type="text"
-        name="forma_pago"
-        id="{{ $formIdPrefix }}_forma_pago"
-        class="form-control @error('forma_pago') is-invalid @enderror"
-        value="{{ old('forma_pago', $cobranzaCompra->forma_pago ?? '') }}"
-        required
-    >
-    @error('forma_pago')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
-
-<div class="mb-3">
-    <label for="{{ $formIdPrefix }}_zona" class="form-label">Zona</label>
-    <input
-        type="text"
-        name="zona"
-        id="{{ $formIdPrefix }}_zona"
-        class="form-control @error('zona') is-invalid @enderror"
-        value="{{ old('zona', $cobranzaCompra->zona ?? '') }}"
-        required
-    >
-    @error('zona')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
-
-<div class="mb-3">
-    <label for="{{ $formIdPrefix }}_importancia" class="form-label">Importancia</label>
-    <input
-        type="text"
-        name="importancia"
-        id="{{ $formIdPrefix }}_importancia"
-        class="form-control @error('importancia') is-invalid @enderror"
-        value="{{ old('importancia', $cobranzaCompra->importancia ?? '') }}"
-        required
-    >
-    @error('importancia')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
-
-<div class="mb-3">
-    <label for="{{ $formIdPrefix }}_responsable" class="form-label">Responsable</label>
-    <input
-        type="text"
-        name="responsable"
-        id="{{ $formIdPrefix }}_responsable"
-        class="form-control @error('responsable') is-invalid @enderror"
-        value="{{ old('responsable', $cobranzaCompra->responsable ?? '') }}"
-        required
-    >
-    @error('responsable')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
-
-<div class="mb-3">
-    <label for="{{ $formIdPrefix }}_nombre_cuenta" class="form-label">Nombre Cuenta</label>
-    <input
-        type="text"
-        name="nombre_cuenta"
-        id="{{ $formIdPrefix }}_nombre_cuenta"
-        class="form-control @error('nombre_cuenta') is-invalid @enderror"
-        value="{{ old('nombre_cuenta', $cobranzaCompra->nombre_cuenta ?? '') }}"
-        required
-    >
-    @error('nombre_cuenta')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
-
-<div class="mb-3">
-    <label for="{{ $formIdPrefix }}_rut_cuenta" class="form-label">RUT Cuenta</label>
-    <input
-        type="text"
-        name="rut_cuenta"
-        id="{{ $formIdPrefix }}_rut_cuenta"
-        class="form-control @error('rut_cuenta') is-invalid @enderror"
-        value="{{ old('rut_cuenta', $cobranzaCompra->rut_cuenta ?? '') }}"
-        required
-    >
-    @error('rut_cuenta')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
-
-<div class="mb-3">
-    <label for="{{ $formIdPrefix }}_numero_cuenta" class="form-label">Número Cuenta</label>
-    <input
-        type="text"
-        name="numero_cuenta"
-        id="{{ $formIdPrefix }}_numero_cuenta"
-        class="form-control @error('numero_cuenta') is-invalid @enderror"
-        value="{{ old('numero_cuenta', $cobranzaCompra->numero_cuenta ?? '') }}"
-        required
-    >
-    @error('numero_cuenta')
         <div class="invalid-feedback">{{ $message }}</div>
     @enderror
 </div>
