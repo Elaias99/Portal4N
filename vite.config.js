@@ -25,6 +25,7 @@ export default defineConfig({
                 'resources/css/boleta_mensual.css',
                 'resources/css/finanzas_compras.css',
                 'resources/sass/app.scss',
+
                 'resources/js/app.js',
                 'resources/js/reports/delivery-links.js',
                 'resources/js/index.js',
@@ -35,10 +36,14 @@ export default defineConfig({
                 'resources/js/finanzas_compras_index.js',
                 'resources/js/boleta_mensual_index.js',
                 'resources/js/modal_pagos_masivos.js',
+                'resources/js/finanzas_general_pagos_programados.js',
+
+                // Modal crear cobranza / proveedor
+                'resources/js/modules/cobranza/modalCrearCobranza.js',
+
                 'resources/js/react/landing-test.jsx',
                 'resources/js/react/landing/main.jsx',
                 'resources/js/react/tracking/main.jsx',
-                'resources/js/finanzas_general_pagos_programados.js',
                 'resources/js/react/latam-tracking/main.jsx',
             ],
             refresh: true,
