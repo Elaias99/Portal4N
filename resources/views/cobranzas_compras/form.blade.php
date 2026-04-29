@@ -1,6 +1,14 @@
 @php
     $formIdPrefix = $formIdPrefix ?? 'cobranza_compra';
     $isModalFlow = $isModalFlow ?? false;
+
+    $bancoSinRegistro = isset($bancos)
+        ? $bancos->first(fn($banco) => mb_strtolower(trim($banco->nombre)) === 'sin registro')
+        : null;
+
+    $tipoCuentaSinRegistro = isset($tipoCuentas)
+        ? $tipoCuentas->first(fn($tipo) => mb_strtolower(trim($tipo->nombre)) === 'sin registro')
+        : null;
 @endphp
 
 @csrf
@@ -250,6 +258,17 @@
         <button type="button" class="btn btn-secondary me-2 js-cancel-cobranza-modal">Cancelar</button>
     @else
         <a href="{{ route('cobranzas-compras.index') }}" class="btn btn-secondary me-2">Cancelar</a>
+    @endif
+
+    @if($isModalFlow)
+        <button
+            type="button"
+            class="btn btn-outline-secondary me-2 js-fill-proveedor-sin-registro"
+            data-banco-sin-registro-id="{{ $bancoSinRegistro->id ?? '' }}"
+            data-tipo-cuenta-sin-registro-id="{{ $tipoCuentaSinRegistro->id ?? '' }}"
+        >
+            Sin registro
+        </button>
     @endif
 
     <button type="submit" class="btn btn-primary">{{ $btnText }}</button>

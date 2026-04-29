@@ -107,6 +107,38 @@ import { createAjaxService } from './ajaxService';
             updateTitle();
         }
 
+        function fillProveedorSinRegistro($button) {
+            const $form = $(FORM_SELECTORS.compra);
+
+            const defaults = {
+                servicio: 'Sin registro',
+                creditos: 0,
+                tipo: 'Sin registro',
+                facturacion: 'Sin registro',
+                forma_pago: 'Sin registro',
+                zona: 'Sin registro',
+                importancia: 'Sin registro',
+                responsable: 'Sin registro',
+                nombre_cuenta: 'Sin registro',
+                rut_cuenta: 'Sin registro',
+                numero_cuenta: 'Sin registro',
+                banco_id: $button.data('banco-sin-registro-id') || '',
+                tipo_cuenta_id: $button.data('tipo-cuenta-sin-registro-id') || ''
+            };
+
+            Object.entries(defaults).forEach(function ([name, value]) {
+                const $field = $form.find(`[name="${name}"]`).first();
+
+                if (!$field.length) return;
+
+                const currentValue = String($field.val() ?? '').trim();
+
+                if (currentValue === '') {
+                    $field.val(value);
+                }
+            });
+        }
+
         // -----------------------
         // Flujo Service
         // -----------------------
@@ -135,6 +167,13 @@ import { createAjaxService } from './ajaxService';
             const tipo = $(this).hasClass('crear-compra-link') ? 'compra' : 'cobranza';
 
             flujo.openManual(tipo, rut, razon);
+        });
+
+        $(document).on('click', '.js-fill-proveedor-sin-registro', function (e) {
+
+            e.preventDefault();
+
+            fillProveedorSinRegistro($(this));
         });
 
         $(document).on('submit', '.js-form-crear-cobranza', function (e) {
