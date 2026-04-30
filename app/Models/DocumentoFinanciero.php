@@ -313,12 +313,27 @@ class DocumentoFinanciero extends Model
     {
         $this->loadMissing('cobranza');
 
-        if ($this->fecha_docto && $this->cobranza && $this->cobranza->creditos) {
-            $this->fecha_vencimiento = Carbon::parse($this->fecha_docto)
-                ->addDays((int) $this->cobranza->creditos)
-                ->format('Y-m-d');
-            $this->save();
+        if (!$this->fecha_docto || !$this->cobranza) {
+            return;
         }
+
+        $creditos = $this->cobranza->creditos;
+
+        if ($creditos === null || $creditos === '') {
+            return;
+        }
+
+        $fechaVencimiento = Carbon::parse($this->fecha_docto)
+            ->addDays((int) $creditos)
+            ->format('Y-m-d');
+
+        $this->fecha_vencimiento = $fechaVencimiento;
+
+        $this->status_original = Carbon::parse($fechaVencimiento)->isPast()
+            ? 'Vencido'
+            : 'Al día';
+
+        $this->save();
     }
 
 

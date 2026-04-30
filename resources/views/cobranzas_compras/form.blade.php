@@ -58,80 +58,108 @@
     @enderror
 </div>
 
-@foreach($camposSelectDinamicos as $campo => $label)
-    @php
-        $valorActual = old($campo, $cobranzaCompra->{$campo} ?? '');
-        $valorNormalizado = mb_strtolower(trim((string) $valorActual));
+@if($isModalFlow)
 
-        $opcionesCampo = collect($opcionesCobranzaCompra[$campo] ?? [])
-            ->map(fn($valor) => trim((string) $valor))
-            ->filter(fn($valor) => $valor !== '')
-            ->values();
+    @foreach($camposSelectDinamicos as $campo => $label)
+        @php
+            $valorActual = old($campo, $cobranzaCompra->{$campo} ?? '');
+            $valorNormalizado = mb_strtolower(trim((string) $valorActual));
 
-        $existeEnOpciones = $valorActual === '' || $opcionesCampo->contains(function ($opcion) use ($valorNormalizado) {
-            return mb_strtolower(trim((string) $opcion)) === $valorNormalizado;
-        });
-    @endphp
+            $opcionesCampo = collect($opcionesCobranzaCompra[$campo] ?? [])
+                ->map(fn($valor) => trim((string) $valor))
+                ->filter(fn($valor) => $valor !== '')
+                ->values();
 
-    <div class="mb-3">
-        <label for="{{ $formIdPrefix }}_{{ $campo }}_select" class="form-label">{{ $label }}</label>
+            $existeEnOpciones = $valorActual === '' || $opcionesCampo->contains(function ($opcion) use ($valorNormalizado) {
+                return mb_strtolower(trim((string) $opcion)) === $valorNormalizado;
+            });
+        @endphp
 
-        <input
-            type="hidden"
-            name="{{ $campo }}"
-            id="{{ $formIdPrefix }}_{{ $campo }}"
-            class="js-provider-dynamic-value"
-            value="{{ $valorActual }}"
-        >
+        <div class="mb-3">
+            <label for="{{ $formIdPrefix }}_{{ $campo }}_select" class="form-label">{{ $label }}</label>
 
-        <select
-            id="{{ $formIdPrefix }}_{{ $campo }}_select"
-            class="form-select js-provider-dynamic-select @error($campo) is-invalid @enderror"
-            data-hidden-input="#{{ $formIdPrefix }}_{{ $campo }}"
-            data-other-wrapper="#{{ $formIdPrefix }}_{{ $campo }}_otro_wrap"
-            data-other-input="#{{ $formIdPrefix }}_{{ $campo }}_otro"
-            required
-        >
-            <option value="">Seleccione {{ mb_strtolower($label) }}</option>
+            <input
+                type="hidden"
+                name="{{ $campo }}"
+                id="{{ $formIdPrefix }}_{{ $campo }}"
+                class="js-provider-dynamic-value"
+                value="{{ $valorActual }}"
+            >
 
-            @foreach($opcionesCampo as $opcion)
-                @php
-                    $opcionNormalizada = mb_strtolower(trim((string) $opcion));
-                @endphp
+            <select
+                id="{{ $formIdPrefix }}_{{ $campo }}_select"
+                class="form-select js-provider-dynamic-select @error($campo) is-invalid @enderror"
+                data-hidden-input="#{{ $formIdPrefix }}_{{ $campo }}"
+                data-other-wrapper="#{{ $formIdPrefix }}_{{ $campo }}_otro_wrap"
+                data-other-input="#{{ $formIdPrefix }}_{{ $campo }}_otro"
+                required
+            >
+                <option value="">Seleccione {{ mb_strtolower($label) }}</option>
 
-                <option
-                    value="{{ $opcion }}"
-                    {{ $existeEnOpciones && $valorNormalizado === $opcionNormalizada ? 'selected' : '' }}
-                >
-                    {{ $opcion }}
+                @foreach($opcionesCampo as $opcion)
+                    @php
+                        $opcionNormalizada = mb_strtolower(trim((string) $opcion));
+                    @endphp
+
+                    <option
+                        value="{{ $opcion }}"
+                        {{ $existeEnOpciones && $valorNormalizado === $opcionNormalizada ? 'selected' : '' }}
+                    >
+                        {{ $opcion }}
+                    </option>
+                @endforeach
+
+                <option value="__otro__" {{ !$existeEnOpciones ? 'selected' : '' }}>
+                    Otro
                 </option>
-            @endforeach
+            </select>
 
-            <option value="__otro__" {{ !$existeEnOpciones ? 'selected' : '' }}>
-                Otro
-            </option>
-        </select>
+            <div
+                id="{{ $formIdPrefix }}_{{ $campo }}_otro_wrap"
+                class="mt-2 js-provider-dynamic-other-wrapper"
+                style="{{ !$existeEnOpciones ? '' : 'display:none;' }}"
+            >
+                <input
+                    type="text"
+                    id="{{ $formIdPrefix }}_{{ $campo }}_otro"
+                    class="form-control js-provider-dynamic-other"
+                    data-hidden-input="#{{ $formIdPrefix }}_{{ $campo }}"
+                    value="{{ !$existeEnOpciones ? $valorActual : '' }}"
+                    placeholder="Ingrese {{ mb_strtolower($label) }}"
+                >
+            </div>
 
-        <div
-            id="{{ $formIdPrefix }}_{{ $campo }}_otro_wrap"
-            class="mt-2 js-provider-dynamic-other-wrapper"
-            style="{{ !$existeEnOpciones ? '' : 'display:none;' }}"
-        >
+            @error($campo)
+                <div class="invalid-feedback d-block">{{ $message }}</div>
+            @enderror
+        </div>
+    @endforeach
+
+@else
+
+    @foreach($camposSelectDinamicos as $campo => $label)
+        <div class="mb-3">
+            <label for="{{ $formIdPrefix }}_{{ $campo }}" class="form-label">{{ $label }}</label>
+
             <input
                 type="text"
-                id="{{ $formIdPrefix }}_{{ $campo }}_otro"
-                class="form-control js-provider-dynamic-other"
-                data-hidden-input="#{{ $formIdPrefix }}_{{ $campo }}"
-                value="{{ !$existeEnOpciones ? $valorActual : '' }}"
-                placeholder="Ingrese {{ mb_strtolower($label) }}"
+                name="{{ $campo }}"
+                id="{{ $formIdPrefix }}_{{ $campo }}"
+                class="form-control @error($campo) is-invalid @enderror"
+                value="{{ old($campo, $cobranzaCompra->{$campo} ?? '') }}"
+                required
             >
-        </div>
 
-        @error($campo)
-            <div class="invalid-feedback d-block">{{ $message }}</div>
-        @enderror
-    </div>
-@endforeach
+            @error($campo)
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
+    @endforeach
+
+@endif
+
+
+
 
 <div class="mb-3">
     <label for="{{ $formIdPrefix }}_creditos" class="form-label">Créditos (días)</label>
