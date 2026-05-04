@@ -180,6 +180,7 @@ class CobranzaController extends Controller
 
                     //Buscar documento financiero que quedó sin cobranza_id
                     $documento = \App\Models\DocumentoFinanciero::where('folio', $folio)
+                        ->where('rut_cliente', $rut)
                         ->whereNull('cobranza_id')
                         ->first();
 

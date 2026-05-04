@@ -14,19 +14,29 @@ class DocumentoFinancieroImportService
         $filename = $file->getClientOriginalName();
 
         $rut = null;
+
         if (preg_match('/(\d{7,8}-[0-9Kk])/', $filename, $matches)) {
             $rut = $this->normalizarRut($matches[1]);
         }
 
-        $empresa = null;
-        if ($rut) {
-            $empresa = Empresa::whereRaw(
-                "REPLACE(REPLACE(rut, '.', ''), '-', '-') = ?",
-                [$rut]
-            )->first();
+        if (!$rut) {
+            throw new \InvalidArgumentException(
+                'El nombre del archivo no contiene un RUT de empresa válido.'
+            );
         }
 
-        $import = new DocumentosImport($empresa?->id);
+        $empresa = Empresa::whereRaw(
+            "REPLACE(REPLACE(rut, '.', ''), '-', '') = ?",
+            [str_replace('-', '', $rut)]
+        )->first();
+
+        if (!$empresa) {
+            throw new \InvalidArgumentException(
+                "El RUT {$rut} encontrado en el nombre del archivo no corresponde a ninguna empresa registrada."
+            );
+        }
+
+        $import = new DocumentosImport($empresa->id);
 
         Excel::import($import, $file);
         $import->afterImport();

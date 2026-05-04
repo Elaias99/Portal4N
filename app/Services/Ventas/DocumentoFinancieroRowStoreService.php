@@ -125,10 +125,16 @@ class DocumentoFinancieroRowStoreService
             folio: $folioExcel,
         );
 
+
+
+        $rutCliente = trim((string) ($row['rut_cliente'] ?? ''));
         // Se preserva la misma conducta actual:
         // updateOrCreate usando solo folio como llave.
         DocumentoFinanciero::updateOrCreate(
-            ['folio' => $folioExcel],
+            [    'empresa_id' => $empresaId,
+                'tipo_documento_id' => $tipoDocumento?->id,
+                'rut_cliente' => $rutCliente,
+                'folio' => $folioExcel,],
             [
                 'empresa_id'                    => $empresaId,
                 'tipo_documento_id'             => $tipoDocumento?->id,
@@ -213,12 +219,23 @@ class DocumentoFinancieroRowStoreService
             ?? $row['foliodocref']
             ?? null;
 
+
+
         $factura = null;
-        if ($tipoReferencia && $folioReferencia) {
-            $factura = DocumentoFinanciero::where('tipo_documento_id', $tipoReferencia)
+
+        $rutCliente = trim((string) ($row['rut_cliente'] ?? ''));
+        $folioReferencia = trim((string) $folioReferencia);
+
+        if ($tipoReferencia && $folioReferencia !== '') {
+            $factura = DocumentoFinanciero::where('empresa_id', $empresaId)
+                ->where('rut_cliente', $rutCliente)
+                ->where('tipo_documento_id', (int) $tipoReferencia)
                 ->where('folio', $folioReferencia)
                 ->first();
         }
+
+
+
 
         $fechaDocto = $this->transformDate($row['fecha_docto'] ?? null);
         $fechaVencimiento = $this->calcularFechaVencimiento(

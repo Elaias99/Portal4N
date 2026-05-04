@@ -46,7 +46,11 @@ class DocumentoFinancieroPostImportService
         DocumentoFinancieroImportState $state,
         bool $esImportada = true
     ): void {
-        $factura = DocumentoFinanciero::where('folio', $nota->folio_docto_referencia)
+
+
+        $factura = DocumentoFinanciero::where('empresa_id', $nota->empresa_id)
+            ->where('rut_cliente', $nota->rut_cliente)
+            ->where('folio', $nota->folio_docto_referencia)
             ->where('tipo_documento_id', $nota->tipo_docto_referencia)
             ->first();
 

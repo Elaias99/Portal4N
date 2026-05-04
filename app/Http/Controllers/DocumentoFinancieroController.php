@@ -7,7 +7,6 @@ use App\Models\DocumentoFinanciero;
 use App\Models\Empresa;
 use App\Models\TipoDocumento;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Imports\DocumentosImport;
 use App\Models\MovimientoDocumento;
 use App\Exports\DocumentosExport;
 use Illuminate\Support\Facades\Auth;
@@ -422,7 +421,15 @@ class DocumentoFinancieroController extends Controller
 
         $filename = $request->file('file')->getClientOriginalName();
 
-        $import = $importService->execute($request->file('file'));
+        try {
+            $import = $importService->execute($request->file('file'));
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->route('cobranzas.documentos')
+                ->with('error', 'No se pudo importar el archivo.')
+                ->with('detalles_errores', [
+                    $e->getMessage()
+                ]);
+        }
 
         $mensajes = [];
 
