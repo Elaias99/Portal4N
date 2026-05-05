@@ -233,7 +233,7 @@
                             <span>Historial de Compras</span>
                         </a>
 
-                        <form action="{{ route('finanzas_compras.import') }}" method="POST" enctype="multipart/form-data" class="mb-3">
+                        <form action="{{ route('finanzas_compras.import') }}" method="POST" enctype="multipart/form-data" class="mb-3" data-long-loader>
                             @csrf
                             <input type="file" name="file" class="form-control form-control-sm mb-2" required>
                             <button type="submit" class="btn btn-success btn-sm w-100">
@@ -241,6 +241,7 @@
                             </button>
                         </form>
                     @endif
+                    <br>
 
                     <button type="button"
                             class="btn btn-outline-success btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"

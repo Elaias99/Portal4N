@@ -300,7 +300,7 @@
                     @endif
 
                     @if (Auth::id() != 375)
-                        <form action="{{ route('cobranzas.import') }}" method="POST" enctype="multipart/form-data" class="mb-3">
+                        <form action="{{ route('cobranzas.import') }}" method="POST" enctype="multipart/form-data" class="mb-3" data-long-loader>
                             @csrf
                             <input type="file" name="file" class="form-control form-control-sm mb-2" required>
                             <button type="submit" class="btn btn-success btn-sm w-100">

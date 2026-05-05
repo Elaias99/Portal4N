@@ -14,7 +14,7 @@
         </p>
 
         {{-- Exportar solo la página actual --}}
-        <form method="GET" action="{{ route('documentos.export') }}">
+        <form method="GET" action="{{ route('documentos.export') }}" data-long-loader>
           @foreach (request()->query() as $key => $value)
               <input type="hidden" name="{{ $key }}" value="{{ $value }}">
           @endforeach
@@ -25,7 +25,7 @@
         </form>
 
         {{-- Exportar todos los registros filtrados --}}
-        <form method="GET" action="{{ route('finanzas.exportAll') }}">
+        <form method="GET" action="{{ route('finanzas.exportAll') }}" data-long-loader>
           @foreach (request()->query() as $key => $value)
               <input type="hidden" name="{{ $key }}" value="{{ $value }}">
           @endforeach

@@ -796,10 +796,18 @@ class DocumentoFinancieroController extends Controller
             if ($doc->fecha_vencimiento && $doc->saldo_pendiente > 0) {
                 $fechaVenc = \Carbon\Carbon::parse($doc->fecha_vencimiento);
                 $nuevoEstado = $fechaVenc->lt($hoy) ? 'Vencido' : 'Al día';
+
+
                 if ($doc->status_original !== $nuevoEstado) {
+                    DocumentoFinanciero::whereKey($doc->id)->update([
+                        'status_original' => $nuevoEstado,
+                    ]);
+
                     $doc->status_original = $nuevoEstado;
-                    $doc->save();
                 }
+
+
+
             }
         }
 

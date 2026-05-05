@@ -466,12 +466,38 @@
 
 
     <script>
+
+
+
         (function () {
             const loader = document.getElementById('pageLoader');
             if (!loader) return;
 
             let visibleCount = 0;
             let safetyTimer = null;
+
+            const DEFAULT_SAFETY_TIMEOUT = 15000;
+            const LONG_SAFETY_TIMEOUT = 5 * 60 * 1000; // 5 minutos
+
+            let activeSafetyTimeout = DEFAULT_SAFETY_TIMEOUT;
+
+            const resolveSafetyTimeout = (trigger) => {
+                const longLoaderElement = trigger?.closest?.('[data-long-loader]');
+
+                if (!longLoaderElement) {
+                    return DEFAULT_SAFETY_TIMEOUT;
+                }
+
+                const customTimeout = Number(longLoaderElement.dataset.longLoader);
+
+                return Number.isFinite(customTimeout) && customTimeout > 0
+                    ? customTimeout
+                    : LONG_SAFETY_TIMEOUT;
+            };
+
+            const resetSafetyTimeout = () => {
+                activeSafetyTimeout = DEFAULT_SAFETY_TIMEOUT;
+            };
 
             const render = () => {
                 if (visibleCount > 0) {
@@ -490,37 +516,55 @@
                 }
             };
 
-            const startSafety = () => {
+
+
+            const startSafety = (timeout = DEFAULT_SAFETY_TIMEOUT) => {
                 clearSafety();
+
                 safetyTimer = setTimeout(() => {
                     visibleCount = 0;
+                    resetSafetyTimeout();
+                    clearSafety();
                     render();
-                }, 15000);
+                }, timeout);
             };
 
-            const show = () => {
+
+
+
+            const show = (options = {}) => {
+                const requestedTimeout = Number(options.timeout) || DEFAULT_SAFETY_TIMEOUT;
+
+                activeSafetyTimeout = Math.max(activeSafetyTimeout, requestedTimeout);
+
                 visibleCount++;
                 render();
-                startSafety();
+                startSafety(activeSafetyTimeout);
             };
 
             const hide = () => {
                 if (visibleCount > 0) {
                     visibleCount--;
                 }
+
                 if (visibleCount === 0) {
                     clearSafety();
+                    resetSafetyTimeout();
                 }
+
                 render();
             };
 
             const forceHide = () => {
                 visibleCount = 0;
                 clearSafety();
+                resetSafetyTimeout();
                 render();
             };
 
             window.pageLoader = { show, hide, forceHide };
+
+
 
             // Formularios normales
             document.addEventListener('submit', (e) => {
@@ -528,11 +572,14 @@
                 if (!(form instanceof HTMLFormElement)) return;
                 if (form.hasAttribute('data-no-loader')) return;
 
-                show();
+                show({ timeout: resolveSafetyTimeout(form) });
 
                 const submits = form.querySelectorAll('button[type="submit"], input[type="submit"]');
                 submits.forEach(btn => btn.disabled = true);
             }, true);
+
+
+
 
             // Links internos normales
             document.addEventListener('click', (e) => {
@@ -556,7 +603,7 @@
                     return;
                 }
 
-                show();
+                show({ timeout: resolveSafetyTimeout(a) });
             }, true);
 
             // Interceptor global para fetch
@@ -599,6 +646,11 @@
                 forceHide();
             });
         })();
+
+
+
+
+
     </script>
 
 

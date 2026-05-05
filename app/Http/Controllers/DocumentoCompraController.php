@@ -762,13 +762,12 @@ class DocumentoCompraController extends Controller
 
         // === Query base ===
         $query = DocumentoCompra::with([
-            'empresa',
-            'tipoDocumento',
-            'movimientos',
-            'abonos',
-            'cruces',
-            'pagos',
-            'prontoPagos'
+            'empresa:id,Nombre',
+            'tipoDocumento:id,nombre',
+            'referencia:id,tipo_documento_id,folio,fecha_docto',
+            'referencia.tipoDocumento:id,nombre',
+            'referenciados:id,referencia_id,tipo_documento_id,folio,monto_total',
+            'referenciados.tipoDocumento:id,nombre',
         ]);
 
         // ===Filtros principales ===
@@ -866,10 +865,19 @@ class DocumentoCompraController extends Controller
             if ($doc->fecha_vencimiento && $doc->saldo_pendiente > 0) {
                 $fechaVenc = \Carbon\Carbon::parse($doc->fecha_vencimiento);
                 $nuevoEstado = $fechaVenc->lt($hoy) ? 'Vencido' : 'Al día';
+
+
+
                 if ($doc->status_original !== $nuevoEstado) {
+                    DocumentoCompra::whereKey($doc->id)->update([
+                        'status_original' => $nuevoEstado,
+                    ]);
+
                     $doc->status_original = $nuevoEstado;
-                    $doc->save();
                 }
+
+
+
             }
         }
 
@@ -888,13 +896,12 @@ class DocumentoCompraController extends Controller
     {
         // ===Query base ===
         $query = DocumentoCompra::with([
-            'empresa',
-            'tipoDocumento',
-            'movimientos',
-            'abonos',
-            'cruces',
-            'pagos',
-            'prontoPagos'
+            'empresa:id,Nombre',
+            'tipoDocumento:id,nombre',
+            'referencia:id,tipo_documento_id,folio,fecha_docto',
+            'referencia.tipoDocumento:id,nombre',
+            'referenciados:id,referencia_id,tipo_documento_id,folio,monto_total',
+            'referenciados.tipoDocumento:id,nombre',
         ]);
 
         // ===Filtros principales ===
@@ -908,6 +915,10 @@ class DocumentoCompraController extends Controller
 
         if ($request->filled('folio')) {
             $query->where('folio', 'like', "%{$request->folio}%");
+        }
+
+        if ($request->filled('empresa_id')) {
+            $query->where('empresa_id', $request->empresa_id);
         }
 
         if ($request->filled('estado')) {
@@ -932,6 +943,27 @@ class DocumentoCompraController extends Controller
             $query->whereDate('fecha_vencimiento', '>=', $request->fecha_venc_inicio);
         } elseif ($request->filled('fecha_venc_fin')) {
             $query->whereDate('fecha_vencimiento', '<=', $request->fecha_venc_fin);
+        }
+
+        // ===Filtro por saldo ===
+        if ($request->filled('saldo_valor')) {
+            $valor = (float) str_replace(['.', ','], '', $request->saldo_valor);
+
+            $tipoSaldo = $request->input('saldo_tipo', 'saldo_pendiente');
+
+            $columnasPermitidas = [
+                'saldo_pendiente',
+                'monto_total',
+            ];
+
+            if (!in_array($tipoSaldo, $columnasPermitidas, true)) {
+                $tipoSaldo = 'saldo_pendiente';
+            }
+
+            $query->whereBetween($tipoSaldo, [
+                $valor - 1,
+                $valor + 1,
+            ]);
         }
 
         // ===Filtros personalizados (filtrarColumnas) ===
@@ -962,8 +994,60 @@ class DocumentoCompraController extends Controller
             }
         }
 
+        // ===Filtro de estado de pago directo en SQL ===
+        if ($request->filled('estado_pago')) {
+            if ($request->estado_pago === 'Pagado') {
+                $query->where('saldo_pendiente', '<=', 0);
+            } elseif ($request->estado_pago === 'Pendiente') {
+                $query->where('saldo_pendiente', '>', 0);
+            }
+        }
+
+        // ===Filtro por referencias ===
+        if ($request->filled('filtro_referencia')) {
+            switch ($request->filtro_referencia) {
+                case 'referencia_a_otro':
+                    $query->whereNotNull('referencia_id');
+                    break;
+
+                case 'referenciado_por_otros':
+                    $query->whereHas('referenciados');
+                    break;
+
+                case 'ambas':
+                    $query->whereNotNull('referencia_id')
+                        ->whereHas('referenciados');
+                    break;
+
+                case 'con_cualquier_referencia':
+                    $query->where(function ($q) {
+                        $q->whereNotNull('referencia_id')
+                        ->orWhereHas('referenciados');
+                    });
+                    break;
+
+                case 'sin_referencias':
+                    $query->whereNull('referencia_id')
+                        ->whereDoesntHave('referenciados');
+                    break;
+            }
+        }
+
         // ===Excluir notas de crédito / anulados ===
         // $query->whereNotIn('tipo_documento_id', [61, 56]);
+
+        // ===Actualizar estado automático en bloque ===
+        DB::table('documentos_compras')
+            ->whereDate('fecha_vencimiento', '<', now())
+            ->where('saldo_pendiente', '>', 0)
+            ->where('status_original', '!=', 'Vencido')
+            ->update(['status_original' => 'Vencido']);
+
+        DB::table('documentos_compras')
+            ->whereDate('fecha_vencimiento', '>=', now())
+            ->where('saldo_pendiente', '>', 0)
+            ->where('status_original', '!=', 'Al día')
+            ->update(['status_original' => 'Al día']);
 
         // ===Orden ===
         if ($request->filled('sort_by')) {
@@ -977,34 +1061,9 @@ class DocumentoCompraController extends Controller
         // ===Ejecutar la query ===
         $documentos = $query->get();
 
-        // ===  Filtro de estado de pago (en memoria) ===
-        if ($request->filled('estado_pago')) {
-            $documentos = $documentos->filter(function ($doc) use ($request) {
-                if ($request->estado_pago === 'Pagado') {
-                    return $doc->saldo_pendiente <= 0;
-                }
-                if ($request->estado_pago === 'Pendiente') {
-                    return $doc->saldo_pendiente > 0;
-                }
-                return true;
-            });
-        }
-
-        // ===Actualizar estado automático (Vencido / Al día) ===
-        $hoy = \Carbon\Carbon::today();
-        foreach ($documentos as $doc) {
-            if ($doc->fecha_vencimiento && $doc->saldo_pendiente > 0) {
-                $fechaVenc = \Carbon\Carbon::parse($doc->fecha_vencimiento);
-                $nuevoEstado = $fechaVenc->lt($hoy) ? 'Vencido' : 'Al día';
-                if ($doc->status_original !== $nuevoEstado) {
-                    $doc->status_original = $nuevoEstado;
-                    $doc->save();
-                }
-            }
-        }
-
-        // ===  Exportación final ===
+        // ===Exportación final ===
         $fecha = now()->format('Y-m-d_H-i-s');
+
         return Excel::download(
             new DocumentoCompraExport($documentos),
             "Cuentas_Por_Pagar_Todos_{$fecha}.xlsx"
