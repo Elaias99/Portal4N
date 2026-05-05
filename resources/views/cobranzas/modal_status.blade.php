@@ -262,10 +262,10 @@
         }
 
         // Mostrar u ocultar campo de fecha manual
-        formEstado.querySelector('.fecha-estado-' + id).style.display =
-            ['Abono', 'Cruce', 'Pago', 'Pronto pago', 'Cobranza judicial'].includes(estado)
-                ? 'block'
-                : 'none';
+        // formEstado.querySelector('.fecha-estado-' + id).style.display =
+        //     ['Abono', 'Cruce', 'Pago', 'Pronto pago', 'Cobranza judicial'].includes(estado)
+        //         ? 'block'
+        //         : 'none';
     }
 
     function submitModalForm(id) {
