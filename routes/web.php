@@ -4,7 +4,6 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\TrabajadorController;
 use App\Http\Controllers\SolicitudController;
-use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PerfilController;
 use App\Http\Controllers\VacacionController;
 use App\Http\Controllers\HistorialVacacionController;
@@ -104,48 +103,6 @@ route::get('/solicitudes/vacaciones', [SolicitudController::class, 'vacaciones']
 route::get('/solicitudes/{id}/descargar', [SolicitudController::class, 'descargarArchivo'])->name('solicitudes.descargar');//Enlace para descargar el archivo que adjunto el empleado para pedir una solicitud
 
 Route::get('solicitudes/{id}/descargar-archivo-admin', [SolicitudController::class, 'descargaArchivoAEmpleado'])->name('solicitudes.descargar-archivo-admin');//Permite que el empleado descargue el archivo que el administrador adjuntó como respuesta.
-
-
-// 5. Rutas de notificaciones
-route::post('/notifications/mark-all-read', function () {
-    Auth::user()->unreadNotifications->markAsRead();
-    return back();
-})->name('notifications.markAllAsRead');
-
-
-Route::get('/notificaciones/empleado', function () {
-    $tiposPermitidos = [
-        'App\Notifications\SolicitudActualizada',
-        'App\Notifications\NuevoReclamoAreaNotification',
-        'App\Notifications\ReclamoRespondidoNotification',
-        'App\Notifications\NuevoComentarioReclamoNotification',
-        'App\Notifications\ReclamoCerradoNotification',
-    ];
-
-    $notificaciones = Auth::user()->unreadNotifications
-        ->whereIn('type', $tiposPermitidos)
-        ->sortByDesc('created_at')
-        ->take(5)
-        ->map(function ($n) {
-            return [
-                'id' => $n->id,
-                'mensaje' => $n->data['mensaje'],
-                'link' => $n->data['link'] . '?notificacion_id=' . $n->id,
-                'tipo' => $n->type,
-            ];
-        });
-
-    return response()->json([
-        'total' => $notificaciones->count(),
-        'items' => $notificaciones->values()
-    ]);
-})->middleware('auth');
-
-
-Route::get('/notifications/mark-as-read/{id}', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
-
-
-Route::post('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
 
 
 // PANEL ADMIN
@@ -1074,21 +1031,6 @@ Route::get('/admin', function () {
 
 
 
-
-
-Route::get('/assign-role-admin-marce', function () {
-    $luis = User::find(140); // Cambia Y por el ID de Luis en `users`
-    $luis->assignRole('admin');
-    return "Rol 'admin' asignado a Marcelo.";
-});
-
-Route::get('/assign-role-jefe-jp', function () {
-    $benjamin = User::find(139); // Cambia X por el ID de Benjamin en `users`
-    $benjamin->assignRole('jefe');
-    return "Rol 'jefe' asignado a jp.";
-});
-
-
 Route::get('/tracking-data/{tracking}', [PublicTrackingController::class, 'data'])
     ->where('tracking', '[A-Za-z0-9\-]+')
     ->name('tracking.public.data');
@@ -1097,24 +1039,3 @@ Route::get('/tracking/{tracking}', [PublicTrackingController::class, 'show'])
     ->where('tracking', '[A-Za-z0-9\-]+')
     ->name('tracking.public.show');
 
-
-
-Route::post('/fake-api/token', function (Request $request) {
-    // Simulamos usuario y contraseña correctos
-    $usuario = $request->input('Username');
-    $contrasena = $request->input('Password');
-    $grantType = $request->input('grant_type');
-
-    // Verificamos que los valores coincidan con lo esperado
-    if ($usuario === 'admin' && $contrasena === '1234' && $grantType === 'password') {
-        return response()->json([
-            'access_token' => 'FAKE-TOKEN-123456789',
-            'token_type' => 'Bearer',
-            'expires_in' => 3600,
-        ]);
-    } else {
-        return response()->json([
-            'error' => 'Credenciales inválidas'
-        ], 401);
-    }
-});
