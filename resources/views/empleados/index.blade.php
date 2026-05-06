@@ -1,17 +1,5 @@
 @extends('layouts.app')
 
-@php
-$notificaciones = Auth::user()->unreadNotifications
-    ->whereIn('type', [
-        'App\Notifications\NotificacionAdmin',
-        'App\Notifications\NotificacionAdminVacaciones',
-        'App\Notifications\NuevoReclamoAreaNotification',
-        'App\Notifications\ReclamoRespondidoNotification',
-        'App\Notifications\NuevoComentarioReclamoNotification',
-        'App\Notifications\ReclamoCerradoNotification',
-    ])
-    ->sortByDesc('created_at');
-@endphp
 @section('content')
 
 <div class="container"> 

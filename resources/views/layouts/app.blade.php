@@ -85,6 +85,8 @@
             to { transform: rotate(360deg); }
         }
     </style>
+
+    @viteReactRefresh
     
 
     @vite([
@@ -92,9 +94,8 @@
         'resources/css/appcustom.css',
         'resources/sass/app.scss',
         'resources/js/app.js',
+        'resources/js/react/sidebar/main.jsx',
     ])
-
-    @livewireStyles
     
 </head>
 <body>
@@ -114,19 +115,51 @@
 
         <nav class="navbar navbar-expand-md navbar-dark">
             <div class="container">
-                <!-- Off-canvas Sidebar Menu Button (only for roles admin and jefe) -->
+                <!-- Off-canvas Sidebar Menu React -->
                 @auth
+
+                    {{-- Definir que verá cada rol y que acceso tiene --}}
                     @if (
                         auth()->user()->hasRole(['admin', 'jefe']) ||
                         (auth()->user()->trabajador && auth()->user()->trabajador->area_id) ||
                         $isTrackingOnlyUser
                     )
-                        <button class="btn btn-outline-light" type="button"
-                                data-bs-toggle="offcanvas"
-                                data-bs-target="#menuSidebar"
-                                aria-controls="menuSidebar">
-                            <i class="fas fa-bars"></i> Menú
-                        </button>
+
+
+                    @php
+                        $sidebarRoutes = [
+                            'empleadosIndex' => route('empleados.index'),
+                            'empleadosLocalidades' => route('empleados.localidades'),
+                            'hijosIndex' => route('hijos.index'),
+                            'tallasIndex' => route('tallas.index'),
+                            'areasIndex' => route('areas.index'),
+
+                            'solicitudesIndex' => route('solicitudes.index'),
+                            'solicitudesVacaciones' => route('solicitudes.vacaciones'),
+
+                            'archivosRespaldo' => route('admin.archivos-respaldo'),
+                            'adminIndex' => route('admin.index'),
+                            'adminControlPanel' => route('admin.controlpanel.index'),
+                            'historialVacacion' => route('historial-vacacion.index'),
+
+                            'trackingDeliveryLinks' => url('/tracking/delivery-links'),
+                            'labels' => url('/labels'),
+                        ];
+                    @endphp
+
+                    <div
+                        id="portal-sidebar-root"
+                        data-user-name="{{ auth()->user()->name }}"
+                        data-can-open-menu="true"
+                        data-can-see-admin-menu="{{ auth()->user()->hasRole(['admin', 'jefe']) ? 'true' : 'false' }}"
+                        data-can-see-admin-only="{{ auth()->user()->hasRole('admin') ? 'true' : 'false' }}"
+                        data-can-see-admin-panel="{{ Auth::check() && Auth::id() === 1 ? 'true' : 'false' }}"
+                        data-can-see-tracking-menu="{{ $isTrackingOnlyUser ? 'true' : 'false' }}"
+                        data-routes='@json($sidebarRoutes)'
+                    ></div>
+
+
+
                     @endif
                 @endauth
 
@@ -137,19 +170,12 @@
                 </button>
 
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
+
+
                     
+
                     <!-- Right Side Of Navbar -->
                     <ul class="navbar-nav ms-auto">
-
-                        @role('admin|jefe')
-                            <li class="nav-item dropdown">
-                                <button class="btn btn-link position-relative" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-bell"></i>
-                                    <span class="badge bg-danger position-absolute top-0 start-100 translate-middle" style="display: none;">0</span>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end"></ul>
-                            </li>
-                        @endrole
                         @guest
                             @if (Route::has('login'))
                                 <li class="nav-item">
@@ -168,33 +194,38 @@
                         @else
 
 
-                            <li class="nav-item dropdown">
-                                <a id="navbarDropdown" class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>
-                                    <i class="fas fa-user"></i> {{ Auth::user()->name }}
+                        <li class="nav-item dropdown">
+                            <a id="navbarDropdown" class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>
+                                <i class="fas fa-user"></i> {{ Auth::user()->name }}
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                                <!-- Si tiene rol de admin o jefe -->
+                                @role('admin|jefe')
+                                <a class="dropdown-item" href="{{ route('empleados.perfil') }}">
+                                    <i class="fas fa-user-circle"></i> Mi Perfil
                                 </a>
-                                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                    <!-- Si tiene rol de admin o jefe -->
-                                    @role('admin|jefe')
-                                    <a class="dropdown-item" href="{{ route('empleados.perfil') }}">
-                                        <i class="fas fa-user-circle"></i> Mi Perfil
-                                    </a>
-                                    @endrole
+                                @endrole
                             
-                                    <!-- Opción Logout -->
-                                    <a class="dropdown-item" href="{{ route('logout') }}"
+                                <!-- Opción Logout -->
+                                <a class="dropdown-item" href="{{ route('logout') }}"
                                     onclick="event.preventDefault();
                                                 document.getElementById('logout-form').submit();">
-                                        <i class="fas fa-sign-out-alt"></i> Logout
-                                    </a>
-                                    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
-                                        @csrf
-                                    </form>
-                                </div>
-                            </li>
+                                    <i class="fas fa-sign-out-alt"></i> Logout
+                                </a>
+                                <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+                                    @csrf
+                                </form>
+                            </div>
+                        </li>
                         
                         
                         @endguest
                     </ul>
+
+
+
+
+
                 </div>
             </div>
         </nav>
@@ -207,11 +238,16 @@
                 $isTrackingOnlyUser
             )
 
+
+
         <div class="offcanvas offcanvas-start" tabindex="-1" id="menuSidebar" aria-labelledby="menuSidebarLabel">
+
+
             <div class="offcanvas-header">
                 <h5 class="offcanvas-title" id="menuSidebarLabel">Navegación Rápida</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
             </div>
+            
             <div class="offcanvas-body">
                 <div class="logo-container">
                     <img src="{{ asset('images/logo.png') }}" alt="4Nortes" class="logo-guirnalda">
@@ -358,6 +394,9 @@
                 </ul>
             </div>
         </div>
+
+
+
         @endif
         @endauth
 
@@ -373,73 +412,6 @@
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     
-    <script>
-        function cargarNotificaciones() {
-            $.get('{{ url('notificaciones/recientes') }}', function(data) {
-
-                
-
-                
-                
-
-                const badge = $('#notificationDropdown .badge');
-                const dropdown = $('#notificationDropdown').next('.dropdown-menu');
-
-                // Actualizar contador
-                if (data.total > 0) {
-                    badge.text(data.total).show();
-                } else {
-                    badge.hide();
-                }
-
-                // Actualizar listado
-                if (dropdown.length) {
-                    let html = '';
-                    const iconos = {
-                        'App\\Notifications\\NotificacionAdmin': 'fas fa-edit text-primary',
-                        'App\\Notifications\\NotificacionAdminVacaciones': 'fas fa-umbrella-beach text-info',
-                        'App\\Notifications\\NuevoReclamoAreaNotification': 'fas fa-box text-warning',
-                        'App\\Notifications\\ReclamoRespondidoNotification': 'fas fa-reply text-success',
-                        'App\\Notifications\\NuevoComentarioReclamoNotification': 'fas fa-comment text-secondary',
-                        'App\\Notifications\\ReclamoCerradoNotification': 'fas fa-lock text-danger',
-                        'App\\Notifications\\SolicitudActualizada': 'fas fa-file-signature text-primary',
-                        'App\\Notifications\\ReclamoReabiertoNotification': 'fas fa-undo text-info',
-                    };
-
-                    if (data.items.length > 0) {
-                        data.items.forEach(function(n) {
-                            html += `
-                                <li class="dropdown-item">
-                                    <a href="{{ url('notifications/mark-as-read') }}/${n.id}" class="d-flex align-items-center gap-2">
-                                        <i class="${iconos[n.tipo] || 'fas fa-info-circle text-muted'}"></i>
-                                        <span>${n.mensaje}</span>
-                                    </a>
-                                </li>
-                            `;
-                        });
-                        html += `
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form method="POST" action="{{ route('notifications.markAllAsRead') }}">
-                                    @csrf
-                                    <button type="submit" class="dropdown-item text-center">Marcar todas como leídas</button>
-                                </form>
-                            </li>
-                        `;
-                    } else {
-                        html += '<li class="dropdown-item text-center text-muted">No tienes notificaciones nuevas.</li>';
-                    }
-
-                    dropdown.html(html);
-                }
-            });
-        }
-
-        // $(document).ready(function() {
-        //     cargarNotificaciones();
-        //     setInterval(cargarNotificaciones, 30000); // cada 30 segundos
-        // });
-    </script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -466,9 +438,6 @@
 
 
     <script>
-
-
-
         (function () {
             const loader = document.getElementById('pageLoader');
             if (!loader) return;
@@ -648,23 +617,8 @@
         })();
 
 
-
-
-
     </script>
 
-
-
-
     @stack('scripts')
-    @livewireScripts
-
-
-
-
-
-
-
-
 </body>
 </html>
