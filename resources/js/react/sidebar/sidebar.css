@@ -1,0 +1,13 @@
+.portal-sidebar-test {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 9998;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: #111827;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+}

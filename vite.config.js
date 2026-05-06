@@ -45,6 +45,7 @@ export default defineConfig({
                 'resources/js/react/landing/main.jsx',
                 'resources/js/react/tracking/main.jsx',
                 'resources/js/react/latam-tracking/main.jsx',
+                'resources/js/react/sidebar/main.jsx',
             ],
             refresh: true,
         }),

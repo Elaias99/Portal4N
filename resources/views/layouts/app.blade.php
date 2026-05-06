@@ -85,6 +85,8 @@
             to { transform: rotate(360deg); }
         }
     </style>
+
+    @viteReactRefresh
     
 
     @vite([
@@ -92,11 +94,22 @@
         'resources/css/appcustom.css',
         'resources/sass/app.scss',
         'resources/js/app.js',
+        'resources/js/react/sidebar/main.jsx',
     ])
     
 </head>
 <body>
     <div id="app">
+
+        <div
+            id="portal-sidebar-root"
+            data-user-name="{{ auth()->check() ? auth()->user()->name : '' }}"
+            data-can-open-menu="{{ auth()->check() && (
+                auth()->user()->hasRole(['admin', 'jefe']) ||
+                (auth()->user()->trabajador && auth()->user()->trabajador->area_id) ||
+                $isTrackingOnlyUser
+            ) ? 'true' : 'false' }}"
+        ></div>
 
 
         <div id="pageLoader" class="page-loader" aria-hidden="true">
@@ -395,9 +408,6 @@
 
 
     <script>
-
-
-
         (function () {
             const loader = document.getElementById('pageLoader');
             if (!loader) return;
