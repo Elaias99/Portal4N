@@ -6,9 +6,11 @@ import App from "./App.jsx";
 const rootElement = document.getElementById("react-root");
 
 if (rootElement) {
+    const initialTracking = rootElement.dataset.initialTracking || "";
+
     createRoot(rootElement).render(
         <StrictMode>
-            <App />
+            <App initialTracking={initialTracking} />
         </StrictMode>
     );
 }

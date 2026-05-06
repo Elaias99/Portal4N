@@ -62,9 +62,11 @@ Route::get('/', function () {
     return redirect('/sitio-4n');
 })->name('home');
 
-Route::get('/sitio-4n', function () {
-    return view('landing-react');
-})->name('sitio.4n');
+Route::get('/sitio-4n/{tracking?}', function (?string $tracking = null) {
+    return view('landing-react', [
+        'initialTracking' => $tracking,
+    ]);
+})->where('tracking', '[A-Za-z0-9\-]+')->name('sitio.4n');
 
 Route::get('/acceso-trabajadores', function () {
     return view('landing');

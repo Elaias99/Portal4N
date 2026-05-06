@@ -9,6 +9,14 @@
     @vite('resources/js/react/landing/main.jsx')
 </head>
 <body>
-    <div id="react-root"></div>
+
+
+    <div
+        id="react-root"
+        data-initial-tracking="{{ $initialTracking ?? '' }}"
+    ></div>
+
+
+
 </body>
 </html>

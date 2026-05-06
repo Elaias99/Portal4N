@@ -332,7 +332,9 @@ function ChileRouteGraphic() {
   );
 }
 
-export default function FourNLogisticaWebsite() {
+export default function FourNLogisticaWebsite( { initialTracking = "" }) {
+
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [tracking, setTracking] = useState("");
   const [trackingResult, setTrackingResult] = useState(null);
@@ -354,6 +356,23 @@ export default function FourNLogisticaWebsite() {
 
   const [accessOpen, setAccessOpen] = useState(false);
   const accessMenuRef = useRef(null);
+  const initialTrackingAppliedRef = useRef(false);
+
+  useEffect(() => {
+    const cleanInitialTracking = String(initialTracking || "").trim();
+
+    if (!cleanInitialTracking || initialTrackingAppliedRef.current) return;
+
+    initialTrackingAppliedRef.current = true;
+    setTracking(cleanInitialTracking);
+
+    handleTrackingSubmit({
+      preventDefault: () => {},
+      trackingOverride: cleanInitialTracking,
+      updateUrl: false,
+    });
+  }, [initialTracking]);
+
 
   useEffect(() => {
   function handleClickOutside(event) {
@@ -436,7 +455,8 @@ export default function FourNLogisticaWebsite() {
   async function handleTrackingSubmit(event) {
     event.preventDefault();
 
-    const cleanTracking = tracking.trim();
+    const cleanTracking = String(event.trackingOverride || tracking).trim();
+    const shouldUpdateUrl = event.updateUrl !== false;
 
     setTrackingSearched(true);
     setTrackingError("");
@@ -446,6 +466,16 @@ export default function FourNLogisticaWebsite() {
     if (!cleanTracking) {
       setTrackingError("Debes ingresar un número de seguimiento.");
       return;
+    }
+
+    setTracking(cleanTracking);
+
+    if (shouldUpdateUrl) {
+      const newUrl = `/sitio-4n/${encodeURIComponent(cleanTracking)}`;
+
+      if (window.location.pathname !== newUrl) {
+        window.history.pushState({}, "", newUrl);
+      }
     }
 
     setTrackingLoading(true);
@@ -459,6 +489,9 @@ export default function FourNLogisticaWebsite() {
       setTrackingLoading(false);
     }
   }
+
+
+
 
   return (
     <div
