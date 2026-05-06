@@ -1,19 +1,5 @@
 @extends('layouts.app')
 
-@php
-$notificaciones = Auth::user()->unreadNotifications
-    ->whereIn('type', [
-        'App\Notifications\SolicitudActualizada',
-        'App\Notifications\NuevoReclamoAreaNotification',
-        'App\Notifications\ReclamoRespondidoNotification',
-        'App\Notifications\NuevoComentarioReclamoNotification',
-        'App\Notifications\ReclamoCerradoNotification',
-        'App\Notifications\ReclamoReabiertoNotification',
-    ])
-    ->sortByDesc('created_at');
-@endphp
-
-
 @vite(['resources/css/custom.css'])
 
 @section('content')
@@ -28,25 +14,6 @@ $notificaciones = Auth::user()->unreadNotifications
         {{ session('success') }}
     </div>
 @endif
-
-<div class="container mb-4">
-    <h4 class="mb-3">🔔 Notificaciones</h4>
-
-    <form method="POST" action="{{ route('notifications.markAllAsRead') }}" class="mb-3 text-end">
-        @csrf
-        <button type="submit" class="btn btn-sm btn-outline-primary">
-            Marcar todas como leídas
-        </button>
-    </form>
-
-    <div class="list-group" id="notificacionesEmpleado">
-        {{-- JavaScript insertará las notificaciones aquí --}}
-    </div>
-</div>
-
-
-
-
 
 <div class="container">
     <h1 class="mb-4 text-center">Perfil del Empleado</h1>

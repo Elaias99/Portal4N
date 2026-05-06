@@ -8,10 +8,30 @@ const rootElement = document.getElementById("portal-sidebar-root");
 if (rootElement) {
     const userName = rootElement.dataset.userName || "";
     const canOpenMenu = rootElement.dataset.canOpenMenu === "true";
+    const canSeeAdminMenu = rootElement.dataset.canSeeAdminMenu === "true";
+    const canSeeAdminPanel = rootElement.dataset.canSeeAdminPanel === "true";
+    const canSeeAdminOnly = rootElement.dataset.canSeeAdminOnly === "true";
+    const canSeeTrackingMenu = rootElement.dataset.canSeeTrackingMenu === "true";
+
+    let routes = {};
+
+    try {
+        routes = JSON.parse(rootElement.dataset.routes || "{}");
+    } catch (error) {
+        console.error("No se pudieron leer las rutas del sidebar.", error);
+    }
 
     createRoot(rootElement).render(
         <StrictMode>
-            <Sidebar userName={userName} canOpenMenu={canOpenMenu} />
+            <Sidebar
+                userName={userName}
+                canOpenMenu={canOpenMenu}
+                canSeeAdminMenu={canSeeAdminMenu}
+                canSeeAdminOnly={canSeeAdminOnly}
+                canSeeAdminPanel={canSeeAdminPanel}
+                canSeeTrackingMenu={canSeeTrackingMenu}
+                routes={routes}
+            />
         </StrictMode>
     );
 }

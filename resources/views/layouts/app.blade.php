@@ -101,16 +101,6 @@
 <body>
     <div id="app">
 
-        <div
-            id="portal-sidebar-root"
-            data-user-name="{{ auth()->check() ? auth()->user()->name : '' }}"
-            data-can-open-menu="{{ auth()->check() && (
-                auth()->user()->hasRole(['admin', 'jefe']) ||
-                (auth()->user()->trabajador && auth()->user()->trabajador->area_id) ||
-                $isTrackingOnlyUser
-            ) ? 'true' : 'false' }}"
-        ></div>
-
 
         <div id="pageLoader" class="page-loader" aria-hidden="true">
             <div class="page-loader__card" role="status" aria-live="polite" aria-label="Cargando">
@@ -125,19 +115,51 @@
 
         <nav class="navbar navbar-expand-md navbar-dark">
             <div class="container">
-                <!-- Off-canvas Sidebar Menu Button (only for roles admin and jefe) -->
+                <!-- Off-canvas Sidebar Menu React -->
                 @auth
+
+                    {{-- Definir que verá cada rol y que acceso tiene --}}
                     @if (
                         auth()->user()->hasRole(['admin', 'jefe']) ||
                         (auth()->user()->trabajador && auth()->user()->trabajador->area_id) ||
                         $isTrackingOnlyUser
                     )
-                        <button class="btn btn-outline-light" type="button"
-                                data-bs-toggle="offcanvas"
-                                data-bs-target="#menuSidebar"
-                                aria-controls="menuSidebar">
-                            <i class="fas fa-bars"></i> Menú
-                        </button>
+
+
+                    @php
+                        $sidebarRoutes = [
+                            'empleadosIndex' => route('empleados.index'),
+                            'empleadosLocalidades' => route('empleados.localidades'),
+                            'hijosIndex' => route('hijos.index'),
+                            'tallasIndex' => route('tallas.index'),
+                            'areasIndex' => route('areas.index'),
+
+                            'solicitudesIndex' => route('solicitudes.index'),
+                            'solicitudesVacaciones' => route('solicitudes.vacaciones'),
+
+                            'archivosRespaldo' => route('admin.archivos-respaldo'),
+                            'adminIndex' => route('admin.index'),
+                            'adminControlPanel' => route('admin.controlpanel.index'),
+                            'historialVacacion' => route('historial-vacacion.index'),
+
+                            'trackingDeliveryLinks' => url('/tracking/delivery-links'),
+                            'labels' => url('/labels'),
+                        ];
+                    @endphp
+
+                    <div
+                        id="portal-sidebar-root"
+                        data-user-name="{{ auth()->user()->name }}"
+                        data-can-open-menu="true"
+                        data-can-see-admin-menu="{{ auth()->user()->hasRole(['admin', 'jefe']) ? 'true' : 'false' }}"
+                        data-can-see-admin-only="{{ auth()->user()->hasRole('admin') ? 'true' : 'false' }}"
+                        data-can-see-admin-panel="{{ Auth::check() && Auth::id() === 1 ? 'true' : 'false' }}"
+                        data-can-see-tracking-menu="{{ $isTrackingOnlyUser ? 'true' : 'false' }}"
+                        data-routes='@json($sidebarRoutes)'
+                    ></div>
+
+
+
                     @endif
                 @endauth
 
@@ -216,11 +238,16 @@
                 $isTrackingOnlyUser
             )
 
+
+
         <div class="offcanvas offcanvas-start" tabindex="-1" id="menuSidebar" aria-labelledby="menuSidebarLabel">
+
+
             <div class="offcanvas-header">
                 <h5 class="offcanvas-title" id="menuSidebarLabel">Navegación Rápida</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
             </div>
+            
             <div class="offcanvas-body">
                 <div class="logo-container">
                     <img src="{{ asset('images/logo.png') }}" alt="4Nortes" class="logo-guirnalda">
@@ -367,6 +394,9 @@
                 </ul>
             </div>
         </div>
+
+
+
         @endif
         @endauth
 
