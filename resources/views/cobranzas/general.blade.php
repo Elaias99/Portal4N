@@ -49,10 +49,6 @@
                         Quitar programación
                     </button>
 
-                    {{-- <a href="{{ route('finanzas_compras.index') }}"
-                    class="btn btn-sm btn-outline-warning rounded-pill px-3">
-                        Revisar compras
-                    </a> --}}
                 </div>
             </div>
 
@@ -148,10 +144,6 @@
                         Quitar programación
                     </button>
 
-                    {{-- <a href="{{ route('finanzas_compras.index') }}"
-                    class="btn btn-sm btn-outline-danger rounded-pill px-3">
-                        Revisar pendientes
-                    </a> --}}
                 </div>
             </div>
 

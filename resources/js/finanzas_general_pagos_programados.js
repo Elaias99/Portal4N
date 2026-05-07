@@ -50,6 +50,7 @@
         let documentosSeleccionados = {};
         let pagosProcesados = false;
         let procesando = false;
+        let recargaPanelEjecutada = false;
 
         function limpiarMensajes() {
             $('#msg-pago-programado-ok')?.remove();
@@ -81,6 +82,7 @@
         function setEstadoInicialModal() {
             pagosProcesados = false;
             procesando = false;
+            recargaPanelEjecutada = false;
             limpiarMensajes();
 
             if (btnSubmit) {
@@ -310,14 +312,30 @@
             });
         }
 
-        function cerrarModal() {
+        function recargarPanelSiCorresponde() {
+            if (!pagosProcesados || recargaPanelEjecutada) {
+                return false;
+            }
+
+            recargaPanelEjecutada = true;
+            window.location.reload();
+
+            return true;
+        }
+
+        function cerrarModal(e = null) {
             if (procesando) return;
+
+            if (pagosProcesados && e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
 
             modal.hide();
 
             if (pagosProcesados) {
                 setTimeout(() => {
-                    window.location.reload();
+                    recargarPanelSiCorresponde();
                 }, 250);
             }
         }
@@ -331,11 +349,15 @@
         }
 
         if (btnCancelar) {
-            btnCancelar.addEventListener('click', cerrarModal);
+            btnCancelar.addEventListener('click', (e) => {
+                cerrarModal(e);
+            });
         }
 
         if (btnCerrarX) {
-            btnCerrarX.addEventListener('click', cerrarModal);
+            btnCerrarX.addEventListener('click', (e) => {
+                cerrarModal(e);
+            });
         }
 
         modalEl.addEventListener('click', (e) => {
@@ -408,11 +430,10 @@
             }
         });
 
-        modalEl.addEventListener('hidden.bs.modal', () => {
-            if (pagosProcesados) {
-                return;
-            }
 
+
+
+        function limpiarModalAlCerrar() {
             tbody.innerHTML = '';
             hiddenWrap.innerHTML = '';
             totalesEmpresaEl.innerHTML = '';
@@ -424,6 +445,21 @@
             documentosSeleccionados = {};
             pagosProcesados = false;
             procesando = false;
+            recargaPanelEjecutada = false;
+        }
+
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            if (recargarPanelSiCorresponde()) {
+                return;
+            }
+
+            limpiarModalAlCerrar();
         });
+
+
+
+
+
+
     });
 })();
