@@ -290,7 +290,7 @@
     'sinSeleccionTexto' => 'No hay honorarios seleccionados.',
 
     'formId' => 'form-pago-programados-hoy',
-    'action' => route('honorarios.mensual.pago.masivo'),
+    'action' => route('honorarios.mensual.pago.masivo.exportar'),
     'method' => 'POST',
 
     'closeXId' => 'btn-cerrar-x-pago-programados-hoy',

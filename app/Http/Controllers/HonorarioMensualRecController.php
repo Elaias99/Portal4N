@@ -619,13 +619,22 @@ class HonorarioMensualRecController extends Controller
             'fecha_pago'   => 'required|date|before_or_equal:today',
         ]);
 
-        DB::transaction(function () use ($request) {
+        $pagados = 0;
+        $omitidos = 0;
+        $totalPagado = 0;
 
-            foreach ($request->honorarios as $honorarioId) {
+        DB::transaction(function () use ($request, &$pagados, &$omitidos, &$totalPagado) {
+
+            $ids = collect($request->honorarios)
+                ->unique()
+                ->values();
+
+            foreach ($ids as $honorarioId) {
 
                 $honorario = HonorarioMensualRec::find($honorarioId);
 
                 if (!$honorario) {
+                    $omitidos++;
                     continue;
                 }
 
@@ -635,6 +644,7 @@ class HonorarioMensualRecController extends Controller
                     $honorario->prontoPagos()->exists() ||
                     $honorario->saldo_pendiente <= 0
                 ) {
+                    $omitidos++;
                     continue;
                 }
 
@@ -681,10 +691,27 @@ class HonorarioMensualRecController extends Controller
                         'saldo' => 0,
                     ],
                 ]);
+
+                $pagados++;
+                $totalPagado += (int) $saldoAnterior;
             }
         });
 
-        return redirect()->back()->with('success', 'Pago masivo registrado correctamente.');
+        $message = "Pago masivo registrado correctamente. Pagados: {$pagados}. Omitidos: {$omitidos}.";
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'ok'           => true,
+                'message'      => $message,
+                'pagados'      => $pagados,
+                'omitidos'     => $omitidos,
+                'total_pagado' => $totalPagado,
+            ]);
+        }
+
+        return redirect()
+            ->back()
+            ->with('success', $message);
     }
 
 
@@ -693,7 +720,8 @@ class HonorarioMensualRecController extends Controller
 
 
     // =========================
-    // Métodos para exportar pagos masivos a Excel, agrupados por empresa, con detalle de cada pago incluido 
+    // Métodos para exportar pagos masivos a Excel, agrupados por empresa,
+    // con detalle de cada pago incluido 
     // =========================
     public function storePagoMasivoExport(Request $request)
     {
@@ -703,8 +731,6 @@ class HonorarioMensualRecController extends Controller
             'fecha_pago'   => 'required|date|before_or_equal:today',
         ]);
 
-
-
         /**
          * [
          *   empresa_id => Collection<HonorarioMensualRec>
@@ -712,19 +738,33 @@ class HonorarioMensualRecController extends Controller
          */
         $honorariosPorEmpresa = collect();
 
+        $pagados = 0;
+        $omitidos = 0;
+        $totalPagado = 0;
+
         // =========================
         // TRANSACCIÓN: PAGOS + AGRUPACIÓN
         // =========================
-        DB::transaction(function () use ($request, &$honorariosPorEmpresa) {
+        DB::transaction(function () use (
+            $request,
+            &$honorariosPorEmpresa,
+            &$pagados,
+            &$omitidos,
+            &$totalPagado
+        ) {
+            $ids = collect($request->honorarios)
+                ->unique()
+                ->values();
 
-            foreach ($request->honorarios as $honorarioId) {
+            foreach ($ids as $honorarioId) {
 
-                $honorario = HonorarioMensualRec::with('empresa')->find($honorarioId);
-
+                $honorario = HonorarioMensualRec::with([
+                    'empresa',
+                    'pagoProgramado',
+                ])->find($honorarioId);
 
                 if (!$honorario) {
-
-                
+                    $omitidos++;
                     continue;
                 }
 
@@ -734,11 +774,12 @@ class HonorarioMensualRecController extends Controller
                     $honorario->prontoPagos()->exists() ||
                     $honorario->saldo_pendiente <= 0
                 ) {
+                    $omitidos++;
                     continue;
                 }
 
                 $estadoAnterior = $honorario->estado_financiero_final;
-                $saldoAnterior  = $honorario->saldo_pendiente;
+                $saldoAnterior  = (int) $honorario->saldo_pendiente;
 
                 // =========================
                 // CREAR PAGO
@@ -747,6 +788,11 @@ class HonorarioMensualRecController extends Controller
                     'fecha_pago' => $request->fecha_pago,
                     'user_id'    => Auth::id(),
                 ]);
+
+                // =========================
+                // ELIMINAR PROGRAMACIÓN SI EXISTE
+                // =========================
+                $honorario->pagoProgramado()->delete();
 
                 // =========================
                 // ACTUALIZAR HONORARIO
@@ -771,7 +817,8 @@ class HonorarioMensualRecController extends Controller
                         'saldo' => $saldoAnterior,
                     ],
                     'datos_nuevos'     => [
-                        'saldo' => 0,
+                        'fecha_pago' => $request->fecha_pago,
+                        'saldo'      => 0,
                     ],
                 ]);
 
@@ -785,8 +832,15 @@ class HonorarioMensualRecController extends Controller
                 }
 
                 $honorariosPorEmpresa[$empresaId]->push(
-                    $honorario->fresh()
+                    $honorario->fresh([
+                        'empresa',
+                        'cobranzaCompra',
+                        'pagos',
+                    ])
                 );
+
+                $pagados++;
+                $totalPagado += $saldoAnterior;
             }
         });
 
@@ -797,19 +851,38 @@ class HonorarioMensualRecController extends Controller
 
         foreach ($honorariosPorEmpresa as $empresaId => $honorarios) {
 
-            $token = (string) \Illuminate\Support\Str::uuid();
+            if ($honorarios->isEmpty()) {
+                continue;
+            }
+
+            $token = (string) Str::uuid();
 
             // Guardar la Collection para que downloadPagoMasivoExcel($token) la consuma
-            Cache::put("pago_masivo_excel:$token", $honorarios, now()->addMinutes(10));
+            Cache::put(
+                "pago_masivo_excel:$token",
+                $honorarios,
+                now()->addMinutes(10)
+            );
+
+            $empresaNombre = $honorarios->first()?->empresa?->Nombre ?? 'Empresa';
 
             $downloads[] = [
-                'url' => route('honorarios.mensual.pago.masivo.descargar', ['token' => $token]),
+                'empresa' => $empresaNombre,
+                'url'     => route('honorarios.mensual.pago.masivo.descargar', [
+                    'token' => $token,
+                ]),
             ];
         }
 
+        $message = "Pago masivo registrado correctamente. Pagados: {$pagados}. Omitidos: {$omitidos}.";
+
         return response()->json([
-            'ok' => true,
-            'downloads' => $downloads,
+            'ok'           => true,
+            'message'      => $message,
+            'pagados'      => $pagados,
+            'omitidos'     => $omitidos,
+            'total_pagado' => $totalPagado,
+            'downloads'    => $downloads,
         ]);
     }
 

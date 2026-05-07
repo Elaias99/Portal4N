@@ -20,10 +20,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCerrarX = document.getElementById('btn-cerrar-x-pago-programados-hoy');
     const btnCancelarModal = document.getElementById('btn-cancelar-pago-programados-hoy');
 
+    const formPagoProgramados = document.getElementById('form-pago-programados-hoy');
+    const btnSubmitPagoProgramados = document.getElementById('btn-submit-pago-programados-hoy');
+
     const formEliminar = document.getElementById('form-eliminar-programados');
     const inputsEliminar = document.getElementById('inputs-eliminar-programados');
 
     let modal = null;
+    let pagoProgramadoProcesado = false;
+    let recargaPanelEjecutada = false;
+
+    const TEXTO_CONFIRMAR_PAGO = 'Confirmar pago';
+    const TEXTO_PROCESANDO = 'Procesando...';
+    const TEXTO_PAGO_REGISTRADO = 'Pago registrado';
+    const TEXTO_CANCELAR = 'Cancelar';
+    const TEXTO_CERRAR = 'Cerrar';
 
     if (modalEl) {
         modal = new bootstrap.Modal(modalEl);
@@ -35,6 +46,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function textoFolios(cantidad) {
         return `${cantidad} ${cantidad === 1 ? 'folio' : 'folios'}`;
+    }
+
+    function descargarExcels(downloads) {
+        return new Promise((resolve) => {
+            if (!Array.isArray(downloads) || downloads.length === 0) {
+                resolve();
+                return;
+            }
+
+            downloads.forEach((item, index) => {
+                setTimeout(() => {
+                    const link = document.createElement('a');
+                    link.href = item.url;
+                    link.download = '';
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                }, index * 800);
+            });
+
+            setTimeout(resolve, downloads.length * 800 + 300);
+        });
     }
 
     function renderTotalesProgramados(seleccionados) {
@@ -89,6 +122,85 @@ document.addEventListener('DOMContentLoaded', () => {
         totalesEmpresaWrap.innerHTML = html;
     }
 
+    function getFeedbackPagoProgramados() {
+        if (!modalEl) return null;
+
+        let feedback = modalEl.querySelector('#panel-pago-programados-feedback');
+
+        if (!feedback) {
+            feedback = document.createElement('div');
+            feedback.id = 'panel-pago-programados-feedback';
+            feedback.className = 'alert d-none mb-3';
+            feedback.setAttribute('role', 'alert');
+
+            const form = modalEl.querySelector('#form-pago-programados-hoy');
+
+            if (form) {
+                form.prepend(feedback);
+            }
+        }
+
+        return feedback;
+    }
+
+    function mostrarFeedbackPagoProgramados(tipo, mensaje) {
+        const feedback = getFeedbackPagoProgramados();
+        if (!feedback) return;
+
+        feedback.className = `alert alert-${tipo} mb-3`;
+        feedback.textContent = mensaje;
+        feedback.classList.remove('d-none');
+    }
+
+    function limpiarFeedbackPagoProgramados() {
+        const feedback = getFeedbackPagoProgramados();
+        if (!feedback) return;
+
+        feedback.className = 'alert d-none mb-3';
+        feedback.textContent = '';
+    }
+
+    function setEstadoSubmitPagoProgramados(estado) {
+        if (!btnSubmitPagoProgramados) return;
+
+        if (estado === 'procesando') {
+            btnSubmitPagoProgramados.disabled = true;
+            btnSubmitPagoProgramados.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2"
+                      role="status"
+                      aria-hidden="true"></span>
+                ${TEXTO_PROCESANDO}
+            `;
+            return;
+        }
+
+        if (estado === 'registrado') {
+            btnSubmitPagoProgramados.disabled = true;
+            btnSubmitPagoProgramados.textContent = TEXTO_PAGO_REGISTRADO;
+            return;
+        }
+
+        btnSubmitPagoProgramados.disabled = false;
+        btnSubmitPagoProgramados.textContent = TEXTO_CONFIRMAR_PAGO;
+    }
+
+    function resetEstadoModalPagoProgramados() {
+        pagoProgramadoProcesado = false;
+        recargaPanelEjecutada = false;
+
+        limpiarFeedbackPagoProgramados();
+        setEstadoSubmitPagoProgramados('normal');
+
+        if (btnCancelarModal) {
+            btnCancelarModal.disabled = false;
+            btnCancelarModal.textContent = TEXTO_CANCELAR;
+        }
+
+        if (btnCerrarX) {
+            btnCerrarX.disabled = false;
+        }
+    }
+
     function limpiarModalPago() {
         if (resumenWrap) {
             resumenWrap.innerHTML = '';
@@ -103,6 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         renderTotalesProgramados([]);
+        limpiarFeedbackPagoProgramados();
     }
 
     if (checkAllHoy) {
@@ -149,16 +262,19 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        resetEstadoModalPagoProgramados();
+
         resumenWrap.innerHTML = '';
         inputsWrap.innerHTML = '';
 
         seleccionados.forEach(chk => {
-            const saldoFormateado = new Intl.NumberFormat('es-CL').format(Number(chk.dataset.saldo || 0));
+            const saldoFormateado = new Intl.NumberFormat('es-CL')
+                .format(Number(chk.dataset.saldo || 0));
 
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${chk.dataset.folio}</td>
-                <td>${chk.dataset.emisor}</td>
+                <td>${chk.dataset.folio || ''}</td>
+                <td>${chk.dataset.emisor || ''}</td>
                 <td class="text-end">$${saldoFormateado}</td>
             `;
 
@@ -188,23 +304,174 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (btnCerrarX && modal) {
-        btnCerrarX.addEventListener('click', () => {
-            modal.hide();
-        });
+
+
+
+    function recargarPanelSiCorresponde() {
+        if (!pagoProgramadoProcesado || recargaPanelEjecutada) {
+            return false;
+        }
+
+        recargaPanelEjecutada = true;
+        window.location.reload();
+
+        return true;
     }
 
-    if (btnCancelarModal && modal) {
-        btnCancelarModal.addEventListener('click', () => {
+    function cerrarModalPagoProgramados(e = null) {
+        if (pagoProgramadoProcesado) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            if (modal) {
+                modal.hide();
+            } else if (window.$) {
+                $('#modalPagoProgramadosHoy').modal('hide');
+            }
+
+            setTimeout(() => {
+                recargarPanelSiCorresponde();
+            }, 250);
+
+            return;
+        }
+
+        if (modal) {
             modal.hide();
-        });
+        } else if (window.$) {
+            $('#modalPagoProgramadosHoy').modal('hide');
+        }
+    }
+
+    if (btnCerrarX) {
+        btnCerrarX.addEventListener('click', cerrarModalPagoProgramados);
+    }
+
+    if (btnCancelarModal) {
+        btnCancelarModal.addEventListener('click', cerrarModalPagoProgramados);
+    }
+
+    function manejarCierreModalPagoProgramados() {
+        if (recargarPanelSiCorresponde()) {
+            return;
+        }
+
+        limpiarModalPago();
+        resetEstadoModalPagoProgramados();
     }
 
     if (modalEl) {
-        modalEl.addEventListener('hidden.bs.modal', () => {
-            limpiarModalPago();
+        modalEl.addEventListener('hidden.bs.modal', manejarCierreModalPagoProgramados);
+    }
+
+    if (window.$) {
+        $('#modalPagoProgramadosHoy').on('hidden.bs.modal', manejarCierreModalPagoProgramados);
+    }
+
+
+
+
+
+
+
+
+
+    if (formPagoProgramados) {
+        formPagoProgramados.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            limpiarFeedbackPagoProgramados();
+            setEstadoSubmitPagoProgramados('procesando');
+
+            if (btnCancelarModal) {
+                btnCancelarModal.disabled = true;
+            }
+
+            if (btnCerrarX) {
+                btnCerrarX.disabled = true;
+            }
+
+            try {
+                const formData = new FormData(formPagoProgramados);
+
+                const response = await fetch(formPagoProgramados.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                    },
+                });
+
+                const data = await response.json().catch(() => null);
+
+                if (!response.ok) {
+                    if (data?.message) {
+                        throw new Error(data.message);
+                    }
+
+                    throw new Error('No fue posible registrar el pago.');
+                }
+
+                if (!data || data.ok !== true) {
+                    throw new Error('Respuesta inválida del servidor.');
+                }
+
+                const totalPagado = formatMonto(data.total_pagado || 0);
+                const cantidadDescargas = Array.isArray(data.downloads)
+                    ? data.downloads.length
+                    : 0;
+
+                mostrarFeedbackPagoProgramados(
+                    'info',
+                    `${data.message || 'Pago registrado correctamente.'} Preparando ${cantidadDescargas} archivo(s) Excel...`
+                );
+
+                await descargarExcels(data.downloads);
+
+                pagoProgramadoProcesado = true;
+
+                setEstadoSubmitPagoProgramados('registrado');
+
+                if (btnCancelarModal) {
+                    btnCancelarModal.disabled = false;
+                    btnCancelarModal.textContent = TEXTO_CERRAR;
+                }
+
+                if (btnCerrarX) {
+                    btnCerrarX.disabled = false;
+                }
+
+                mostrarFeedbackPagoProgramados(
+                    'success',
+                    `${data.message || 'Pago registrado correctamente.'} Total pagado: ${totalPagado}. Excel generado(s): ${cantidadDescargas}.`
+                );
+            } catch (error) {
+                console.error('[PANEL HONORARIOS] Error registrando pago:', error);
+
+                setEstadoSubmitPagoProgramados('normal');
+
+                if (btnCancelarModal) {
+                    btnCancelarModal.disabled = false;
+                    btnCancelarModal.textContent = TEXTO_CANCELAR;
+                }
+
+                if (btnCerrarX) {
+                    btnCerrarX.disabled = false;
+                }
+
+                mostrarFeedbackPagoProgramados(
+                    'danger',
+                    error?.message || 'Ocurrió un error al registrar el pago.'
+                );
+            }
         });
     }
+
+
+
 
     function eliminarProgramados(selector, mensajeConfirmacion) {
         if (!formEliminar || !inputsEliminar) {

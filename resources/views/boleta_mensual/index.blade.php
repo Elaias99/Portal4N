@@ -578,24 +578,12 @@
 
     <div class="hm-table-wrap">
 
-        {{-- <div class="hm-table-toolbar">
-            <p class="hm-table-title">Reporte Honorarios Mensuales</p>
-            <div class="hm-subtle">
-                @if(method_exists($registros, 'total'))
-                    Mostrando {{ $registros->count() }} de {{ $registros->total() }}
-                @else
-                    Registros: {{ $registros->count() }}
-                @endif
-            </div>
-        </div> --}}
 
         @if($registros->isEmpty())
             <div class="p-3">
                 <p class="text-muted mb-0">No hay honorarios registrados.</p>
             </div>
         @else
-
-
 
 
             <x-finanzas.plain-table>
