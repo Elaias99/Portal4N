@@ -18,6 +18,7 @@
     <title>{{ config('app.name', '4Nortes') }}</title>
 
     {{-- <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}"> --}}
+    <link rel="preload" as="image" href="{{ asset('images/logo.png') }}">
 
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -150,6 +151,7 @@
                     <div
                         id="portal-sidebar-root"
                         data-user-name="{{ auth()->user()->name }}"
+                        data-logo-url="{{ asset('images/logo.png') }}"
                         data-can-open-menu="true"
                         data-can-see-admin-menu="{{ auth()->user()->hasRole(['admin', 'jefe']) ? 'true' : 'false' }}"
                         data-can-see-admin-only="{{ auth()->user()->hasRole('admin') ? 'true' : 'false' }}"
@@ -230,179 +232,6 @@
             </div>
         </nav>
 
-        <!-- Offcanvas Sidebar (only for roles admin and jefe) -->
-        @auth
-        @if (
-                auth()->user()->hasRole(['admin', 'jefe']) ||
-                (auth()->user()->trabajador && auth()->user()->trabajador->area_id) ||
-                $isTrackingOnlyUser
-            )
-
-
-
-        <div class="offcanvas offcanvas-start" tabindex="-1" id="menuSidebar" aria-labelledby="menuSidebarLabel">
-
-
-            <div class="offcanvas-header">
-                <h5 class="offcanvas-title" id="menuSidebarLabel">Navegación Rápida</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-            </div>
-            
-            <div class="offcanvas-body">
-                <div class="logo-container">
-                    <img src="{{ asset('images/logo.png') }}" alt="4Nortes" class="logo-guirnalda">
-                </div>
-                <ul class="list-group">
-
-                    {{-- Secciones solo visibles para admin o jefe --}}
-                    @role('admin|jefe')
-                        <!-- Sección: Información de Empleados -->
-                        <li class="list-group-item">
-                            <a class="text-decoration-none dropdown-toggle" data-bs-toggle="collapse" href="#informacionEmpleados" role="button" aria-expanded="false" aria-controls="informacionEmpleados">
-                                <i class="fas fa-address-book me-2"></i> Información de Empleados
-                            </a>
-                            <div class="collapse" id="informacionEmpleados">
-                                <ul class="list-group">
-                                    <li class="list-group-item">
-                                        <a href="{{ route('empleados.index') }}" class="text-decoration-none">
-                                            <i class="fas fa-user-friends me-2"></i> Trabajadores
-                                        </a>
-                                    </li>
-                                    <li class="list-group-item">
-                                        <a href="{{ route('empleados.localidades') }}" class="text-decoration-none">
-                                            <i class="fas fa-map-marker-alt me-2"></i> Zonas de Residencia
-                                        </a>
-                                    </li>
-                                    <li class="list-group-item">
-                                        <a href="{{ route('hijos.index') }}" class="text-decoration-none">
-                                            <i class="fas fa-child me-2"></i> Hijos de Empleados
-                                        </a>
-                                    </li>
-
-                                    <li class="list-group-item">
-                                        <a href="{{ route('tallas.index') }}" class="text-decoration-none">
-                                            <i class="fas fa-tshirt me-2"></i> Tallas de Uniformes
-                                        </a>
-                                    </li>
-
-                                    <li class="list-group-item">
-                                        <a href="{{ route('areas.index') }}" class="text-decoration-none">
-                                            <i class="fa-solid fa-tags me-2"></i>   Áreas de Trabajo
-
-                                        </a>
-                                    </li>
-
-                                </ul>
-                            </div>
-                        </li>
-
-                        <!-- Sección: Solicitudes y Permisos -->
-                        <li class="list-group-item">
-                            <a class="text-decoration-none dropdown-toggle" data-bs-toggle="collapse" href="#solicitudesPermisos" role="button" aria-expanded="false" aria-controls="solicitudesPermisos">
-                                <i class="fas fa-file-signature me-2"></i> Solicitudes y Permisos
-                            </a>
-                            <div class="collapse" id="solicitudesPermisos">
-                                <ul class="list-group">
-                                    <li class="list-group-item">
-                                        <a href="{{ route('solicitudes.index') }}" class="text-decoration-none">
-                                            <i class="fas fa-edit me-2"></i> Solicitudes de Modificación
-                                        </a>
-                                    </li>
-                                    <li class="list-group-item">
-                                        <a href="{{ route('solicitudes.vacaciones') }}" class="text-decoration-none">
-                                            <i class="fas fa-calendar-day me-2"></i> Solicitudes de Días
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </li>
-
-                        <!-- Archivos Adjuntos y Proveedores -->
-                        <li class="list-group-item">
-                            <a href="{{ route('admin.archivos-respaldo') }}" class="text-decoration-none">
-                                <i class="fas fa-folder-open me-2"></i> Archivos Adjuntos
-                            </a>
-                        </li>
-
-                        @role('admin')
-                        <li class="list-group-item">
-                            <a class="text-decoration-none" href="{{ route('admin.index') }}">
-                                <i class="fas fa-cogs me-2"></i> {{ __('Centro de Gestión') }}
-                            </a>
-                        </li>
-                        @endrole
-
-                        @if (Auth::check() && Auth::id() === 1)
-                            <li class="list-group-item">
-                                <a href="{{ route('admin.controlpanel.index') }}" class="text-decoration-none">
-                                    <i class="fas fa-tools me-2"></i> Panel Administrativo
-                                </a>
-                            </li>
-                        @endif
-
-
-                        <!-- Historial de Vacaciones -->
-                        @role('admin')
-                        <li class="list-group-item">
-                            <a href="{{ route('historial-vacacion.index') }}" class="text-decoration-none">
-                                <i class="fas fa-history me-2"></i> Historial de Vacaciones
-                            </a>
-                        </li>
-                        @endrole
-
-
-
-
-
-
-
-                    @endrole
-
-
-                        @if ($isTrackingOnlyUser)
-                            <li class="list-group-item">
-                                <a class="text-decoration-none dropdown-toggle"
-                                data-bs-toggle="collapse"
-                                href="#informacionTracking"
-                                role="button"
-                                aria-expanded="false"
-                                aria-controls="informacionTracking">
-                                    <i class="fas fa-truck-moving me-2"></i> Tracking
-                                </a>
-
-                                <div class="collapse" id="informacionTracking">
-                                    <ul class="list-group">
-                                        <li class="list-group-item">
-                                            <a href="{{ url('/tracking/delivery-links') }}" class="text-decoration-none">
-                                                <i class="fas fa-search-location me-2"></i> Seguimiento Tracking
-                                            </a>
-                                        </li>
-                                    </ul>
-
-                                    <ul class="list-group">
-                                        <li class="list-group-item">
-                                            <a href="{{ url('/labels') }}" class="text-decoration-none">
-                                                <i class="fas fa-search-location me-2"></i> Etiquetas Zebra
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </li>
-                        @endif
-
-                    
-                </ul>
-            </div>
-        </div>
-
-
-
-        @endif
-        @endauth
-
-
-        
-
         <main class="py-4">
             @yield('content')
         </main>
@@ -412,21 +241,6 @@
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const $navbar = $('#navbarSupportedContent');
-
-            // Cierra el menú hamburguesa si está abierto al abrir el sidebar
-            $('#menuSidebar').on('show.bs.offcanvas', function () {
-                if ($navbar.hasClass('show')) {
-                    $navbar.collapse('hide');
-                }
-            });
-        });
-    </script>
-
-
 
     <script>
         if ('serviceWorker' in navigator) {

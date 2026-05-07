@@ -7,6 +7,7 @@ const rootElement = document.getElementById("portal-sidebar-root");
 
 if (rootElement) {
     const userName = rootElement.dataset.userName || "";
+    const logoUrl = rootElement.dataset.logoUrl || "";
     const canOpenMenu = rootElement.dataset.canOpenMenu === "true";
     const canSeeAdminMenu = rootElement.dataset.canSeeAdminMenu === "true";
     const canSeeAdminPanel = rootElement.dataset.canSeeAdminPanel === "true";
@@ -25,6 +26,7 @@ if (rootElement) {
         <StrictMode>
             <Sidebar
                 userName={userName}
+                logoUrl={logoUrl}
                 canOpenMenu={canOpenMenu}
                 canSeeAdminMenu={canSeeAdminMenu}
                 canSeeAdminOnly={canSeeAdminOnly}

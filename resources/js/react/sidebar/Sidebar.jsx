@@ -55,6 +55,7 @@ function SidebarSection({ id, title, icon, items, openSection, setOpenSection, o
 
 export default function Sidebar({
     userName,
+    logoUrl,
     canOpenMenu,
     canSeeAdminMenu = false,
     canSeeAdminOnly = false,
@@ -198,6 +199,10 @@ export default function Sidebar({
         return links;
     }, [canSeeAdminMenu, canSeeAdminOnly, canSeeAdminPanel, routes]);
 
+    const openSidebar = () => {
+        setOpen(true);
+    };
+
     const closeSidebar = () => {
         setOpen(false);
     };
@@ -211,7 +216,7 @@ export default function Sidebar({
             <button
                 type="button"
                 className="portal-sidebar-trigger"
-                onClick={() => setOpen(true)}
+                onClick={openSidebar}
                 aria-expanded={open}
                 aria-controls="portal-react-sidebar"
             >
@@ -219,72 +224,77 @@ export default function Sidebar({
                 <span>Menú</span>
             </button>
 
-            {open && (
-                <div className="portal-sidebar-layer">
-                    <button
-                        type="button"
-                        className="portal-sidebar-backdrop"
-                        onClick={closeSidebar}
-                        aria-label="Cerrar menú"
-                    ></button>
+            <div
+                className={`portal-sidebar-layer ${open ? "is-open" : ""}`}
+                aria-hidden={!open}
+            >
+                <button
+                    type="button"
+                    className="portal-sidebar-backdrop"
+                    onClick={closeSidebar}
+                    aria-label="Cerrar menú"
+                    tabIndex={open ? 0 : -1}
+                ></button>
 
-                    <aside
-                        id="portal-react-sidebar"
-                        className="portal-sidebar-panel"
-                        aria-label="Navegación rápida"
-                    >
-                        <div className="portal-sidebar-header">
-                            <div>
-                                <h2>Navegación Rápida</h2>
-                                <p>{userName}</p>
+                <aside
+                    id="portal-react-sidebar"
+                    className="portal-sidebar-panel"
+                    aria-label="Navegación rápida"
+                >
+                    <div className="portal-sidebar-header">
+                        <div>
+                            <h2>Navegación Rápida</h2>
+                            <p>{userName}</p>
+                        </div>
+
+                        <button
+                            type="button"
+                            className="portal-sidebar-close"
+                            onClick={closeSidebar}
+                            aria-label="Cerrar menú"
+                            tabIndex={open ? 0 : -1}
+                        >
+                            ×
+                        </button>
+                    </div>
+
+                    <div className="portal-sidebar-logo">
+                        {logoUrl && (
+                            <img src={logoUrl} alt="4Nortes Logística" />
+                        )}
+                    </div>
+
+                    <nav className="portal-sidebar-nav" aria-label="Menú principal">
+                        {sections.map((section) => (
+                            <SidebarSection
+                                key={section.id}
+                                id={section.id}
+                                title={section.title}
+                                icon={section.icon}
+                                items={section.items}
+                                openSection={openSection}
+                                setOpenSection={setOpenSection}
+                                onNavigate={closeSidebar}
+                            />
+                        ))}
+
+                        {singleLinks.length > 0 && (
+                            <div className="portal-sidebar-single-links">
+                                {singleLinks.map((item) => (
+                                    <SidebarLink
+                                        key={item.label}
+                                        href={item.href}
+                                        icon={item.icon}
+                                        onNavigate={closeSidebar}
+                                    >
+                                        {item.label}
+                                    </SidebarLink>
+                                ))}
                             </div>
-
-                            <button
-                                type="button"
-                                className="portal-sidebar-close"
-                                onClick={closeSidebar}
-                                aria-label="Cerrar menú"
-                            >
-                                ×
-                            </button>
-                        </div>
-
-                        <div className="portal-sidebar-logo">
-                            <img src="/images/logo.png" alt="4Nortes Logística" />
-                        </div>
-
-                        <nav className="portal-sidebar-nav" aria-label="Menú principal">
-                            {sections.map((section) => (
-                                <SidebarSection
-                                    key={section.id}
-                                    id={section.id}
-                                    title={section.title}
-                                    icon={section.icon}
-                                    items={section.items}
-                                    openSection={openSection}
-                                    setOpenSection={setOpenSection}
-                                    onNavigate={closeSidebar}
-                                />
-                            ))}
-
-                            {singleLinks.length > 0 && (
-                                <div className="portal-sidebar-single-links">
-                                    {singleLinks.map((item) => (
-                                        <SidebarLink
-                                            key={item.label}
-                                            href={item.href}
-                                            icon={item.icon}
-                                            onNavigate={closeSidebar}
-                                        >
-                                            {item.label}
-                                        </SidebarLink>
-                                    ))}
-                                </div>
-                            )}
-                        </nav>
-                    </aside>
-                </div>
-            )}
+                        )}
+                    </nav>
+                </aside>
+            </div>
         </>
     );
 }
