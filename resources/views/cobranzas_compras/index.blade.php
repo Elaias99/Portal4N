@@ -22,12 +22,12 @@
         <div class="d-flex justify-content-center gap-3 flex-wrap">
             @if(request('origen') === 'honorarios')
                 <a href="{{ route('honorarios.mensual.index') }}"
-                class="btn btn-outline-secondary px-4">
+                   class="btn btn-outline-secondary px-4">
                     Volver a Honorarios
                 </a>
             @else
                 <a href="{{ route('finanzas_compras.index') }}"
-                class="btn btn-outline-secondary px-4">
+                   class="btn btn-outline-secondary px-4">
                     Volver a Compras
                 </a>
             @endif
@@ -41,22 +41,16 @@
             <a href="{{ route('cobranzasCompra.export') }}" class="btn btn-outline-success px-4">
                 Exportar Excel
             </a>
-
-            {{-- Nueva vista: Salud de Proveedores --}}
-            <a href="{{ route('cobranzas-compras.salud') }}" class="btn btn-outline-dark px-4">
-                Salud de Proveedores
-            </a>
         </div>
-
     </div>
 
     {{-- Buscador --}}
     <form method="GET" action="{{ route('cobranzas-compras.index') }}" class="mb-4 d-flex justify-content-center">
         <div class="search-box d-flex align-items-center shadow-sm">
-            <input 
-                type="text" 
-                name="buscar" 
-                class="form-control border-0 ps-3" 
+            <input
+                type="text"
+                name="buscar"
+                class="form-control border-0 ps-3"
                 placeholder="Buscar por razón social o RUT..."
                 value="{{ request('buscar') }}"
             >
@@ -80,12 +74,11 @@
                     <tr>
                         <th>Rut Cliente</th>
                         <th>Razón Social</th>
+                        <th class="text-center">Uso</th>
                         <th>Servicio</th>
                         <th>Créditos</th>
+                        <th>Forma Pago</th>
                         <th>Tipo</th>
-                        <th>Zona</th>
-                        <th>Importancia</th>
-                        <th>Responsable</th>
                         <th class="text-center">Detalles</th>
                         <th>Acciones</th>
                     </tr>
@@ -95,50 +88,75 @@
                     @foreach ($cobranzasCompras as $c)
                         <tr>
                             <td>{{ $c->rut_cliente }}</td>
-                            <td>{{ $c->razon_social }}</td>
+
+                            <td class="razon-social-cell">
+                                {{ $c->razon_social }}
+                            </td>
+
+                            <td class="text-center">
+                                <div class="proveedor-uso-badges">
+                                    @if(($c->documentos_rcv_compras_count ?? 0) > 0)
+                                        <span class="proveedor-uso-badge proveedor-uso-badge--rcv">
+                                            RCV
+                                        </span>
+                                    @endif
+
+                                    @if(($c->documentos_bh_count ?? 0) > 0)
+                                        <span class="proveedor-uso-badge proveedor-uso-badge--bh">
+                                            B.H.
+                                        </span>
+                                    @endif
+
+                                    @if(
+                                        ($c->documentos_rcv_compras_count ?? 0) === 0 &&
+                                        ($c->documentos_bh_count ?? 0) === 0
+                                    )
+                                        <span class="proveedor-uso-badge proveedor-uso-badge--empty">
+                                            —
+                                        </span>
+                                    @endif
+                                </div>
+                            </td>
+
                             <td>{{ $c->servicio }}</td>
                             <td>{{ $c->creditos }}</td>
+                            <td>{{ $c->forma_pago }}</td>
                             <td>{{ $c->tipo }}</td>
-                            <td>{{ $c->zona }}</td>
-                            <td>{{ $c->importancia }}</td>
-                            <td>{{ $c->responsable }}</td>
 
                             {{-- Botón Detalles --}}
                             <td class="text-center">
-                                <button class="btn btn-sm btn-success" data-toggle="modal" data-target="#detalles{{ $c->id }}">
+                                <button class="btn btn-sm btn-success"
+                                        data-toggle="modal"
+                                        data-target="#detalles{{ $c->id }}">
                                     Ver
                                 </button>
                             </td>
 
+                            {{-- Acciones --}}
+                            <td>
+                                @if (Auth::id() != 375)
+                                    <a href="{{ route('cobranzas-compras.edit', $c) }}" class="btn btn-sm btn-warning">
+                                        Editar
+                                    </a>
 
-
-                                {{-- Acciones --}}
-                                <td>
-                                    @if (Auth::id() != 375)
-                                        <a href="{{ route('cobranzas-compras.edit', $c) }}" class="btn btn-sm btn-warning">
-                                            Editar
-                                        </a>
-
-                                        <form action="{{ route('cobranzas-compras.destroy', $c) }}" method="POST" style="display:inline;">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger"
+                                    <form action="{{ route('cobranzas-compras.destroy', $c) }}" method="POST" style="display:inline;">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                                class="btn btn-sm btn-danger"
                                                 onclick="return confirm('¿Seguro que deseas eliminar esta cobranza?')">
-                                                Eliminar
-                                            </button>
-                                        </form>
-                                    @endif
-                                </td>
-
-
-
+                                            Eliminar
+                                        </button>
+                                    </form>
+                                @endif
+                            </td>
                         </tr>
 
                         {{-- Modal Detalles --}}
                         <div class="modal fade" id="detalles{{ $c->id }}" tabindex="-1">
                             <div class="modal-dialog modal-dialog-centered modal-lg">
                                 <div class="modal-content shadow">
-                                    <div class="modal-header ">
+                                    <div class="modal-header">
                                         <h5 class="modal-title">Detalles de Cobranza</h5>
 
                                         <button type="button"
@@ -158,15 +176,15 @@
                                                 ">
                                             <span aria-hidden="true" class="text-dark" style="font-size: 1.2rem;">&times;</span>
                                         </button>
-
-
-                                        
                                     </div>
 
                                     <div class="modal-body">
                                         <ul class="list-group">
                                             <li class="list-group-item"><strong>Facturación:</strong> {{ $c->facturacion }}</li>
                                             <li class="list-group-item"><strong>Forma Pago:</strong> {{ $c->forma_pago }}</li>
+                                            <li class="list-group-item"><strong>Zona:</strong> {{ $c->zona }}</li>
+                                            <li class="list-group-item"><strong>Importancia:</strong> {{ $c->importancia }}</li>
+                                            <li class="list-group-item"><strong>Responsable:</strong> {{ $c->responsable }}</li>
                                             <li class="list-group-item"><strong>Nombre Cuenta:</strong> {{ $c->nombre_cuenta }}</li>
                                             <li class="list-group-item"><strong>Rut Cuenta:</strong> {{ $c->rut_cuenta }}</li>
                                             <li class="list-group-item"><strong>Número Cuenta:</strong> {{ $c->numero_cuenta }}</li>
@@ -195,7 +213,6 @@
 
 {{-- Estilos --}}
 <style>
-
     .container {
         max-width: 95% !important;
     }
@@ -205,6 +222,48 @@
         white-space: nowrap;
         font-size: 14px;
         padding: 8px 12px;
+    }
+
+
+
+    .proveedor-uso-badges {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+
+    .proveedor-uso-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 34px;
+        height: 20px;
+        padding: 0 7px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1;
+        border: 1px solid transparent;
+    }
+
+    .proveedor-uso-badge--rcv {
+        color: #0f5132;
+        background: #d1e7dd;
+        border-color: #badbcc;
+    }
+
+    .proveedor-uso-badge--bh {
+        color: #084298;
+        background: #cfe2ff;
+        border-color: #b6d4fe;
+    }
+
+    .proveedor-uso-badge--empty {
+        color: #6c757d;
+        background: #f1f3f5;
+        border-color: #dee2e6;
     }
 
     .search-box {
@@ -220,8 +279,8 @@
         color: #fff;
         width: 45px;
         height: 45px;
+        border: 0;
     }
-
 </style>
 
 @endsection

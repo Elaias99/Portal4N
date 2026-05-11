@@ -22,7 +22,11 @@ class CobranzaCompraController extends Controller
      */
     public function index(Request $request)
     {
-        $query = CobranzaCompra::query();
+        $query = CobranzaCompra::query()
+            ->withCount([
+                'documentos as documentos_rcv_compras_count',
+                'honorariosMensualesRec as documentos_bh_count',
+        ]);
 
         if ($request->filled('buscar')) {
             $busqueda = $request->input('buscar');

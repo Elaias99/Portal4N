@@ -34,6 +34,12 @@ class CobranzaCompra extends Model
         return $this->hasMany(DocumentoCompra::class, 'cobranza_compra_id');
     }
 
+    // Relación: una cobranza de compras puede tener boletas de honorarios asociadas
+    public function honorariosMensualesRec()
+    {
+        return $this->hasMany(HonorarioMensualRec::class, 'cobranza_compra_id');
+    }
+
     // Evento automático: si cambian los créditos, recalcula vencimientos
     protected static function booted()
     {
