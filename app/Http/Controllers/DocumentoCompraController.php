@@ -1454,12 +1454,19 @@ class DocumentoCompraController extends Controller
                 $exportPorEmpresa[$empresaId]['empresa'] ??=
                     optional($documento->empresa)->Nombre ?? 'Empresa';
 
+
+
+
                 $exportPorEmpresa[$empresaId]['items'][] = [
                     'documento_id' => $documento->id,
                     'tipo'         => 'pago',
-                    'monto'        => $documento->monto_total,
+                    'monto'        => (int) $documento->saldo_pendiente,
                     'fecha'        => $request->fecha_programada,
                 ];
+
+
+
+
             }
         });
 

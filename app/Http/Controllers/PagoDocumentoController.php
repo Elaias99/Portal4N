@@ -289,12 +289,18 @@ class PagoDocumentoController extends Controller
                 $exportPorEmpresa[$empresaId]['empresa'] ??=
                     optional($documento->empresa)->Nombre ?? 'Empresa';
 
+
+
+
                 $exportPorEmpresa[$empresaId]['items'][] = [
                     'documento_id' => $documento->id,
                     'tipo'         => 'pago',
-                    'monto'        => $documento->monto_total,
+                    'monto'        => $saldoAnterior,
                     'fecha'        => $fechaPago,
                 ];
+
+
+
 
                 $procesados++;
                 continue;
