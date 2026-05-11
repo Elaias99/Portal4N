@@ -6,6 +6,7 @@ use App\Models\CobranzaCompra;
 use App\Models\HonorarioMensualRec;
 use App\Models\HonorarioMensualRecTotal;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class HonorarioMensualStoreService
 {
@@ -51,6 +52,15 @@ class HonorarioMensualStoreService
                 ? CobranzaCompra::where('rut_cliente', $rutEmisor)->first()
                 : null;
 
+            $formaPagoNormalizada = mb_strtoupper(
+                trim((string) ($cobranza->forma_pago ?? ''))
+            );
+
+            $esPagoAutomatico = in_array($formaPagoNormalizada, [
+                'CAJA CHICA',
+                'FONDO POR RENDIR',
+            ], true);
+
             // =========================
             // ESTADO FINANCIERO INICIAL + FECHA VENCIMIENTO
             // =========================
@@ -79,9 +89,10 @@ class HonorarioMensualStoreService
             $estadoDocumento = mb_strtoupper(trim((string) ($r['estado'] ?? '')));
             $documentoCerradoPorSii = in_array($estadoDocumento, ['NULA', 'ANULADA'], true);
 
-            $saldoPendienteInicial = $documentoCerradoPorSii
-                ? 0
-                : (int) ($r['monto_pagado'] ?? 0);
+            // =========================
+            // REGLA: CAJA CHICA / FONDO POR RENDIR => CIERRE AUTOMÁTICO
+            // =========================
+            $debeCerrarAutomaticamente = !$documentoCerradoPorSii && $esPagoAutomatico;
 
             $honorario = HonorarioMensualRec::where([
                 'empresa_id'        => $empresaId,
@@ -117,7 +128,7 @@ class HonorarioMensualStoreService
                     ]);
                 }
             } else {
-                HonorarioMensualRec::create([
+                $honorario = HonorarioMensualRec::create([
                     'empresa_id'        => $empresaId,
                     'tipo_boleta'       => $tipoBoleta,
                     'rut_contribuyente' => $rutContribuyenteDocumento,
@@ -137,12 +148,63 @@ class HonorarioMensualStoreService
                     'monto_retenido' => $r['monto_retenido'],
                     'monto_pagado'   => $r['monto_pagado'],
 
-                    'saldo_pendiente'           => $saldoPendienteInicial,
+                    'saldo_pendiente' => $documentoCerradoPorSii
+                        ? 0
+                        : (int) ($r['monto_pagado'] ?? 0),
+
                     'estado_financiero_inicial' => $estadoFinancieroInicial,
+                    'estado_financiero'         => null,
+                    'fecha_estado_financiero'   => null,
                     'fecha_vencimiento'         => $fechaVencimiento,
 
                     'cobranza_compra_id' => $cobranza?->id,
                 ]);
+            }
+
+            if ($debeCerrarAutomaticamente && $honorario) {
+                $yaEstabaCerradoAutomaticamente =
+                    (int) $honorario->saldo_pendiente === 0 &&
+                    $honorario->estado_financiero === 'Pago' &&
+                    $honorario->pagos()->exists();
+
+                if (!$yaEstabaCerradoAutomaticamente) {
+                    $estadoAnterior = $honorario->estado_financiero;
+                    $saldoAnterior  = (int) $honorario->saldo_pendiente;
+
+                    $fechaPagoAutomatica = !empty($r['fecha_emision'])
+                        ? Carbon::parse($r['fecha_emision'])->format('Y-m-d')
+                        : now()->format('Y-m-d');
+
+                    $honorario->update([
+                        'estado_financiero'       => 'Pago',
+                        'fecha_estado_financiero' => now(),
+                        'saldo_pendiente'         => 0,
+                    ]);
+
+                    if (!$honorario->pagos()->exists()) {
+                        $honorario->pagos()->create([
+                            'fecha_pago' => $fechaPagoAutomatica,
+                            'user_id'    => Auth::id(),
+                        ]);
+                    }
+
+                    $honorario->movimientos()->create([
+                        'usuario_id'      => Auth::id(),
+                        'estado_anterior' => $estadoAnterior,
+                        'nuevo_estado'    => 'Pago',
+                        'fecha_cambio'    => now(),
+                        'tipo_movimiento' => 'Pago automático por forma de pago',
+                        'descripcion'     => 'Honorario cerrado automáticamente al importar por forma de pago ' . $formaPagoNormalizada . '.',
+                        'datos_anteriores'=> [
+                            'saldo'      => $saldoAnterior,
+                            'forma_pago' => $cobranza->forma_pago ?? null,
+                        ],
+                        'datos_nuevos'    => [
+                            'fecha_pago' => $fechaPagoAutomatica,
+                            'saldo'      => 0,
+                        ],
+                    ]);
+                }
             }
         }
 
