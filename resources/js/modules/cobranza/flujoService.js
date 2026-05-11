@@ -73,6 +73,7 @@ export function createFlujoService({
 
         ajaxService.post(url)
             .done(function (resp) {
+
                 if (window.pageLoader) {
                     window.pageLoader.forceHide();
                 }

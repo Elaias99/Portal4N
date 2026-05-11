@@ -147,6 +147,7 @@ class CobranzaCompraController extends Controller
         return redirect()->route('cobranzas-compras.index')
                          ->with('success', 'Cobranza de compra eliminada correctamente.');
     }
+    
 
     /**
      * Reprocesar documentos de compras pendientes (sin cobranza_compra_id)
@@ -291,8 +292,21 @@ class CobranzaCompraController extends Controller
             }
         }
 
-        if (!empty($sugerencias)) {
-            session(['sugerencias_notas_compras' => $sugerencias]);
+        $sugerenciasExistentes = session('sugerencias_notas_compras', []);
+
+        $sugerenciasFinales = collect($sugerenciasExistentes)
+            ->merge($sugerencias)
+            ->filter(function ($item) {
+                return isset($item['nota']) && $item['nota'];
+            })
+            ->unique(function ($item) {
+                return $item['nota']->id ?? null;
+            })
+            ->values()
+            ->all();
+
+        if (!empty($sugerenciasFinales)) {
+            session(['sugerencias_notas_compras' => $sugerenciasFinales]);
         }
 
         session()->forget('sin_compra_pendientes');
