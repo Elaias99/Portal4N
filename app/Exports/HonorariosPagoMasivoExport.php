@@ -55,7 +55,11 @@ class HonorariosPagoMasivoExport implements
 
         $nombreBeneficiario = $cobranza?->razon_social ?? '';
 
-        $monto = (int) $honorario->monto_pagado;
+        $monto = (int) (
+            $honorario->monto_exportacion
+            ?? $honorario->saldo_pendiente
+            ?? $honorario->monto_pagado
+        );
 
         $correoBeneficiario = $this->resolverCorreoBeneficiario(
             $cobranza?->responsable

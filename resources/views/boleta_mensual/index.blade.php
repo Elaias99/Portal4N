@@ -423,6 +423,8 @@
         </div>
     @endif
 
+
+
     @if(session('preview'))
         @php
             $preview = session('preview');
@@ -465,6 +467,7 @@
                                     <th>Razón Social</th>
                                     <th>Servicio</th>
                                     <th>Créditos (días)</th>
+                                    <th>Forma de Pago</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -506,6 +509,20 @@
                                                 placeholder="Ej: 30"
                                                 required>
                                         </td>
+
+                                        <td>
+                                            <select
+                                                name="proveedores[{{ $index }}][forma_pago]"
+                                                class="form-select"
+                                                required
+                                            >
+                                                <option value="">Seleccione forma de pago</option>
+                                                <option value="Transferencia">Transferencia</option>
+                                                <option value="CAJA CHICA">CAJA CHICA</option>
+                                                <option value="FONDO POR RENDIR">FONDO POR RENDIR</option>
+                                            </select>
+                                        </td>
+
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -575,6 +592,9 @@
 
         </div>
     @endif
+
+
+
 
     <div class="hm-table-wrap">
 

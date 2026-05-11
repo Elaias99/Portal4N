@@ -317,7 +317,15 @@ class HonorarioMensualRecController extends Controller
             'prontoPagos.user',
         ]);
 
-        return view('boleta_mensual.show', compact('honorario'));
+        $proveedores = CobranzaCompra::query()
+            ->orderBy('razon_social')
+            ->get([
+                'id',
+                'razon_social',
+                'rut_cliente',
+            ]);
+
+        return view('boleta_mensual.show', compact('honorario', 'proveedores'));
     }
 
 
@@ -461,6 +469,7 @@ class HonorarioMensualRecController extends Controller
         $request->validate([
             'monto_cruce' => 'required|integer|min:1',
             'fecha_cruce' => 'required|date|before_or_equal:today',
+            'cobranza_compra_id' => 'required|integer|exists:cobranza_compras,id',
         ]);
 
         $montoCruce = (int) $request->monto_cruce;
@@ -831,13 +840,22 @@ class HonorarioMensualRecController extends Controller
                     $honorariosPorEmpresa[$empresaId] = collect();
                 }
 
-                $honorariosPorEmpresa[$empresaId]->push(
-                    $honorario->fresh([
-                        'empresa',
-                        'cobranzaCompra',
-                        'pagos',
-                    ])
-                );
+
+
+
+                $honorarioExport = $honorario->fresh([
+                    'empresa',
+                    'cobranzaCompra',
+                    'pagos',
+                ]);
+
+                $honorarioExport->monto_exportacion = $saldoAnterior;
+
+                $honorariosPorEmpresa[$empresaId]->push($honorarioExport);
+
+
+
+
 
                 $pagados++;
                 $totalPagado += $saldoAnterior;
@@ -1604,13 +1622,28 @@ class HonorarioMensualRecController extends Controller
 
                 $empresaId = $honorario->empresa_id;
 
+
+
                 if (!$honorariosPorEmpresa->has($empresaId)) {
                     $honorariosPorEmpresa[$empresaId] = collect();
                 }
 
-                $honorariosPorEmpresa[$empresaId]->push(
-                    $honorario->fresh()
-                );
+
+
+
+                $honorarioExport = $honorario->fresh([
+                    'empresa',
+                    'cobranzaCompra',
+                    'pagos',
+                ]);
+
+                $honorarioExport->monto_exportacion = (int) $honorario->saldo_pendiente;
+
+                $honorariosPorEmpresa[$empresaId]->push($honorarioExport);
+
+
+
+
             }
         });
 

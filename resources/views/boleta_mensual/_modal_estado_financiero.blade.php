@@ -81,7 +81,7 @@
                     <div id="modal-campo-cruce" class="d-none">
 
                         <div class="mb-3">
-                            <label class="form-label">Monto</label>
+                            <lbel class="form-label">Monto</label>
                             <input type="number"
                                    name="monto_cruce"
                                    class="form-control"
@@ -90,8 +90,15 @@
 
                         <div class="mb-3">
                             <label class="form-label">Proveedor</label>
+
                             <select name="cobranza_compra_id" class="form-select">
                                 <option value="">Seleccione proveedor</option>
+
+                                @foreach(($proveedores ?? []) as $proveedor)
+                                    <option value="{{ $proveedor->id }}">
+                                        {{ $proveedor->razon_social }} — {{ $proveedor->rut_cliente }}
+                                    </option>
+                                @endforeach
                             </select>
                         </div>
 
