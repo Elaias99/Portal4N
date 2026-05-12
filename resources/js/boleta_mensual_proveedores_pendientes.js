@@ -370,7 +370,7 @@
                 });
         });
 
-        $(document).on('click', '.js-cancel-modal-proveedor-honorarios', function (e) {
+        $(document).on('click', '.js-cancel-modal-proveedor-honorarios, #formCrearProveedorHonorarios .js-cancel-cobranza-modal', function (e) {
             e.preventDefault();
 
             if (finalizando) return;

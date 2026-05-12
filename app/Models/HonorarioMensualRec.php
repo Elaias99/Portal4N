@@ -239,6 +239,40 @@ class HonorarioMensualRec extends Model
     }
 
 
+    public function actualizarFechaVencimientoDesdeProveedor(): void
+    {
+        $this->loadMissing('cobranzaCompra');
+
+        if (!$this->fecha_emision || !$this->cobranzaCompra) {
+            return;
+        }
+
+        $creditos = (int) ($this->cobranzaCompra->creditos ?? 0);
+
+        $fechaVencimiento = $this->fecha_emision
+            ->copy()
+            ->addDays($creditos);
+
+        $datosActualizar = [
+            'fecha_vencimiento' => $fechaVencimiento,
+        ];
+
+        $estadoDocumento = mb_strtoupper(trim((string) $this->estado));
+
+        $documentoAnulado = in_array($estadoDocumento, ['NULA', 'ANULADA'], true);
+
+        if (
+            !$documentoAnulado &&
+            (int) $this->saldo_pendiente > 0
+        ) {
+            $datosActualizar['estado_financiero_inicial'] = $fechaVencimiento->isPast()
+                ? 'Vencido'
+                : 'Al día';
+        }
+
+        $this->update($datosActualizar);
+    }
+
 
 
 

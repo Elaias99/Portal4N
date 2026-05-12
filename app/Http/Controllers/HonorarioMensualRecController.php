@@ -1905,8 +1905,12 @@ class HonorarioMensualRecController extends Controller
 
     private function determinarEstadoFinancieroRecalculado(HonorarioMensualRec $honorario): string
     {
-        if ($honorario->pagos()->exists() || $honorario->prontoPagos()->exists()) {
+        if ($honorario->pagos()->exists()) {
             return 'Pago';
+        }
+
+        if ($honorario->prontoPagos()->exists()) {
+            return 'Pronto pago';
         }
 
         if ($honorario->abonos()->exists()) {

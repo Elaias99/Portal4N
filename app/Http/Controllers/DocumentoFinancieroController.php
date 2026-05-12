@@ -376,8 +376,12 @@ class DocumentoFinancieroController extends Controller
 
         $hoy = \Carbon\Carbon::today();
 
+
+
+
+
         $comprasProgramadasHoy = \App\Models\DocumentoCompraPagoProgramado::with([
-            'documentoCompra:id,empresa_id,folio,razon_social,rut_proveedor,saldo_pendiente',
+            'documentoCompra:id,empresa_id,tipo_documento_id,folio,razon_social,rut_proveedor,monto_total,saldo_pendiente,estado,referencia_id',
             'documentoCompra.empresa:id,Nombre',
         ])
         ->whereDate('fecha_programada', $hoy)
@@ -392,7 +396,7 @@ class DocumentoFinancieroController extends Controller
         ->get();
 
         $comprasProgramadasAtrasadas = \App\Models\DocumentoCompraPagoProgramado::with([
-            'documentoCompra:id,empresa_id,folio,razon_social,rut_proveedor,saldo_pendiente',
+            'documentoCompra:id,empresa_id,tipo_documento_id,folio,razon_social,rut_proveedor,monto_total,saldo_pendiente,estado,referencia_id',
             'documentoCompra.empresa:id,Nombre',
         ])
         ->whereDate('fecha_programada', '<', $hoy)
@@ -405,6 +409,10 @@ class DocumentoFinancieroController extends Controller
         })
         ->orderBy('fecha_programada')
         ->get();
+
+
+
+
 
         return view('cobranzas.general', compact(
             'comprasProgramadasHoy',

@@ -45,10 +45,18 @@ class CobranzaCompra extends Model
     {
         static::updated(function ($cobranzaCompra) {
             if ($cobranzaCompra->wasChanged('creditos')) {
-                $cobranzaCompra->load('documentos');
+
+                $cobranzaCompra->load([
+                    'documentos',
+                    'honorariosMensualesRec',
+                ]);
 
                 foreach ($cobranzaCompra->documentos as $doc) {
                     $doc->actualizarFechaVencimiento();
+                }
+
+                foreach ($cobranzaCompra->honorariosMensualesRec as $honorario) {
+                    $honorario->actualizarFechaVencimientoDesdeProveedor();
                 }
             }
         });
