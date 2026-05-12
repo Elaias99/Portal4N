@@ -566,6 +566,17 @@ Route::post(
 )->name('honorarios.mensual.proveedores.store');
 
 
+Route::post(
+    '/honorarios-mensual/reprocesar-pendientes',
+    [HonorarioMensualRecController::class, 'reprocesarPendientesHonorarios']
+)->name('honorarios.mensual.reprocesar-pendientes');
+
+Route::post(
+    '/honorarios-mensual/cancelar-pendientes',
+    [HonorarioMensualRecController::class, 'cancelarPendientesHonorarios']
+)->name('honorarios.mensual.cancelar-pendientes');
+
+
 // Exportar
 
 

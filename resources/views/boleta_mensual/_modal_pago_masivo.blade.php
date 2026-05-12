@@ -64,7 +64,7 @@
             <th>Folio</th>
             <th>Fecha Emisión</th>
             <th>Fecha Vencimiento</th>
-            <th class="text-end">Monto</th>
+            <th class="text-end">Saldo a pagar</th>
             <th class="text-center">Quitar</th>
         </tr>
     @endslot

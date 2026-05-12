@@ -108,7 +108,6 @@ class HonorarioMensualRecController extends Controller
             'pagoProgramado:id,honorario_mensual_rec_id,fecha_programada',
         ]);
 
-
         // =========================
         // FILTRO: EMPRESA
         // =========================
@@ -157,13 +156,10 @@ class HonorarioMensualRecController extends Controller
         // =========================
         if ($request->filled('folio')) {
             $query->where('folio', $request->folio);
-            //exacto; cambia a like si lo quieres parcial
         }
 
-
-
         // =========================
-        // FILTRO: FECHA DOCUMENTO (fecha_emision)
+        // FILTRO: FECHA DOCUMENTO
         // =========================
         if ($request->filled('fecha_emision_desde')) {
             $query->whereDate(
@@ -182,7 +178,7 @@ class HonorarioMensualRecController extends Controller
         }
 
         // =========================
-        // FILTRO: FECHA VENCIMIENTO (fecha_vencimiento)
+        // FILTRO: FECHA VENCIMIENTO
         // =========================
         if ($request->filled('fecha_vencimiento_desde')) {
             $query->whereDate(
@@ -200,35 +196,27 @@ class HonorarioMensualRecController extends Controller
             );
         }
 
-
         // =========================
         // FILTRO: SALDO
         // =========================
-
         if ($request->filled('saldo_monto')) {
 
-            // Normalizar número (quita puntos/ comas/ espacios)
             $monto = (float) str_replace(['.', ',', ' '], '', (string) $request->saldo_monto);
 
-            // Determinar tipo (default: pendiente)
             $tipo = $request->input('saldo_tipo', 'pendiente');
 
-            // Mapear tipo -> columna real (whitelist)
             $map = [
                 'pendiente' => 'saldo_pendiente',
-                'original'  => 'monto_pagado', // si “original” debe ser monto_bruto, cámbialo aquí
+                'original'  => 'monto_pagado',
             ];
 
-            // Fallback seguro
             $columna = $map[$tipo] ?? 'saldo_pendiente';
 
-            // Aplicar filtro con tolerancia ±1
             $query->whereBetween($columna, [$monto - 1, $monto + 1]);
         }
 
-
         // =========================
-        // FILTRO: SERVICIO (AMBOS CAMPOS)
+        // FILTRO: SERVICIO
         // =========================
         if ($request->filled('servicio_valor')) {
 
@@ -236,12 +224,11 @@ class HonorarioMensualRecController extends Controller
 
             $query->where(function ($q) use ($valor) {
                 $q->where('servicio_manual', 'like', '%' . $valor . '%')
-                ->orWhereHas('cobranzaCompra', function ($sub) use ($valor) {
-                    $sub->where('servicio', 'like', '%' . $valor . '%');
-                });
+                    ->orWhereHas('cobranzaCompra', function ($sub) use ($valor) {
+                        $sub->where('servicio', 'like', '%' . $valor . '%');
+                    });
             });
         }
-
 
         // =========================
         // FILTRO: ESTADO ORIGINAL
@@ -278,6 +265,45 @@ class HonorarioMensualRecController extends Controller
         // =========================
         $empresas = \App\Models\Empresa::orderBy('Nombre')->get();
 
+        $bancos = \App\Models\Banco::orderBy('nombre')->get();
+
+        $tipoCuentas = \App\Models\TipoCuenta::orderBy('nombre')->get();
+
+        // =========================
+        // OPCIONES PARA MODAL DE PROVEEDOR B.H.
+        // =========================
+        $camposOpciones = [
+            'servicio',
+            'tipo',
+            'facturacion',
+            'forma_pago',
+            'zona',
+            'importancia',
+            'responsable',
+            'nombre_cuenta',
+            'rut_cuenta',
+            'numero_cuenta',
+        ];
+
+        $opcionesCobranzaCompra = [];
+
+        foreach ($camposOpciones as $campo) {
+            $valores = CobranzaCompra::query()
+                ->whereNotNull($campo)
+                ->select($campo)
+                ->distinct()
+                ->orderBy($campo)
+                ->pluck($campo)
+                ->map(fn ($valor) => trim((string) $valor))
+                ->filter(fn ($valor) => $valor !== '')
+                ->values();
+
+            $opcionesCobranzaCompra[$campo] = $valores
+                ->unique(fn ($valor) => mb_strtoupper(trim($valor)))
+                ->values()
+                ->all();
+        }
+
         $totalAlDia = (clone $query)->where('estado_financiero_inicial', 'Al día')->count();
         $totalVencido = (clone $query)->where('estado_financiero_inicial', 'Vencido')->count();
 
@@ -292,6 +318,9 @@ class HonorarioMensualRecController extends Controller
         return view('boleta_mensual.index', compact(
             'registros',
             'empresas',
+            'bancos',
+            'tipoCuentas',
+            'opcionesCobranzaCompra',
             'anios',
             'totalAlDia',
             'totalVencido',
@@ -346,10 +375,41 @@ class HonorarioMensualRecController extends Controller
 
         $preview = $this->honorarioMensualImportService->execute($archivo);
 
+        $proveedoresFaltantes = collect($preview['proveedores_faltantes'] ?? [])
+            ->map(function ($proveedor) {
+                return [
+                    'rut_cliente'   => $proveedor['rut_emisor'] ?? null,
+                    'rut_proveedor' => $proveedor['rut_emisor'] ?? null,
+                    'razon_social'  => $proveedor['razon_social_emisor'] ?? null,
+                ];
+            })
+            ->filter(fn ($proveedor) => !empty($proveedor['rut_cliente']))
+            ->unique('rut_cliente')
+            ->values()
+            ->all();
+
+        if (!empty($proveedoresFaltantes)) {
+            session([
+                'honorarios_preview_pendiente' => $preview,
+                'sin_honorarios_proveedores_pendientes' => $proveedoresFaltantes,
+            ]);
+
+            return redirect()
+                ->route('honorarios.mensual.index')
+                ->with('info', 'Se detectaron proveedores no registrados. Debe regularizarlos para completar la importación.');
+        }
+
+        $guardadoOk = $this->honorarioMensualStoreService->execute($preview);
+
+        if (!$guardadoOk) {
+            return redirect()
+                ->route('honorarios.mensual.index')
+                ->with('error', 'No hay información válida para guardar.');
+        }
+
         return redirect()
             ->route('honorarios.mensual.index')
-            ->with('preview', $preview)
-            ->with('info', 'Archivo analizado correctamente. Revisa la previsualización.');
+            ->with('success', 'Honorarios mensuales importados correctamente.');
     }
 
 
@@ -377,6 +437,65 @@ class HonorarioMensualRecController extends Controller
     }
 
 
+    public function reprocesarPendientesHonorarios(Request $request)
+    {
+        $preview = session('honorarios_preview_pendiente');
+
+        if (!$preview || empty($preview['registros'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay honorarios pendientes para reprocesar.',
+            ], 422);
+        }
+
+        $rutsEmisores = collect($preview['registros'])
+            ->pluck('rut_emisor')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $rutsExistentes = CobranzaCompra::whereIn('rut_cliente', $rutsEmisores)
+            ->pluck('rut_cliente')
+            ->toArray();
+
+        $proveedoresFaltantes = $rutsEmisores
+            ->reject(fn ($rut) => in_array($rut, $rutsExistentes, true))
+            ->values()
+            ->all();
+
+        if (!empty($proveedoresFaltantes)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Aún existen proveedores sin registrar.',
+                'proveedores_faltantes' => $proveedoresFaltantes,
+            ], 422);
+        }
+
+        $guardadoOk = false;
+
+        DB::transaction(function () use ($preview, &$guardadoOk) {
+            $guardadoOk = $this->honorarioMensualStoreService->execute($preview);
+        });
+
+        if (!$guardadoOk) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No fue posible guardar los honorarios pendientes.',
+            ], 422);
+        }
+
+        session()->forget([
+            'honorarios_preview_pendiente',
+            'sin_honorarios_proveedores_pendientes',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Proveedores regularizados y honorarios importados correctamente.',
+        ]);
+    }
+
+
 
     // Actualización manual del estado financiero (abono, cruce, pago, pronto pago)
     public function storeEstado(Request $request)
@@ -401,6 +520,19 @@ class HonorarioMensualRecController extends Controller
         }
 
         return back()->withErrors('Estado no válido');
+    }
+
+    public function cancelarPendientesHonorarios(Request $request)
+    {
+        session()->forget([
+            'honorarios_preview_pendiente',
+            'sin_honorarios_proveedores_pendientes',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Importación pendiente de honorarios cancelada correctamente.',
+        ]);
     }
 
 

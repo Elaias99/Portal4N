@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalesPorEmpresa = new Map();
 
         seleccionados.forEach(h => {
-            const monto = Number(h.monto || 0);
+            const monto = Number(h.saldo  || 0);
             const empresa = h.empresa || 'Sin empresa';
 
             total += monto;
