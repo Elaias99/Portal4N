@@ -52,9 +52,9 @@ class ReferenciaNotasCompraService
     protected function obtenerFacturasProveedor(DocumentoCompra $notaCredito): Collection
     {
         $facturas = DocumentoCompra::query()
+            ->where('empresa_id', $notaCredito->empresa_id)
             ->where('rut_proveedor', $notaCredito->rut_proveedor)
             ->whereIn('tipo_documento_id', [30, 32, 33, 34, 40, 43, 45, 46])
-            ->where('saldo_pendiente', '>', 0)
             ->orderBy('fecha_docto', 'asc')
             ->get();
 
@@ -70,14 +70,23 @@ class ReferenciaNotasCompraService
     {
         return $facturas->filter(function ($factura) use ($notaCredito) {
 
-            if ($factura->saldo_pendiente < $notaCredito->monto_total) {
+            // No permitir que una NC se referencie a sí misma.
+            if ((int) $factura->id === (int) $notaCredito->id) {
+                return false;
+            }
 
+            // La referencia documental debe ser dentro de la misma empresa.
+            if ((int) $factura->empresa_id !== (int) $notaCredito->empresa_id) {
+                return false;
+            }
+
+            // La referencia documental debe ser del mismo proveedor.
+            if ((string) $factura->rut_proveedor !== (string) $notaCredito->rut_proveedor) {
                 return false;
             }
 
             return true;
         })->values();
-
     }
 
 

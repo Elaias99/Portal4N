@@ -40,6 +40,7 @@ export default defineConfig({
 
                 // Modal crear cobranza / proveedor
                 'resources/js/modules/cobranza/modalCrearCobranza.js',
+                'resources/js/boleta_mensual_proveedores_pendientes.js',
 
                 'resources/js/react/landing-test.jsx',
                 'resources/js/react/landing/main.jsx',

@@ -28,22 +28,38 @@ class SincronizarMovimientoReferenciaCompraService
 
         $referenciados = $factura->referenciados()->get();
 
+
+
+
+
+
         $totalNotasCredito = (int) $referenciados
             ->where('tipo_documento_id', 61)
             ->sum('monto_total');
 
-        // Caso 1: quedó totalmente saldada
+
+
+
+
+        // Caso 0: la factura ya estaba cerrada por un pago real/automático
+        // La referencia NC es documental, no debe crear pago/abono por referencia ni alterar el cierre.
+        if ($saldoActual === 0 && $totalNotasCredito > 0 && $tienePagoReal) {
+            $abonosReferencia->delete();
+            $pagosReferencia->delete();
+
+            return;
+        }
+
+        // Caso 1: quedó totalmente saldada por referencia NC
         if ($saldoActual === 0 && $totalNotasCredito > 0) {
-            // borrar abonos automáticos por referencia
             $abonosReferencia->delete();
 
-            // marcar como pago
             $factura->update([
                 'estado' => 'Pago',
                 'fecha_estado_manual' => now(),
             ]);
 
-            if (!$tienePagoReal && !$pagosReferencia->exists()) {
+            if (!$pagosReferencia->exists()) {
                 $factura->pagos()->create([
                     'fecha_pago' => now()->toDateString(),
                     'user_id'    => Auth::id(),
@@ -53,6 +69,12 @@ class SincronizarMovimientoReferenciaCompraService
 
             return;
         }
+
+
+
+
+
+
 
         // Caso 2: tiene NC asociadas pero no quedó en cero
         if ($saldoActual > 0 && $totalNotasCredito > 0) {

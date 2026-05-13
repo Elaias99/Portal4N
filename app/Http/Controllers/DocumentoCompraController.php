@@ -705,11 +705,27 @@ class DocumentoCompraController extends Controller
                 ->with('error', 'La referencia debe corresponder al mismo proveedor.');
         }
 
-        if ((int) $nuevaFactura->saldo_pendiente <= 0) {
+
+
+
+        if ($documento->rut_proveedor !== $nuevaFactura->rut_proveedor) {
             return redirect()
                 ->route('finanzas_compras.show', $documento->id)
-                ->with('error', 'Solo se puede referenciar una factura con saldo pendiente mayor a cero.');
+                ->with('error', 'La referencia debe corresponder al mismo proveedor.');
         }
+
+        // Para este caso: una NC solo debe referenciar facturas
+        if ((int) $documento->tipo_documento_id === 61 && (int) $nuevaFactura->tipo_documento_id !== 33) {
+            return redirect()
+                ->route('finanzas_compras.show', $documento->id)
+                ->with('error', 'La Nota de Crédito solo puede referenciar una Factura Electrónica.');
+        }
+
+
+
+
+
+
 
         // Para este caso: una NC solo debe referenciar facturas
         if ((int) $documento->tipo_documento_id === 61 && (int) $nuevaFactura->tipo_documento_id !== 33) {
