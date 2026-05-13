@@ -1,6 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $esNotaCredito = (int) $documento->tipo_documento_id === 61;
+@endphp
+
 <div class="container mt-4" style="max-width: 1100px;">
 
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -8,8 +12,7 @@
             Detalles del Documento de Compra
         </h2>
 
-
-        @if($documento->tipo_documento_id != 61 && Auth::id() != 375)
+        @if(!$esNotaCredito && Auth::id() != 375)
             <button type="button"
                     class="btn btn-outline-secondary btn-sm mt-1 px-2 py-0"
                     data-bs-toggle="modal"
@@ -19,9 +22,6 @@
             @include('cobranzas.finanzas_compras.modal_estado', ['doc' => $documento])
         @endif
     </div>
-
-
-
 
     {{-- Información general --}}
     <div class="card mb-4 shadow-sm">
@@ -46,222 +46,286 @@
         </div>
     </div>
 
+    {{-- Bloque especial para Nota de Crédito --}}
+    @if($esNotaCredito)
+        <div class="card mb-4 shadow-sm border-info">
+            <div class="card-header bg-light fw-bold text-info">
+                Nota de Crédito Electrónica
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    Este documento corresponde a una Nota de Crédito. Su función principal en este módulo es
+                    mantener la referencia documental contra la factura relacionada.
+                </p>
+
+                <p class="mb-2">
+                    Las acciones financieras como pagos, abonos, cruces o pronto pago deben gestionarse desde la
+                    factura referenciada, no directamente desde la Nota de Crédito.
+                </p>
+
+                @if($documento->referencia)
+                    <p class="mb-0">
+                        <strong>Factura referenciada:</strong>
+                        {{ $documento->referencia->tipoDocumento->nombre ?? 'Documento' }}
+                        Folio <strong>{{ $documento->referencia->folio }}</strong>
+                        — Monto: ${{ number_format($documento->referencia->monto_total, 0, ',', '.') }}
+                    </p>
+                @else
+                    <p class="text-muted mb-0">
+                        Esta Nota de Crédito aún no tiene una factura referenciada.
+                    </p>
+                @endif
+            </div>
+        </div>
+    @endif
+
     {{-- Resumen del cálculo del saldo pendiente --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Resumen del cálculo del saldo pendiente</div>
         <div class="card-body">
-            <p class="mb-1"><strong> Monto total inicial:</strong> ${{ number_format($documento->monto_total, 0, ',', '.') }}</p>
+            <p class="mb-1">
+                <strong>Monto total inicial:</strong>
+                ${{ number_format($documento->monto_total, 0, ',', '.') }}
+            </p>
 
-            {{-- Pago registrado --}}
-            @if($documento->pagos()->exists())
+            @if(!$esNotaCredito)
 
-                @php 
-                    $pago = $documento->pagos()->latest('fecha_pago')->first(); 
-                @endphp
+                {{-- Pago registrado --}}
+                @if($documento->pagos()->exists())
 
-                <div class="card mb-4 shadow-sm border-success">
-                    <div class="card-header bg-light fw-bold text-success">
-                        Documento marcado como Pago
+                    @php
+                        $pago = $documento->pagos()->latest('fecha_pago')->first();
+                    @endphp
+
+                    <div class="card mb-4 shadow-sm border-success">
+                        <div class="card-header bg-light fw-bold text-success">
+                            Documento marcado como Pago
+                        </div>
+
+                        <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+
+                            <p class="mb-2 mb-md-0">
+                                Este documento fue marcado como <strong>Pagado</strong>
+                                {{ $pago->fecha_pago ? 'el ' . \Carbon\Carbon::parse($pago->fecha_pago)->format('d-m-Y') : '' }}.
+                            </p>
+
+                            @if($pago->origen === 'referencia_nc')
+
+                                <span class="text-muted small">
+                                    Este pago fue generado automáticamente por una referencia.
+                                    Para revertirlo, quite la referencia del documento.
+                                </span>
+
+                            @else
+
+                                <form action="{{ route('pagos.destroy', $pago->id) }}"
+                                    method="POST"
+                                    onsubmit="return confirm('¿Seguro que deseas eliminar este Pago y restaurar el estado original del documento?')">
+
+                                    @csrf
+                                    @method('DELETE')
+
+                                    @if (Auth::id() != 375)
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                                            <i class="bi bi-x-circle"></i> Eliminar Pago
+                                        </button>
+                                    @endif
+
+                                </form>
+
+                            @endif
+
+                        </div>
                     </div>
 
-                    <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+                @endif
 
-                        <p class="mb-2 mb-md-0">
-                            Este documento fue marcado como <strong>Pagado</strong>
-                            {{ $pago->fecha_pago ? 'el ' . \Carbon\Carbon::parse($pago->fecha_pago)->format('d-m-Y') : '' }}.
-                        </p>
+                {{-- Pronto Pago --}}
+                @if($documento->prontoPagos()->exists())
+                    @php $pp = $documento->prontoPagos()->latest('fecha_pronto_pago')->first(); @endphp
 
-                        {{-- Si el pago fue generado por referencia de NC --}}
-                        @if($pago->origen === 'referencia_nc')
+                    <div class="card mb-4 shadow-sm border-warning">
+                        <div class="card-header bg-light fw-bold text-warning">
+                            Documento marcado como Pronto Pago
+                        </div>
 
-                            <span class="text-muted small">
-                                Este pago fue generado automáticamente por una referencia.
-                                Para revertirlo, quite la referencia del documento.
-                            </span>
+                        <div class="card-body d-flex justify-content-between align-items-center flex-wrap">
+                            <p class="mb-2 mb-md-0">
+                                Este documento fue marcado como <strong>Pronto Pago</strong>
+                                {{ $pp->fecha_pronto_pago ? 'el ' . \Carbon\Carbon::parse($pp->fecha_pronto_pago)->format('d-m-Y') : '' }}.
+                            </p>
 
-                        @else
-
-                            {{-- Pago manual o automático normal --}}
-                            <form action="{{ route('pagos.destroy', $pago->id) }}"
-                                method="POST"
-                                onsubmit="return confirm('¿Seguro que deseas eliminar este Pago y restaurar el estado original del documento?')">
-
+                            <form action="{{ route('prontopagos.destroy', $pp->id) }}"
+                                  method="POST"
+                                  onsubmit="return confirm('¿Seguro que deseas eliminar el registro de Pronto Pago y restaurar el estado original del documento?')">
                                 @csrf
                                 @method('DELETE')
 
                                 @if (Auth::id() != 375)
                                     <button type="submit" class="btn btn-outline-danger btn-sm">
-                                        <i class="bi bi-x-circle"></i> Eliminar Pago
+                                        <i class="bi bi-x-circle"></i> Eliminar Pronto Pago
                                     </button>
                                 @endif
-
                             </form>
-
-                        @endif
-
+                        </div>
                     </div>
-                </div>
+                @endif
 
-            @endif
-
-            {{-- Pronto Pago --}}
-            @if($documento->prontoPagos()->exists())
-                @php $pp = $documento->prontoPagos()->latest('fecha_pronto_pago')->first(); @endphp
-                <div class="card mb-4 shadow-sm border-warning">
-                    <div class="card-header bg-light fw-bold text-warning">
-                        Documento marcado como Pronto Pago
-                    </div>
-                    <div class="card-body d-flex justify-content-between align-items-center flex-wrap">
-                        <p class="mb-2 mb-md-0">
-                            Este documento fue marcado como <strong>Pronto Pago</strong>
-                            {{ $pp->fecha_pronto_pago ? 'el ' . \Carbon\Carbon::parse($pp->fecha_pronto_pago)->format('d-m-Y') : '' }}.
+                {{-- Abonos --}}
+                @if($documento->abonos->isNotEmpty())
+                    @foreach ($documento->abonos as $abono)
+                        <p class="mb-1">
+                            <strong>Abono registrado el {{ \Carbon\Carbon::parse($abono->fecha_abono)->format('d-m-Y') }}:</strong>
+                            - ${{ number_format($abono->monto, 0, ',', '.') }}
                         </p>
+                    @endforeach
+                @endif
 
-                        <form action="{{ route('prontopagos.destroy', $pp->id) }}" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar el registro de Pronto Pago y restaurar el estado original del documento?')">
-                            @csrf
-                            @method('DELETE')
-                            @if (Auth::id() != 375)
-                                <button type="submit" class="btn btn-outline-danger btn-sm">
-                                    <i class="bi bi-x-circle"></i> Eliminar Pronto Pago
-                                </button>
-                            @endif
-                        </form>
-                    </div>
-                </div>
-            @endif
+                {{-- Cruces --}}
+                @if($documento->cruces->isNotEmpty())
+                    @foreach ($documento->cruces as $cruce)
+                        <p class="mb-1">
+                            <strong>Cruce registrado el {{ \Carbon\Carbon::parse($cruce->fecha_cruce)->format('d-m-Y') }}:</strong>
+                            - ${{ number_format($cruce->monto, 0, ',', '.') }}
+                        </p>
+                    @endforeach
+                @endif
 
-            {{-- Abonos --}}
-            @if($documento->abonos->isNotEmpty())
-                @foreach ($documento->abonos as $abono)
-                    <p class="mb-1">
-                        <strong> Abono registrado el {{ \Carbon\Carbon::parse($abono->fecha_abono)->format('d-m-Y') }}:</strong>
-                        - ${{ number_format($abono->monto, 0, ',', '.') }}
+            @else
+
+                <p class="text-muted mb-1 mt-3">
+                    La Nota de Crédito se mantiene como documento de ajuste. Si está referenciada, su saldo queda en 0.
+                </p>
+
+                @if($documento->pagos()->exists())
+                    @php
+                        $pagoNc = $documento->pagos()->latest('fecha_pago')->first();
+                    @endphp
+
+                    <p class="text-muted mb-1">
+                        <strong>Cierre registrado:</strong>
+                        {{ $pagoNc->fecha_pago ? \Carbon\Carbon::parse($pagoNc->fecha_pago)->format('d-m-Y') : '-' }}
+                        @if($pagoNc->origen)
+                            — Origen: {{ $pagoNc->origen }}
+                        @endif
                     </p>
-                @endforeach
-            @endif
+                @endif
 
-            {{-- Cruces --}}
-            @if($documento->cruces->isNotEmpty())
-                @foreach ($documento->cruces as $cruce)
-                    <p class="mb-1">
-                        <strong> Cruce registrado el {{ \Carbon\Carbon::parse($cruce->fecha_cruce)->format('d-m-Y') }}:</strong>
-                        - ${{ number_format($cruce->monto, 0, ',', '.') }}
-                    </p>
-                @endforeach
             @endif
 
             <hr>
+
             <p class="fw-bold text-success mb-0">
-                <strong>Saldo pendiente actual:</strong> ${{ number_format($documento->saldo_pendiente, 0, ',', '.') }}
+                <strong>Saldo pendiente actual:</strong>
+                ${{ number_format($documento->saldo_pendiente, 0, ',', '.') }}
             </p>
         </div>
     </div>
 
-    {{-- Sección de abonos --}}
-    <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-light fw-bold">Abonos registrados</div>
-        <div class="card-body">
-            @if($documento->abonos->isEmpty())
-                <p class="text-muted">Sin abonos registrados.</p>
-            @else
-                <table class="table table-sm table-striped align-middle">
-                    <thead>
-                        <tr>
-                            <th>Fecha Abono</th>
-                            <th>Monto</th>
-                            <th class="text-center" style="width: 150px;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($documento->abonos as $abono)
+    {{-- Sección de abonos: solo documentos que no sean NC --}}
+    @if(!$esNotaCredito)
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-light fw-bold">Abonos registrados</div>
+            <div class="card-body">
+                @if($documento->abonos->isEmpty())
+                    <p class="text-muted">Sin abonos registrados.</p>
+                @else
+                    <table class="table table-sm table-striped align-middle">
+                        <thead>
                             <tr>
-                                <td>{{ \Carbon\Carbon::parse($abono->fecha_abono)->format('d-m-Y') }}</td>
-                                <td>${{ number_format($abono->monto, 0, ',', '.') }}</td>
-                                <td class="text-center">
-                                    @if($abono->origen === 'referencia_nc')
-                                        <span class="text-muted small">
-                                            Generado por referencia. Quite la referencia para revertirlo.
-                                        </span>
-                                    @else
-                                        <form action="{{ route('abonos.destroy', $abono->id) }}" 
-                                            method="POST" 
-                                            onsubmit="return confirm('¿Seguro que deseas eliminar este abono?')">
+                                <th>Fecha Abono</th>
+                                <th>Monto</th>
+                                <th class="text-center" style="width: 150px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($documento->abonos as $abono)
+                                <tr>
+                                    <td>{{ \Carbon\Carbon::parse($abono->fecha_abono)->format('d-m-Y') }}</td>
+                                    <td>${{ number_format($abono->monto, 0, ',', '.') }}</td>
+                                    <td class="text-center">
+                                        @if($abono->origen === 'referencia_nc')
+                                            <span class="text-muted small">
+                                                Generado por referencia. Quite la referencia para revertirlo.
+                                            </span>
+                                        @else
+                                            <form action="{{ route('abonos.destroy', $abono->id) }}"
+                                                method="POST"
+                                                onsubmit="return confirm('¿Seguro que deseas eliminar este abono?')">
+                                                @csrf
+                                                @method('DELETE')
+
+                                                @if (Auth::id() != 375)
+                                                    <button type="submit" class="btn btn-sm btn-danger">
+                                                        Eliminar
+                                                    </button>
+                                                @endif
+                                            </form>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            </div>
+        </div>
+
+        {{-- Sección de cruces --}}
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-light fw-bold">Cruces registrados</div>
+            <div class="card-body">
+                @if($documento->cruces->isEmpty())
+                    <p class="text-muted">Sin cruces registrados.</p>
+                @else
+                    <table class="table table-sm table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>Fecha Cruce</th>
+                                <th>Monto</th>
+                                <th>Cliente</th>
+                                <th class="text-center" style="width: 150px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($documento->cruces as $cruce)
+                                <tr>
+                                    <td>{{ \Carbon\Carbon::parse($cruce->fecha_cruce)->format('d-m-Y') }}</td>
+                                    <td>${{ number_format($cruce->monto, 0, ',', '.') }}</td>
+                                    <td>
+                                        {{ $cruce->cobranzaCompra->razon_social ?? '—' }}
+                                        @if($cruce->cobranzaCompra)
+                                            <br>
+                                            <small class="text-muted">
+                                                RUT: {{ $cruce->cobranzaCompra->rut_cliente }}
+                                            </small>
+                                        @endif
+                                    </td>
+
+                                    <td class="text-center">
+                                        <form action="{{ route('cruces.destroy', $cruce->id) }}"
+                                              method="POST"
+                                              onsubmit="return confirm('¿Seguro que deseas eliminar este cruce?')">
                                             @csrf
                                             @method('DELETE')
+
                                             @if (Auth::id() != 375)
                                                 <button type="submit" class="btn btn-sm btn-danger">
                                                     Eliminar
                                                 </button>
                                             @endif
                                         </form>
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            </div>
         </div>
-    </div>
+    @endif
 
-    {{-- Sección de cruces --}}
-    <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-light fw-bold">Cruces registrados</div>
-        <div class="card-body">
-            @if($documento->cruces->isEmpty())
-                <p class="text-muted">Sin cruces registrados.</p>
-            @else
-                <table class="table table-sm table-striped align-middle">
-                    <thead>
-                        <tr>
-                            <th>Fecha Cruce</th>
-                            <th>Monto</th>
-                            <th>Cliente</th>
-                            <th class="text-center" style="width: 150px;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($documento->cruces as $cruce)
-                            <tr>
-                                <td>{{ \Carbon\Carbon::parse($cruce->fecha_cruce)->format('d-m-Y') }}</td>
-                                <td>${{ number_format($cruce->monto, 0, ',', '.') }}</td>
-                                <td>
-                                    {{ $cruce->cobranzaCompra->razon_social ?? '—' }}
-                                    @if($cruce->cobranzaCompra)
-                                        <br>
-                                        <small class="text-muted">
-                                            RUT: {{ $cruce->cobranzaCompra->rut_cliente }}
-                                        </small>
-                                    @endif
-                                </td>
-
-                                <td class="text-center">
-                                    <form action="{{ route('cruces.destroy', $cruce->id) }}" 
-                                          method="POST"
-                                          onsubmit="return confirm('¿Seguro que deseas eliminar este cruce?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        @if (Auth::id() != 375)
-                                            <button type="submit" class="btn btn-sm btn-danger">
-                                                Eliminar
-                                            </button>
-                                        @endif
-                                    </form>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            @endif
-        </div>
-    </div>
-
-
-
-    {{-- ========================================= --}}
-{{-- Sección de Referencias (igual a ventas) --}}
-{{-- ========================================= --}}
-
+    {{-- Referencias del Documento --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Referencias del Documento</div>
         <div class="card-body">
@@ -278,8 +342,8 @@
 
                     @if (Auth::id() != 375)
                         <form action="{{ route('finanzas_compras.quitar_referencia', $documento->id) }}"
-                            method="POST"
-                            onsubmit="return confirm('¿Seguro que deseas quitar la referencia actual de este documento?')">
+                              method="POST"
+                              onsubmit="return confirm('¿Seguro que deseas quitar la referencia actual de este documento?')">
                             @csrf
                             @method('DELETE')
 
@@ -294,6 +358,7 @@
             {{-- Si otros documentos referencian a este --}}
             @if($documento->referenciados->isNotEmpty())
                 <p><strong>Referenciado por:</strong></p>
+
                 <ul class="list-unstyled">
                     @foreach($documento->referenciados as $ref)
                         <li class="mb-2 border rounded p-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -305,8 +370,8 @@
 
                             @if (Auth::id() != 375)
                                 <form action="{{ route('finanzas_compras.quitar_referencia', $ref->id) }}"
-                                    method="POST"
-                                    onsubmit="return confirm('¿Seguro que deseas quitar esta referencia?')">
+                                      method="POST"
+                                      onsubmit="return confirm('¿Seguro que deseas quitar esta referencia?')">
                                     @csrf
                                     @method('DELETE')
 
@@ -320,17 +385,13 @@
                 </ul>
             @endif
 
-            {{-- Si no tiene ninguna referencia (igual que ventas) --}}
+            {{-- Si no tiene ninguna referencia --}}
             @if(!$documento->referencia && $documento->referenciados->isEmpty())
                 <p class="text-muted">Sin referencias asociadas.</p>
             @endif
 
-
-            {{-- ========================================= --}}
-            {{-- Asignar nueva referencia (solo para NC) --}}
-            {{-- ========================================= --}}
-
-            @if($documento->tipo_documento_id == 61 && Auth::id() != 375)
+            {{-- Asignar nueva referencia: solo para NC --}}
+            @if($esNotaCredito && Auth::id() != 375)
 
                 <hr>
 
@@ -345,8 +406,8 @@
                 @else
 
                     <form action="{{ route('finanzas_compras.asignar_referencia', $documento->id) }}"
-                        method="POST"
-                        class="row g-2 mt-1">
+                          method="POST"
+                          class="row g-2 mt-1">
 
                         @csrf
 
@@ -357,11 +418,10 @@
                                 @foreach($candidatosReferencia as $factura)
                                     <option value="{{ $factura->id }}">
                                         Folio {{ $factura->folio }}
-                                        — ${{ number_format($factura->monto_total,0,',','.') }}
+                                        — ${{ number_format($factura->monto_total, 0, ',', '.') }}
                                         — {{ \Carbon\Carbon::parse($factura->fecha_docto)->format('d-m-Y') }}
                                     </option>
                                 @endforeach
-
                             </select>
                         </div>
 
@@ -377,12 +437,8 @@
 
             @endif
 
-
-
-
         </div>
     </div>
-
 
     {{-- Botón volver --}}
     <div class="text-center mt-4">

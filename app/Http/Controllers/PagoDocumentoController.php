@@ -141,6 +141,42 @@ class PagoDocumentoController extends Controller
             $nuevoEstado = 'Pago';
         }
 
+
+        // Determinar nuevo estado
+        if ($documento->pagos()->count() === 0) {
+            $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
+                ? 'Vencido'
+                : 'Al día';
+
+            $campoEstado = $tipoDocumento === 'compra' ? 'estado' : 'status';
+            $documento->update([
+                $campoEstado => null,
+                'status_original' => $nuevoEstado,
+                'fecha_estado_manual' => null,
+            ]);
+        } else {
+            $nuevoEstado = 'Pago';
+        }
+
+        // Si es documento de compra y tiene NC referenciadas,
+        // resincronizar para restaurar estado Abono/Pago por referencia.
+        if (
+            $tipoDocumento === 'compra' &&
+            method_exists($documento, 'referenciados') &&
+            $documento->referenciados()->where('tipo_documento_id', 61)->exists()
+        ) {
+            $documento->refresh();
+
+            $syncMovimientoReferencia = app(\App\Services\SincronizarMovimientoReferenciaCompraService::class);
+            $syncMovimientoReferencia->sincronizar($documento);
+
+            $documento->refresh();
+
+            $nuevoEstado = $documento->estado
+                ?? $documento->status_original
+                ?? $nuevoEstado;
+        }
+
         // Registrar movimiento
         if ($tipoDocumento === 'financiero') {
             \App\Models\MovimientoDocumento::create([

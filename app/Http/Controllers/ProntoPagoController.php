@@ -144,6 +144,24 @@ class ProntoPagoController extends Controller
         // Refrescar instancia
         $documento->refresh();
 
+
+        // Si es documento de compra y tiene NC referenciadas,
+        // resincronizar para restaurar estado Abono/Pago por referencia.
+        if (
+            $tipoDocumento === 'compra' &&
+            method_exists($documento, 'referenciados') &&
+            $documento->referenciados()->where('tipo_documento_id', 61)->exists()
+        ) {
+            $syncMovimientoReferencia = app(\App\Services\SincronizarMovimientoReferenciaCompraService::class);
+            $syncMovimientoReferencia->sincronizar($documento);
+
+            $documento->refresh();
+
+            $nuevoEstado = $documento->estado
+                ?? $documento->status_original
+                ?? $nuevoEstado;
+        }
+
         // Registrar movimiento detallado
         if ($tipoDocumento === 'financiero') {
             \App\Models\MovimientoDocumento::create([

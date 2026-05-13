@@ -1167,7 +1167,6 @@ class DocumentoCompraController extends Controller
                 ->where('empresa_id', $documento->empresa_id)
                 ->where('rut_proveedor', $documento->rut_proveedor)
                 ->where('tipo_documento_id', 33)
-                ->where('saldo_pendiente', '>', 0)
                 ->where('id', '!=', $documento->id)
                 ->orderBy('fecha_docto', 'desc')
                 ->orderBy('folio', 'desc')
