@@ -95,6 +95,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 saldo: Number(cb.dataset.saldo || 0),
                 total: Number(cb.dataset.total || 0),
                 programadoId: cb.dataset.programadoId ? Number(cb.dataset.programadoId) : null,
+
+                formaPago: cb.dataset.formaPago || '',
+                omitidoBanco: cb.dataset.omitidoBanco === '1',
             };
         });
 
@@ -228,9 +231,23 @@ document.addEventListener('DOMContentLoaded', () => {
         docs.forEach(doc => {
             const row = document.createElement('tr');
 
+
+            const avisoBanco = doc.omitidoBanco
+            ? `
+                <div class="small text-muted mt-1">
+                    <span class="badge rounded-pill bg-light text-secondary border">
+                        Portal Proveedor · no exporta banco
+                    </span>
+                </div>
+            `
+            : '';
+
             row.innerHTML = `
                 <td class="text-start">${doc.folio ?? '-'}</td>
-                <td class="text-start">${doc.razon ?? '-'}</td>
+                <td class="text-start">
+                    <div>${doc.razon ?? '-'}</div>
+                    ${avisoBanco}
+                </td>
                 <td class="text-start">${doc.rut ?? '-'}</td>
                 <td class="text-end">${formatMonto(doc.saldo || 0)}</td>
                 <td class="text-center">

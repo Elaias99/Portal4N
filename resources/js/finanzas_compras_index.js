@@ -27,7 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
             fechaDocto: cb.dataset.fechaDocto || '',
             fechaVencimiento: cb.dataset.fechaVencimiento || '',
             saldo: Number(cb.dataset.saldo),
-            total: Number(cb.dataset.total)
+            total: Number(cb.dataset.total),
+
+            formaPago: cb.dataset.formaPago || '',
+            omitidoBanco: cb.dataset.omitidoBanco === '1'
         };
 
         saveSeleccion(seleccion);

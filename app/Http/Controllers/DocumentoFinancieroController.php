@@ -381,8 +381,9 @@ class DocumentoFinancieroController extends Controller
 
 
         $comprasProgramadasHoy = \App\Models\DocumentoCompraPagoProgramado::with([
-            'documentoCompra:id,empresa_id,tipo_documento_id,folio,razon_social,rut_proveedor,monto_total,saldo_pendiente,estado,referencia_id',
+            'documentoCompra:id,empresa_id,cobranza_compra_id,tipo_documento_id,folio,razon_social,rut_proveedor,monto_total,saldo_pendiente,estado,referencia_id',
             'documentoCompra.empresa:id,Nombre',
+            'documentoCompra.cobranzaCompra:id,razon_social,rut_cliente,forma_pago',
         ])
         ->whereDate('fecha_programada', $hoy)
         ->whereHas('documentoCompra', function ($q) {
@@ -396,8 +397,9 @@ class DocumentoFinancieroController extends Controller
         ->get();
 
         $comprasProgramadasAtrasadas = \App\Models\DocumentoCompraPagoProgramado::with([
-            'documentoCompra:id,empresa_id,tipo_documento_id,folio,razon_social,rut_proveedor,monto_total,saldo_pendiente,estado,referencia_id',
+            'documentoCompra:id,empresa_id,cobranza_compra_id,tipo_documento_id,folio,razon_social,rut_proveedor,monto_total,saldo_pendiente,estado,referencia_id',
             'documentoCompra.empresa:id,Nombre',
+            'documentoCompra.cobranzaCompra:id,razon_social,rut_cliente,forma_pago',
         ])
         ->whereDate('fecha_programada', '<', $hoy)
         ->whereHas('documentoCompra', function ($q) {

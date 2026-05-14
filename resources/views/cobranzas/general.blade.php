@@ -69,9 +69,21 @@
                         </thead>
                         <tbody>
                             @foreach($comprasProgramadasHoy as $programado)
+
+
                                 @php $d = $programado->documentoCompra; @endphp
                                 @if($d)
+                                    @php
+                                        $formaPagoCompra = trim((string) optional($d->cobranzaCompra)->forma_pago);
+                                        $esPortalProveedor = mb_strtolower($formaPagoCompra) === 'portal proveedor';
+                                    @endphp
+
                                     <tr>
+
+
+
+
+
                                         <td class="text-center">
                                             <input type="checkbox"
                                                 class="chk-compra-programada-hoy"
@@ -81,10 +93,23 @@
                                                 data-folio="{{ $d->folio }}"
                                                 data-proveedor="{{ $d->razon_social }}"
                                                 data-rut="{{ $d->rut_proveedor }}"
-                                                data-saldo="{{ $d->saldo_pendiente ?? 0 }}">
+                                                data-saldo="{{ $d->saldo_pendiente ?? 0 }}"
+                                                data-forma-pago="{{ $formaPagoCompra }}"
+                                                data-omitido-banco="{{ $esPortalProveedor ? 1 : 0 }}">
+                                                
                                         </td>
                                         <td>{{ $d->empresa->Nombre ?? '-' }}</td>
-                                        <td>{{ $d->razon_social }}</td>
+                                        <td>
+                                            <div>{{ $d->razon_social }}</div>
+
+                                            @if($esPortalProveedor)
+                                                <div class="small text-muted mt-1">
+                                                    <span class="badge rounded-pill bg-light text-secondary border">
+                                                        Portal Proveedor · no exporta banco
+                                                    </span>
+                                                </div>
+                                            @endif
+                                        </td>
                                         <td>
                                             <a href="{{ route('finanzas_compras.show', $d->id) }}"
                                             class="panel-table-link">
@@ -164,9 +189,17 @@
                         </thead>
                         <tbody>
                             @foreach($comprasProgramadasAtrasadas as $programado)
-                                @php $d = $programado->documentoCompra; @endphp
-                                @if($d)
-                                    <tr>
+
+
+
+                                    @php $d = $programado->documentoCompra; @endphp
+                                    @if($d)
+                                        @php
+                                            $formaPagoCompra = trim((string) optional($d->cobranzaCompra)->forma_pago);
+                                            $esPortalProveedor = mb_strtolower($formaPagoCompra) === 'portal proveedor';
+                                        @endphp
+
+                                        <tr>
                                         <td class="text-center">
                                             <input type="checkbox"
                                                 class="chk-compra-programada-atrasada"
@@ -176,10 +209,22 @@
                                                 data-folio="{{ $d->folio }}"
                                                 data-proveedor="{{ $d->razon_social }}"
                                                 data-rut="{{ $d->rut_proveedor }}"
-                                                data-saldo="{{ $d->saldo_pendiente ?? 0 }}">
+                                                data-saldo="{{ $d->saldo_pendiente ?? 0 }}"
+                                                data-forma-pago="{{ $formaPagoCompra }}"
+                                                data-omitido-banco="{{ $esPortalProveedor ? 1 : 0 }}">
                                         </td>
                                         <td>{{ $d->empresa->Nombre ?? '-' }}</td>
-                                        <td>{{ $d->razon_social }}</td>
+                                        <td>
+                                            <div>{{ $d->razon_social }}</div>
+
+                                            @if($esPortalProveedor)
+                                                <div class="small text-muted mt-1">
+                                                    <span class="badge rounded-pill bg-light text-secondary border">
+                                                        Portal Proveedor · no exporta banco
+                                                    </span>
+                                                </div>
+                                            @endif
+                                        </td>
                                         <td>
                                             <a href="{{ route('finanzas_compras.show', $d->id) }}"
                                             class="panel-table-link">

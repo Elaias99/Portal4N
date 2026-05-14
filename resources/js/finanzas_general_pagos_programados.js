@@ -161,6 +161,9 @@
                     rut: chk.dataset.rut || '',
                     fechaProgramada,
                     saldo: Number(chk.dataset.saldo || 0),
+
+                    formaPago: chk.dataset.formaPago || '',
+                    omitidoBanco: chk.dataset.omitidoBanco === '1',
                 };
             });
 
@@ -199,6 +202,22 @@
             totalesEmpresaEl.innerHTML = html;
         }
 
+
+        function avisoNoExportaBanco(doc) {
+            if (!doc.omitidoBanco) return '';
+
+            return `
+                <div class="small text-muted mt-1">
+                    <span
+                        class="badge rounded-pill bg-light text-secondary border"
+                        title="Este documento no se incluirá en el Excel bancario porque su forma de pago es Portal Proveedor."
+                    >
+                        Portal Proveedor · no exporta banco
+                    </span>
+                </div>
+            `;
+        }
+
         function renderResumen() {
             if (!tbody || !countEl || !alertaSin || !hiddenWrap || !btnSubmit) return;
 
@@ -223,7 +242,10 @@
                 tr.innerHTML = `
                     <td class="text-start">${escapeHtml(doc.empresa)}</td>
                     <td class="text-start fw-semibold">${escapeHtml(doc.folio)}</td>
-                    <td class="text-start">${escapeHtml(doc.proveedor)}</td>
+                    <td class="text-start">
+                        <div>${escapeHtml(doc.proveedor)}</div>
+                        ${avisoNoExportaBanco(doc)}
+                    </td>
                     <td class="text-start">${escapeHtml(doc.rut)}</td>
                     <td class="text-start">${escapeHtml(doc.fechaProgramada)}</td>
                     <td class="text-end">${fmtCLP(doc.saldo)}</td>

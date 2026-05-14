@@ -394,6 +394,8 @@
                                     @php
                                         $color = $doc->status_original === 'Vencido' ? 'bg-danger' : 'bg-success';
                                         $estadoMostrar = $doc->estado_visible;
+                                        $formaPagoCompra = trim((string) optional($doc->cobranzaCompra)->forma_pago);
+                                        $esPortalProveedor = mb_strtolower($formaPagoCompra) === 'portal proveedor';
 
                                         $programacionActiva =
                                             $doc->pagoProgramado &&
@@ -423,6 +425,8 @@
                                                     data-saldo="{{ $doc->saldo_pendiente }}"
                                                     data-total="{{ $doc->monto_total }}"
                                                     data-programado-id="{{ $doc->pagoProgramado?->id ?? '' }}"
+                                                    data-forma-pago="{{ $formaPagoCompra }}"
+                                                    data-omitido-banco="{{ $esPortalProveedor ? 1 : 0 }}"
                                                 >
                                             @endif
                                         </td>

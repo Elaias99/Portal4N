@@ -153,7 +153,10 @@
                     saldoInicial: Number(doc.saldo),
                     montoTotal: Number(doc.total),
                     operacion: 'pago',
-                    monto: Number(doc.saldo)
+                    monto: Number(doc.saldo),
+
+                    formaPago: doc.formaPago || '',
+                    omitidoBanco: doc.omitidoBanco === true || doc.omitidoBanco === '1'
                 };
             });
         }
@@ -192,10 +195,30 @@
 
                 const tr = document.createElement('tr');
 
+
+
+                const avisoBanco = doc.omitidoBanco
+                ? `
+                    <div class="small text-muted mt-1">
+                        <span class="badge rounded-pill bg-light text-secondary border">
+                            Portal Proveedor · no exporta banco
+                        </span>
+                    </div>
+                `
+                : '';
+
+
+
+
+
+
                 tr.innerHTML = `
                     <td>${escapeHtml(doc.empresa)}</td>
                     <td>${escapeHtml(doc.rut)}</td>
-                    <td class="text-start">${escapeHtml(doc.razon)}</td>
+                    <td class="text-start">
+                        <div>${escapeHtml(doc.razon)}</div>
+                        ${avisoBanco}
+                    </td>
                     <td class="fw-semibold">${escapeHtml(doc.folio)}</td>
                     <td>${escapeHtml(doc.fechaDocto)}</td>
                     <td>${escapeHtml(doc.fechaVencimiento)}</td>

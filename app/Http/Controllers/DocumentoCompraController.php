@@ -29,6 +29,7 @@ class DocumentoCompraController extends Controller
         $baseQuery = DocumentoCompra::select([
                 'id',
                 'empresa_id',
+                'cobranza_compra_id',
                 'tipo_documento_id',
                 'nro',
                 'tipo_doc',
@@ -57,6 +58,7 @@ class DocumentoCompraController extends Controller
                 'pagos:id,documento_compra_id,fecha_pago',
                 'prontoPagos:id,documento_compra_id,fecha_pronto_pago',
                 'pagoProgramado:id,documento_compra_id,fecha_programada',
+                'cobranzaCompra:id,razon_social,rut_cliente,forma_pago',
             ]);
 
         // === FILTROS GENERALES ===
