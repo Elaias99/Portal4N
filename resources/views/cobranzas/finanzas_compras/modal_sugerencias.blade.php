@@ -24,6 +24,8 @@
             <!-- BODY -->
             <div class="modal-body">
 
+                <div id="msgReferenciasSugerencias" class="alert d-none mb-3"></div>
+
                 <form id="formReferencias">
 
                     @foreach($sugerenciasNotas as $item)
@@ -129,52 +131,146 @@
 document.addEventListener('DOMContentLoaded', function () {
     const modalElement = document.getElementById('modalSugerenciasNotas');
 
-    if (!modalElement) {
+    if (!modalElement || typeof $ === 'undefined') {
         return;
     }
 
-    const modal = new bootstrap.Modal(modalElement);
-    modal.show();
+    $('#modalSugerenciasNotas').modal('show');
 });
 </script>
 
-<!-- GUARDAR REFERENCIAS -->
+<!-- GUARDAR / CERRAR REFERENCIAS -->
 <script>
-document.getElementById('btnGuardarReferencias')?.addEventListener('click', function () {
-
+document.addEventListener('DOMContentLoaded', function () {
+    const modalElement = document.getElementById('modalSugerenciasNotas');
     const form = document.getElementById('formReferencias');
-    const data = new FormData(form);
+    const msg = document.getElementById('msgReferenciasSugerencias');
+    const btnGuardar = document.getElementById('btnGuardarReferencias');
+    const btnCerrar = document.getElementById('btnCerrarSugerencias');
 
-    fetch("{{ route('compras.asignar_referencias') }}", {
-        method: "POST",
-        headers: {
-            "X-CSRF-TOKEN": "{{ csrf_token() }}",
-        },
-        body: data
-    })
-    .then(res => res.json())
-    .then(res => {
-        if (res.success) {
-            alert("Referencias guardadas correctamente");
+    if (!modalElement || !msg || typeof $ === 'undefined') {
+        return;
+    }
 
+    function mostrarMensaje(tipo, texto) {
+        msg.className = `alert alert-${tipo} mb-3`;
+        msg.textContent = texto;
+    }
+
+    function limpiarMensaje() {
+        msg.className = 'alert d-none mb-3';
+        msg.textContent = '';
+    }
+
+    function setGuardando() {
+        if (btnGuardar) {
+            btnGuardar.disabled = true;
+            btnGuardar.textContent = 'Guardando referencias...';
+        }
+
+        if (btnCerrar) {
+            btnCerrar.disabled = true;
+        }
+    }
+
+    function setCerrando() {
+        if (btnGuardar) {
+            btnGuardar.disabled = true;
+        }
+
+        if (btnCerrar) {
+            btnCerrar.disabled = true;
+            btnCerrar.textContent = 'Cerrando...';
+        }
+    }
+
+    function restaurarBotones() {
+        if (btnGuardar) {
+            btnGuardar.disabled = false;
+            btnGuardar.textContent = 'Guardar referencias seleccionadas';
+        }
+
+        if (btnCerrar) {
+            btnCerrar.disabled = false;
+            btnCerrar.textContent = 'Cerrar';
+        }
+    }
+
+    function cerrarYRecargar(delay = 700) {
+        setTimeout(() => {
             $('#modalSugerenciasNotas').modal('hide');
 
-            setTimeout(() => location.reload(), 500);
-        }
-    });
-});
-</script>
+            setTimeout(() => {
+                location.reload();
+            }, 250);
+        }, delay);
+    }
 
-<script>
-document.getElementById('btnCerrarSugerencias')?.addEventListener('click', function () {
-    fetch("{{ route('compras.asignar_referencias') }}", {
-        method: "POST",
-        headers: {
-            "X-CSRF-TOKEN": "{{ csrf_token() }}"
+    btnGuardar?.addEventListener('click', function () {
+        if (!form) {
+            return;
         }
-    }).then(() => {
-        $('#modalSugerenciasNotas').modal('hide');
-        location.reload();
+
+        limpiarMensaje();
+        setGuardando();
+
+        const data = new FormData(form);
+
+        mostrarMensaje('info', 'Guardando referencias seleccionadas...');
+
+        fetch("{{ route('compras.asignar_referencias') }}", {
+            method: "POST",
+            headers: {
+                "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                "Accept": "application/json",
+            },
+            body: data
+        })
+        .then(async response => {
+            const result = await response.json().catch(() => null);
+
+            if (!response.ok || !result?.success) {
+                throw new Error(result?.message || 'No se pudieron guardar las referencias.');
+            }
+
+            return result;
+        })
+        .then(() => {
+            mostrarMensaje('success', 'Referencias guardadas correctamente. Actualizando documentos...');
+            cerrarYRecargar();
+        })
+        .catch(error => {
+            mostrarMensaje('danger', error?.message || 'Ocurrió un error al guardar las referencias.');
+            restaurarBotones();
+        });
+    });
+
+    btnCerrar?.addEventListener('click', function () {
+        limpiarMensaje();
+        setCerrando();
+
+        mostrarMensaje('info', 'Cerrando sugerencias...');
+
+        fetch("{{ route('compras.asignar_referencias') }}", {
+            method: "POST",
+            headers: {
+                "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                "Accept": "application/json",
+            }
+        })
+        .then(async response => {
+            if (!response.ok) {
+                const result = await response.json().catch(() => null);
+                throw new Error(result?.message || 'No se pudo cerrar el modal de sugerencias.');
+            }
+
+            mostrarMensaje('success', 'Sugerencias cerradas. Actualizando vista...');
+            cerrarYRecargar(500);
+        })
+        .catch(error => {
+            mostrarMensaje('danger', error?.message || 'Ocurrió un error al cerrar las sugerencias.');
+            restaurarBotones();
+        });
     });
 });
 </script>
