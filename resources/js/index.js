@@ -48,6 +48,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================
     const STORAGE_KEY = 'honorarios_seleccionados';
 
+    function mostrarLoaderPagina(timeout = 30000) {
+        window.pageLoader?.show({ timeout });
+    }
+
     function loadSeleccionados() {
         try {
             const raw = sessionStorage.getItem(STORAGE_KEY);
@@ -304,11 +308,14 @@ document.addEventListener('DOMContentLoaded', () => {
         empresaTotalesWrap.innerHTML = '';
 
         if (pagoMasivoConfirmado) {
+            mostrarLoaderPagina();
             location.reload();
             return;
         }
 
         sessionStorage.removeItem('honorarios_seleccionados');
+
+        mostrarLoaderPagina();
         location.reload();
     });
 
@@ -403,6 +410,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const TEXTO_GUARDAR = 'Guardar próximo pago';
     const TEXTO_PROCESANDO = 'Procesando...';
     const TEXTO_GUARDADO = 'Próximo pago guardado';
+
+    function mostrarLoaderPagina(timeout = 30000) {
+        window.pageLoader?.show({ timeout });
+    }
 
     function formatMonto(valor) {
         return '$' + Number(valor || 0).toLocaleString('es-CL');
@@ -585,7 +596,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (proximoPagoProcesado) {
             proximoPagoProcesado = false;
+
+            mostrarLoaderPagina();
             location.reload();
+
             return;
         }
 

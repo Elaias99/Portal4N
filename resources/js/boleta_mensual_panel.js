@@ -30,6 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let pagoProgramadoProcesado = false;
     let recargaPanelEjecutada = false;
 
+    function mostrarLoaderPagina(timeout = 30000) {
+        window.pageLoader?.show({ timeout });
+    }
+
     const TEXTO_CONFIRMAR_PAGO = 'Confirmar pago';
     const TEXTO_PROCESANDO = 'Procesando...';
     const TEXTO_PAGO_REGISTRADO = 'Pago registrado';
@@ -313,6 +317,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         recargaPanelEjecutada = true;
+
+        mostrarLoaderPagina();
         window.location.reload();
 
         return true;
