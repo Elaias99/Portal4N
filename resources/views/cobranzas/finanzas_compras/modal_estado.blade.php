@@ -7,8 +7,11 @@
                 <h5 class="modal-title fw-bold" id="modalEstadoLabel-{{ $doc->id }}">
                     Actualizar estado — {{ $doc->razon_social }} — Folio {{ $doc->folio }}
                 </h5>
-                <button type="button" class="btn btn-light btn-sm rounded-circle shadow-sm"
-                        data-dismiss="modal" aria-label="Cerrar"
+
+                <button type="button"
+                        class="btn btn-light btn-sm rounded-circle shadow-sm"
+                        data-dismiss="modal"
+                        aria-label="Cerrar"
                         style="position:absolute;top:16px;right:16px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">
                     <span aria-hidden="true" class="text-dark" style="font-size:1.2rem;">&times;</span>
                 </button>
@@ -18,28 +21,32 @@
             <div class="modal-body">
 
                 {{-- === FORMULARIO PRINCIPAL === --}}
-                <form action="{{ route('finanzas_compras.updateEstado', $doc->id) }}" method="POST" id="form-estado-{{ $doc->id }}">
+                <form action="{{ route('finanzas_compras.updateEstado', $doc->id) }}"
+                      method="POST"
+                      id="form-estado-{{ $doc->id }}">
                     @csrf
                     @method('PATCH')
 
                     {{-- Estado actual --}}
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Estado actual</label>
-                        <input type="text" class="form-control form-control-sm" value="{{ $doc->estado_visible  }}" readonly>
+                        <input type="text"
+                               class="form-control form-control-sm"
+                               value="{{ $doc->estado_visible }}"
+                               readonly>
                     </div>
 
                     {{-- Nuevo estado --}}
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Nuevo estado</label>
-                        <select name="estado" id="estado-{{ $doc->id }}" class="form-select form-select-sm" onchange="toggleEstadoForm({{ $doc->id }})">
+                        <select name="estado"
+                                id="estado-{{ $doc->id }}"
+                                class="form-select form-select-sm"
+                                onchange="toggleEstadoForm({{ $doc->id }})">
                             <option value="">Sin estado manual</option>
                             <option value="Abono" {{ $doc->estado == 'Abono' ? 'selected' : '' }}>Abono</option>
                             <option value="Cruce" {{ $doc->estado == 'Cruce' ? 'selected' : '' }}>Cruce</option>
-
                             <option value="Pago" {{ $doc->estado == 'Pago' ? 'selected' : '' }}>Pagado</option>
-
-
-
                             <option value="Pronto pago" {{ $doc->estado == 'Pronto pago' ? 'selected' : '' }}>Pronto pago</option>
                             <option value="Cobranza judicial" {{ $doc->estado == 'Cobranza judicial' ? 'selected' : '' }}>Cobranza judicial</option>
                         </select>
@@ -47,42 +54,76 @@
                 </form>
 
                 {{-- === FORMULARIO DE ABONO === --}}
-                <form action="{{ route('finanzas_compras.abonos.store', $doc->id) }}" method="POST" id="form-abono-{{ $doc->id }}" style="display:{{ $doc->estado == 'Abono' ? 'block' : 'none' }};">
+                <form action="{{ route('finanzas_compras.abonos.store', $doc->id) }}"
+                      method="POST"
+                      id="form-abono-{{ $doc->id }}"
+                      style="display:{{ $doc->estado == 'Abono' ? 'block' : 'none' }};">
                     @csrf
+
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Saldo pendiente</label>
-                        <input type="text" class="form-control form-control-sm" value="${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}" readonly>
+                        <input type="text"
+                               class="form-control form-control-sm"
+                               value="${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}"
+                               readonly>
                     </div>
+
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Monto del abono</label>
-                        <input type="number" name="monto" class="form-control form-control-sm" min="1" required>
+                        <input type="number"
+                               name="monto"
+                               class="form-control form-control-sm"
+                               min="1"
+                               required>
                     </div>
+
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Fecha del abono</label>
-                        <input type="date" name="fecha_abono" class="form-control form-control-sm" value="{{ now()->format('Y-m-d') }}" required>
+                        <input type="date"
+                               name="fecha_abono"
+                               class="form-control form-control-sm"
+                               value="{{ now()->format('Y-m-d') }}"
+                               required>
                     </div>
                 </form>
 
                 {{-- === FORMULARIO DE CRUCE === --}}
-                <form action="{{ route('finanzas_compras.cruces.store', $doc->id) }}" method="POST" id="form-cruce-{{ $doc->id }}" style="display:{{ $doc->estado == 'Cruce' ? 'block' : 'none' }};">
+                <form action="{{ route('finanzas_compras.cruces.store', $doc->id) }}"
+                      method="POST"
+                      id="form-cruce-{{ $doc->id }}"
+                      style="display:{{ $doc->estado == 'Cruce' ? 'block' : 'none' }};">
                     @csrf
+
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Saldo pendiente</label>
-                        <input type="text" class="form-control form-control-sm" value="${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}" readonly>
+                        <input type="text"
+                               class="form-control form-control-sm"
+                               value="${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}"
+                               readonly>
                     </div>
+
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Monto del cruce</label>
-                        <input type="number" name="monto" class="form-control form-control-sm" min="1" required>
+                        <input type="number"
+                               name="monto"
+                               class="form-control form-control-sm"
+                               min="1"
+                               required>
                     </div>
+
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Fecha del cruce</label>
-                        <input type="date" name="fecha_cruce" class="form-control form-control-sm" value="{{ now()->format('Y-m-d') }}" required>
+                        <input type="date"
+                               name="fecha_cruce"
+                               class="form-control form-control-sm"
+                               value="{{ now()->format('Y-m-d') }}"
+                               required>
                     </div>
 
-
-
                     <label class="form-label small text-muted">Cobranza asociada</label>
-                    <select name="cobranza_compra_id" class="form-select form-select-sm" required>
+                    <select name="cobranza_compra_id"
+                            class="form-select form-select-sm"
+                            required>
                         <option value="">-- Seleccionar cobranza de compra --</option>
                         @foreach($cobranzasCompras as $cobranza)
                             <option value="{{ $cobranza->id }}">
@@ -90,33 +131,47 @@
                             </option>
                         @endforeach
                     </select>
-
-
-
                 </form>
 
                 {{-- === FORMULARIO DE PAGO === --}}
-                <form action="{{ route('documentos.pagos.store', $doc->id) }}" method="POST" id="form-pago-{{ $doc->id }}" style="display:{{ $doc->estado == 'Pago' ? 'block' : 'none' }};">
+                <form action="{{ route('documentos.pagos.store', $doc->id) }}"
+                      method="POST"
+                      id="form-pago-{{ $doc->id }}"
+                      style="display:{{ $doc->estado == 'Pago' ? 'block' : 'none' }};">
                     @csrf
+
                     <input type="hidden" name="tipo" value="compra">
+
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Fecha del pago</label>
-                        <input type="date" name="fecha_pago" class="form-control form-control-sm" value="{{ now()->format('Y-m-d') }}" required>
+                        <input type="date"
+                               name="fecha_pago"
+                               class="form-control form-control-sm"
+                               value="{{ now()->format('Y-m-d') }}"
+                               required>
                     </div>
+
                     <div class="alert alert-info py-1 px-2 small">
                         Al registrar un pago, el saldo pendiente quedará automáticamente en <strong>0</strong>.
                     </div>
                 </form>
 
-
                 {{-- === FORMULARIO DE PRONTO PAGO === --}}
-                <form action="{{ route('prontopagos.store', $doc->id) }}" method="POST" id="form-prontopago-{{ $doc->id }}" style="display:{{ $doc->estado == 'Pronto pago' ? 'block' : 'none' }};">
+                <form action="{{ route('prontopagos.store', $doc->id) }}"
+                      method="POST"
+                      id="form-prontopago-{{ $doc->id }}"
+                      style="display:{{ $doc->estado == 'Pronto pago' ? 'block' : 'none' }};">
                     @csrf
+
                     <input type="hidden" name="tipo" value="compra">
 
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Fecha del pronto pago</label>
-                        <input type="date" name="fecha_pronto_pago" class="form-control form-control-sm" value="{{ now()->format('Y-m-d') }}" required>
+                        <input type="date"
+                               name="fecha_pronto_pago"
+                               class="form-control form-control-sm"
+                               value="{{ now()->format('Y-m-d') }}"
+                               required>
                     </div>
                 </form>
 
@@ -124,8 +179,16 @@
 
             {{-- === FOOTER === --}}
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary btn-sm" onclick="submitEstadoForm({{ $doc->id }})">
+                <button type="button"
+                        class="btn btn-secondary btn-sm"
+                        data-dismiss="modal">
+                    Cancelar
+                </button>
+
+                <button type="button"
+                        class="btn btn-primary btn-sm"
+                        id="btn-guardar-estado-{{ $doc->id }}"
+                        onclick="submitEstadoForm({{ $doc->id }})">
                     <i class="bi bi-save"></i> Guardar cambios
                 </button>
             </div>
@@ -136,36 +199,90 @@
 {{-- === SCRIPT === --}}
 <script>
 function toggleEstadoForm(id) {
-    const estado = document.getElementById('estado-' + id).value;
+    const estadoSelect = document.getElementById('estado-' + id);
+
+    if (!estadoSelect) {
+        return;
+    }
+
+    const estado = estadoSelect.value;
     const forms = ['abono', 'cruce', 'pago', 'prontopago'];
 
     forms.forEach(f => {
-        document.getElementById('form-' + f + '-' + id).style.display = 'none';
+        const form = document.getElementById('form-' + f + '-' + id);
+
+        if (form) {
+            form.style.display = 'none';
+        }
     });
 
     if (estado === 'Abono') {
-        document.getElementById('form-abono-' + id).style.display = 'block';
+        document.getElementById('form-abono-' + id)?.style.setProperty('display', 'block');
     } else if (estado === 'Cruce') {
-        document.getElementById('form-cruce-' + id).style.display = 'block';
+        document.getElementById('form-cruce-' + id)?.style.setProperty('display', 'block');
     } else if (estado === 'Pago') {
-        document.getElementById('form-pago-' + id).style.display = 'block';
+        document.getElementById('form-pago-' + id)?.style.setProperty('display', 'block');
     } else if (estado === 'Pronto pago') {
-        document.getElementById('form-prontopago-' + id).style.display = 'block';
+        document.getElementById('form-prontopago-' + id)?.style.setProperty('display', 'block');
     }
 }
 
-function submitEstadoForm(id) {
-    const estado = document.getElementById('estado-' + id).value;
+function getEstadoForm(id) {
+    const estado = document.getElementById('estado-' + id)?.value;
+
     if (estado === 'Abono') {
-        document.getElementById('form-abono-' + id).submit();
-    } else if (estado === 'Cruce') {
-        document.getElementById('form-cruce-' + id).submit();
-    } else if (estado === 'Pago') {
-        document.getElementById('form-pago-' + id).submit();
-    } else if (estado === 'Pronto pago') {
-        document.getElementById('form-prontopago-' + id).submit();
-    } else {
-        document.getElementById('form-estado-' + id).submit();
+        return document.getElementById('form-abono-' + id);
+    }
+
+    if (estado === 'Cruce') {
+        return document.getElementById('form-cruce-' + id);
+    }
+
+    if (estado === 'Pago') {
+        return document.getElementById('form-pago-' + id);
+    }
+
+    if (estado === 'Pronto pago') {
+        return document.getElementById('form-prontopago-' + id);
+    }
+
+    return document.getElementById('form-estado-' + id);
+}
+
+function submitEstadoForm(id) {
+    const form = getEstadoForm(id);
+    const btnGuardar = document.getElementById('btn-guardar-estado-' + id);
+
+    if (!form) {
+        return;
+    }
+
+    /*
+     * form.submit() no dispara validación HTML5 automáticamente.
+     * Por eso validamos manualmente antes de mostrar el spinner.
+     */
+    if (typeof form.reportValidity === 'function' && !form.reportValidity()) {
+        return;
+    }
+
+    if (btnGuardar) {
+        btnGuardar.disabled = true;
+        btnGuardar.innerHTML = '<i class="bi bi-hourglass-split"></i> Guardando...';
+    }
+
+    window.pageLoader?.show({ timeout: 30000 });
+
+    try {
+        form.submit();
+    } catch (error) {
+        window.pageLoader?.forceHide?.();
+
+        if (btnGuardar) {
+            btnGuardar.disabled = false;
+            btnGuardar.innerHTML = '<i class="bi bi-save"></i> Guardar cambios';
+        }
+
+        console.error('Error al enviar formulario de estado:', error);
     }
 }
 </script>

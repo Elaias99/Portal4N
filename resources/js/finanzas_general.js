@@ -17,6 +17,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let modal = null;
 
+    function mostrarLoaderPagina(timeout = 30000) {
+        window.pageLoader?.show({ timeout });
+    }
+
     if (modalEl) {
         modal = new bootstrap.Modal(modalEl);
     }
@@ -132,7 +136,9 @@ document.addEventListener('DOMContentLoaded', () => {
             inputsEliminar.appendChild(input);
         });
 
+        mostrarLoaderPagina();
         formEliminar.submit();
+
     }
 
     if (btnEliminarHoy) {

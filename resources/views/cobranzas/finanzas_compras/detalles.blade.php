@@ -15,6 +15,8 @@
         @if(!$esNotaCredito && Auth::id() != 375)
             <button type="button"
                     class="btn btn-outline-secondary btn-sm mt-1 px-2 py-0"
+                    data-toggle="modal"
+                    data-target="#modalEstadoCompra-{{ $documento->id }}"
                     data-bs-toggle="modal"
                     data-bs-target="#modalEstadoCompra-{{ $documento->id }}">
                 Editar
@@ -119,9 +121,12 @@
                             @else
 
                                 <form action="{{ route('pagos.destroy', $pago->id) }}"
-                                    method="POST"
-                                    onsubmit="return confirm('¿Seguro que deseas eliminar este Pago y restaurar el estado original del documento?')">
-
+                                      method="POST"
+                                      class="js-confirm-submit"
+                                      data-no-loader
+                                      data-confirm-title="Eliminar pago"
+                                      data-confirm-message="¿Seguro que deseas eliminar este Pago y restaurar el estado original del documento?"
+                                      data-confirm-button="Eliminar Pago">
                                     @csrf
                                     @method('DELETE')
 
@@ -157,7 +162,11 @@
 
                             <form action="{{ route('prontopagos.destroy', $pp->id) }}"
                                   method="POST"
-                                  onsubmit="return confirm('¿Seguro que deseas eliminar el registro de Pronto Pago y restaurar el estado original del documento?')">
+                                  class="js-confirm-submit"
+                                  data-no-loader
+                                  data-confirm-title="Eliminar pronto pago"
+                                  data-confirm-message="¿Seguro que deseas eliminar el registro de Pronto Pago y restaurar el estado original del documento?"
+                                  data-confirm-button="Eliminar Pronto Pago">
                                 @csrf
                                 @method('DELETE')
 
@@ -250,8 +259,12 @@
                                             </span>
                                         @else
                                             <form action="{{ route('abonos.destroy', $abono->id) }}"
-                                                method="POST"
-                                                onsubmit="return confirm('¿Seguro que deseas eliminar este abono?')">
+                                                  method="POST"
+                                                  class="js-confirm-submit"
+                                                  data-no-loader
+                                                  data-confirm-title="Eliminar abono"
+                                                  data-confirm-message="¿Seguro que deseas eliminar este abono?"
+                                                  data-confirm-button="Eliminar Abono">
                                                 @csrf
                                                 @method('DELETE')
 
@@ -305,7 +318,11 @@
                                     <td class="text-center">
                                         <form action="{{ route('cruces.destroy', $cruce->id) }}"
                                               method="POST"
-                                              onsubmit="return confirm('¿Seguro que deseas eliminar este cruce?')">
+                                              class="js-confirm-submit"
+                                              data-no-loader
+                                              data-confirm-title="Eliminar cruce"
+                                              data-confirm-message="¿Seguro que deseas eliminar este cruce?"
+                                              data-confirm-button="Eliminar Cruce">
                                             @csrf
                                             @method('DELETE')
 
@@ -343,7 +360,11 @@
                     @if (Auth::id() != 375)
                         <form action="{{ route('finanzas_compras.quitar_referencia', $documento->id) }}"
                               method="POST"
-                              onsubmit="return confirm('¿Seguro que deseas quitar la referencia actual de este documento?')">
+                              class="js-confirm-submit"
+                              data-no-loader
+                              data-confirm-title="Quitar referencia"
+                              data-confirm-message="¿Seguro que deseas quitar la referencia actual de este documento?"
+                              data-confirm-button="Quitar referencia">
                             @csrf
                             @method('DELETE')
 
@@ -371,7 +392,11 @@
                             @if (Auth::id() != 375)
                                 <form action="{{ route('finanzas_compras.quitar_referencia', $ref->id) }}"
                                       method="POST"
-                                      onsubmit="return confirm('¿Seguro que deseas quitar esta referencia?')">
+                                      class="js-confirm-submit"
+                                      data-no-loader
+                                      data-confirm-title="Quitar referencia"
+                                      data-confirm-message="¿Seguro que deseas quitar esta referencia?"
+                                      data-confirm-button="Quitar referencia">
                                     @csrf
                                     @method('DELETE')
 
@@ -408,7 +433,6 @@
                     <form action="{{ route('finanzas_compras.asignar_referencia', $documento->id) }}"
                           method="POST"
                           class="row g-2 mt-1">
-
                         @csrf
 
                         <div class="col-md-9">
@@ -430,7 +454,6 @@
                                 Guardar referencia
                             </button>
                         </div>
-
                     </form>
 
                 @endif
@@ -448,4 +471,236 @@
     </div>
 
 </div>
+
+{{-- Modal reutilizable de confirmación --}}
+{{-- Modal reutilizable de confirmación --}}
+<div class="modal fade" id="confirmActionModal" tabindex="-1" role="dialog" aria-labelledby="confirmActionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-sm rounded-3">
+
+            <div class="modal-header px-4 py-3 border-bottom">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0" id="confirmActionModalLabel">
+                        Confirmar acción
+                    </h5>
+
+                    <div class="small text-muted mt-1">
+                        Esta operación modificará la información del documento.
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    id="confirmActionCloseX"
+                    aria-label="Cerrar"
+                ></button>
+            </div>
+
+            <div class="modal-body px-4 py-4">
+                <div class="alert alert-warning border mb-0">
+                    <div class="fw-semibold mb-1" id="confirmActionMessage">
+                        ¿Seguro que deseas continuar?
+                    </div>
+
+                    <div class="small mb-0">
+                        Revisa la acción antes de confirmar. Una vez enviada, la página se actualizará con los cambios.
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer px-4 py-3">
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    id="confirmActionCancelBtn">
+                    Cancelar
+                </button>
+
+                <button
+                    type="button"
+                    class="btn btn-danger"
+                    id="confirmActionSubmitBtn">
+                    Confirmar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const modalEl = document.getElementById('confirmActionModal');
+        const titleEl = document.getElementById('confirmActionModalLabel');
+        const messageEl = document.getElementById('confirmActionMessage');
+        const confirmBtn = document.getElementById('confirmActionSubmitBtn');
+        const cancelBtn = document.getElementById('confirmActionCancelBtn');
+        const closeXBtn = document.getElementById('confirmActionCloseX');
+
+        if (!modalEl || !titleEl || !messageEl || !confirmBtn || !cancelBtn || !closeXBtn) {
+            return;
+        }
+
+        let pendingForm = null;
+        let isSubmitting = false;
+        let bootstrap5ModalInstance = null;
+
+        function hasJqueryModal() {
+            return typeof window.jQuery !== 'undefined'
+                && typeof window.jQuery.fn !== 'undefined'
+                && typeof window.jQuery.fn.modal === 'function';
+        }
+
+        function hasBootstrap5Modal() {
+            return typeof window.bootstrap !== 'undefined'
+                && typeof window.bootstrap.Modal === 'function';
+        }
+
+        function showConfirmModal() {
+            if (hasJqueryModal()) {
+                window.jQuery(modalEl).modal('show');
+                return;
+            }
+
+            if (hasBootstrap5Modal()) {
+                bootstrap5ModalInstance = bootstrap5ModalInstance || new bootstrap.Modal(modalEl);
+                bootstrap5ModalInstance.show();
+                return;
+            }
+
+            if (pendingForm && window.confirm(messageEl.textContent || '¿Seguro que deseas continuar?')) {
+                submitPendingForm();
+            }
+        }
+
+        function hideConfirmModal() {
+            if (hasJqueryModal()) {
+                window.jQuery(modalEl).modal('hide');
+                return;
+            }
+
+            if (hasBootstrap5Modal()) {
+                bootstrap5ModalInstance = bootstrap5ModalInstance || new bootstrap.Modal(modalEl);
+                bootstrap5ModalInstance.hide();
+                return;
+            }
+
+            modalEl.classList.remove('show');
+            modalEl.style.display = 'none';
+            modalEl.setAttribute('aria-hidden', 'true');
+        }
+
+        function resetConfirmState() {
+            if (isSubmitting) {
+                return;
+            }
+
+            pendingForm = null;
+
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Confirmar';
+
+            cancelBtn.disabled = false;
+            closeXBtn.disabled = false;
+        }
+
+        function submitPendingForm() {
+            if (!pendingForm || isSubmitting) {
+                return;
+            }
+
+            isSubmitting = true;
+
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Procesando...';
+
+            cancelBtn.disabled = true;
+            closeXBtn.disabled = true;
+
+            window.pageLoader?.show({ timeout: 30000 });
+
+            try {
+                pendingForm.submit();
+            } catch (error) {
+                isSubmitting = false;
+                window.pageLoader?.forceHide?.();
+
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = pendingForm?.dataset?.confirmButton || 'Confirmar';
+
+                cancelBtn.disabled = false;
+                closeXBtn.disabled = false;
+
+                hideConfirmModal();
+
+                console.error('Error al enviar el formulario confirmado:', error);
+            }
+        }
+
+        document.querySelectorAll('.js-confirm-submit').forEach(function (form) {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                if (isSubmitting) {
+                    return;
+                }
+
+                pendingForm = form;
+
+                const title = form.dataset.confirmTitle || 'Confirmar acción';
+                const message = form.dataset.confirmMessage || '¿Seguro que deseas continuar?';
+                const buttonText = form.dataset.confirmButton || 'Confirmar';
+
+                titleEl.textContent = title;
+                messageEl.textContent = message;
+
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = buttonText;
+
+                cancelBtn.disabled = false;
+                closeXBtn.disabled = false;
+
+                showConfirmModal();
+            });
+        });
+
+        confirmBtn.addEventListener('click', function () {
+            submitPendingForm();
+        });
+
+        cancelBtn.addEventListener('click', function () {
+            if (isSubmitting) {
+                return;
+            }
+
+            hideConfirmModal();
+            resetConfirmState();
+        });
+
+        closeXBtn.addEventListener('click', function () {
+            if (isSubmitting) {
+                return;
+            }
+
+            hideConfirmModal();
+            resetConfirmState();
+        });
+
+        if (hasJqueryModal()) {
+            window.jQuery(modalEl).on('hidden.bs.modal', function () {
+                resetConfirmState();
+            });
+        } else {
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                resetConfirmState();
+            });
+        }
+    });
+</script>
+
+
+
+
+
 @endsection

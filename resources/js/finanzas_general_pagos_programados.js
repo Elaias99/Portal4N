@@ -52,6 +52,10 @@
         let procesando = false;
         let recargaPanelEjecutada = false;
 
+        function mostrarLoaderPagina(timeout = 30000) {
+            window.pageLoader?.show({ timeout });
+        }
+
         function limpiarMensajes() {
             $('#msg-pago-programado-ok')?.remove();
             $('#msg-pago-programado-error')?.remove();
@@ -340,6 +344,8 @@
             }
 
             recargaPanelEjecutada = true;
+
+            mostrarLoaderPagina();
             window.location.reload();
 
             return true;

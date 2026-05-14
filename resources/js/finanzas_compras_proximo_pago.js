@@ -22,6 +22,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = new bootstrap.Modal(modalEl);
     let proximoPagoProcesado = false;
 
+
+    function mostrarLoaderPagina(timeout = 30000) {
+        window.pageLoader?.show({ timeout });
+    }
+
+    function recargarPaginaConLoader(delay = 250) {
+        setTimeout(() => {
+            mostrarLoaderPagina();
+            location.reload();
+        }, delay);
+    }
+
+
+
+
+
+
+
+
     function formatMonto(valor) {
         return '$' + Number(valor || 0).toLocaleString('es-CL');
     }
@@ -345,23 +364,21 @@ document.addEventListener('DOMContentLoaded', () => {
         formTmp.submit();
     });
 
+
     btnCerrarX?.addEventListener('click', () => {
         modal.hide();
 
         if (proximoPagoProcesado) {
-            setTimeout(() => {
-                location.reload();
-            }, 250);
+            recargarPaginaConLoader();
         }
     });
+
 
     btnCancelar?.addEventListener('click', () => {
         modal.hide();
 
         if (proximoPagoProcesado) {
-            setTimeout(() => {
-                location.reload();
-            }, 250);
+            recargarPaginaConLoader();
         }
     });
 

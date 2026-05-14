@@ -3,6 +3,10 @@
         let documentosSeleccionados = {};
         let pagosMasivosProcesados = false;
 
+        function mostrarLoaderPagina(timeout = 30000) {
+            window.pageLoader?.show({ timeout });
+        }
+
         const $ = (sel, root = document) => root.querySelector(sel);
         const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
@@ -467,6 +471,7 @@
 
             modalEl.addEventListener('hidden.bs.modal', () => {
                 if (pagosMasivosProcesados) {
+                    mostrarLoaderPagina();
                     window.location.reload();
                 } else {
                     $('#msg-pagos-ok')?.remove();
