@@ -67,6 +67,7 @@
 
             limpiarErrores();
             resetDynamicFields($form);
+            resetFkOtherFields($form);
         }
 
         function setFieldValue(name, value) {
@@ -86,6 +87,8 @@
             setFieldValue('razon_social', item.razon_social || '');
 
             resetDynamicFields($form);
+            resetFkOtherFields($form);
+
             actualizarTitulo();
         }
 
@@ -184,6 +187,85 @@
             return true;
         }
 
+        // ============================================================
+        // CAMPOS FK CON OPCIÓN OTRO: BANCO / TIPO CUENTA
+        // ============================================================
+
+        function syncFkOtherSelect($select) {
+            const selectedValue = $select.val();
+            const otherWrapperSelector = $select.data('other-wrapper');
+            const otherInputSelector = $select.data('other-input');
+
+            const $otherWrapper = $(otherWrapperSelector);
+            const $otherInput = $(otherInputSelector);
+
+            if (selectedValue === '__otro__') {
+                $otherWrapper.show();
+                $otherInput.prop('required', true);
+                return;
+            }
+
+            $otherWrapper.hide();
+            $otherInput.prop('required', false);
+            $otherInput.val('');
+        }
+
+        function resetFkOtherFields($context) {
+            $context.find('.js-fk-other-select').each(function () {
+                syncFkOtherSelect($(this));
+            });
+        }
+
+        function setFkFieldValue(name, value) {
+            const $field = $form.find(`[name="${name}"]`).first();
+
+            if (!$field.length) {
+                return false;
+            }
+
+            $field.val(value || '');
+            syncFkOtherSelect($field);
+
+            return true;
+        }
+
+        function agregarOpcionFkATodosLosSelects(name, registro) {
+            if (!registro || !registro.id || !registro.nombre) {
+                return;
+            }
+
+            const value = String(registro.id);
+            const label = String(registro.nombre);
+
+            $form.find(`select[name="${name}"]`).each(function () {
+                const $select = $(this);
+
+                const yaExiste = $select.find(`option[value="${value}"]`).length > 0;
+
+                if (yaExiste) {
+                    return;
+                }
+
+                const $option = $('<option>', {
+                    value: value,
+                    text: label
+                });
+
+                const $opcionOtro = $select.find('option[value="__otro__"]').first();
+
+                if ($opcionOtro.length) {
+                    $option.insertBefore($opcionOtro);
+                } else {
+                    $select.append($option);
+                }
+            });
+        }
+
+        function agregarOpcionesFkDesdeRespuesta(data) {
+            agregarOpcionFkATodosLosSelects('banco_id', data.banco);
+            agregarOpcionFkATodosLosSelects('tipo_cuenta_id', data.tipo_cuenta);
+        }
+
         function fillProveedorSinRegistro($button) {
             const defaults = {
                 servicio: 'Sin registro',
@@ -213,7 +295,11 @@
                 const wasDynamic = setDynamicFieldValue(name, value);
 
                 if (!wasDynamic) {
-                    $field.val(value);
+                    const wasFkOther = setFkFieldValue(name, value);
+
+                    if (!wasFkOther) {
+                        $field.val(value);
+                    }
                 }
             });
         }
@@ -278,6 +364,7 @@
 
         function guardarProveedorActual() {
             resetDynamicFields($form);
+            resetFkOtherFields($form);
             limpiarErrores();
 
             const formData = new FormData($form[0]);
@@ -332,6 +419,10 @@
             syncDynamicOther($(this));
         });
 
+        $(document).on('change', '#formCrearProveedorHonorarios .js-fk-other-select', function () {
+            syncFkOtherSelect($(this));
+        });
+
         $(document).on('click', '#formCrearProveedorHonorarios .js-fill-proveedor-sin-registro', function (e) {
             e.preventDefault();
 
@@ -352,6 +443,8 @@
                         alert(data.message || 'No fue posible guardar el proveedor.');
                         return;
                     }
+
+                    agregarOpcionesFkDesdeRespuesta(data);
 
                     pasarAlSiguiente();
                 })

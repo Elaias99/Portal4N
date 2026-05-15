@@ -250,16 +250,16 @@ class HonorarioMensualRecController extends Controller
             }
         }
 
+
         // =========================
         // ORDEN + PAGINACIÓN
         // =========================
         $registros = $query
-            ->orderBy('anio', 'desc')
-            ->orderBy('mes', 'desc')
+            ->orderBy('fecha_vencimiento', 'desc')
             ->orderBy('fecha_emision', 'desc')
+            ->orderBy('id', 'desc')
             ->paginate(10)
             ->appends($request->query());
-
         // =========================
         // DATOS PARA SELECTORES
         // =========================
@@ -280,9 +280,6 @@ class HonorarioMensualRecController extends Controller
             'zona',
             'importancia',
             'responsable',
-            'nombre_cuenta',
-            'rut_cuenta',
-            'numero_cuenta',
         ];
 
         $opcionesCobranzaCompra = [];
