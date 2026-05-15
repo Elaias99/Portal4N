@@ -62,8 +62,6 @@ class CobranzaCompraController extends Controller
             'servicio' => 'required|string|max:255',
             'creditos' => 'required|string|max:255',
 
-            // Los nuevos integrados
-
             'tipo' => 'nullable|string|max:255',
             'facturacion' => 'nullable|string|max:255',
             'forma_pago' => 'nullable|string|max:255',
@@ -73,26 +71,124 @@ class CobranzaCompraController extends Controller
             'nombre_cuenta' => 'nullable|string|max:255',
             'rut_cuenta' => 'nullable|string|max:255',
             'numero_cuenta' => 'nullable|string|max:255',
-            'banco_id' => 'nullable|exists:bancos,id',
-            'tipo_cuenta_id' => 'nullable|exists:tipo_cuentas,id',
 
-            
+            'banco_id' => 'nullable|string|max:255',
+            'banco_otro' => 'nullable|string|max:255',
 
-
-
+            'tipo_cuenta_id' => 'nullable|string|max:255',
+            'tipo_cuenta_otro' => 'nullable|string|max:255',
         ]);
+
+        $bancoSeleccionado = null;
+        $tipoCuentaSeleccionada = null;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Resolver banco
+        |--------------------------------------------------------------------------
+        */
+        $bancoId = $validated['banco_id'] ?? null;
+        $bancoOtro = trim((string) ($validated['banco_otro'] ?? ''));
+
+        if ($bancoId === '__otro__') {
+            if ($bancoOtro === '') {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'banco_otro' => 'Debe ingresar el nombre del banco.',
+                ]);
+            }
+
+            $nombreBanco = preg_replace('/\s+/', ' ', $bancoOtro);
+
+            $bancoSeleccionado = Banco::whereRaw('LOWER(TRIM(nombre)) = ?', [
+                mb_strtolower($nombreBanco)
+            ])->first();
+
+            if (!$bancoSeleccionado) {
+                $bancoSeleccionado = Banco::create([
+                    'nombre' => $nombreBanco,
+                ]);
+            }
+
+            $validated['banco_id'] = $bancoSeleccionado->id;
+        } elseif ($bancoId) {
+            $bancoSeleccionado = Banco::find($bancoId);
+
+            if (!$bancoSeleccionado) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'banco_id' => 'El banco seleccionado no es válido.',
+                ]);
+            }
+
+            $validated['banco_id'] = (int) $bancoId;
+        } else {
+            $validated['banco_id'] = null;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Resolver tipo de cuenta
+        |--------------------------------------------------------------------------
+        */
+        $tipoCuentaId = $validated['tipo_cuenta_id'] ?? null;
+        $tipoCuentaOtro = trim((string) ($validated['tipo_cuenta_otro'] ?? ''));
+
+        if ($tipoCuentaId === '__otro__') {
+            if ($tipoCuentaOtro === '') {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'tipo_cuenta_otro' => 'Debe ingresar el tipo de cuenta.',
+                ]);
+            }
+
+            $nombreTipoCuenta = preg_replace('/\s+/', ' ', $tipoCuentaOtro);
+
+            $tipoCuentaSeleccionada = TipoCuenta::whereRaw('LOWER(TRIM(nombre)) = ?', [
+                mb_strtolower($nombreTipoCuenta)
+            ])->first();
+
+            if (!$tipoCuentaSeleccionada) {
+                $tipoCuentaSeleccionada = TipoCuenta::create([
+                    'nombre' => $nombreTipoCuenta,
+                ]);
+            }
+
+            $validated['tipo_cuenta_id'] = $tipoCuentaSeleccionada->id;
+        } elseif ($tipoCuentaId) {
+            $tipoCuentaSeleccionada = TipoCuenta::find($tipoCuentaId);
+
+            if (!$tipoCuentaSeleccionada) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'tipo_cuenta_id' => 'El tipo de cuenta seleccionado no es válido.',
+                ]);
+            }
+
+            $validated['tipo_cuenta_id'] = (int) $tipoCuentaId;
+        } else {
+            $validated['tipo_cuenta_id'] = null;
+        }
+
+        unset($validated['banco_otro'], $validated['tipo_cuenta_otro']);
 
         $cobranza = CobranzaCompra::create($validated);
 
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
-                'cobranza' => $cobranza
+                'cobranza' => $cobranza,
+
+                'banco' => $bancoSeleccionado ? [
+                    'id' => $bancoSeleccionado->id,
+                    'nombre' => $bancoSeleccionado->nombre,
+                ] : null,
+
+                'tipo_cuenta' => $tipoCuentaSeleccionada ? [
+                    'id' => $tipoCuentaSeleccionada->id,
+                    'nombre' => $tipoCuentaSeleccionada->nombre,
+                ] : null,
             ]);
         }
 
         return redirect()->route('cobranzas-compras.index')
-                         ->with('success', 'Cobranza de compra creada correctamente.');
+            ->with('success', 'Cobranza de compra creada correctamente.');
     }
 
     /**

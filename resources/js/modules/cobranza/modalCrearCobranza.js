@@ -120,6 +120,87 @@ import { createAjaxService } from './ajaxService';
             $hidden.val($input.val() || '');
         }
 
+
+
+        function syncFkOtherSelect($select) {
+            const selectedValue = $select.val();
+            const otherWrapperSelector = $select.data('other-wrapper');
+            const otherInputSelector = $select.data('other-input');
+
+            const $otherWrapper = $(otherWrapperSelector);
+            const $otherInput = $(otherInputSelector);
+
+            if (selectedValue === '__otro__') {
+                $otherWrapper.show();
+                $otherInput.prop('required', true);
+                return;
+            }
+
+            $otherWrapper.hide();
+            $otherInput.prop('required', false);
+            $otherInput.val('');
+        }
+
+        function resetFkOtherFields($form) {
+            $form.find('.js-fk-other-select').each(function () {
+                syncFkOtherSelect($(this));
+            });
+        }
+
+        function setFkFieldValue($form, name, value) {
+            const $field = $form.find(`[name="${name}"]`).first();
+
+            if (!$field.length) {
+                return false;
+            }
+
+            $field.val(value || '');
+            syncFkOtherSelect($field);
+
+            return true;
+        }
+
+
+
+        function agregarOpcionFkATodosLosSelects(name, registro) {
+            if (!registro || !registro.id || !registro.nombre) {
+                return;
+            }
+
+            const value = String(registro.id);
+            const label = String(registro.nombre);
+
+            $(`select[name="${name}"]`).each(function () {
+                const $select = $(this);
+
+                const yaExiste = $select.find(`option[value="${value}"]`).length > 0;
+
+                if (yaExiste) {
+                    return;
+                }
+
+                const $option = $('<option>', {
+                    value: value,
+                    text: label
+                });
+
+                const $opcionOtro = $select.find('option[value="__otro__"]').first();
+
+                if ($opcionOtro.length) {
+                    $option.insertBefore($opcionOtro);
+                } else {
+                    $select.append($option);
+                }
+            });
+        }
+
+        function agregarOpcionesFkDesdeRespuesta(data) {
+            agregarOpcionFkATodosLosSelects('banco_id', data.banco);
+            agregarOpcionFkATodosLosSelects('tipo_cuenta_id', data.tipo_cuenta);
+        }
+
+
+
         function resetDynamicFields($form) {
             $form.find('.js-provider-dynamic-select').each(function () {
                 syncDynamicSelect($(this));
@@ -183,12 +264,14 @@ import { createAjaxService } from './ajaxService';
             const $form = getActiveForm();
 
             formService.reset($form);
-            resetDynamicFields($form);
 
             formService.fill($form, {
                 rut_cliente: item.rut_cliente || item.rut_proveedor || '',
                 razon_social: item.razon_social || ''
             });
+
+            resetDynamicFields($form);
+            resetFkOtherFields($form);
 
             updateTitle();
         }
@@ -221,11 +304,22 @@ import { createAjaxService } from './ajaxService';
 
                 if (currentValue !== '') return;
 
+
+
+
                 const wasDynamic = setDynamicFieldValue($form, name, value);
 
                 if (!wasDynamic) {
-                    $field.val(value);
+                    const wasFkOther = setFkFieldValue($form, name, value);
+
+                    if (!wasFkOther) {
+                        $field.val(value);
+                    }
                 }
+
+
+
+
             });
         }
 
@@ -258,11 +352,20 @@ import { createAjaxService } from './ajaxService';
 
             flujo.openManual(tipo, rut, razon);
             resetDynamicFields(getActiveForm());
+            resetFkOtherFields(getActiveForm());
         });
+
+
 
         $(document).on('change', '.js-provider-dynamic-select', function () {
             syncDynamicSelect($(this));
         });
+
+
+        $(document).on('change', '.js-fk-other-select', function () {
+            syncFkOtherSelect($(this));
+        });
+
 
         $(document).on('input', '.js-provider-dynamic-other', function () {
             syncDynamicOther($(this));
@@ -282,15 +385,21 @@ import { createAjaxService } from './ajaxService';
             const $form = $(this);
 
             resetDynamicFields($form);
+            resetFkOtherFields($form);
             formService.clearErrors($form);
 
             ajaxService.submitForm($form)
+
+
+
                 .done(function (data) {
 
                     if (!data.success) {
                         alert('No fue posible guardar el registro.');
                         return;
                     }
+
+                    agregarOpcionesFkDesdeRespuesta(data);
 
                     if (state.guided) {
                         flujo.goToNextPending();
@@ -300,6 +409,12 @@ import { createAjaxService } from './ajaxService';
                     modal.hide();
                     window.location.reload();
                 })
+
+
+
+
+
+
                 .fail(function (xhr) {
 
                     if (xhr.status === 422 && xhr.responseJSON?.errors) {
@@ -329,6 +444,7 @@ import { createAjaxService } from './ajaxService';
             formService.reset($(FORM_SELECTORS.compra));
 
             resetDynamicFields($(FORM_SELECTORS.compra));
+            resetFkOtherFields($(FORM_SELECTORS.compra));
 
             if (state.pendingActionAfterHide === 'next') {
 
@@ -352,6 +468,7 @@ import { createAjaxService } from './ajaxService';
         // -----------------------
 
         resetDynamicFields($(FORM_SELECTORS.compra));
+        resetFkOtherFields($(FORM_SELECTORS.compra));
 
         if (pendientesSesion.length > 0) {
             flujo.startGuided(tipoFlujoSesion, pendientesSesion);

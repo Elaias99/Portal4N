@@ -25,7 +25,7 @@
         'responsable' => 'Responsable',
     ];
 
-    $camposCuenta = [
+    $camposCuentaTexto = [
         'nombre_cuenta' => 'Nombre Cuenta',
         'rut_cuenta' => 'RUT Cuenta',
         'numero_cuenta' => 'Número Cuenta',
@@ -284,127 +284,139 @@ IDENTIFICACIÓN
         <h6 class="fw-semibold mb-3">Datos bancarios</h6>
 
         <div class="{{ $rowClass }}">
-            @foreach($camposCuenta as $campo => $label)
-                @php
-                    $valorActual = old($campo, $cobranzaCompra->{$campo} ?? '');
-                    $valorNormalizado = mb_strtolower(trim((string) $valorActual));
 
-                    $opcionesCampo = collect($opcionesCobranzaCompra[$campo] ?? [])
-                        ->map(fn($valor) => trim((string) $valor))
-                        ->filter(fn($valor) => $valor !== '')
-                        ->values();
-
-                    $existeEnOpciones = $valorActual === '' || $opcionesCampo->contains(function ($opcion) use ($valorNormalizado) {
-                        return mb_strtolower(trim((string) $opcion)) === $valorNormalizado;
-                    });
-                @endphp
-
+            {{-- Campos bancarios escritos manualmente --}}
+            @foreach($camposCuentaTexto as $campo => $label)
                 <div class="col-md-4">
                     <div class="{{ $fieldMarginClass }}">
-                        <label for="{{ $formIdPrefix }}_{{ $campo }}_select" class="form-label">{{ $label }}</label>
+                        <label for="{{ $formIdPrefix }}_{{ $campo }}" class="form-label">{{ $label }}</label>
 
                         <input
-                            type="hidden"
+                            type="text"
                             name="{{ $campo }}"
                             id="{{ $formIdPrefix }}_{{ $campo }}"
-                            class="js-provider-dynamic-value"
-                            value="{{ $valorActual }}"
-                        >
-
-                        <select
-                            id="{{ $formIdPrefix }}_{{ $campo }}_select"
-                            class="form-select js-provider-dynamic-select @error($campo) is-invalid @enderror"
-                            data-hidden-input="#{{ $formIdPrefix }}_{{ $campo }}"
-                            data-other-wrapper="#{{ $formIdPrefix }}_{{ $campo }}_otro_wrap"
-                            data-other-input="#{{ $formIdPrefix }}_{{ $campo }}_otro"
+                            class="form-control @error($campo) is-invalid @enderror"
+                            value="{{ old($campo, $cobranzaCompra->{$campo} ?? '') }}"
                             required
                         >
-                            <option value="">Seleccione {{ mb_strtolower($label) }}</option>
-
-                            @foreach($opcionesCampo as $opcion)
-                                @php
-                                    $opcionNormalizada = mb_strtolower(trim((string) $opcion));
-                                @endphp
-
-                                <option
-                                    value="{{ $opcion }}"
-                                    {{ $existeEnOpciones && $valorNormalizado === $opcionNormalizada ? 'selected' : '' }}
-                                >
-                                    {{ $opcion }}
-                                </option>
-                            @endforeach
-
-                            <option value="__otro__" {{ !$existeEnOpciones ? 'selected' : '' }}>
-                                Otro
-                            </option>
-                        </select>
-
-                        <div
-                            id="{{ $formIdPrefix }}_{{ $campo }}_otro_wrap"
-                            class="mt-2 js-provider-dynamic-other-wrapper"
-                            style="{{ !$existeEnOpciones ? '' : 'display:none;' }}"
-                        >
-                            <input
-                                type="text"
-                                id="{{ $formIdPrefix }}_{{ $campo }}_otro"
-                                class="form-control js-provider-dynamic-other"
-                                data-hidden-input="#{{ $formIdPrefix }}_{{ $campo }}"
-                                value="{{ !$existeEnOpciones ? $valorActual : '' }}"
-                                placeholder="Ingrese {{ mb_strtolower($label) }}"
-                            >
-                        </div>
 
                         @error($campo)
-                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                            <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
                 </div>
             @endforeach
 
+            @php
+                $bancoIdActual = old('banco_id', $cobranzaCompra->banco_id ?? '');
+                $bancoOtroActual = old('banco_otro', '');
+                $bancoEsOtro = $bancoIdActual === '__otro__';
+
+                $tipoCuentaIdActual = old('tipo_cuenta_id', $cobranzaCompra->tipo_cuenta_id ?? '');
+                $tipoCuentaOtroActual = old('tipo_cuenta_otro', '');
+                $tipoCuentaEsOtro = $tipoCuentaIdActual === '__otro__';
+            @endphp
+
+            {{-- Banco --}}
             <div class="col-md-6">
                 <div class="{{ $fieldMarginClass }}">
                     <label for="{{ $formIdPrefix }}_banco_id" class="form-label">Banco</label>
+
                     <select
                         name="banco_id"
                         id="{{ $formIdPrefix }}_banco_id"
-                        class="form-select @error('banco_id') is-invalid @enderror"
+                        class="form-select js-fk-other-select @error('banco_id') is-invalid @enderror"
+                        data-other-wrapper="#{{ $formIdPrefix }}_banco_otro_wrap"
+                        data-other-input="#{{ $formIdPrefix }}_banco_otro"
                         required
                     >
                         <option value="">Seleccione un banco</option>
+
                         @foreach($bancos as $banco)
                             <option value="{{ $banco->id }}"
-                                {{ old('banco_id', $cobranzaCompra->banco_id ?? '') == $banco->id ? 'selected' : '' }}>
+                                {{ (string) $bancoIdActual === (string) $banco->id ? 'selected' : '' }}>
                                 {{ $banco->nombre }}
                             </option>
                         @endforeach
+
+                        <option value="__otro__" {{ $bancoEsOtro ? 'selected' : '' }}>
+                            Otro
+                        </option>
                     </select>
 
+                    <div
+                        id="{{ $formIdPrefix }}_banco_otro_wrap"
+                        class="mt-2 js-fk-other-wrapper"
+                        style="{{ $bancoEsOtro ? '' : 'display:none;' }}"
+                    >
+                        <input
+                            type="text"
+                            name="banco_otro"
+                            id="{{ $formIdPrefix }}_banco_otro"
+                            class="form-control @error('banco_otro') is-invalid @enderror"
+                            value="{{ $bancoOtroActual }}"
+                            placeholder="Ingrese banco"
+                        >
+
+                        @error('banco_otro')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
+
                     @error('banco_id')
-                        <div class="invalid-feedback">{{ $message }}</div>
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
                     @enderror
                 </div>
             </div>
 
+            {{-- Tipo de Cuenta --}}
             <div class="col-md-6">
                 <div class="{{ $fieldMarginClass }}">
                     <label for="{{ $formIdPrefix }}_tipo_cuenta_id" class="form-label">Tipo de Cuenta</label>
+
                     <select
                         name="tipo_cuenta_id"
                         id="{{ $formIdPrefix }}_tipo_cuenta_id"
-                        class="form-select @error('tipo_cuenta_id') is-invalid @enderror"
+                        class="form-select js-fk-other-select @error('tipo_cuenta_id') is-invalid @enderror"
+                        data-other-wrapper="#{{ $formIdPrefix }}_tipo_cuenta_otro_wrap"
+                        data-other-input="#{{ $formIdPrefix }}_tipo_cuenta_otro"
                         required
                     >
                         <option value="">Seleccione un tipo de cuenta</option>
+
                         @foreach($tipoCuentas as $tipo)
                             <option value="{{ $tipo->id }}"
-                                {{ old('tipo_cuenta_id', $cobranzaCompra->tipo_cuenta_id ?? '') == $tipo->id ? 'selected' : '' }}>
+                                {{ (string) $tipoCuentaIdActual === (string) $tipo->id ? 'selected' : '' }}>
                                 {{ $tipo->nombre }}
                             </option>
                         @endforeach
+
+                        <option value="__otro__" {{ $tipoCuentaEsOtro ? 'selected' : '' }}>
+                            Otro
+                        </option>
                     </select>
 
+                    <div
+                        id="{{ $formIdPrefix }}_tipo_cuenta_otro_wrap"
+                        class="mt-2 js-fk-other-wrapper"
+                        style="{{ $tipoCuentaEsOtro ? '' : 'display:none;' }}"
+                    >
+                        <input
+                            type="text"
+                            name="tipo_cuenta_otro"
+                            id="{{ $formIdPrefix }}_tipo_cuenta_otro"
+                            class="form-control @error('tipo_cuenta_otro') is-invalid @enderror"
+                            value="{{ $tipoCuentaOtroActual }}"
+                            placeholder="Ingrese tipo de cuenta"
+                        >
+
+                        @error('tipo_cuenta_otro')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
+
                     @error('tipo_cuenta_id')
-                        <div class="invalid-feedback">{{ $message }}</div>
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
                     @enderror
                 </div>
             </div>
@@ -498,7 +510,7 @@ IDENTIFICACIÓN
         <h6 class="fw-semibold mb-3">Datos bancarios</h6>
 
         <div class="{{ $rowClass }}">
-            @foreach($camposCuenta as $campo => $label)
+            @foreach($camposCuentaTexto as $campo => $label)
                 <div class="col-md-4">
                     <div class="{{ $fieldMarginClass }}">
                         <label for="{{ $formIdPrefix }}_{{ $campo }}" class="form-label">{{ $label }}</label>
