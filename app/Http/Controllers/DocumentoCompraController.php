@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\DocumentoCompra;
+use App\Models\DocumentoFinanciero;
 use App\Imports\ComprasImport;
 use App\Models\CobranzaCompra;
 use Maatwebsite\Excel\Facades\Excel;
@@ -1260,14 +1261,17 @@ class DocumentoCompraController extends Controller
     public function storeCruce(Request $request, DocumentoCompra $documento)
     {
         $request->validate([
-            'monto' => 'required|integer|min:1',
+            'monto' => 'nullable|integer|min:1',
             'fecha_cruce' => 'required|date|before_or_equal:today',
+            'documentos_financieros_cruce' => 'nullable|array',
+            'documentos_financieros_cruce.*' => 'integer|exists:documentos_financieros,id',
         ], [
             'fecha_cruce.before_or_equal' => 'La fecha del cruce no debe sobrepasar la fecha actual.',
             'fecha_cruce.required' => 'La fecha del cruce es obligatoria.',
+            'documentos_financieros_cruce.*.exists' => 'Uno de los documentos seleccionados no es válido.',
         ]);
 
-        $documento->loadMissing('cobranzaCompra');
+        $documento->loadMissing('cobranzaCompra', 'cobranzaClienteAsociada');
 
         if (!$documento->cobranza_compra_id) {
             return back()
@@ -1277,9 +1281,36 @@ class DocumentoCompraController extends Controller
 
         $saldoPendiente = $documento->saldo_pendiente;
 
-        if ($request->monto > $saldoPendiente) {
+        $documentosSeleccionadosIds = collect($request->input('documentos_financieros_cruce', []))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $documentosFinancierosSeleccionados = collect();
+
+        if ($documentosSeleccionadosIds->isNotEmpty()) {
+            $documentosFinancierosSeleccionados = DocumentoFinanciero::with(['empresa', 'tipoDocumento'])
+                ->whereIn('id', $documentosSeleccionadosIds)
+                ->where('rut_cliente', $documento->rut_proveedor)
+                ->whereNotIn('tipo_documento_id', [61, 56])
+                ->get();
+
+            if ($documentosFinancierosSeleccionados->count() !== $documentosSeleccionadosIds->count()) {
+                return back()
+                    ->withErrors([
+                        'documentos_financieros_cruce' => 'Uno o más documentos seleccionados no corresponden al cliente asociado.',
+                    ])
+                    ->withInput();
+            }
+
+            $montoCruce = (int) $documentosFinancierosSeleccionados->sum('saldo_pendiente');
+        } else {
+            $montoCruce = (int) $request->monto;
+        }
+
+        if ($montoCruce <= 0) {
             return back()
-                ->withErrors(['monto' => 'El cruce no puede ser mayor al saldo pendiente actual.'])
+                ->withErrors(['monto' => 'El monto del cruce debe ser mayor a cero.'])
                 ->withInput();
         }
 
@@ -1289,7 +1320,7 @@ class DocumentoCompraController extends Controller
         ];
 
         $cruce = $documento->cruces()->create([
-            'monto' => $request->monto,
+            'monto' => $montoCruce,
             'fecha_cruce' => $request->fecha_cruce,
             'cobranza_compra_id' => $documento->cobranza_compra_id,
         ]);
@@ -1308,13 +1339,25 @@ class DocumentoCompraController extends Controller
             'nuevo_estado' => 'Cruce',
             'fecha_cambio' => now(),
             'tipo_movimiento' => 'Registro de cruce',
-            'descripcion' => "Se registró un cruce de {$request->monto} el {$request->fecha_cruce} con la cobranza de compra asociada {$documento->cobranzaCompra?->razon_social}.",
+            'descripcion' => "Se registró un cruce de {$montoCruce} el {$request->fecha_cruce} con la cobranza de compra asociada {$documento->cobranzaCompra?->razon_social}.",
             'datos_anteriores' => $datosAnteriores,
             'datos_nuevos' => [
-                'monto' => $request->monto,
+                'monto' => $montoCruce,
                 'fecha_cruce' => $request->fecha_cruce,
                 'cobranza_compra_id' => $documento->cobranza_compra_id,
                 'cobranza_compra_razon_social' => $documento->cobranzaCompra?->razon_social,
+                'documentos_financieros_cruce' => $documentosFinancierosSeleccionados->map(function ($docFinanciero) {
+                    return [
+                        'id' => $docFinanciero->id,
+                        'folio' => $docFinanciero->folio,
+                        'empresa' => $docFinanciero->empresa?->Nombre,
+                        'tipo_documento' => $docFinanciero->tipoDocumento?->nombre,
+                        'rut_cliente' => $docFinanciero->rut_cliente,
+                        'razon_social' => $docFinanciero->razon_social,
+                        'saldo_pendiente' => $docFinanciero->saldo_pendiente,
+                    ];
+                })->values(),
+                'saldo_anterior' => $saldoPendiente,
                 'nuevo_saldo' => $documento->saldo_pendiente,
             ],
         ]);

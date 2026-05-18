@@ -11,6 +11,7 @@
                 <button type="button"
                         class="btn btn-light btn-sm rounded-circle shadow-sm"
                         data-dismiss="modal"
+                        data-bs-dismiss="modal"
                         aria-label="Cerrar"
                         style="position:absolute;top:16px;right:16px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">
                     <span aria-hidden="true" class="text-dark" style="font-size:1.2rem;">&times;</span>
@@ -114,6 +115,7 @@
 
                         <input type="number"
                                name="monto"
+                               id="monto-cruce-{{ $doc->id }}"
                                class="form-control form-control-sm @error('monto') is-invalid @enderror"
                                min="1"
                                required>
@@ -330,7 +332,8 @@
             <div class="modal-footer">
                 <button type="button"
                         class="btn btn-secondary btn-sm"
-                        data-dismiss="modal">
+                        data-dismiss="modal"
+                        data-bs-dismiss="modal">
                     Cancelar
                 </button>
 
@@ -466,6 +469,12 @@ document.addEventListener('change', function (event) {
             currency: 'CLP',
             maximumFractionDigits: 0
         });
+    }
+
+    const montoCruceInput = document.getElementById('monto-cruce-' + formId);
+
+    if (montoCruceInput) {
+        montoCruceInput.value = total > 0 ? total : '';
     }
 });
 </script>
