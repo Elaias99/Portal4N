@@ -1254,19 +1254,22 @@ class DocumentoCompraController extends Controller
 
     public function storeCruce(Request $request, DocumentoCompra $documento)
     {
-        //  Validación usando cobranza_compras
         $request->validate([
             'monto' => 'required|integer|min:1',
             'fecha_cruce' => 'required|date|before_or_equal:today',
-            'cobranza_compra_id' => 'required|exists:cobranza_compras,id',
         ], [
             'fecha_cruce.before_or_equal' => 'La fecha del cruce no debe sobrepasar la fecha actual.',
             'fecha_cruce.required' => 'La fecha del cruce es obligatoria.',
-            'cobranza_compra_id.required' => 'Debe seleccionar un cliente.',
-            'cobranza_compra_id.exists' => 'El cliente seleccionado no es válido.',
         ]);
 
-        //Validar que el cruce no supere el saldo pendiente
+        $documento->loadMissing('cobranzaCompra');
+
+        if (!$documento->cobranza_compra_id) {
+            return back()
+                ->withErrors(['cobranza_compra_id' => 'El documento no tiene una cobranza de compra asociada.'])
+                ->withInput();
+        }
+
         $saldoPendiente = $documento->saldo_pendiente;
 
         if ($request->monto > $saldoPendiente) {
@@ -1275,29 +1278,24 @@ class DocumentoCompraController extends Controller
                 ->withInput();
         }
 
-        //Guardar datos anteriores
         $datosAnteriores = [
             'saldo_pendiente' => $saldoPendiente,
             'estado' => $documento->estado,
         ];
 
-        //Registrar el cruce (SIN proveedores)
         $cruce = $documento->cruces()->create([
             'monto' => $request->monto,
             'fecha_cruce' => $request->fecha_cruce,
-            'cobranza_compra_id' => $request->cobranza_compra_id,
+            'cobranza_compra_id' => $documento->cobranza_compra_id,
         ]);
 
-        //Recalcular saldo pendiente
         $documento->recalcularSaldoPendiente();
 
-        //Actualizar estado manual
         $documento->update([
             'estado' => 'Cruce',
             'fecha_estado_manual' => now(),
         ]);
 
-        //Registrar movimiento con trazabilidad
         MovimientoCompra::create([
             'documento_compra_id' => $documento->id,
             'usuario_id' => Auth::id(),
@@ -1305,12 +1303,13 @@ class DocumentoCompraController extends Controller
             'nuevo_estado' => 'Cruce',
             'fecha_cambio' => now(),
             'tipo_movimiento' => 'Registro de cruce',
-            'descripcion' => "Se registró un cruce de {$request->monto} el {$request->fecha_cruce} con cobranza_compra ID {$request->cobranza_compra_id}.",
+            'descripcion' => "Se registró un cruce de {$request->monto} el {$request->fecha_cruce} con la cobranza de compra asociada {$documento->cobranzaCompra?->razon_social}.",
             'datos_anteriores' => $datosAnteriores,
             'datos_nuevos' => [
                 'monto' => $request->monto,
                 'fecha_cruce' => $request->fecha_cruce,
-                'cobranza_compra_id' => $request->cobranza_compra_id,
+                'cobranza_compra_id' => $documento->cobranza_compra_id,
+                'cobranza_compra_razon_social' => $documento->cobranzaCompra?->razon_social,
                 'nuevo_saldo' => $documento->saldo_pendiente,
             ],
         ]);

@@ -145,16 +145,21 @@
                             Cliente (Cobranza asociada)
                         </label>
 
-                        <select name="cobranza_id"
-                                class="form-select form-select-sm @error('cobranza_id') is-invalid @enderror"
-                                required>
-                            <option value="">-- Seleccionar cliente --</option>
-                            @foreach($cobranzas as $cobranza)
-                                <option value="{{ $cobranza->id }}">
-                                    {{ $cobranza->razon_social }} — RUT: {{ $cobranza->rut_cliente }}
-                                </option>
-                            @endforeach
-                        </select>
+                        {{-- Cobranza asociada automática --}}
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">
+                                Cliente asociado
+                            </label>
+
+                            <input type="text"
+                                class="form-control form-control-sm"
+                                value="{{ $doc->cobranza?->razon_social ?? $doc->razon_social }} — RUT: {{ $doc->cobranza?->rut_cliente ?? $doc->rut_cliente }}"
+                                readonly>
+
+                            <small class="text-muted">
+                                El cruce se asociará automáticamente al cliente del documento.
+                            </small>
+                        </div>
 
                         @error('cobranza_id')
                             <span class="invalid-feedback d-block text-danger">

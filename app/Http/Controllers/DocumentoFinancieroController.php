@@ -938,15 +938,19 @@ class DocumentoFinancieroController extends Controller
         $request->validate([
             'monto' => 'required|integer|min:1',
             'fecha_cruce' => 'required|date|before_or_equal:today',
-            'cobranza_id' => 'required|exists:cobranzas,id',
         ], [
             'fecha_cruce.before_or_equal' => 'La fecha del cruce no debe sobrepasar la fecha actual.',
             'fecha_cruce.required' => 'La fecha del cruce es obligatoria.',
-            'cobranza_id.required' => 'Debe seleccionar un cliente.',
-            'cobranza_id.exists' => 'El cliente seleccionado no es válido.',
         ]);
 
-        //Validar límite del saldo
+        $documento->loadMissing('cobranza');
+
+        if (!$documento->cobranza_id) {
+            return back()
+                ->withErrors(['cobranza_id' => 'El documento no tiene una cobranza asociada.'])
+                ->withInput();
+        }
+
         $saldoPendiente = $documento->saldo_pendiente;
 
         if ($request->monto > $saldoPendiente) {
@@ -955,32 +959,29 @@ class DocumentoFinancieroController extends Controller
                 ->withInput();
         }
 
-        //Registrar cruce
         $cruce = $documento->cruces()->create([
             'monto' => $request->monto,
             'fecha_cruce' => $request->fecha_cruce,
-            'cobranza_id' => $request->cobranza_id,
+            'cobranza_id' => $documento->cobranza_id,
         ]);
 
-        //Recalcular saldo pendiente
         $documento->recalcularSaldoPendiente();
 
-        //Actualizar estado del documento
         $documento->update([
             'status' => 'Cruce',
             'fecha_estado_manual' => now(),
         ]);
 
-        //Registrar movimiento
         \App\Models\MovimientoDocumento::create([
             'documento_financiero_id' => $documento->id,
             'user_id' => Auth::id(),
             'tipo_movimiento' => 'Cruce registrado',
-            'descripcion' => "Se registró un cruce de {$request->monto} el {$request->fecha_cruce} con la cobranza ID {$request->cobranza_id}.",
+            'descripcion' => "Se registró un cruce de {$request->monto} el {$request->fecha_cruce} con la cobranza asociada {$documento->cobranza?->razon_social}.",
             'datos_nuevos' => [
                 'monto' => $request->monto,
                 'fecha_cruce' => $request->fecha_cruce,
-                'cobranza_id' => $request->cobranza_id,
+                'cobranza_id' => $documento->cobranza_id,
+                'cobranza_razon_social' => $documento->cobranza?->razon_social,
             ],
         ]);
 

@@ -120,17 +120,21 @@
                                required>
                     </div>
 
-                    <label class="form-label small text-muted">Cobranza asociada</label>
-                    <select name="cobranza_compra_id"
-                            class="form-select form-select-sm"
-                            required>
-                        <option value="">-- Seleccionar cobranza de compra --</option>
-                        @foreach($cobranzasCompras as $cobranza)
-                            <option value="{{ $cobranza->id }}">
-                                {{ $cobranza->razon_social }} — RUT: {{ $cobranza->rut_cliente }}
-                            </option>
-                        @endforeach
-                    </select>
+                    {{-- Cobranza de compra asociada automática --}}
+                    <div class="form-group mb-3">
+                        <label class="form-label small text-muted">
+                            Proveedor asociado
+                        </label>
+
+                        <input type="text"
+                            class="form-control form-control-sm"
+                            value="{{ $doc->cobranzaCompra?->razon_social ?? $doc->razon_social }} — RUT: {{ $doc->cobranzaCompra?->rut_cliente ?? $doc->rut_proveedor }}"
+                            readonly>
+
+                        <small class="text-muted">
+                            El cruce se asociará automáticamente al proveedor del documento.
+                        </small>
+                    </div>
                 </form>
 
                 {{-- === FORMULARIO DE PAGO === --}}
