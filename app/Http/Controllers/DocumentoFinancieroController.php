@@ -142,7 +142,8 @@ class DocumentoFinancieroController extends Controller
             'empresa:id,Nombre',
 
             'abonos:id,documento_financiero_id,fecha_abono',
-            'cruces:id,documento_financiero_id,fecha_cruce',
+            'cruces:id,documento_financiero_id,documento_compra_id,cobranza_compra_id,monto,fecha_cruce',
+            'cruces.documentoCompra:id,folio,razon_social,rut_proveedor',
             'pagos:id,documento_financiero_id,fecha_pago',
             'prontoPagos:id,documento_financiero_id,fecha_pronto_pago',
 

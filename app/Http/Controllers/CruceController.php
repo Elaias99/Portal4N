@@ -7,6 +7,7 @@ use App\Models\DocumentoFinanciero;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CruceController extends Controller
 {
@@ -68,100 +69,188 @@ class CruceController extends Controller
 
     public function destroy($id)
     {
-        $cruce = \App\Models\Cruce::findOrFail($id);
-        $documento = $cruce->documento ?? $cruce->documentoCompra;
+        $cruce = Cruce::with([
+            'documento',
+            'documentoCompra',
+        ])->findOrFail($id);
 
-        // Detectar tipo de documento
-        $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
+        $documentoFinanciero = $cruce->documento;
+        $documentoCompra = $cruce->documentoCompra;
 
-        //  Guardar datos antes de eliminar
+        $documentoFinancieroId = $documentoFinanciero?->id;
+        $documentoCompraId = $documentoCompra?->id;
+
         $datosAnteriores = [
+            'cruce_id' => $cruce->id,
+            'documento_financiero_id' => $cruce->documento_financiero_id,
+            'documento_compra_id' => $cruce->documento_compra_id,
+            'cobranza_id' => $cruce->cobranza_id,
+            'cobranza_compra_id' => $cruce->cobranza_compra_id,
+            'proveedor_id' => $cruce->proveedor_id,
             'monto' => $cruce->monto,
             'fecha_cruce' => $cruce->fecha_cruce,
-            'proveedor_id' => $cruce->proveedor_id,
         ];
 
-        $estadoAnterior = $documento->estado;
+        $estadoAnteriorFinanciero = $documentoFinanciero?->status;
+        $estadoAnteriorCompra = $documentoCompra?->estado;
 
-        // Eliminar el cruce
-        $cruce->delete();
+        try {
+            DB::transaction(function () use (
+                $cruce,
+                $documentoFinanciero,
+                $documentoCompra,
+                $datosAnteriores,
+                $estadoAnteriorFinanciero,
+                $estadoAnteriorCompra
+            ) {
+                /*
+                * IMPORTANTE:
+                * Solo se elimina ESTE cruce por ID.
+                * No se eliminan otros cruces del mismo documento_compra_id.
+                */
+                $cruce->delete();
 
-        //  Recalcular saldo pendiente
-        if (method_exists($documento, 'recalcularSaldoPendiente')) {
-            $documento->recalcularSaldoPendiente(); 
+                /*
+                * Recalcular lado CxC si el cruce tenía documento_financiero_id.
+                */
+                if ($documentoFinanciero) {
+                    $documentoFinanciero->recalcularSaldoPendiente();
+
+                    $totalCruces = $documentoFinanciero->cruces()->sum('monto');
+                    $totalAbonos = $documentoFinanciero->abonos()->sum('monto');
+                    $tienePagos = $documentoFinanciero->pagos()->exists();
+                    $tieneProntoPagos = $documentoFinanciero->prontoPagos()->exists();
+
+                    if ($tienePagos) {
+                        $nuevoEstadoManual = 'Pago';
+                    } elseif ($tieneProntoPagos) {
+                        $nuevoEstadoManual = 'Pronto pago';
+                    } elseif ($totalCruces > 0) {
+                        $nuevoEstadoManual = 'Cruce';
+                    } elseif ($totalAbonos > 0) {
+                        $nuevoEstadoManual = 'Abono';
+                    } else {
+                        $nuevoEstadoManual = null;
+                    }
+
+                    if ($documentoFinanciero->fecha_vencimiento) {
+                        $nuevoStatusOriginal = now()->gt(Carbon::parse($documentoFinanciero->fecha_vencimiento))
+                            ? 'Vencido'
+                            : 'Al día';
+                    } else {
+                        $nuevoStatusOriginal = 'Sin cálculo';
+                    }
+
+                    $documentoFinanciero->update([
+                        'status' => $nuevoEstadoManual,
+                        'status_original' => $nuevoStatusOriginal,
+                        'fecha_estado_manual' => $nuevoEstadoManual ? now() : null,
+                    ]);
+
+                    \App\Models\MovimientoDocumento::create([
+                        'documento_financiero_id' => $documentoFinanciero->id,
+                        'user_id' => Auth::id(),
+                        'tipo_movimiento' => 'Eliminación de cruce',
+                        'descripcion' => "Se eliminó el cruce ID {$datosAnteriores['cruce_id']} por {$datosAnteriores['monto']} correspondiente al documento financiero folio {$documentoFinanciero->folio}.",
+                        'datos_anteriores' => array_merge($datosAnteriores, [
+                            'status_anterior' => $estadoAnteriorFinanciero,
+                        ]),
+                        'datos_nuevos' => [
+                            'nuevo_estado_manual' => $nuevoEstadoManual,
+                            'nuevo_status_original' => $nuevoStatusOriginal,
+                            'saldo_actual' => $documentoFinanciero->saldo_pendiente,
+                        ],
+                    ]);
+                }
+
+                /*
+                * Recalcular lado CxP si el cruce tenía documento_compra_id.
+                */
+                if ($documentoCompra) {
+                    $documentoCompra->recalcularSaldoPendiente();
+
+                    $totalCruces = $documentoCompra->cruces()->sum('monto');
+                    $totalAbonos = $documentoCompra->abonos()->sum('monto');
+                    $tienePagos = $documentoCompra->pagos()->exists();
+                    $tieneProntoPagos = $documentoCompra->prontoPagos()->exists();
+
+                    if ($tienePagos) {
+                        $nuevoEstadoManual = 'Pago';
+                    } elseif ($tieneProntoPagos) {
+                        $nuevoEstadoManual = 'Pronto pago';
+                    } elseif ($totalCruces > 0) {
+                        $nuevoEstadoManual = 'Cruce';
+                    } elseif ($totalAbonos > 0) {
+                        $nuevoEstadoManual = 'Abono';
+                    } else {
+                        $nuevoEstadoManual = null;
+                    }
+
+                    if ($documentoCompra->fecha_vencimiento) {
+                        $nuevoStatusOriginal = now()->gt(Carbon::parse($documentoCompra->fecha_vencimiento))
+                            ? 'Vencido'
+                            : 'Al día';
+                    } else {
+                        $nuevoStatusOriginal = 'Sin cálculo';
+                    }
+
+                    $documentoCompra->update([
+                        'estado' => $nuevoEstadoManual,
+                        'status_original' => $nuevoStatusOriginal,
+                        'fecha_estado_manual' => $nuevoEstadoManual ? now() : null,
+                    ]);
+
+                    \App\Models\MovimientoCompra::create([
+                        'documento_compra_id' => $documentoCompra->id,
+                        'usuario_id' => Auth::id(),
+                        'estado_anterior' => $estadoAnteriorCompra,
+                        'nuevo_estado' => $nuevoEstadoManual,
+                        'fecha_cambio' => now(),
+                        'tipo_movimiento' => 'Eliminación de cruce',
+                        'descripcion' => "Se eliminó el cruce ID {$datosAnteriores['cruce_id']} por {$datosAnteriores['monto']} correspondiente al documento de compra folio {$documentoCompra->folio}.",
+                        'datos_anteriores' => array_merge($datosAnteriores, [
+                            'estado_anterior' => $estadoAnteriorCompra,
+                        ]),
+                        'datos_nuevos' => [
+                            'nuevo_estado_manual' => $nuevoEstadoManual,
+                            'nuevo_status_original' => $nuevoStatusOriginal,
+                            'saldo_actual' => $documentoCompra->saldo_pendiente,
+                        ],
+                    ]);
+                }
+            });
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()
+                ->withErrors(['cruce' => 'Ocurrió un error al eliminar el cruce.'])
+                ->withInput();
         }
 
-        // Recalcular totales
-        $totalCruces = $documento->cruces()->sum('monto');
-        $totalAbonos = $documento->abonos()->sum('monto');
+        /*
+        * Redirección según desde dónde se eliminó.
+        */
+        $urlAnterior = url()->previous();
 
-        //  Determinar nuevo estado
-        if ($totalCruces > 0) {
-            $nuevoEstado = 'Cruce';
-        } elseif ($totalAbonos > 0) {
-            $nuevoEstado = 'Abono';
-        } else {
-            $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
-                ? 'Vencido'
-                : 'Al día';
-        }
-
-        // Actualizar documento según tipo
-        if ($tipoDocumento === 'compra') {
-            $documento->update([
-                'estado' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
-                'status_original' => $nuevoEstado,
-                'fecha_estado_manual' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
-            ]);
-        } else {
-
-            $documento->update([
-                'status' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
-                'status_original' => $nuevoEstado,
-                'fecha_estado_manual' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
-            ]);
-        }
-
-        //  Registrar movimiento según tipo de documento
-        if ($tipoDocumento === 'financiero') {
-            \App\Models\MovimientoDocumento::create([
-                'documento_financiero_id' => $documento->id,
-                'user_id' => Auth::id(),
-                'tipo_movimiento' => 'Eliminación de cruce',
-                'descripcion' => "Se eliminó un cruce de {$datosAnteriores['monto']} correspondiente al documento folio {$documento->folio}.",
-                'datos_anteriores' => $datosAnteriores,
-                'datos_nuevos' => [
-                    'nuevo_estado' => $nuevoEstado,
-                    'saldo_actual' => $documento->saldo_pendiente,
-                ],
-            ]);
-        } elseif ($tipoDocumento === 'compra') {
-            \App\Models\MovimientoCompra::create([
-                'documento_compra_id' => $documento->id,
-                'usuario_id' => Auth::id(),
-                'estado_anterior' => $estadoAnterior,
-                'nuevo_estado' => $nuevoEstado,
-                'fecha_cambio' => now(),
-                'tipo_movimiento' => 'Eliminación de cruce',
-                'descripcion' => "Se eliminó un cruce de {$datosAnteriores['monto']} correspondiente al documento de compra folio {$documento->folio}.",
-                'datos_anteriores' => $datosAnteriores,
-                'datos_nuevos' => [
-                    'nuevo_estado' => $nuevoEstado,
-                    'saldo_actual' => $documento->saldo_pendiente,
-                ],
-            ]);
-        }
-
-        //  Redirección inteligente
-        if ($tipoDocumento === 'compra') {
+        if ($documentoCompraId && str_contains($urlAnterior, '/finanzas/compras')) {
             return redirect()
-                ->route('finanzas_compras.show', $documento->id)
-                ->with('success', 'Cruce eliminado, movimiento registrado y estado actualizado correctamente.');
+                ->route('finanzas_compras.show', $documentoCompraId)
+                ->with('success', 'Cruce eliminado, saldos recalculados y movimientos registrados correctamente.');
         }
 
-        return redirect()
-            ->route('documentos.detalles', $documento->id)
-            ->with('success', 'Cruce eliminado, movimiento registrado y estado actualizado correctamente.');
+        if ($documentoFinancieroId) {
+            return redirect()
+                ->route('documentos.detalles', $documentoFinancieroId)
+                ->with('success', 'Cruce eliminado, saldos recalculados y movimientos registrados correctamente.');
+        }
+
+        if ($documentoCompraId) {
+            return redirect()
+                ->route('finanzas_compras.show', $documentoCompraId)
+                ->with('success', 'Cruce eliminado, saldos recalculados y movimientos registrados correctamente.');
+        }
+
+        return back()->with('success', 'Cruce eliminado correctamente.');
     }
 
 

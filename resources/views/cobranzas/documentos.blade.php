@@ -409,15 +409,30 @@
                                 {{ $doc->folio }}
                         </a>
 
-                        @if($doc->referenciados->count() > 0)
-                            <small class="badge bg-info text-dark ms-1">
-                                Referenciado por NC Nº{{ $doc->referenciados->pluck('folio')->join(', ') }}
-                            </small>
-                        @elseif($doc->referencia)
-                            <small class="badge bg-warning text-dark ms-1">
-                                Referencia a Factura Nº{{ $doc->referencia->folio }}
-                            </small>
-                        @endif
+                    @if($doc->referenciados->count() > 0)
+                        <small class="badge bg-info text-dark ms-1">
+                            Referenciado por NC Nº{{ $doc->referenciados->pluck('folio')->join(', ') }}
+                        </small>
+                    @elseif($doc->referencia)
+                        <small class="badge bg-warning text-dark ms-1">
+                            Referencia a Factura Nº{{ $doc->referencia->folio }}
+                        </small>
+                    @endif
+
+                    @php
+                        $crucesCxP = $doc->cruces->filter(fn($cruce) => !is_null($cruce->documento_compra_id));
+                    @endphp
+
+                    @if($crucesCxP->isNotEmpty())
+                        <div class="mt-1">
+                            @foreach($crucesCxP as $cruce)
+                                <small class="badge bg-primary text-white d-inline-block mb-1">
+                                    Cruzado con CxP Folio {{ $cruce->documentoCompra?->folio ?? $cruce->documento_compra_id }}
+                                    — ${{ number_format($cruce->monto, 0, ',', '.') }}
+                                </small>
+                            @endforeach
+                        </div>
+                    @endif
                     </td>
 
                     {{-- Fecha Docto --}}
