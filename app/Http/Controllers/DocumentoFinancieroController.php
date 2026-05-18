@@ -845,16 +845,22 @@ class DocumentoFinancieroController extends Controller
 
     public function show(DocumentoFinanciero $documento)
     {
-        // Cargar relaciones relevantes, incluyendo proveedor dentro de cruces
+        // Cargar relaciones relevantes
         $documento->load([
             'empresa',
             'abonos',
-            'cruces.proveedor', 
+            'cruces.proveedor',
             'referencia',
-            'referenciados'
+            'referenciados',
+            'cobranza',
+            'cobranzaCompraAsociada',
+
+            // Documentos de compra asociados al mismo RUT del cliente
+            'documentosCompraAsociados.empresa',
+            'documentosCompraAsociados.tipoDocumento',
         ]);
 
-        //Guardar la URL anterior solo si viene del listado y no de otra acción (como updateStatus)
+        // Guardar la URL anterior solo si viene del listado y no de otra acción
         if (url()->previous() && !str_contains(url()->previous(), '/documentos/')) {
             session(['return_to_listado' => url()->previous()]);
         }
@@ -865,13 +871,19 @@ class DocumentoFinancieroController extends Controller
             'referenciadoPor' => $documento->referenciados,
         ];
 
-        // Cargar proveedores disponibles (para poder mostrar o editar cruces)
-        $proveedores = \App\Models\Proveedor::orderBy('razon_social')->get(['id', 'razon_social', 'rut']);
+        // Cargar proveedores disponibles
+        $proveedores = \App\Models\Proveedor::orderBy('razon_social')
+            ->get(['id', 'razon_social', 'rut']);
 
-        $cobranzas = \App\Models\Cobranza::orderBy('razon_social')->get(['id', 'razon_social', 'rut_cliente']);
+        $cobranzas = \App\Models\Cobranza::orderBy('razon_social')
+            ->get(['id', 'razon_social', 'rut_cliente']);
 
-
-        return view('cobranzas.detalles', compact('documento', 'referencias', 'proveedores', 'cobranzas'));
+        return view('cobranzas.detalles', compact(
+            'documento',
+            'referencias',
+            'proveedores',
+            'cobranzas'
+        ));
     }
 
 

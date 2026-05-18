@@ -82,6 +82,19 @@ class DocumentoFinanciero extends Model
         return $this->belongsTo(Cobranza::class, 'cobranza_id');
     }
 
+    public function cobranzaCompraAsociada()
+    {
+        return $this->hasOne(CobranzaCompra::class, 'rut_cliente', 'rut_cliente');
+    }
+
+
+    // Documentos de compra asociados al mismo RUT del cliente
+    public function documentosCompraAsociados()
+    {
+        return $this->hasMany(DocumentoCompra::class, 'rut_proveedor', 'rut_cliente');
+    }
+
+
     public function empresa()
     {
         return $this->belongsTo(Empresa::class);

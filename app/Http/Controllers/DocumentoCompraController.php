@@ -1145,6 +1145,11 @@ class DocumentoCompraController extends Controller
             'pagos',
             'prontoPagos',
             'cobranzaCompra',
+            'cobranzaClienteAsociada',
+
+            // Documentos de CxC asociados al mismo RUT del proveedor
+            'documentosFinancierosAsociados.empresa',
+            'documentosFinancierosAsociados.tipoDocumento',
         ]);
 
         // Guardar la URL anterior solo si viene desde el listado

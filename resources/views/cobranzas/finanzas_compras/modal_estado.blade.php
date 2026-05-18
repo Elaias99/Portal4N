@@ -94,47 +94,192 @@
                       style="display:{{ $doc->estado == 'Cruce' ? 'block' : 'none' }};">
                     @csrf
 
+                    {{-- Saldo pendiente --}}
                     <div class="form-group mb-3">
-                        <label class="form-label small text-muted">Saldo pendiente</label>
+                        <label class="form-label small text-muted">
+                            Saldo pendiente
+                        </label>
+
                         <input type="text"
                                class="form-control form-control-sm"
                                value="${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}"
                                readonly>
                     </div>
 
+                    {{-- Monto del cruce --}}
                     <div class="form-group mb-3">
-                        <label class="form-label small text-muted">Monto del cruce</label>
+                        <label class="form-label small text-muted">
+                            Monto del cruce
+                        </label>
+
                         <input type="number"
                                name="monto"
-                               class="form-control form-control-sm"
+                               class="form-control form-control-sm @error('monto') is-invalid @enderror"
                                min="1"
                                required>
+
+                        @error('monto')
+                            <span class="invalid-feedback d-block text-danger">
+                                <strong>{{ $message }}</strong>
+                            </span>
+                        @enderror
                     </div>
 
+                    {{-- Fecha del cruce --}}
                     <div class="form-group mb-3">
-                        <label class="form-label small text-muted">Fecha del cruce</label>
+                        <label class="form-label small text-muted">
+                            Fecha del cruce
+                        </label>
+
                         <input type="date"
                                name="fecha_cruce"
-                               class="form-control form-control-sm"
+                               class="form-control form-control-sm @error('fecha_cruce') is-invalid @enderror"
                                value="{{ now()->format('Y-m-d') }}"
                                required>
+
+                        @error('fecha_cruce')
+                            <span class="invalid-feedback d-block text-danger">
+                                <strong>{{ $message }}</strong>
+                            </span>
+                        @enderror
                     </div>
 
-                    {{-- Cobranza de compra asociada automática --}}
+                    {{-- Proveedor asociado del documento --}}
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">
                             Proveedor asociado
                         </label>
 
                         <input type="text"
-                            class="form-control form-control-sm"
-                            value="{{ $doc->cobranzaCompra?->razon_social ?? $doc->razon_social }} — RUT: {{ $doc->cobranzaCompra?->rut_cliente ?? $doc->rut_proveedor }}"
-                            readonly>
+                               class="form-control form-control-sm"
+                               value="{{ $doc->cobranzaCompra?->razon_social ?? $doc->razon_social }} — RUT: {{ $doc->cobranzaCompra?->rut_cliente ?? $doc->rut_proveedor }}"
+                               readonly>
 
                         <small class="text-muted">
                             El cruce se asociará automáticamente al proveedor del documento.
                         </small>
+
+                        @error('cobranza_compra_id')
+                            <span class="invalid-feedback d-block text-danger">
+                                <strong>{{ $message }}</strong>
+                            </span>
+                        @enderror
                     </div>
+
+                    {{-- Cliente asociado en Cuentas por Cobrar --}}
+                    <div class="form-group mb-3">
+                        <label class="form-label small text-muted">
+                            Cliente asociado en CxC
+                        </label>
+
+                        @if($doc->cobranzaClienteAsociada)
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   value="{{ $doc->cobranzaClienteAsociada->razon_social }} — RUT: {{ $doc->cobranzaClienteAsociada->rut_cliente }}"
+                                   readonly>
+
+                            <small class="text-success">
+                                Este proveedor también existe como cliente en Cuentas por Cobrar.
+                            </small>
+                        @else
+                            <input type="text"
+                                   class="form-control form-control-sm text-muted"
+                                   value="No existe cliente asociado en Cuentas por Cobrar para este RUT"
+                                   readonly>
+
+                            <small class="text-warning">
+                                No se encontró una cobranza cliente con el mismo RUT del proveedor.
+                            </small>
+                        @endif
+                    </div>
+
+                    {{-- Documentos asociados en Cuentas por Cobrar --}}
+                    @if($doc->cobranzaClienteAsociada)
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">
+                                Documentos asociados en CxC
+                            </label>
+
+                            @php
+                                $documentosFinancierosAsociados = $doc->documentosFinancierosAsociados
+                                    ->where('saldo_pendiente', '>', 0)
+                                    ->whereNotIn('tipo_documento_id', [61, 56])
+                                    ->sortByDesc('fecha_vencimiento');
+                            @endphp
+
+                            @if($documentosFinancierosAsociados->isNotEmpty())
+                                <div class="border rounded p-2 bg-light"
+                                     style="max-height: 220px; overflow-y: auto;">
+
+                                    @foreach($documentosFinancierosAsociados as $docFinanciero)
+                                        <div class="small py-2 {{ !$loop->last ? 'border-bottom' : '' }}">
+                                            <div class="form-check">
+                                                <input type="checkbox"
+                                                       class="form-check-input js-doc-cruce-check"
+                                                       id="doc-financiero-cruce-{{ $doc->id }}-{{ $docFinanciero->id }}"
+                                                       name="documentos_financieros_cruce[]"
+                                                       value="{{ $docFinanciero->id }}"
+                                                       data-form-id="{{ $doc->id }}"
+                                                       data-saldo="{{ (int) $docFinanciero->saldo_pendiente }}">
+
+                                                <label class="form-check-label w-100"
+                                                       for="doc-financiero-cruce-{{ $doc->id }}-{{ $docFinanciero->id }}">
+                                                    <div class="fw-semibold">
+                                                        Folio {{ $docFinanciero->folio }}
+                                                        — {{ $docFinanciero->tipoDocumento?->nombre ?? 'Documento financiero' }}
+                                                    </div>
+
+                                                    <div class="text-muted">
+                                                        Empresa:
+                                                        {{ $docFinanciero->empresa?->Nombre ?? 'Sin empresa' }}
+                                                    </div>
+
+                                                    <div>
+                                                        Saldo pendiente:
+                                                        <span class="fw-semibold text-danger">
+                                                            ${{ number_format($docFinanciero->saldo_pendiente, 0, ',', '.') }}
+                                                        </span>
+                                                    </div>
+
+                                                    <div class="text-muted">
+                                                        Fecha documento:
+                                                        {{ $docFinanciero->fecha_docto ? \Carbon\Carbon::parse($docFinanciero->fecha_docto)->format('d-m-Y') : '-' }}
+                                                        —
+                                                        Vencimiento:
+                                                        {{ $docFinanciero->fecha_vencimiento ? \Carbon\Carbon::parse($docFinanciero->fecha_vencimiento)->format('d-m-Y') : '-' }}
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+
+                                <div class="mt-2 p-2 border rounded bg-white">
+                                    <span class="small text-muted">
+                                        Total seleccionado:
+                                    </span>
+
+                                    <span class="fw-bold text-primary js-total-cruce-seleccionado"
+                                          data-form-id="{{ $doc->id }}">
+                                        $0
+                                    </span>
+                                </div>
+
+                                <small class="text-muted">
+                                    Estos documentos pertenecen al cliente asociado en Cuentas por Cobrar.
+                                </small>
+                            @else
+                                <input type="text"
+                                       class="form-control form-control-sm text-muted"
+                                       value="No hay documentos pendientes en CxC para este cliente"
+                                       readonly>
+
+                                <small class="text-warning">
+                                    El cliente existe, pero no tiene documentos pendientes disponibles para cruce.
+                                </small>
+                            @endif
+                        </div>
+                    @endif
                 </form>
 
                 {{-- === FORMULARIO DE PAGO === --}}
@@ -289,4 +434,38 @@ function submitEstadoForm(id) {
         console.error('Error al enviar formulario de estado:', error);
     }
 }
+
+document.addEventListener('change', function (event) {
+    const checkbox = event.target;
+
+    if (!checkbox.classList.contains('js-doc-cruce-check')) {
+        return;
+    }
+
+    const formId = checkbox.dataset.formId;
+
+    const checks = document.querySelectorAll(
+        '.js-doc-cruce-check[data-form-id="' + formId + '"]'
+    );
+
+    let total = 0;
+
+    checks.forEach(function (item) {
+        if (item.checked) {
+            total += Number(item.dataset.saldo || 0);
+        }
+    });
+
+    const totalElement = document.querySelector(
+        '.js-total-cruce-seleccionado[data-form-id="' + formId + '"]'
+    );
+
+    if (totalElement) {
+        totalElement.textContent = total.toLocaleString('es-CL', {
+            style: 'currency',
+            currency: 'CLP',
+            maximumFractionDigits: 0
+        });
+    }
+});
 </script>

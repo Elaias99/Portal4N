@@ -5,7 +5,7 @@
             {{-- === HEADER === --}}
             <div class="modal-header position-relative">
                 <h5 class="modal-title fw-bold" id="modalStatusLabel-{{ $doc->id }}">
-                    Actualizar estado - {{ $doc->razon_social }} - folio {{ $doc->folio }} 
+                    Actualizar estado - {{ $doc->razon_social }} - folio {{ $doc->folio }}
                 </h5>
 
                 <button type="button"
@@ -31,7 +31,6 @@
             <div class="modal-body">
 
                 {{-- FORMULARIO PRINCIPAL --}}
-                {{-- FORMULARIO PRINCIPAL --}}
                 <form action="{{ route('documentos.updateStatus', $doc->id) }}" method="POST" id="form-status-{{ $doc->id }}">
                     @csrf
                     @method('PATCH')
@@ -40,9 +39,9 @@
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Estado actual</label>
                         <input type="text"
-                            class="form-control form-control-sm"
-                            value="{{ $doc->estado_visible  }}"
-                            readonly>
+                               class="form-control form-control-sm"
+                               value="{{ $doc->estado_visible }}"
+                               readonly>
                     </div>
 
                     {{-- Nuevo estado manual --}}
@@ -60,106 +59,127 @@
                             <option value="Cobranza judicial" {{ $doc->status == 'Cobranza judicial' ? 'selected' : '' }}>Cobranza judicial</option>
                         </select>
                     </div>
-
                 </form>
 
-
                 {{-- FORMULARIO DE ABONO --}}
-                <form action="{{ route('documentos.abonos.store', $doc->id) }}" method="POST" id="form-abono-{{ $doc->id }}" style="display: {{ $doc->status == 'Abono' ? 'block' : 'none' }};">
+                <form action="{{ route('documentos.abonos.store', $doc->id) }}"
+                      method="POST"
+                      id="form-abono-{{ $doc->id }}"
+                      style="display: {{ $doc->status == 'Abono' ? 'block' : 'none' }};">
                     @csrf
 
-                    {{-- Saldo pendiente --}}
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">Saldo pendiente</label>
-                        <input type="text" class="form-control form-control-sm"
+                        <input type="text"
+                               class="form-control form-control-sm"
                                value="${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}"
                                readonly>
                     </div>
 
-                    {{-- Monto del abono --}}
                     <div class="form-group mb-3">
                         <label for="monto-abono-{{ $doc->id }}" class="form-label small text-muted">Monto del abono</label>
-                        <input type="number" name="monto" id="monto-abono-{{ $doc->id }}" class="form-control form-control-sm @error('monto') is-invalid @enderror" min="1" required>
+                        <input type="number"
+                               name="monto"
+                               id="monto-abono-{{ $doc->id }}"
+                               class="form-control form-control-sm @error('monto') is-invalid @enderror"
+                               min="1"
+                               required>
+
                         @error('monto')
-                            <span class="invalid-feedback d-block text-danger"><strong>{{ $message }}</strong></span>
+                            <span class="invalid-feedback d-block text-danger">
+                                <strong>{{ $message }}</strong>
+                            </span>
                         @enderror
                     </div>
 
-                    {{-- Fecha del abono --}}
                     <div class="form-group mb-3">
                         <label for="fecha-abono-{{ $doc->id }}" class="form-label small text-muted">Fecha del abono</label>
-                        <input type="date" name="fecha_abono" id="fecha-abono-{{ $doc->id }}" class="form-control form-control-sm @error('fecha_abono') is-invalid @enderror" required>
+                        <input type="date"
+                               name="fecha_abono"
+                               id="fecha-abono-{{ $doc->id }}"
+                               class="form-control form-control-sm @error('fecha_abono') is-invalid @enderror"
+                               required>
+
                         @error('fecha_abono')
-                            <span class="invalid-feedback d-block text-danger"><strong>{{ $message }}</strong></span>
+                            <span class="invalid-feedback d-block text-danger">
+                                <strong>{{ $message }}</strong>
+                            </span>
                         @enderror
                     </div>
                 </form>
 
-                {{-- FORMULARIO DE CRUCE (nuevo) --}}
-                <form action="{{ route('documentos.cruces.store', $doc->id) }}" 
-                    method="POST" 
-                    id="form-cruce-{{ $doc->id }}" 
-                    style="display: {{ $doc->status == 'Cruce' ? 'block' : 'none' }};">
+                {{-- FORMULARIO DE CRUCE --}}
+                <form action="{{ route('documentos.cruces.store', $doc->id) }}"
+                      method="POST"
+                      id="form-cruce-{{ $doc->id }}"
+                      style="display: {{ $doc->status == 'Cruce' ? 'block' : 'none' }};">
                     @csrf
 
                     {{-- Saldo pendiente --}}
                     <div class="form-group mb-3">
-                        <label class="form-label small text-muted">Saldo pendiente</label>
-                        <input type="text" 
-                            class="form-control form-control-sm"
-                            value="${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}"
-                            readonly>
+                        <label class="form-label small text-muted">
+                            Saldo pendiente
+                        </label>
+
+                        <input type="text"
+                               class="form-control form-control-sm"
+                               value="${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}"
+                               readonly>
                     </div>
 
                     {{-- Monto del cruce --}}
                     <div class="form-group mb-3">
-                        <label for="monto-cruce-{{ $doc->id }}" class="form-label small text-muted">Monto del cruce</label>
-                        <input type="number" 
-                            name="monto" 
-                            id="monto-cruce-{{ $doc->id }}" 
-                            class="form-control form-control-sm @error('monto') is-invalid @enderror" 
-                            min="1" 
-                            required>
+                        <label for="monto-cruce-{{ $doc->id }}" class="form-label small text-muted">
+                            Monto del cruce
+                        </label>
+
+                        <input type="number"
+                               name="monto"
+                               id="monto-cruce-{{ $doc->id }}"
+                               class="form-control form-control-sm @error('monto') is-invalid @enderror"
+                               min="1"
+                               required>
+
                         @error('monto')
-                            <span class="invalid-feedback d-block text-danger"><strong>{{ $message }}</strong></span>
+                            <span class="invalid-feedback d-block text-danger">
+                                <strong>{{ $message }}</strong>
+                            </span>
                         @enderror
                     </div>
 
                     {{-- Fecha del cruce --}}
                     <div class="form-group mb-3">
-                        <label for="fecha-cruce-{{ $doc->id }}" class="form-label small text-muted">Fecha del cruce</label>
-                        <input type="date" 
-                            name="fecha_cruce" 
-                            id="fecha-cruce-{{ $doc->id }}" 
-                            class="form-control form-control-sm @error('fecha_cruce') is-invalid @enderror" 
-                            required>
+                        <label for="fecha-cruce-{{ $doc->id }}" class="form-label small text-muted">
+                            Fecha del cruce
+                        </label>
+
+                        <input type="date"
+                               name="fecha_cruce"
+                               id="fecha-cruce-{{ $doc->id }}"
+                               class="form-control form-control-sm @error('fecha_cruce') is-invalid @enderror"
+                               required>
+
                         @error('fecha_cruce')
-                            <span class="invalid-feedback d-block text-danger"><strong>{{ $message }}</strong></span>
+                            <span class="invalid-feedback d-block text-danger">
+                                <strong>{{ $message }}</strong>
+                            </span>
                         @enderror
                     </div>
 
-                    {{-- Seleccionar proveedor --}}
-                    {{-- Seleccionar proveedor --}}
+                    {{-- Cliente asociado del documento --}}
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">
-                            Cliente (Cobranza asociada)
+                            Cliente asociado
                         </label>
 
-                        {{-- Cobranza asociada automática --}}
-                        <div class="form-group mb-3">
-                            <label class="form-label small text-muted">
-                                Cliente asociado
-                            </label>
+                        <input type="text"
+                               class="form-control form-control-sm"
+                               value="{{ $doc->cobranza?->razon_social ?? $doc->razon_social }} — RUT: {{ $doc->cobranza?->rut_cliente ?? $doc->rut_cliente }}"
+                               readonly>
 
-                            <input type="text"
-                                class="form-control form-control-sm"
-                                value="{{ $doc->cobranza?->razon_social ?? $doc->razon_social }} — RUT: {{ $doc->cobranza?->rut_cliente ?? $doc->rut_cliente }}"
-                                readonly>
-
-                            <small class="text-muted">
-                                El cruce se asociará automáticamente al cliente del documento.
-                            </small>
-                        </div>
+                        <small class="text-muted">
+                            El cruce se asociará automáticamente al cliente del documento.
+                        </small>
 
                         @error('cobranza_id')
                             <span class="invalid-feedback d-block text-danger">
@@ -168,22 +188,138 @@
                         @enderror
                     </div>
 
+                    {{-- Proveedor asociado en Cuentas por Pagar --}}
+                    <div class="form-group mb-3">
+                        <label class="form-label small text-muted">
+                            Proveedor asociado en CxP
+                        </label>
 
+                        @if($doc->cobranzaCompraAsociada)
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   value="{{ $doc->cobranzaCompraAsociada->razon_social }} — RUT: {{ $doc->cobranzaCompraAsociada->rut_cliente }}"
+                                   readonly>
+
+                            <small class="text-success">
+                                Este cliente también existe como proveedor en Cuentas por Pagar.
+                            </small>
+                        @else
+                            <input type="text"
+                                   class="form-control form-control-sm text-muted"
+                                   value="No existe proveedor asociado en Cuentas por Pagar para este RUT"
+                                   readonly>
+
+                            <small class="text-warning">
+                                No se encontró una cobranza de compra con el mismo RUT del cliente.
+                            </small>
+                        @endif
+                    </div>
+
+                    {{-- Documentos asociados en Cuentas por Pagar --}}
+                    @if($doc->cobranzaCompraAsociada)
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">
+                                Documentos asociados en CxP
+                            </label>
+
+                            @php
+                                $documentosCompraAsociados = $doc->documentosCompraAsociados
+                                    ->where('saldo_pendiente', '>', 0)
+                                    ->whereNotIn('tipo_documento_id', [61, 56])
+                                    ->sortByDesc('fecha_vencimiento');
+                            @endphp
+
+                            @if($documentosCompraAsociados->isNotEmpty())
+                                <div class="border rounded p-2 bg-light"
+                                     style="max-height: 220px; overflow-y: auto;">
+
+                                    @foreach($documentosCompraAsociados as $docCompra)
+                                        <div class="small py-2 {{ !$loop->last ? 'border-bottom' : '' }}">
+                                            <div class="form-check">
+                                                <input type="checkbox"
+                                                       class="form-check-input js-doc-cruce-check"
+                                                       id="doc-compra-cruce-{{ $doc->id }}-{{ $docCompra->id }}"
+                                                       name="documentos_compra_cruce[]"
+                                                       value="{{ $docCompra->id }}"
+                                                       data-form-id="{{ $doc->id }}"
+                                                       data-saldo="{{ (int) $docCompra->saldo_pendiente }}">
+
+                                                <label class="form-check-label w-100"
+                                                       for="doc-compra-cruce-{{ $doc->id }}-{{ $docCompra->id }}">
+                                                    <div class="fw-semibold">
+                                                        Folio {{ $docCompra->folio }}
+                                                        — {{ $docCompra->tipoDocumento?->nombre ?? 'Documento compra' }}
+                                                    </div>
+
+                                                    <div class="text-muted">
+                                                        Empresa:
+                                                        {{ $docCompra->empresa?->Nombre ?? 'Sin empresa' }}
+                                                    </div>
+
+                                                    <div>
+                                                        Saldo pendiente:
+                                                        <span class="fw-semibold text-danger">
+                                                            ${{ number_format($docCompra->saldo_pendiente, 0, ',', '.') }}
+                                                        </span>
+                                                    </div>
+
+                                                    <div class="text-muted">
+                                                        Fecha documento:
+                                                        {{ $docCompra->fecha_docto ? \Carbon\Carbon::parse($docCompra->fecha_docto)->format('d-m-Y') : '-' }}
+                                                        —
+                                                        Vencimiento:
+                                                        {{ $docCompra->fecha_vencimiento ? \Carbon\Carbon::parse($docCompra->fecha_vencimiento)->format('d-m-Y') : '-' }}
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+
+                                <div class="mt-2 p-2 border rounded bg-white">
+                                    <span class="small text-muted">
+                                        Total seleccionado:
+                                    </span>
+
+                                    <span class="fw-bold text-primary js-total-cruce-seleccionado"
+                                          data-form-id="{{ $doc->id }}">
+                                        $0
+                                    </span>
+                                </div>
+
+                                <small class="text-muted">
+                                    Estos documentos pertenecen al proveedor asociado en Cuentas por Pagar.
+                                </small>
+                            @else
+                                <input type="text"
+                                       class="form-control form-control-sm text-muted"
+                                       value="No hay documentos pendientes en CxP para este proveedor"
+                                       readonly>
+
+                                <small class="text-warning">
+                                    El proveedor existe, pero no tiene documentos pendientes disponibles para cruce.
+                                </small>
+                            @endif
+                        </div>
+                    @endif
                 </form>
 
-
-
                 {{-- FORMULARIO DE PAGO --}}
-                <form action="{{ route('documentos.pagos.store', $doc->id) }}" method="POST" id="form-pago-{{ $doc->id }}" style="display: {{ $doc->status == 'Pago' ? 'block' : 'none' }};">
+                <form action="{{ route('documentos.pagos.store', $doc->id) }}"
+                      method="POST"
+                      id="form-pago-{{ $doc->id }}"
+                      style="display: {{ $doc->status == 'Pago' ? 'block' : 'none' }};">
                     @csrf
+
                     <div class="form-group mb-3">
                         <label for="fecha-pago-{{ $doc->id }}" class="form-label small text-muted">Fecha del pago</label>
                         <input type="date"
-                            name="fecha_pago"
-                            id="fecha-pago-{{ $doc->id }}"
-                            class="form-control form-control-sm @error('fecha_pago') is-invalid @enderror"
-                            value="{{ now()->format('Y-m-d') }}"
-                            required>
+                               name="fecha_pago"
+                               id="fecha-pago-{{ $doc->id }}"
+                               class="form-control form-control-sm @error('fecha_pago') is-invalid @enderror"
+                               value="{{ now()->format('Y-m-d') }}"
+                               required>
+
                         @error('fecha_pago')
                             <span class="invalid-feedback d-block text-danger">
                                 <strong>{{ $message }}</strong>
@@ -191,7 +327,6 @@
                         @enderror
                     </div>
 
-                    {{-- Campo oculto para mantener coherencia con "Fecha Estado Manual" --}}
                     <input type="hidden" name="fecha_estado_manual" value="{{ old('fecha_estado_manual', now()->format('Y-m-d')) }}">
 
                     <div class="alert alert-info py-1 px-2 small">
@@ -199,32 +334,29 @@
                     </div>
                 </form>
 
-
-                {{-- FORMULARIO DE PRONTO PAGO (nuevo) --}}
-                <form action="{{ route('prontopagos.store', $doc->id) }}" method="POST" id="form-prontopago-{{ $doc->id }}" style="display: {{ $doc->status == 'Pronto pago' ? 'block' : 'none' }};">
+                {{-- FORMULARIO DE PRONTO PAGO --}}
+                <form action="{{ route('prontopagos.store', $doc->id) }}"
+                      method="POST"
+                      id="form-prontopago-{{ $doc->id }}"
+                      style="display: {{ $doc->status == 'Pronto pago' ? 'block' : 'none' }};">
                     @csrf
 
-                    {{-- Fecha del pronto pago --}}
                     <div class="form-group mb-3">
                         <label for="fecha-prontopago-{{ $doc->id }}" class="form-label small text-muted">Fecha del pronto pago</label>
                         <input type="date"
-                            name="fecha_pronto_pago"
-                            id="fecha-prontopago-{{ $doc->id }}"
-                            class="form-control form-control-sm @error('fecha_pronto_pago') is-invalid @enderror"
-                            value="{{ now()->format('Y-m-d') }}"
-                            required>
+                               name="fecha_pronto_pago"
+                               id="fecha-prontopago-{{ $doc->id }}"
+                               class="form-control form-control-sm @error('fecha_pronto_pago') is-invalid @enderror"
+                               value="{{ now()->format('Y-m-d') }}"
+                               required>
+
                         @error('fecha_pronto_pago')
                             <span class="invalid-feedback d-block text-danger">
                                 <strong>{{ $message }}</strong>
                             </span>
                         @enderror
                     </div>
-
-
                 </form>
-
-
-
 
             </div>
 
@@ -247,15 +379,12 @@
         const formCruce = document.getElementById('form-cruce-' + id);
         const formPago = document.getElementById('form-pago-' + id);
         const formProntoPago = document.getElementById('form-prontopago-' + id);
-        const formEstado = document.getElementById('form-status-' + id);
 
-        // Ocultar todos
         formAbono.style.display = 'none';
         formCruce.style.display = 'none';
         formPago.style.display = 'none';
         formProntoPago.style.display = 'none';
 
-        // Mostrar el que corresponda
         if (estado === 'Abono') {
             formAbono.style.display = 'block';
         } else if (estado === 'Cruce') {
@@ -265,16 +394,11 @@
         } else if (estado === 'Pronto pago') {
             formProntoPago.style.display = 'block';
         }
-
-        // Mostrar u ocultar campo de fecha manual
-        // formEstado.querySelector('.fecha-estado-' + id).style.display =
-        //     ['Abono', 'Cruce', 'Pago', 'Pronto pago', 'Cobranza judicial'].includes(estado)
-        //         ? 'block'
-        //         : 'none';
     }
 
     function submitModalForm(id) {
         const estado = document.getElementById('status-' + id).value;
+
         if (estado === 'Abono') {
             document.getElementById('form-abono-' + id).submit();
         } else if (estado === 'Cruce') {
@@ -287,7 +411,38 @@
             document.getElementById('form-status-' + id).submit();
         }
     }
+
+    document.addEventListener('change', function (event) {
+        const checkbox = event.target;
+
+        if (!checkbox.classList.contains('js-doc-cruce-check')) {
+            return;
+        }
+
+        const formId = checkbox.dataset.formId;
+
+        const checks = document.querySelectorAll(
+            '.js-doc-cruce-check[data-form-id="' + formId + '"]'
+        );
+
+        let total = 0;
+
+        checks.forEach(function (item) {
+            if (item.checked) {
+                total += Number(item.dataset.saldo || 0);
+            }
+        });
+
+        const totalElement = document.querySelector(
+            '.js-total-cruce-seleccionado[data-form-id="' + formId + '"]'
+        );
+
+        if (totalElement) {
+            totalElement.textContent = total.toLocaleString('es-CL', {
+                style: 'currency',
+                currency: 'CLP',
+                maximumFractionDigits: 0
+            });
+        }
+    });
 </script>
-
-
-
