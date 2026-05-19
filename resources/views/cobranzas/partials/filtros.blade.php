@@ -1,6 +1,10 @@
 <thead>
     <tr>
 
+        <th class="text-center" style="width:40px;">
+            <input type="checkbox" id="check-all-documentos-factory">
+        </th>
+
         {{-- EMPRESA --}}
         <th>
             <div class="dropdown d-inline">

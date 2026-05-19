@@ -317,6 +317,23 @@
                         <span>Exportar Excel</span>
                     </button>
 
+
+
+                    @if (Auth::id() != 375)
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
+                                id="btn-factory-masivo-documentos"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalFactoryMasivo">
+                            <i class="bi bi-building"></i>
+                            <span>Factory masivo</span>
+                        </button>
+                    @endif
+
+
+
+
+
                     @if(request()->filled('fecha_corte'))
                         <form method="GET"
                             action="{{ route('cobranzas.documentos.exportar_al_corte') }}"
@@ -367,6 +384,37 @@
             <tbody>
             @foreach ($documentosOriginal as $doc)
                 <tr>
+
+
+                    @php
+                        $puedeFactoryMasivo =
+                            (int) $doc->tipo_documento_id !== 61 &&
+                            (int) $doc->tipo_documento_id !== 56 &&
+                            (int) $doc->saldo_pendiente > 0 &&
+                            !$doc->factoryRegistro &&
+                            $doc->pagos->isEmpty() &&
+                            $doc->prontoPagos->isEmpty();
+                    @endphp
+
+                    <td class="text-center">
+                        @if($puedeFactoryMasivo)
+                            <input type="checkbox"
+                                class="check-documento-factory"
+                                value="{{ $doc->id }}"
+                                data-id="{{ $doc->id }}"
+                                data-empresa="{{ $doc->empresa?->Nombre ?? '' }}"
+                                data-folio="{{ $doc->folio }}"
+                                data-razon="{{ $doc->razon_social }}"
+                                data-rut="{{ $doc->rut_cliente }}"
+                                data-fecha-docto="{{ $doc->fecha_docto ? \Carbon\Carbon::parse($doc->fecha_docto)->format('d-m-Y') : '' }}"
+                                data-fecha-vencimiento="{{ $doc->fecha_vencimiento ? \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') : '' }}"
+                                data-saldo="{{ $doc->saldo_pendiente }}"
+                                data-total="{{ $doc->monto_total }}">
+                        @endif
+                    </td>
+
+
+
 
                     {{-- Empresa --}}
                     <td class="text-nowrap">
@@ -478,6 +526,16 @@
 
         </x-finanzas.plain-table>
 
+
+
+
+
+
+
+
+
+
+
         {{-- Paginación --}}
         <div class="mt-3 d-flex justify-content-center">
             {{ $documentosOriginal->appends(request()->query())->links('pagination::bootstrap-4') }}
@@ -491,6 +549,7 @@
 
 @include('cobranzas._modal_create_cobranza')
 @include('cobranzas.modal_pagos_masivos')
+@include('cobranzas.modal_factory_masivo')
 @include('cobranzas.partials.modal_ExportarVenta')
 
 @vite('resources/js/cobranzas_documentos.js')

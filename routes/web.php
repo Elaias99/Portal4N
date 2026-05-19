@@ -401,6 +401,9 @@ Route::post('/documentos/{documento}/factory', [FactoryController::class, 'store
 Route::delete('/factories/{factory}', [FactoryController::class, 'destroy'])
     ->name('factories.destroy');
 
+Route::post('/documentos/factory-masivo', [FactoryController::class, 'storeMasivo'])
+    ->name('documentos.factory.masivo.store');
+
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

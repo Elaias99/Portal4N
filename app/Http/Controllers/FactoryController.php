@@ -258,6 +258,200 @@ class FactoryController extends Controller
         return back()->with('success', 'Factory eliminado, saldo recalculado y estado actualizado correctamente.');
     }
 
+
+
+
+    /**
+     * Registrar Factory masivo para documentos financieros CxC.
+     */
+    public function storeMasivo(Request $request)
+    {
+        $validated = $request->validate([
+            'documentos' => 'required|array|min:1',
+
+            'documentos.*.banco_id' => 'required|string|max:255',
+            'documentos.*.banco_otro' => 'nullable|string|max:255',
+            'documentos.*.rut_factory' => 'required|string|max:20',
+            'documentos.*.fecha_factory' => 'required|date',
+        ], [
+            'documentos.required' => 'Debe seleccionar al menos un documento.',
+            'documentos.array' => 'La selección de documentos no es válida.',
+            'documentos.min' => 'Debe seleccionar al menos un documento.',
+
+            'documentos.*.banco_id.required' => 'Debe seleccionar el banco o entidad Factory.',
+            'documentos.*.rut_factory.required' => 'Debe ingresar el RUT del Factory.',
+            'documentos.*.rut_factory.max' => 'El RUT del Factory no puede superar los 20 caracteres.',
+            'documentos.*.fecha_factory.required' => 'Debe ingresar la fecha Factory.',
+            'documentos.*.fecha_factory.date' => 'La fecha Factory no es válida.',
+        ]);
+
+        $items = $validated['documentos'];
+
+        $documentoIds = collect(array_keys($items))
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($documentoIds->isEmpty()) {
+            return back()
+                ->withErrors(['factory_masivo' => 'Debe seleccionar al menos un documento válido.'])
+                ->withInput();
+        }
+
+        $documentos = DocumentoFinanciero::with([
+                'factoryRegistro',
+                'pagos',
+                'prontoPagos',
+            ])
+            ->whereIn('id', $documentoIds)
+            ->get()
+            ->keyBy('id');
+
+        $errores = [];
+
+        foreach ($documentoIds as $documentoId) {
+            $documento = $documentos->get($documentoId);
+            $data = $items[$documentoId] ?? null;
+
+            if (!$documento) {
+                $errores[] = "Documento ID {$documentoId}: no existe.";
+                continue;
+            }
+
+            $identificador = "Folio {$documento->folio}";
+
+            if ((int) $documento->tipo_documento_id === 61) {
+                $errores[] = "{$identificador}: no se puede registrar Factory sobre una nota de crédito.";
+            }
+
+            if ((int) $documento->tipo_documento_id === 56) {
+                $errores[] = "{$identificador}: no se puede registrar Factory sobre una nota de débito.";
+            }
+
+            if ((int) $documento->saldo_pendiente <= 0) {
+                $errores[] = "{$identificador}: no tiene saldo pendiente.";
+            }
+
+            if ($documento->factoryRegistro) {
+                $errores[] = "{$identificador}: ya tiene un registro Factory asociado.";
+            }
+
+            if ($documento->pagos->isNotEmpty()) {
+                $errores[] = "{$identificador}: ya tiene un pago registrado.";
+            }
+
+            if ($documento->prontoPagos->isNotEmpty()) {
+                $errores[] = "{$identificador}: ya tiene un pronto pago registrado.";
+            }
+
+            if (!$data) {
+                $errores[] = "{$identificador}: no tiene datos Factory enviados.";
+                continue;
+            }
+
+            $bancoId = $data['banco_id'] ?? null;
+            $bancoOtro = trim((string) ($data['banco_otro'] ?? ''));
+
+            if ($bancoId === '__otro__' && $bancoOtro === '') {
+                $errores[] = "{$identificador}: debe ingresar el nombre del banco o Factory.";
+            }
+
+            if ($bancoId !== '__otro__' && !Banco::whereKey($bancoId)->exists()) {
+                $errores[] = "{$identificador}: el banco seleccionado no es válido.";
+            }
+        }
+
+        if (!empty($errores)) {
+            return back()
+                ->withErrors(['factory_masivo' => $errores])
+                ->withInput();
+        }
+
+        try {
+            DB::transaction(function () use ($documentoIds, $items) {
+                foreach ($documentoIds as $documentoId) {
+                    $documento = DocumentoFinanciero::whereKey($documentoId)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    /*
+                    * Revalidación mínima dentro de la transacción.
+                    */
+                    if (
+                        in_array((int) $documento->tipo_documento_id, [61, 56], true) ||
+                        (int) $documento->saldo_pendiente <= 0 ||
+                        $documento->factoryRegistro()->exists() ||
+                        $documento->pagos()->exists() ||
+                        $documento->prontoPagos()->exists()
+                    ) {
+                        throw ValidationException::withMessages([
+                            'factory_masivo' => "El documento folio {$documento->folio} ya no cumple las condiciones para registrar Factory.",
+                        ]);
+                    }
+
+                    $data = $items[$documentoId];
+
+                    $banco = $this->resolverBancoFactoryMasivo(
+                        bancoId: $data['banco_id'],
+                        bancoOtro: $data['banco_otro'] ?? null,
+                    );
+
+                    $saldoAnterior = (int) $documento->saldo_pendiente;
+
+                    FactoryRegistro::create([
+                        'documento_financiero_id' => $documento->id,
+                        'banco_id' => $banco->id,
+                        'rut_factory' => trim($data['rut_factory']),
+                        'fecha_factory' => $data['fecha_factory'],
+                        'monto' => $saldoAnterior,
+                        'user_id' => Auth::id(),
+                    ]);
+
+                    $documento->update([
+                        'status' => 'Factory',
+                        'fecha_estado_manual' => now(),
+                        'saldo_pendiente' => 0,
+                    ]);
+                }
+            });
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()
+                ->withErrors(['factory_masivo' => 'Ocurrió un error al registrar Factory masivo.'])
+                ->withInput();
+        }
+
+        return back()->with('success', 'Factory masivo registrado correctamente.');
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     /**
      * Define qué estado manual debe quedar después de eliminar Factory.
      */
@@ -295,4 +489,53 @@ class FactoryController extends Controller
             ? 'Vencido'
             : 'Al día';
     }
+
+
+
+
+    /**
+     * Resolver banco para Factory masivo.
+     * Si viene "__otro__", crea el banco si no existe.
+     */
+    private function resolverBancoFactoryMasivo(string $bancoId, ?string $bancoOtro): Banco
+    {
+        $bancoOtro = trim((string) $bancoOtro);
+
+        if ($bancoId === '__otro__') {
+            if ($bancoOtro === '') {
+                throw ValidationException::withMessages([
+                    'banco_otro' => 'Debe ingresar el nombre del banco o Factory.',
+                ]);
+            }
+
+            $nombreBanco = preg_replace('/\s+/', ' ', $bancoOtro);
+
+            $banco = Banco::whereRaw('LOWER(TRIM(nombre)) = ?', [
+                mb_strtolower($nombreBanco),
+            ])->first();
+
+            if (!$banco) {
+                $banco = Banco::create([
+                    'nombre' => $nombreBanco,
+                ]);
+            }
+
+            return $banco;
+        }
+
+        $banco = Banco::find($bancoId);
+
+    if (!$banco) {
+        throw ValidationException::withMessages([
+            'banco_id' => 'El banco seleccionado no es válido.',
+        ]);
+    }
+
+    return $banco;
+}
+
+
+
+
+
 }
