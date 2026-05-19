@@ -56,6 +56,7 @@
                             <option value="Cruce" {{ $doc->status == 'Cruce' ? 'selected' : '' }}>Cruce</option>
                             <option value="Pago" {{ $doc->status == 'Pago' ? 'selected' : '' }}>Pagado</option>
                             <option value="Pronto pago" {{ $doc->status == 'Pronto pago' ? 'selected' : '' }}>Pronto pago</option>
+                            <option value="Factory" {{ $doc->status == 'Factory' ? 'selected' : '' }}>Factory</option>
                             <option value="Cobranza judicial" {{ $doc->status == 'Cobranza judicial' ? 'selected' : '' }}>Cobranza judicial</option>
                         </select>
                     </div>
@@ -115,7 +116,6 @@
                       style="display: {{ $doc->status == 'Cruce' ? 'block' : 'none' }};">
                     @csrf
 
-                    {{-- Saldo pendiente --}}
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">
                             Saldo pendiente
@@ -127,7 +127,6 @@
                                readonly>
                     </div>
 
-                    {{-- Monto del cruce --}}
                     <div class="form-group mb-3">
                         <label for="monto-cruce-{{ $doc->id }}" class="form-label small text-muted">
                             Monto del cruce
@@ -147,7 +146,6 @@
                         @enderror
                     </div>
 
-                    {{-- Fecha del cruce --}}
                     <div class="form-group mb-3">
                         <label for="fecha-cruce-{{ $doc->id }}" class="form-label small text-muted">
                             Fecha del cruce
@@ -166,7 +164,6 @@
                         @enderror
                     </div>
 
-                    {{-- Cliente asociado del documento --}}
                     <div class="form-group mb-3">
                         <label class="form-label small text-muted">
                             Cliente asociado
@@ -243,6 +240,140 @@
                     </div>
                 </form>
 
+                {{-- FORMULARIO DE FACTORY --}}
+                <form action="{{ route('documentos.factory.store', $doc->id) }}"
+                    method="POST"
+                    id="form-factory-{{ $doc->id }}"
+                    style="display: {{ $doc->status == 'Factory' ? 'block' : 'none' }};"
+                    data-tiene-factory="{{ $doc->factoryRegistro ? '1' : '0' }}">
+                    @csrf
+
+                    <div class="form-group mb-3">
+                        <label class="form-label small text-muted">Saldo pendiente</label>
+                        <input type="text"
+                            class="form-control form-control-sm"
+                            value="${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}"
+                            readonly>
+                    </div>
+
+                    @if($doc->factoryRegistro)
+                        <div class="alert alert-info py-2 px-3 small">
+                            Este documento ya tiene un registro <strong>Factory</strong> asociado.
+                            Para revertirlo, elimínalo desde el detalle del documento.
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">Nombre Factory / Banco</label>
+                            <input type="text"
+                                class="form-control form-control-sm"
+                                value="{{ $doc->factoryRegistro->banco?->nombre ?? 'Sin banco' }}"
+                                readonly>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">RUT Factory</label>
+                            <input type="text"
+                                class="form-control form-control-sm"
+                                value="{{ $doc->factoryRegistro->rut_factory }}"
+                                readonly>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">Fecha Factory</label>
+                            <input type="text"
+                                class="form-control form-control-sm"
+                                value="{{ $doc->factoryRegistro->fecha_factory ? \Carbon\Carbon::parse($doc->factoryRegistro->fecha_factory)->format('d-m-Y') : '-' }}"
+                                readonly>
+                        </div>
+                    @else
+                        <div class="form-group mb-3">
+                            <label for="banco-factory-{{ $doc->id }}" class="form-label small text-muted">
+                                Nombre Factory / Banco
+                            </label>
+
+                            <select name="banco_id"
+                                    id="banco-factory-{{ $doc->id }}"
+                                    class="form-select form-select-sm @error('banco_id') is-invalid @enderror"
+                                    onchange="toggleBancoFactoryOtro({{ $doc->id }})"
+                                    required>
+                                <option value="">Seleccione banco / factory</option>
+
+                                @foreach(($bancos ?? collect()) as $banco)
+                                    <option value="{{ $banco->id }}">
+                                        {{ $banco->nombre }}
+                                    </option>
+                                @endforeach
+
+                                <option value="__otro__">Otro</option>
+                            </select>
+
+                            <div id="banco-factory-otro-wrapper-{{ $doc->id }}"
+                                class="mt-2"
+                                style="display:none;">
+                                <label for="banco-factory-otro-{{ $doc->id }}" class="form-label small text-muted">
+                                    Nombre nuevo banco / Factory
+                                </label>
+
+                                <input type="text"
+                                    name="banco_otro"
+                                    id="banco-factory-otro-{{ $doc->id }}"
+                                    class="form-control form-control-sm @error('banco_otro') is-invalid @enderror"
+                                    placeholder="Ingrese nombre del banco o Factory">
+                            </div>
+
+                            @error('banco_id')
+                                <span class="invalid-feedback d-block text-danger">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+
+                            @error('banco_otro')
+                                <span class="invalid-feedback d-block text-danger">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="rut-factory-{{ $doc->id }}" class="form-label small text-muted">
+                                RUT Factory
+                            </label>
+
+                            <input type="text"
+                                name="rut_factory"
+                                id="rut-factory-{{ $doc->id }}"
+                                class="form-control form-control-sm @error('rut_factory') is-invalid @enderror"
+                                placeholder="Ej: 76000000-0"
+                                required>
+
+                            @error('rut_factory')
+                                <span class="invalid-feedback d-block text-danger">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">
+                                Fecha Factory
+                            </label>
+
+                            <input type="date"
+                                class="form-control form-control-sm"
+                                value="{{ now()->format('Y-m-d') }}"
+                                readonly>
+
+                            <small class="text-muted">
+                                La fecha se registrará automáticamente con la fecha actual.
+                            </small>
+                        </div>
+
+                        <div class="alert alert-info py-1 px-2 small">
+                            Al registrar Factory, el saldo pendiente quedará automáticamente en <strong>0</strong>.
+                        </div>
+                    @endif
+                </form>
+
             </div>
 
             {{-- === FOOTER === --}}
@@ -257,18 +388,25 @@
 </div>
 
 {{-- === SCRIPT === --}}
+{{-- === SCRIPT === --}}
 <script>
     function toggleEstadoFields(id) {
         const estado = document.getElementById('status-' + id).value;
+
         const formAbono = document.getElementById('form-abono-' + id);
         const formCruce = document.getElementById('form-cruce-' + id);
         const formPago = document.getElementById('form-pago-' + id);
         const formProntoPago = document.getElementById('form-prontopago-' + id);
+        const formFactory = document.getElementById('form-factory-' + id);
 
         formAbono.style.display = 'none';
         formCruce.style.display = 'none';
         formPago.style.display = 'none';
         formProntoPago.style.display = 'none';
+
+        if (formFactory) {
+            formFactory.style.display = 'none';
+        }
 
         if (estado === 'Abono') {
             formAbono.style.display = 'block';
@@ -278,6 +416,29 @@
             formPago.style.display = 'block';
         } else if (estado === 'Pronto pago') {
             formProntoPago.style.display = 'block';
+        } else if (estado === 'Factory') {
+            if (formFactory) {
+                formFactory.style.display = 'block';
+            }
+        }
+    }
+
+    function toggleBancoFactoryOtro(id) {
+        const selectBanco = document.getElementById('banco-factory-' + id);
+        const wrapperOtro = document.getElementById('banco-factory-otro-wrapper-' + id);
+        const inputOtro = document.getElementById('banco-factory-otro-' + id);
+
+        if (!selectBanco || !wrapperOtro || !inputOtro) {
+            return;
+        }
+
+        if (selectBanco.value === '__otro__') {
+            wrapperOtro.style.display = 'block';
+            inputOtro.required = true;
+        } else {
+            wrapperOtro.style.display = 'none';
+            inputOtro.required = false;
+            inputOtro.value = '';
         }
     }
 
@@ -292,6 +453,25 @@
             document.getElementById('form-pago-' + id).submit();
         } else if (estado === 'Pronto pago') {
             document.getElementById('form-prontopago-' + id).submit();
+        } else if (estado === 'Factory') {
+            const formFactory = document.getElementById('form-factory-' + id);
+
+            if (!formFactory) {
+                return;
+            }
+
+            if (formFactory.dataset.tieneFactory === '1') {
+                alert('Este documento ya tiene un registro Factory. Para revertirlo, elimínalo desde el detalle del documento.');
+                return;
+            }
+
+            toggleBancoFactoryOtro(id);
+
+            if (typeof formFactory.reportValidity === 'function' && !formFactory.reportValidity()) {
+                return;
+            }
+
+            formFactory.submit();
         } else {
             document.getElementById('form-status-' + id).submit();
         }

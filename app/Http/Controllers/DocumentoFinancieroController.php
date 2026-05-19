@@ -24,7 +24,6 @@ class DocumentoFinancieroController extends Controller
 
     public function index(Request $request)
     {
-
         $usuariosFinanzas = [1, 405, 374, 375];
 
         if (!in_array(Auth::id(), $usuariosFinanzas)) {
@@ -34,12 +33,8 @@ class DocumentoFinancieroController extends Controller
         // === BASE QUERY (para totales dinámicos) ===
         $baseQuery = DocumentoFinanciero::query();
 
-
         $fechaCorte = $this->resolverFechaCorte($request);
         $this->aplicarFiltroFechaCorte($baseQuery, $fechaCorte);
-
-
-
 
         // === APLICAR FILTROS GENERALES ANTES DE CONTAR ===
         if ($request->filled('razon_social')) {
@@ -79,42 +74,30 @@ class DocumentoFinancieroController extends Controller
             $baseQuery->whereDate('fecha_vencimiento', '<=', $request->vencimiento_fin);
         }
 
-
-
-
-
         if ($request->filled('saldo_valor')) {
-
-            //Normalizar número (quita puntos y comas)
+            // Normalizar número (quita puntos y comas)
             $valor = (float) str_replace(['.', ','], '', $request->saldo_valor);
 
-            //Determinar tipo de saldo (default: saldo_pendiente)
+            // Determinar tipo de saldo (default: saldo_pendiente)
             $tipoSaldo = $request->input('saldo_tipo', 'saldo_pendiente');
 
-            //Whitelist de columnas permitidas
+            // Whitelist de columnas permitidas
             $columnasPermitidas = [
                 'saldo_pendiente',
                 'monto_total',
             ];
 
-            //Fallback de seguridad
+            // Fallback de seguridad
             if (!in_array($tipoSaldo, $columnasPermitidas, true)) {
                 $tipoSaldo = 'saldo_pendiente';
             }
 
-            //Aplicar filtro con tolerancia ±1
+            // Aplicar filtro con tolerancia ±1
             $baseQuery->whereBetween($tipoSaldo, [
                 $valor - 1,
-                $valor + 1
+                $valor + 1,
             ]);
         }
-
-
-
-
-
-
-
 
         // === FILTRO POR ESTADO DE PAGO (GLOBAL) ===
         if ($request->filled('estado_pago')) {
@@ -138,57 +121,53 @@ class DocumentoFinancieroController extends Controller
 
         // === QUERY PRINCIPAL (con relaciones) ===
         $query = $baseQuery->with([
-            'cobranza:id,razon_social',
+            'cobranza:id,razon_social,rut_cliente',
             'empresa:id,Nombre',
+            'tipoDocumento:id,nombre',
 
-            'abonos:id,documento_financiero_id,fecha_abono',
+            'abonos:id,documento_financiero_id,fecha_abono,monto',
             'cruces:id,documento_financiero_id,documento_compra_id,cobranza_compra_id,monto,fecha_cruce',
             'cruces.documentoCompra:id,folio,razon_social,rut_proveedor',
+
             'pagos:id,documento_financiero_id,fecha_pago',
             'prontoPagos:id,documento_financiero_id,fecha_pronto_pago',
 
+            // Nuevo estado Factory
+            'factoryRegistro:id,documento_financiero_id,banco_id,rut_factory,fecha_factory,monto,user_id',
+            'factoryRegistro.banco:id,nombre',
+
+            'referencia:id,folio,tipo_documento_id',
             'referenciados:id,referencia_id,folio',
         ]);
-
 
         if ($request->filled('status')) {
             $query->where('status_original', $request->status);
         }
 
-
         // === CALCULAR SALDO PENDIENTE GLOBAL (Optimizado SQL) ===
         $totalSaldoPendiente = (clone $baseQuery)
             ->whereNotIn('tipo_documento_id', [61, 56])   // excluir NC y ND
-            ->where('saldo_pendiente', '>', 0)            // excluir documentos pagados
+            ->where('saldo_pendiente', '>', 0)            // excluir documentos pagados / cerrados
             ->sum('saldo_pendiente');
 
-
-
-        // === OBTENER DATOS BASE SIN PAGINAR ===
+        // === OBTENER DATOS BASE PAGINADOS ===
         $documentosOriginal = $query
             ->orderByRaw('fecha_vencimiento IS NULL, fecha_vencimiento DESC')
             ->orderBy('folio', 'DESC')
             ->paginate(10);
 
-
         // === ACTUALIZAR ESTADO AUTOMÁTICO ===
-        $hoy = \Carbon\Carbon::today();
-
-        
         DB::table('documentos_financieros')
             ->whereDate('fecha_vencimiento', '<', now())
             ->where('saldo_pendiente', '>', 0)
             ->where('status_original', '!=', 'Vencido')
             ->update(['status_original' => 'Vencido']);
 
-        // Actualiza al día
         DB::table('documentos_financieros')
             ->whereDate('fecha_vencimiento', '>=', now())
             ->where('saldo_pendiente', '>', 0)
             ->where('status_original', '!=', 'Al día')
             ->update(['status_original' => 'Al día']);
-
-
 
         // === CONTAR PAGADOS / PENDIENTES (GLOBAL) ===
         $totalPagados = (clone $baseQuery)
@@ -199,11 +178,21 @@ class DocumentoFinancieroController extends Controller
             ->where('saldo_pendiente', '>', 0)
             ->count();
 
-                
-        $empresas = Empresa::orderBy('Nombre')->get(['id', 'Nombre']);
-        $tiposDocumento = TipoDocumento::orderBy('nombre')->get(['id', 'nombre']);
-        $proveedores = \App\Models\Proveedor::orderBy('razon_social')->get(['id', 'razon_social', 'rut']);
-        $cobranzas = Cobranza::orderBy('razon_social')->get(['id', 'razon_social', 'rut_cliente']);
+        $empresas = Empresa::orderBy('Nombre')
+            ->get(['id', 'Nombre']);
+
+        $tiposDocumento = TipoDocumento::orderBy('nombre')
+            ->get(['id', 'nombre']);
+
+        $proveedores = \App\Models\Proveedor::orderBy('razon_social')
+            ->get(['id', 'razon_social', 'rut']);
+
+        $cobranzas = Cobranza::orderBy('razon_social')
+            ->get(['id', 'razon_social', 'rut_cliente']);
+
+        // Bancos para el formulario Factory del modal_status
+        $bancos = \App\Models\Banco::orderBy('nombre')
+            ->get(['id', 'nombre']);
 
         return view('cobranzas.documentos', compact(
             'documentosOriginal',
@@ -215,9 +204,9 @@ class DocumentoFinancieroController extends Controller
             'empresas',
             'tiposDocumento',
             'proveedores',
-            'cobranzas'
+            'cobranzas',
+            'bancos'
         ));
-
     }
 
 
@@ -508,45 +497,83 @@ class DocumentoFinancieroController extends Controller
     public function updateStatus(Request $request, DocumentoFinanciero $documento)
     {
         $request->validate([
-            'status' => 'nullable|string|max:50',
+            'status' => [
+                'nullable',
+                'string',
+                'max:50',
+                'in:Abono,Cruce,Pago,Pronto pago,Cobranza judicial',
+            ],
             'fecha_estado_manual' => 'nullable|date',
         ]);
 
         $nuevoStatus = $request->status;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Protección importante:
+        | Factory NO se debe guardar desde este método.
+        | Factory requiere registro en tabla factories mediante FactoryController.
+        |--------------------------------------------------------------------------
+        */
+        if ($nuevoStatus === 'Factory') {
+            return redirect()
+                ->back()
+                ->withErrors([
+                    'status' => 'El estado Factory debe registrarse desde el formulario específico de Factory.',
+                ])
+                ->withInput();
+        }
+
         $original = $documento->getOriginal();
 
-        // Guardar estado manual
+        // Guardar estado manual simple
         $documento->status = $nuevoStatus;
 
-        // Si el estado requiere fecha manual
-        if (in_array($nuevoStatus, ['Abono', 'Cruce', 'Pago', 'Pronto pago', 'Cobranza judicial'])) {
+        // Estados manuales que llevan fecha
+        if (in_array($nuevoStatus, [
+            'Abono',
+            'Cruce',
+            'Pago',
+            'Pronto pago',
+            'Cobranza judicial',
+        ], true)) {
             $documento->fecha_estado_manual = $request->fecha_estado_manual ?? now();
         } else {
             $documento->fecha_estado_manual = null;
         }
 
-        // Si el estado es Pago → guardar también en la tabla `pagos`
+        /*
+        |--------------------------------------------------------------------------
+        | Compatibilidad con flujo antiguo:
+        | Aunque actualmente Pago y Pronto pago se registran desde formularios
+        | específicos, dejamos esta protección por si alguien usa updateStatus directo.
+        |--------------------------------------------------------------------------
+        */
+
         if ($nuevoStatus === 'Pago') {
-            if ($documento->pagos()->count() === 0) {
+            if (!$documento->pagos()->exists()) {
                 $documento->pagos()->create([
                     'fecha_pago' => $documento->fecha_estado_manual,
                     'user_id' => Auth::id(),
                 ]);
             }
+
+            $documento->saldo_pendiente = 0;
         }
 
-        //Si el estado es Pronto pago → guardar en la tabla `pronto_pagos`
         if ($nuevoStatus === 'Pronto pago') {
-            if ($documento->prontoPagos()->count() === 0) {
+            if (!$documento->prontoPagos()->exists()) {
                 $documento->prontoPagos()->create([
                     'fecha_pronto_pago' => $documento->fecha_estado_manual,
                     'user_id' => Auth::id(),
                 ]);
             }
+
+            $documento->saldo_pendiente = 0;
         }
 
         // Guardar solo si hay cambios
-        if ($documento->isDirty(['status', 'fecha_estado_manual'])) {
+        if ($documento->isDirty(['status', 'fecha_estado_manual', 'saldo_pendiente'])) {
             $documento->save();
 
             MovimientoDocumento::create([
@@ -559,7 +586,9 @@ class DocumentoFinancieroController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', 'Estado manual actualizado correctamente.');
+        return redirect()
+            ->back()
+            ->with('success', 'Estado manual actualizado correctamente.');
     }
 
 
@@ -849,8 +878,17 @@ class DocumentoFinancieroController extends Controller
         // Cargar relaciones relevantes
         $documento->load([
             'empresa',
+            'tipoDocumento',
+
             'abonos',
             'cruces.proveedor',
+            'cruces.documentoCompra',
+            'pagos',
+            'prontoPagos',
+
+            'factoryRegistro.banco',
+            'factoryRegistro.usuario',
+
             'referencia',
             'referenciados',
             'cobranza',
@@ -879,14 +917,18 @@ class DocumentoFinancieroController extends Controller
         $cobranzas = \App\Models\Cobranza::orderBy('razon_social')
             ->get(['id', 'razon_social', 'rut_cliente']);
 
+        // Bancos disponibles para el nuevo estado Factory
+        $bancos = \App\Models\Banco::orderBy('nombre')
+            ->get(['id', 'nombre']);
+
         return view('cobranzas.detalles', compact(
             'documento',
             'referencias',
             'proveedores',
-            'cobranzas'
+            'cobranzas',
+            'bancos'
         ));
     }
-
 
 
 

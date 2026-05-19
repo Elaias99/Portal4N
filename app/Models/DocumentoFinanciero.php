@@ -143,6 +143,12 @@ class DocumentoFinanciero extends Model
         return $this->hasMany(ProntoPago::class, 'documento_financiero_id');
     }
 
+
+    public function factoryRegistro()
+    {
+        return $this->hasOne(Factory::class, 'documento_financiero_id');
+    }
+
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -178,77 +184,97 @@ class DocumentoFinanciero extends Model
         return Carbon::parse($this->fecha_vencimiento)->isPast();
     }
 
+
+
+
+
     public function getSaldoPendienteAttribute()
     {
         /**
          * Si el campo existe en BD → úsalo como base
-         * (pero solo si no hay necesidad de recalcular)
+         * pero solo si no hay movimientos que obliguen recálculo.
          */
         $valorBD = $this->attributes['saldo_pendiente'] ?? null;
 
         /**
-         *Detectar si hay movimientos que requieren recálculo
+         * Detectar si hay movimientos que requieren recálculo.
          */
-        $tienePagos   = $this->pagos()->exists();
-        $tieneAbonos  = $this->abonos()->exists();
-        $tieneCruces  = $this->cruces()->exists();
-        $tieneNotas   = $this->referenciados()->exists();
-        $esProntoPago = $this->prontoPagos()->exists();
-
+        $tienePagos    = $this->pagos()->exists();
+        $tieneAbonos   = $this->abonos()->exists();
+        $tieneCruces   = $this->cruces()->exists();
+        $tieneNotas    = $this->referenciados()->exists();
+        $esProntoPago  = $this->prontoPagos()->exists();
+        $tieneFactory  = $this->factoryRegistro()->exists();
 
         $requiereRecalculo =
             $tienePagos ||
             $tieneAbonos ||
             $tieneCruces ||
             $tieneNotas ||
-            $esProntoPago;
+            $esProntoPago ||
+            $tieneFactory;
 
         /**
-         *Si NO requiere recálculo:
-         *    devolver el valor guardado en la BD
+         * Si NO requiere recálculo:
+         * devolver el valor guardado en BD.
          */
         if (!$requiereRecalculo && $valorBD !== null) {
             return $valorBD;
         }
 
         /**
-         *Si requiere recálculo → usar la lógica original
+         * Si tiene pago, pronto pago o Factory → saldo = 0.
          */
-
-        //Si tiene pagos → saldo = 0
-        if ($tienePagos || $esProntoPago) {
+        if ($tienePagos || $esProntoPago || $tieneFactory) {
             return 0;
         }
 
-        //Si es Nota de Crédito → saldo = 0
-        if ($this->tipo_documento_id == 61 ||
+        /**
+         * Si es Nota de Crédito → saldo = 0.
+         */
+        if (
+            $this->tipo_documento_id == 61 ||
             (isset($this->tipoDocumento) &&
-            str_contains(strtolower($this->tipoDocumento->nombre), 'nota de crédito'))) {
+            str_contains(strtolower($this->tipoDocumento->nombre), 'nota de crédito'))
+        ) {
             return 0;
         }
 
-        // Monto base
+        /**
+         * Monto base.
+         */
         $saldo = $this->monto_total ?? 0;
 
-        // Notas
+        /**
+         * Notas.
+         */
         $referenciados = $this->referenciados()->get();
 
         $saldo -= $referenciados
             ->where('tipo_documento_id', 61)
-            ->sum('monto_total'); // notas crédito
+            ->sum('monto_total');
 
         $saldo += $referenciados
             ->where('tipo_documento_id', 56)
-            ->sum('monto_total'); // notas débito
+            ->sum('monto_total');
 
-        // Abonos
+        /**
+         * Abonos.
+         */
         $saldo -= $this->abonos()->sum('monto');
 
-        // Cruces
+        /**
+         * Cruces.
+         */
         $saldo -= $this->cruces()->sum('monto');
 
         return max($saldo, 0);
     }
+
+
+
+
+
 
 
     public function recalcularSaldoPendiente()
@@ -269,9 +295,16 @@ class DocumentoFinanciero extends Model
             return 0;
         }
 
+        // =============================
+        // 3) Si tiene Factory → saldo 0
+        // =============================
+        if ($this->factoryRegistro()->exists()) {
+            $this->update(['saldo_pendiente' => 0]);
+            return 0;
+        }
 
         // ======================================
-        // 3) Nota de Crédito → saldo 0 (tu regla)
+        // 4) Nota de Crédito → saldo 0
         // ======================================
         if (
             $this->tipo_documento_id == 61 ||
@@ -283,35 +316,35 @@ class DocumentoFinanciero extends Model
         }
 
         // ==============================
-        // 4) Empezamos desde el monto total
+        // 5) Empezamos desde el monto total
         // ==============================
         $saldo = $this->monto_total ?? 0;
 
         // ==============================
-        // 5) Notas de crédito/debito
+        // 6) Notas de crédito/debito
         // ==============================
         $referenciados = $this->referenciados()->get();
 
         $saldo -= $referenciados
             ->where('tipo_documento_id', 61)
-            ->sum('monto_total'); // notas crédito
+            ->sum('monto_total');
 
         $saldo += $referenciados
             ->where('tipo_documento_id', 56)
-            ->sum('monto_total'); // notas débito
+            ->sum('monto_total');
 
         // ==============================
-        // 6) Abonos
+        // 7) Abonos
         // ==============================
         $saldo -= $this->abonos()->sum('monto');
 
         // ==============================
-        // 7) Cruces
+        // 8) Cruces
         // ==============================
         $saldo -= $this->cruces()->sum('monto');
 
         // ==============================
-        // 8) Final
+        // 9) Final
         // ==============================
         $saldo = max($saldo, 0);
 
@@ -320,6 +353,9 @@ class DocumentoFinanciero extends Model
         return $saldo;
     }
 
+
+
+    
 
 
     public function actualizarFechaVencimiento()
@@ -370,7 +406,6 @@ class DocumentoFinanciero extends Model
     // Accesor para mostrar la fechha de trasaccción (abono, cruce, pago, pronto pago) más reciente
     public function getFechaUltimaTransaccionAttribute()
     {
-
         $fechas = collect();
 
         // Abonos
@@ -391,7 +426,7 @@ class DocumentoFinanciero extends Model
         if ($this->pagos->isNotEmpty()) {
             $fechas->push(
                 $this->pagos->max('fecha_pago')
-            );  
+            );
         }
 
         // Pronto Pagos
@@ -401,11 +436,14 @@ class DocumentoFinanciero extends Model
             );
         }
 
+        // Factory
+        if ($this->factoryRegistro) {
+            $fechas->push(
+                $this->factoryRegistro->fecha_factory
+            );
+        }
+
         return $fechas->filter()->max();
-
-
-
-    
     }
 
 

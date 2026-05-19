@@ -39,12 +39,7 @@
                     <p><strong>Monto Total:</strong> ${{ number_format($documento->monto_total, 0, ',', '.') }}</p>
                     <p><strong>Saldo Pendiente:</strong> ${{ number_format($documento->saldo_pendiente, 0, ',', '.') }}</p>
 
-                    
-                    <p><strong>Estado Actual:</strong> {{ $documento->estado_visible  }}</p>
-
-
-                    
-
+                    <p><strong>Estado Actual:</strong> {{ $documento->estado_visible }}</p>
 
                     <p><strong>Fecha Documento:</strong> {{ $documento->fecha_docto ? \Carbon\Carbon::parse($documento->fecha_docto)->format('d-m-Y') : '-' }}</p>
                     <p><strong>Fecha Vencimiento:</strong> {{ $documento->fecha_vencimiento ? \Carbon\Carbon::parse($documento->fecha_vencimiento)->format('d-m-Y') : '-' }}</p>
@@ -54,13 +49,15 @@
     </div>
 
 
-    {{-- Nuevo: Resumen del cálculo del saldo pendiente --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Resumen del cálculo del saldo pendiente</div>
         <div class="card-body">
 
             {{-- Paso 1: Monto base --}}
-            <p class="mb-1"><strong>Monto total inicial:</strong> ${{ number_format($documento->monto_total, 0, ',', '.') }}</p>
+            <p class="mb-1">
+                <strong>Monto total inicial:</strong>
+                ${{ number_format($documento->monto_total, 0, ',', '.') }}
+            </p>
 
 
             {{-- Pago registrado --}}
@@ -80,7 +77,9 @@
                             {{ $pago->fecha_pago ? 'el ' . \Carbon\Carbon::parse($pago->fecha_pago)->format('d-m-Y') : '' }}.
                         </p>
 
-                        <form action="{{ route('pagos.destroy', $pago->id) }}" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar el registro de Pago y restaurar el estado original del documento?')">
+                        <form action="{{ route('pagos.destroy', $pago->id) }}"
+                            method="POST"
+                            onsubmit="return confirm('¿Seguro que deseas eliminar el registro de Pago y restaurar el estado original del documento?')">
                             @csrf
                             @method('DELETE')
 
@@ -89,9 +88,6 @@
                                     <i class="bi bi-x-circle"></i> Eliminar Pago
                                 </button>
                             @endif
-
-
-
                         </form>
                     </div>
                 </div>
@@ -115,7 +111,9 @@
                             {{ $prontoPago->fecha_pronto_pago ? 'el ' . \Carbon\Carbon::parse($prontoPago->fecha_pronto_pago)->format('d-m-Y') : '' }}.
                         </p>
 
-                        <form action="{{ route('prontopagos.destroy', $prontoPago->id) }}" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar el registro de Pronto Pago y restaurar el estado original del documento?')">
+                        <form action="{{ route('prontopagos.destroy', $prontoPago->id) }}"
+                            method="POST"
+                            onsubmit="return confirm('¿Seguro que deseas eliminar el registro de Pronto Pago y restaurar el estado original del documento?')">
                             @csrf
                             @method('DELETE')
 
@@ -124,24 +122,22 @@
                                     <i class="bi bi-x-circle"></i> Eliminar Pronto Pago
                                 </button>
                             @endif
-
-
                         </form>
                     </div>
                 </div>
             @endif
 
 
-
             {{-- Paso 2: Descuento por nota de crédito --}}
             @if($referencias['referenciadoPor']->isNotEmpty())
                 @foreach ($referencias['referenciadoPor'] as $ref)
                     <p class="mb-1">
-                        <strong>Descuento por Nota de Crédito folio {{ $ref->folio }}:</strong> 
+                        <strong>Descuento por Nota de Crédito folio {{ $ref->folio }}:</strong>
                         - ${{ number_format($ref->monto_total, 0, ',', '.') }}
                     </p>
                 @endforeach
             @endif
+
 
             {{-- Paso 3: Aplicación de abonos --}}
             @if($documento->abonos->isNotEmpty())
@@ -153,6 +149,7 @@
                 @endforeach
             @endif
 
+
             {{-- Paso 4: Aplicación de cruces --}}
             @if($documento->cruces->isNotEmpty())
                 @foreach ($documento->cruces as $cruce)
@@ -163,10 +160,21 @@
                 @endforeach
             @endif
 
+
+            {{-- Paso 5: Aplicación de Factory --}}
+            @if($documento->factoryRegistro)
+                <p class="mb-1">
+                    <strong>Factory registrado el {{ \Carbon\Carbon::parse($documento->factoryRegistro->fecha_factory)->format('d-m-Y') }}:</strong>
+                    - ${{ number_format($documento->factoryRegistro->monto, 0, ',', '.') }}
+                </p>
+            @endif
+
+
             {{-- Resultado final --}}
             <hr>
             <p class="fw-bold text-success mb-0">
-                <strong>Saldo pendiente actual:</strong> ${{ number_format($documento->saldo_pendiente, 0, ',', '.') }}
+                <strong>Saldo pendiente actual:</strong>
+                ${{ number_format($documento->saldo_pendiente, 0, ',', '.') }}
             </p>
         </div>
     </div>
@@ -209,10 +217,6 @@
                                             Eliminar
                                         </button>
                                     @endif
-                                    
-
-
-
                                 </form>
                             </td>
                         </tr>
@@ -268,14 +272,58 @@
                                             Eliminar
                                         </button>
                                     @endif
-
-
                                 </form>
                             </td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
+            @endif
+        </div>
+    </div>
+
+
+    {{-- Sección de Factory --}}
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-light fw-bold">Factory registrado</div>
+        <div class="card-body">
+            @if(!$documento->factoryRegistro)
+                <p class="text-muted">Sin Factory registrado.</p>
+            @else
+                <table class="table table-sm table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>Fecha Factory</th>
+                            <th>Nombre Factory / Banco</th>
+                            <th>RUT Factory</th>
+                            <th>Monto</th>
+                            <th class="text-center" style="width: 150px;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{{ $documento->factoryRegistro->fecha_factory ? \Carbon\Carbon::parse($documento->factoryRegistro->fecha_factory)->format('d-m-Y') : '-' }}</td>
+                            <td>{{ $documento->factoryRegistro->banco?->nombre ?? 'Sin banco' }}</td>
+                            <td>{{ $documento->factoryRegistro->rut_factory }}</td>
+                            <td>${{ number_format($documento->factoryRegistro->monto, 0, ',', '.') }}</td>
+                            <td class="text-center">
+                                <form action="{{ route('factories.destroy', $documento->factoryRegistro->id) }}"
+                                      method="POST"
+                                      class="d-inline"
+                                      onsubmit="return confirm('¿Seguro que deseas eliminar este Factory?')">
+                                    @csrf
+                                    @method('DELETE')
+
+                                    @if (Auth::id() != 375)
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            Eliminar
+                                        </button>
+                                    @endif
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             @endif
         </div>
     </div>

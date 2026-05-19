@@ -26,6 +26,12 @@ class Banco extends Model
     }
 
 
+    public function factories()
+    {
+        return $this->hasMany(Factory::class, 'banco_id');
+    }
+
+
 
 
 
