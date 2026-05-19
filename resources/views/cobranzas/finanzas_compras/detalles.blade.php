@@ -306,12 +306,20 @@
                                     <td>{{ \Carbon\Carbon::parse($cruce->fecha_cruce)->format('d-m-Y') }}</td>
                                     <td>${{ number_format($cruce->monto, 0, ',', '.') }}</td>
                                     <td>
-                                        {{ $cruce->cobranzaCompra->razon_social ?? '—' }}
-                                        @if($cruce->cobranzaCompra)
-                                            <br>
+                                        @if($cruce->documento)
+                                            <span class="fw-semibold">
+                                                Folio CxC {{ $cruce->documento->folio }}
+                                            </span><br>
+
                                             <small class="text-muted">
-                                                RUT: {{ $cruce->cobranzaCompra->rut_cliente }}
+                                                Cliente: {{ $cruce->cobranza?->razon_social ?? '—' }}
+                                            </small><br>
+
+                                            <small class="text-muted">
+                                                RUT: {{ $cruce->cobranza?->rut_cliente ?? '—' }}
                                             </small>
+                                        @else
+                                            <span class="text-muted">Cruce sin documento CxC asociado</span>
                                         @endif
                                     </td>
 
