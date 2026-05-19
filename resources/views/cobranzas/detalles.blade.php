@@ -102,6 +102,7 @@
                         'created_at_orden' => $abono->created_at,
                         'monto' => (int) ($abono->monto ?? 0),
                         'prioridad' => 10,
+                        'detalle' => null,
                     ]);
                 }
 
@@ -113,6 +114,7 @@
                         'created_at_orden' => $cruce->created_at,
                         'monto' => (int) ($cruce->monto ?? 0),
                         'prioridad' => 20,
+                        'detalle' => null,
                     ]);
                 }
 
@@ -124,6 +126,7 @@
                         'created_at_orden' => $pago->created_at,
                         'monto' => null,
                         'prioridad' => 30,
+                        'detalle' => null,
                     ]);
                 }
 
@@ -135,17 +138,27 @@
                         'created_at_orden' => $prontoPago->created_at,
                         'monto' => null,
                         'prioridad' => 40,
+                        'detalle' => null,
                     ]);
                 }
 
                 if ($documento->factoryRegistro) {
+                    $factory = $documento->factoryRegistro;
+
                     $movimientosResumen->push([
                         'tipo' => 'Factory',
-                        'fecha' => $documento->factoryRegistro->fecha_factory,
-                        'fecha_orden' => $documento->factoryRegistro->fecha_factory,
-                        'created_at_orden' => $documento->factoryRegistro->created_at,
-                        'monto' => (int) ($documento->factoryRegistro->monto ?? 0),
+                        'fecha' => $factory->fecha_factory,
+                        'fecha_orden' => $factory->fecha_factory,
+                        'created_at_orden' => $factory->created_at,
+                        'monto' => (int) ($factory->monto ?? 0),
                         'prioridad' => 50,
+                        'detalle' => [
+                            'banco' => $factory->banco?->nombre ?? 'Sin banco',
+                            'rut_factory' => $factory->rut_factory,
+                            'cesion' => $factory->cesion,
+                            'saldo_liquido' => (int) ($factory->saldo_liquido ?? 0),
+                            'diferencia' => (int) ($factory->diferencia ?? 0),
+                        ],
                     ]);
                 }
 
@@ -200,10 +213,41 @@
                         : '-';
                 @endphp
 
-                <p class="mb-1">
-                    <strong>{{ $movimiento['tipo'] }} registrado el {{ $fechaMovimiento }}:</strong>
-                    - ${{ number_format($montoMovimiento, 0, ',', '.') }}
-                </p>
+                <div class="mb-2">
+                    <p class="mb-1">
+                        <strong>{{ $movimiento['tipo'] }} registrado el {{ $fechaMovimiento }}:</strong>
+                        - ${{ number_format($montoMovimiento, 0, ',', '.') }}
+                    </p>
+
+                    @if($movimiento['tipo'] === 'Factory' && $movimiento['detalle'])
+                        <div class="small text-muted ps-3">
+                            <div>
+                                <strong>Nombre Factory / Banco:</strong>
+                                {{ $movimiento['detalle']['banco'] }}
+                            </div>
+
+                            <div>
+                                <strong>RUT Factory:</strong>
+                                {{ $movimiento['detalle']['rut_factory'] }}
+                            </div>
+
+                            <div>
+                                <strong>Cesión:</strong>
+                                {{ $movimiento['detalle']['cesion'] ?? '-' }}
+                            </div>
+
+                            <div>
+                                <strong>Saldo líquido:</strong>
+                                ${{ number_format($movimiento['detalle']['saldo_liquido'], 0, ',', '.') }}
+                            </div>
+
+                            <div>
+                                <strong>Diferencia:</strong>
+                                ${{ number_format($movimiento['detalle']['diferencia'], 0, ',', '.') }}
+                            </div>
+                        </div>
+                    @endif
+                </div>
             @endforeach
 
 

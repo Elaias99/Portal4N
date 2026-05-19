@@ -14,6 +14,11 @@ use Illuminate\Validation\ValidationException;
 
 class FactoryController extends Controller
 {
+
+
+
+
+
     /**
      * Registrar estado Factory para un documento financiero CxC.
      */
@@ -23,15 +28,27 @@ class FactoryController extends Controller
             'banco_id' => 'required|string|max:255',
             'banco_otro' => 'nullable|string|max:255',
             'rut_factory' => 'required|string|max:20',
+
+            'cesion' => 'required|string|max:100',
+            'saldo_liquido' => 'required',
         ], [
             'banco_id.required' => 'Debe seleccionar el banco o entidad Factory.',
             'rut_factory.required' => 'Debe ingresar el RUT del Factory.',
             'rut_factory.max' => 'El RUT del Factory no puede superar los 20 caracteres.',
+
+            'cesion.required' => 'Debe ingresar la cesión del Factory.',
+            'saldo_liquido.required' => 'Debe ingresar el saldo líquido.',
         ]);
 
         if ((int) $documento->tipo_documento_id === 61) {
             return back()
                 ->withErrors(['factory' => 'No se puede registrar Factory sobre una nota de crédito.'])
+                ->withInput();
+        }
+
+        if ((int) $documento->tipo_documento_id === 56) {
+            return back()
+                ->withErrors(['factory' => 'No se puede registrar Factory sobre una nota de débito.'])
                 ->withInput();
         }
 
@@ -61,43 +78,26 @@ class FactoryController extends Controller
                 ->withInput();
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Resolver banco / Factory
-        |--------------------------------------------------------------------------
-        | Si viene "__otro__", se crea el banco si no existe.
-        | Si viene un ID normal, se valida contra la tabla bancos.
-        */
-        $bancoId = $validated['banco_id'];
-        $bancoOtro = trim((string) ($validated['banco_otro'] ?? ''));
+        $saldoLiquido = $this->normalizarMontoFactory($validated['saldo_liquido']);
 
-        if ($bancoId === '__otro__') {
-            if ($bancoOtro === '') {
-                throw ValidationException::withMessages([
-                    'banco_otro' => 'Debe ingresar el nombre del banco o Factory.',
-                ]);
-            }
-
-            $nombreBanco = preg_replace('/\s+/', ' ', $bancoOtro);
-
-            $bancoSeleccionado = Banco::whereRaw('LOWER(TRIM(nombre)) = ?', [
-                mb_strtolower($nombreBanco),
-            ])->first();
-
-            if (!$bancoSeleccionado) {
-                $bancoSeleccionado = Banco::create([
-                    'nombre' => $nombreBanco,
-                ]);
-            }
-        } else {
-            $bancoSeleccionado = Banco::find($bancoId);
-
-            if (!$bancoSeleccionado) {
-                throw ValidationException::withMessages([
-                    'banco_id' => 'El banco seleccionado no es válido.',
-                ]);
-            }
+        if ($saldoLiquido < 0) {
+            return back()
+                ->withErrors(['saldo_liquido' => 'El saldo líquido no puede ser negativo.'])
+                ->withInput();
         }
+
+        if ($saldoLiquido > $saldoAnterior) {
+            return back()
+                ->withErrors(['saldo_liquido' => 'El saldo líquido no puede ser mayor al saldo pendiente del documento.'])
+                ->withInput();
+        }
+
+        $diferencia = max($saldoAnterior - $saldoLiquido, 0);
+
+        $bancoSeleccionado = $this->resolverBancoFactoryMasivo(
+            bancoId: $validated['banco_id'],
+            bancoOtro: $validated['banco_otro'] ?? null,
+        );
 
         $estadoAnterior = $documento->status;
         $statusOriginalAnterior = $documento->status_original;
@@ -107,6 +107,8 @@ class FactoryController extends Controller
                 $validated,
                 $documento,
                 $saldoAnterior,
+                $saldoLiquido,
+                $diferencia,
                 $estadoAnterior,
                 $statusOriginalAnterior,
                 $bancoSeleccionado
@@ -115,15 +117,18 @@ class FactoryController extends Controller
                     'documento_financiero_id' => $documento->id,
                     'banco_id' => $bancoSeleccionado->id,
                     'rut_factory' => trim($validated['rut_factory']),
+                    'cesion' => trim($validated['cesion']),
                     'fecha_factory' => Carbon::today()->toDateString(),
                     'monto' => $saldoAnterior,
+                    'saldo_liquido' => $saldoLiquido,
+                    'diferencia' => $diferencia,
                     'user_id' => Auth::id(),
                 ]);
 
                 $documento->update([
                     'status' => 'Factory',
                     'fecha_estado_manual' => now(),
-                    'saldo_pendiente' => 0,
+                    'saldo_pendiente' => $diferencia,
                 ]);
 
                 MovimientoDocumento::create([
@@ -141,10 +146,13 @@ class FactoryController extends Controller
                         'banco_id' => $factory->banco_id,
                         'banco' => $bancoSeleccionado->nombre,
                         'rut_factory' => $factory->rut_factory,
+                        'cesion' => $factory->cesion,
                         'fecha_factory' => $factory->fecha_factory,
                         'monto' => $factory->monto,
+                        'saldo_liquido' => $factory->saldo_liquido,
+                        'diferencia' => $factory->diferencia,
                         'nuevo_estado' => 'Factory',
-                        'saldo_actual' => 0,
+                        'saldo_actual' => $diferencia,
                     ],
                 ]);
             });
@@ -156,8 +164,18 @@ class FactoryController extends Controller
                 ->withInput();
         }
 
-        return back()->with('success', 'Factory registrado correctamente y saldo pendiente actualizado a 0.');
+        return back()->with(
+            'success',
+            'Factory registrado correctamente y saldo pendiente actualizado según la diferencia.'
+        );
     }
+
+
+
+
+
+
+
 
     /**
      * Eliminar un registro Factory y restaurar saldo/estado según movimientos restantes.
@@ -186,8 +204,11 @@ class FactoryController extends Controller
             'banco_id' => $factory->banco_id,
             'banco' => $factory->banco?->nombre,
             'rut_factory' => $factory->rut_factory,
+            'cesion' => $factory->cesion,
             'fecha_factory' => $factory->fecha_factory,
             'monto' => $factory->monto,
+            'saldo_liquido' => $factory->saldo_liquido,
+            'diferencia' => $factory->diferencia,
         ];
 
         $estadoAnterior = $documento->status;
@@ -273,6 +294,9 @@ class FactoryController extends Controller
             'documentos.*.banco_otro' => 'nullable|string|max:255',
             'documentos.*.rut_factory' => 'required|string|max:20',
             'documentos.*.fecha_factory' => 'required|date',
+
+            'documentos.*.cesion' => 'required|string|max:100',
+            'documentos.*.saldo_liquido' => 'required',
         ], [
             'documentos.required' => 'Debe seleccionar al menos un documento.',
             'documentos.array' => 'La selección de documentos no es válida.',
@@ -283,6 +307,9 @@ class FactoryController extends Controller
             'documentos.*.rut_factory.max' => 'El RUT del Factory no puede superar los 20 caracteres.',
             'documentos.*.fecha_factory.required' => 'Debe ingresar la fecha Factory.',
             'documentos.*.fecha_factory.date' => 'La fecha Factory no es válida.',
+
+            'documentos.*.cesion.required' => 'Debe ingresar la cesión del Factory.',
+            'documentos.*.saldo_liquido.required' => 'Debe ingresar el saldo líquido.',
         ]);
 
         $items = $validated['documentos'];
@@ -360,6 +387,16 @@ class FactoryController extends Controller
             if ($bancoId !== '__otro__' && !Banco::whereKey($bancoId)->exists()) {
                 $errores[] = "{$identificador}: el banco seleccionado no es válido.";
             }
+
+            $saldoLiquido = $this->normalizarMontoFactory($data['saldo_liquido'] ?? null);
+
+            if ($saldoLiquido < 0) {
+                $errores[] = "{$identificador}: el saldo líquido no puede ser negativo.";
+            }
+
+            if ($saldoLiquido > (int) $documento->saldo_pendiente) {
+                $errores[] = "{$identificador}: el saldo líquido no puede ser mayor al saldo pendiente.";
+            }
         }
 
         if (!empty($errores)) {
@@ -375,9 +412,6 @@ class FactoryController extends Controller
                         ->lockForUpdate()
                         ->firstOrFail();
 
-                    /*
-                    * Revalidación mínima dentro de la transacción.
-                    */
                     if (
                         in_array((int) $documento->tipo_documento_id, [61, 56], true) ||
                         (int) $documento->saldo_pendiente <= 0 ||
@@ -398,20 +432,59 @@ class FactoryController extends Controller
                     );
 
                     $saldoAnterior = (int) $documento->saldo_pendiente;
+                    $saldoLiquido = $this->normalizarMontoFactory($data['saldo_liquido']);
+                    $diferencia = max($saldoAnterior - $saldoLiquido, 0);
 
-                    FactoryRegistro::create([
+                    if ($saldoLiquido > $saldoAnterior) {
+                        throw ValidationException::withMessages([
+                            'factory_masivo' => "El saldo líquido del folio {$documento->folio} no puede ser mayor al saldo pendiente.",
+                        ]);
+                    }
+
+                    $estadoAnterior = $documento->status;
+                    $statusOriginalAnterior = $documento->status_original;
+
+                    $factory = FactoryRegistro::create([
                         'documento_financiero_id' => $documento->id,
                         'banco_id' => $banco->id,
                         'rut_factory' => trim($data['rut_factory']),
+                        'cesion' => trim($data['cesion']),
                         'fecha_factory' => $data['fecha_factory'],
                         'monto' => $saldoAnterior,
+                        'saldo_liquido' => $saldoLiquido,
+                        'diferencia' => $diferencia,
                         'user_id' => Auth::id(),
                     ]);
 
                     $documento->update([
                         'status' => 'Factory',
                         'fecha_estado_manual' => now(),
-                        'saldo_pendiente' => 0,
+                        'saldo_pendiente' => $diferencia,
+                    ]);
+
+                    MovimientoDocumento::create([
+                        'documento_financiero_id' => $documento->id,
+                        'user_id' => Auth::id(),
+                        'tipo_movimiento' => 'Registro de Factory masivo',
+                        'descripcion' => "El documento folio {$documento->folio} fue marcado como Factory masivo por un monto de {$saldoAnterior}.",
+                        'datos_anteriores' => [
+                            'estado' => $estadoAnterior,
+                            'status_original' => $statusOriginalAnterior,
+                            'saldo_anterior' => $saldoAnterior,
+                        ],
+                        'datos_nuevos' => [
+                            'factory_id' => $factory->id,
+                            'banco_id' => $factory->banco_id,
+                            'banco' => $banco->nombre,
+                            'rut_factory' => $factory->rut_factory,
+                            'cesion' => $factory->cesion,
+                            'fecha_factory' => $factory->fecha_factory,
+                            'monto' => $factory->monto,
+                            'saldo_liquido' => $factory->saldo_liquido,
+                            'diferencia' => $factory->diferencia,
+                            'nuevo_estado' => 'Factory',
+                            'saldo_actual' => 0,
+                        ],
                     ]);
                 }
             });
@@ -427,27 +500,6 @@ class FactoryController extends Controller
 
         return back()->with('success', 'Factory masivo registrado correctamente.');
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -525,14 +577,31 @@ class FactoryController extends Controller
 
         $banco = Banco::find($bancoId);
 
-    if (!$banco) {
-        throw ValidationException::withMessages([
-            'banco_id' => 'El banco seleccionado no es válido.',
-        ]);
+        if (!$banco) {
+            throw ValidationException::withMessages([
+                'banco_id' => 'El banco seleccionado no es válido.',
+            ]);
+        }
+
+        return $banco;
     }
 
-    return $banco;
-}
+
+
+
+    /**
+     * Normaliza montos ingresados desde formularios.
+     */
+    private function normalizarMontoFactory($value): int
+    {
+        if ($value === null || $value === '') {
+            return 0;
+        }
+
+        $normalizado = preg_replace('/[^\d]/', '', (string) $value);
+
+        return (int) $normalizado;
+    }
 
 
 

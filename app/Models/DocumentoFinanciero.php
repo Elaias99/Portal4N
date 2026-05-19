@@ -225,8 +225,14 @@ class DocumentoFinanciero extends Model
         /**
          * Si tiene pago, pronto pago o Factory → saldo = 0.
          */
-        if ($tienePagos || $esProntoPago || $tieneFactory) {
+        if ($tienePagos || $esProntoPago) {
             return 0;
+        }
+
+        if ($tieneFactory) {
+            $factory = $this->factoryRegistro()->first();
+
+            return max((int) ($factory?->diferencia ?? 0), 0);
         }
 
         /**
@@ -296,11 +302,16 @@ class DocumentoFinanciero extends Model
         }
 
         // =============================
-        // 3) Si tiene Factory → saldo 0
+        // 3) Si tiene Factory → saldo = diferencia
         // =============================
         if ($this->factoryRegistro()->exists()) {
-            $this->update(['saldo_pendiente' => 0]);
-            return 0;
+            $factory = $this->factoryRegistro()->first();
+
+            $saldo = max((int) ($factory?->diferencia ?? 0), 0);
+
+            $this->update(['saldo_pendiente' => $saldo]);
+
+            return $saldo;
         }
 
         // ======================================

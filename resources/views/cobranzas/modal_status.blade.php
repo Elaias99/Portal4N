@@ -279,10 +279,42 @@
                         </div>
 
                         <div class="form-group mb-3">
+                            <label class="form-label small text-muted">Cesión</label>
+                            <input type="text"
+                                class="form-control form-control-sm"
+                                value="{{ $doc->factoryRegistro->cesion ?? '-' }}"
+                                readonly>
+                        </div>
+
+                        <div class="form-group mb-3">
                             <label class="form-label small text-muted">Fecha Factory</label>
                             <input type="text"
                                 class="form-control form-control-sm"
                                 value="{{ $doc->factoryRegistro->fecha_factory ? \Carbon\Carbon::parse($doc->factoryRegistro->fecha_factory)->format('d-m-Y') : '-' }}"
+                                readonly>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">Monto documento / saldo cedido</label>
+                            <input type="text"
+                                class="form-control form-control-sm"
+                                value="${{ number_format($doc->factoryRegistro->monto ?? 0, 0, ',', '.') }}"
+                                readonly>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">Saldo líquido</label>
+                            <input type="text"
+                                class="form-control form-control-sm"
+                                value="${{ number_format($doc->factoryRegistro->saldo_liquido ?? 0, 0, ',', '.') }}"
+                                readonly>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">Diferencia</label>
+                            <input type="text"
+                                class="form-control form-control-sm"
+                                value="${{ number_format($doc->factoryRegistro->diferencia ?? 0, 0, ',', '.') }}"
                                 readonly>
                         </div>
                     @else
@@ -354,6 +386,25 @@
                         </div>
 
                         <div class="form-group mb-3">
+                            <label for="cesion-factory-{{ $doc->id }}" class="form-label small text-muted">
+                                Cesión
+                            </label>
+
+                            <input type="text"
+                                name="cesion"
+                                id="cesion-factory-{{ $doc->id }}"
+                                class="form-control form-control-sm @error('cesion') is-invalid @enderror"
+                                placeholder="Ej: 665162"
+                                required>
+
+                            @error('cesion')
+                                <span class="invalid-feedback d-block text-danger">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+
+                        <div class="form-group mb-3">
                             <label class="form-label small text-muted">
                                 Fecha Factory
                             </label>
@@ -365,6 +416,43 @@
 
                             <small class="text-muted">
                                 La fecha se registrará automáticamente con la fecha actual.
+                            </small>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="saldo-liquido-factory-{{ $doc->id }}" class="form-label small text-muted">
+                                Saldo líquido
+                            </label>
+
+                            <input type="text"
+                                name="saldo_liquido"
+                                id="saldo-liquido-factory-{{ $doc->id }}"
+                                class="form-control form-control-sm @error('saldo_liquido') is-invalid @enderror"
+                                data-saldo="{{ (int) $doc->saldo_pendiente }}"
+                                placeholder="Ej: {{ (int) $doc->saldo_pendiente }}"
+                                oninput="calcularDiferenciaFactoryIndividual({{ $doc->id }})"
+                                required>
+
+                            @error('saldo_liquido')
+                                <span class="invalid-feedback d-block text-danger">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">
+                                Diferencia
+                            </label>
+
+                            <input type="text"
+                                id="diferencia-factory-{{ $doc->id }}"
+                                class="form-control form-control-sm"
+                                value="$0"
+                                readonly>
+
+                            <small class="text-muted">
+                                Diferencia entre el saldo pendiente y el saldo líquido informado.
                             </small>
                         </div>
 
@@ -474,6 +562,64 @@
             formFactory.submit();
         } else {
             document.getElementById('form-status-' + id).submit();
+        }
+    }
+</script>
+
+<script>
+    function normalizarMontoFactoryIndividual(value) {
+        if (value === null || value === undefined || value === '') {
+            return 0;
+        }
+
+        return Number(String(value).replace(/[^\d]/g, '')) || 0;
+    }
+
+    function formatearCLPFactoryIndividual(value) {
+        return Number(value || 0).toLocaleString('es-CL', {
+            style: 'currency',
+            currency: 'CLP',
+            maximumFractionDigits: 0
+        });
+    }
+
+    function calcularDiferenciaFactoryIndividual(id) {
+        const inputSaldoLiquido = document.getElementById('saldo-liquido-factory-' + id);
+        const inputDiferencia = document.getElementById('diferencia-factory-' + id);
+
+        if (!inputSaldoLiquido || !inputDiferencia) {
+            return;
+        }
+
+        const saldoPendiente = Number(inputSaldoLiquido.dataset.saldo || 0);
+        const saldoLiquido = normalizarMontoFactoryIndividual(inputSaldoLiquido.value);
+        const diferencia = Math.max(saldoPendiente - saldoLiquido, 0);
+
+        inputDiferencia.value = formatearCLPFactoryIndividual(diferencia);
+
+        if (saldoLiquido > saldoPendiente) {
+            inputSaldoLiquido.setCustomValidity('El saldo líquido no puede ser mayor al saldo pendiente.');
+        } else {
+            inputSaldoLiquido.setCustomValidity('');
+        }
+    }
+
+    function toggleBancoFactoryOtro(id) {
+        const select = document.getElementById('banco-factory-' + id);
+        const wrapper = document.getElementById('banco-factory-otro-wrapper-' + id);
+        const input = document.getElementById('banco-factory-otro-' + id);
+
+        if (!select || !wrapper || !input) {
+            return;
+        }
+
+        if (select.value === '__otro__') {
+            wrapper.style.display = 'block';
+            input.required = true;
+        } else {
+            wrapper.style.display = 'none';
+            input.required = false;
+            input.value = '';
         }
     }
 </script>

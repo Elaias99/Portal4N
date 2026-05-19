@@ -18,11 +18,22 @@ class Factory extends Model
         'fecha_factory',
         'monto',
         'user_id',
+
+
+        'cesion',
+        'saldo_liquido',
+        'diferencia',
+
+
+
+
     ];
 
     protected $casts = [
         'fecha_factory' => 'date',
         'monto' => 'integer',
+        'saldo_liquido' => 'integer',
+        'diferencia' => 'integer',
     ];
 
     public function documentoFinanciero()

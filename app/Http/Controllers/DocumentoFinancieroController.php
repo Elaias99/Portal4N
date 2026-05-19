@@ -921,12 +921,75 @@ class DocumentoFinancieroController extends Controller
         $bancos = \App\Models\Banco::orderBy('nombre')
             ->get(['id', 'nombre']);
 
+        /*
+        |--------------------------------------------------------------------------
+        | Línea de tiempo de movimientos de gestión
+        |--------------------------------------------------------------------------
+        | Se usa en la vista detalle para mostrar abonos, cruces, pagos,
+        | pronto pagos y Factory en orden cronológico.
+        */
+        $movimientosGestion = collect();
+
+        foreach ($documento->abonos as $abono) {
+            $movimientosGestion->push([
+                'tipo' => 'Abono',
+                'fecha' => $abono->fecha_abono,
+                'monto' => (int) $abono->monto,
+                'registro' => $abono,
+            ]);
+        }
+
+        foreach ($documento->cruces as $cruce) {
+            $movimientosGestion->push([
+                'tipo' => 'Cruce',
+                'fecha' => $cruce->fecha_cruce,
+                'monto' => (int) $cruce->monto,
+                'registro' => $cruce,
+            ]);
+        }
+
+        foreach ($documento->pagos as $pago) {
+            $movimientosGestion->push([
+                'tipo' => 'Pago',
+                'fecha' => $pago->fecha_pago,
+                'monto' => null,
+                'registro' => $pago,
+            ]);
+        }
+
+        foreach ($documento->prontoPagos as $prontoPago) {
+            $movimientosGestion->push([
+                'tipo' => 'Pronto pago',
+                'fecha' => $prontoPago->fecha_pronto_pago,
+                'monto' => null,
+                'registro' => $prontoPago,
+            ]);
+        }
+
+        if ($documento->factoryRegistro) {
+            $movimientosGestion->push([
+                'tipo' => 'Factory',
+                'fecha' => $documento->factoryRegistro->fecha_factory,
+                'monto' => (int) $documento->factoryRegistro->monto,
+                'saldo_liquido' => (int) $documento->factoryRegistro->saldo_liquido,
+                'diferencia' => (int) $documento->factoryRegistro->diferencia,
+                'cesion' => $documento->factoryRegistro->cesion,
+                'registro' => $documento->factoryRegistro,
+            ]);
+        }
+
+        $movimientosGestion = $movimientosGestion
+            ->filter(fn ($item) => !empty($item['fecha']))
+            ->sortBy('fecha')
+            ->values();
+
         return view('cobranzas.detalles', compact(
             'documento',
             'referencias',
             'proveedores',
             'cobranzas',
-            'bancos'
+            'bancos',
+            'movimientosGestion'
         ));
     }
 

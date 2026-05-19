@@ -5,7 +5,7 @@
      aria-labelledby="modalFactoryMasivoLabel"
      aria-hidden="true">
 
-    <div class="modal-dialog modal-xl modal-dialog-centered" role="document" style="max-width: 95vw;">
+    <div class="modal-dialog modal-xl modal-dialog-centered" role="document" style="max-width: 98vw;">
         <div class="modal-content">
 
             {{-- HEADER --}}
@@ -64,10 +64,13 @@
                                     <th class="text-nowrap">Folio</th>
                                     <th class="text-nowrap">Razón Social</th>
                                     <th class="text-nowrap">RUT</th>
-                                    <th class="text-end text-nowrap">Saldo</th>
+                                    <th class="text-nowrap" style="min-width: 130px;">Cesión</th>
+                                    <th class="text-end text-nowrap">Saldo Pendiente</th>
                                     <th class="text-nowrap" style="min-width: 230px;">Nombre Factory / Banco</th>
                                     <th class="text-nowrap" style="min-width: 160px;">RUT Factory</th>
                                     <th class="text-nowrap" style="min-width: 150px;">Fecha Factory</th>
+                                    <th class="text-nowrap" style="min-width: 160px;">Saldo Líquido</th>
+                                    <th class="text-end text-nowrap">Diferencia</th>
                                     <th class="text-center text-nowrap" style="width: 80px;">Quitar</th>
                                 </tr>
                             </thead>
@@ -82,15 +85,37 @@
                         {{-- Si después necesitas inputs hidden extra, quedan aquí --}}
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-top pt-3">
-                        <div>
-                            <span class="text-muted small">Total seleccionado:</span>
-                            <span id="factory-masivo-total-general" class="fw-bold text-primary">
-                                $0
-                            </span>
+                    <div class="border-top pt-3">
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4">
+                                <div class="border rounded p-2 bg-light">
+                                    <span class="text-muted small d-block">Total saldo pendiente:</span>
+                                    <span id="factory-masivo-total-general" class="fw-bold text-primary">
+                                        $0
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="border rounded p-2 bg-light">
+                                    <span class="text-muted small d-block">Total saldo líquido:</span>
+                                    <span id="factory-masivo-total-liquido" class="fw-bold text-success">
+                                        $0
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="border rounded p-2 bg-light">
+                                    <span class="text-muted small d-block">Total diferencia:</span>
+                                    <span id="factory-masivo-total-diferencia" class="fw-bold text-danger">
+                                        $0
+                                    </span>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="d-flex gap-2">
+                        <div class="d-flex justify-content-end gap-2">
                             <button type="button"
                                     class="btn btn-secondary btn-sm"
                                     data-dismiss="modal"
@@ -124,6 +149,14 @@
 
                         <td class="text-nowrap">
                             __RUT__
+                        </td>
+
+                        <td>
+                            <input type="text"
+                                   name="documentos[__ID__][cesion]"
+                                   class="form-control form-control-sm"
+                                   placeholder="Ej: 665162"
+                                   required>
                         </td>
 
                         <td class="text-end fw-bold text-danger">
@@ -171,6 +204,24 @@
                                    class="form-control form-control-sm"
                                    value="{{ now()->format('Y-m-d') }}"
                                    required>
+                        </td>
+
+                        <td>
+                            <input type="text"
+                                   name="documentos[__ID__][saldo_liquido]"
+                                   class="form-control form-control-sm js-factory-masivo-saldo-liquido"
+                                   data-documento-id="__ID__"
+                                   data-saldo="__SALDO_RAW__"
+                                   placeholder="Ej: 4910196"
+                                   required>
+                        </td>
+
+                        <td class="text-end fw-bold text-danger">
+                            <span class="js-factory-masivo-diferencia"
+                                  data-documento-id="__ID__"
+                                  data-saldo="__SALDO_RAW__">
+                                $0
+                            </span>
                         </td>
 
                         <td class="text-center">

@@ -29,7 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const tbodyFactory = document.getElementById('factory-masivo-documentos-seleccionados');
     const templateFactory = document.getElementById('factory-masivo-row-template');
     const alertaSinSeleccion = document.getElementById('factory-masivo-sin-seleccion');
+
     const totalGeneralFactory = document.getElementById('factory-masivo-total-general');
+    const totalLiquidoFactory = document.getElementById('factory-masivo-total-liquido');
+    const totalDiferenciaFactory = document.getElementById('factory-masivo-total-diferencia');
+
     const btnSubmitFactory = document.getElementById('btn-submit-factory-masivo');
 
     function getSeleccionFactory() {
@@ -109,6 +113,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function normalizarMontoFactory(value) {
+        if (value === null || value === undefined || value === '') {
+            return 0;
+        }
+
+        return Number(String(value).replace(/[^\d]/g, '')) || 0;
+    }
+
     function escapeHtml(value) {
         return String(value ?? '')
             .replaceAll('&', '&amp;')
@@ -116,6 +128,75 @@ document.addEventListener('DOMContentLoaded', () => {
             .replaceAll('>', '&gt;')
             .replaceAll('"', '&quot;')
             .replaceAll("'", '&#039;');
+    }
+
+    function resetTotalesFactoryMasivo() {
+        if (totalGeneralFactory) {
+            totalGeneralFactory.textContent = formatCLP(0);
+        }
+
+        if (totalLiquidoFactory) {
+            totalLiquidoFactory.textContent = formatCLP(0);
+        }
+
+        if (totalDiferenciaFactory) {
+            totalDiferenciaFactory.textContent = formatCLP(0);
+        }
+    }
+
+    function recalcularFilaFactoryMasivo(inputSaldoLiquido) {
+        const documentoId = inputSaldoLiquido.dataset.documentoId;
+        const saldoPendiente = Number(inputSaldoLiquido.dataset.saldo || 0);
+        const saldoLiquido = normalizarMontoFactory(inputSaldoLiquido.value);
+
+        const diferencia = Math.max(saldoPendiente - saldoLiquido, 0);
+
+        const diferenciaElement = document.querySelector(
+            '.js-factory-masivo-diferencia[data-documento-id="' + documentoId + '"]'
+        );
+
+        if (diferenciaElement) {
+            diferenciaElement.textContent = formatCLP(diferencia);
+        }
+
+        if (saldoLiquido > saldoPendiente) {
+            inputSaldoLiquido.setCustomValidity(
+                'El saldo líquido no puede ser mayor al saldo pendiente.'
+            );
+        } else {
+            inputSaldoLiquido.setCustomValidity('');
+        }
+    }
+
+    function recalcularTotalesFactoryMasivo() {
+        const seleccion = getSeleccionFactory();
+        const documentos = Object.values(seleccion);
+
+        let totalSaldoPendiente = 0;
+        let totalSaldoLiquido = 0;
+
+        documentos.forEach(doc => {
+            totalSaldoPendiente += Number(doc.saldo || 0);
+        });
+
+        document.querySelectorAll('.js-factory-masivo-saldo-liquido').forEach(input => {
+            recalcularFilaFactoryMasivo(input);
+            totalSaldoLiquido += normalizarMontoFactory(input.value);
+        });
+
+        const totalDiferencia = Math.max(totalSaldoPendiente - totalSaldoLiquido, 0);
+
+        if (totalGeneralFactory) {
+            totalGeneralFactory.textContent = formatCLP(totalSaldoPendiente);
+        }
+
+        if (totalLiquidoFactory) {
+            totalLiquidoFactory.textContent = formatCLP(totalSaldoLiquido);
+        }
+
+        if (totalDiferenciaFactory) {
+            totalDiferenciaFactory.textContent = formatCLP(totalDiferencia);
+        }
     }
 
     function renderFactoryMasivoModal() {
@@ -128,16 +209,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tbodyFactory.innerHTML = '';
 
-        let total = 0;
-
         if (documentos.length === 0) {
             if (alertaSinSeleccion) {
                 alertaSinSeleccion.style.display = 'block';
             }
 
-            if (totalGeneralFactory) {
-                totalGeneralFactory.textContent = formatCLP(0);
-            }
+            resetTotalesFactoryMasivo();
 
             if (btnSubmitFactory) {
                 btnSubmitFactory.disabled = true;
@@ -156,7 +233,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         documentos.forEach(doc => {
             const saldo = Number(doc.saldo || 0);
-            total += saldo;
 
             let rowHtml = templateFactory.innerHTML;
 
@@ -166,14 +242,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 .replaceAll('__FOLIO__', escapeHtml(doc.folio))
                 .replaceAll('__RAZON__', escapeHtml(doc.razon))
                 .replaceAll('__RUT__', escapeHtml(doc.rut))
-                .replaceAll('__SALDO_FORMAT__', formatCLP(saldo));
+                .replaceAll('__SALDO_FORMAT__', formatCLP(saldo))
+                .replaceAll('__SALDO_RAW__', String(saldo));
 
             tbodyFactory.insertAdjacentHTML('beforeend', rowHtml);
         });
 
-        if (totalGeneralFactory) {
-            totalGeneralFactory.textContent = formatCLP(total);
-        }
+        recalcularTotalesFactoryMasivo();
     }
 
     function toggleBancoOtroFactoryMasivo(select) {
@@ -271,7 +346,18 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleBancoOtroFactoryMasivo(selectBanco);
     });
 
-    // Evitar enviar si no hay selección
+    // Recalcular saldo líquido / diferencia por fila
+    document.addEventListener('input', function (event) {
+        const inputSaldoLiquido = event.target.closest('.js-factory-masivo-saldo-liquido');
+
+        if (!inputSaldoLiquido) {
+            return;
+        }
+
+        recalcularTotalesFactoryMasivo();
+    });
+
+    // Evitar enviar si no hay selección o si algún saldo líquido no calza
     formFactoryMasivo?.addEventListener('submit', function (event) {
         const seleccion = getSeleccionFactory();
 
@@ -280,6 +366,8 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Debe seleccionar al menos un documento para registrar Factory masivo.');
             return;
         }
+
+        recalcularTotalesFactoryMasivo();
 
         if (typeof this.reportValidity === 'function' && !this.reportValidity()) {
             event.preventDefault();
