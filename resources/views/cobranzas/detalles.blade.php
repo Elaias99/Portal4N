@@ -53,121 +53,158 @@
         <div class="card-header bg-light fw-bold">Resumen del cálculo del saldo pendiente</div>
         <div class="card-body">
 
-            {{-- Paso 1: Monto base --}}
+            @php
+                $saldoBase = (int) ($documento->monto_total ?? 0);
+                $saldoAntesMovimientos = $saldoBase;
+
+                /*
+                * Notas de crédito/débito se aplican antes de los estados de gestión,
+                * igual que en el modelo DocumentoFinanciero.
+                */
+                $lineasNotas = collect();
+
+                foreach ($referencias['referenciadoPor'] as $ref) {
+                    $montoNota = (int) ($ref->monto_total ?? 0);
+
+                    if ((int) $ref->tipo_documento_id === 61) {
+                        $saldoAntesMovimientos -= $montoNota;
+
+                        $lineasNotas->push([
+                            'texto' => 'Descuento por Nota de Crédito folio ' . $ref->folio,
+                            'signo' => '-',
+                            'monto' => $montoNota,
+                        ]);
+                    }
+
+                    if ((int) $ref->tipo_documento_id === 56) {
+                        $saldoAntesMovimientos += $montoNota;
+
+                        $lineasNotas->push([
+                            'texto' => 'Aumento por Nota de Débito folio ' . $ref->folio,
+                            'signo' => '+',
+                            'monto' => $montoNota,
+                        ]);
+                    }
+                }
+
+                /*
+                * Estados/movimientos ordenados por fecha real de gestión.
+                * Pago y Pronto pago no tienen monto guardado, por eso se calcula
+                * como el saldo restante al momento de llegar a esa línea.
+                */
+                $movimientosResumen = collect();
+
+                foreach ($documento->abonos as $abono) {
+                    $movimientosResumen->push([
+                        'tipo' => 'Abono',
+                        'fecha' => $abono->fecha_abono,
+                        'fecha_orden' => $abono->fecha_abono,
+                        'created_at_orden' => $abono->created_at,
+                        'monto' => (int) ($abono->monto ?? 0),
+                        'prioridad' => 10,
+                    ]);
+                }
+
+                foreach ($documento->cruces as $cruce) {
+                    $movimientosResumen->push([
+                        'tipo' => 'Cruce',
+                        'fecha' => $cruce->fecha_cruce,
+                        'fecha_orden' => $cruce->fecha_cruce,
+                        'created_at_orden' => $cruce->created_at,
+                        'monto' => (int) ($cruce->monto ?? 0),
+                        'prioridad' => 20,
+                    ]);
+                }
+
+                foreach ($documento->pagos as $pago) {
+                    $movimientosResumen->push([
+                        'tipo' => 'Pago',
+                        'fecha' => $pago->fecha_pago,
+                        'fecha_orden' => $pago->fecha_pago,
+                        'created_at_orden' => $pago->created_at,
+                        'monto' => null,
+                        'prioridad' => 30,
+                    ]);
+                }
+
+                foreach ($documento->prontoPagos as $prontoPago) {
+                    $movimientosResumen->push([
+                        'tipo' => 'Pronto pago',
+                        'fecha' => $prontoPago->fecha_pronto_pago,
+                        'fecha_orden' => $prontoPago->fecha_pronto_pago,
+                        'created_at_orden' => $prontoPago->created_at,
+                        'monto' => null,
+                        'prioridad' => 40,
+                    ]);
+                }
+
+                if ($documento->factoryRegistro) {
+                    $movimientosResumen->push([
+                        'tipo' => 'Factory',
+                        'fecha' => $documento->factoryRegistro->fecha_factory,
+                        'fecha_orden' => $documento->factoryRegistro->fecha_factory,
+                        'created_at_orden' => $documento->factoryRegistro->created_at,
+                        'monto' => (int) ($documento->factoryRegistro->monto ?? 0),
+                        'prioridad' => 50,
+                    ]);
+                }
+
+                $movimientosResumen = $movimientosResumen
+                    ->sortBy(function ($item) {
+                        $fecha = $item['fecha_orden']
+                            ? \Carbon\Carbon::parse($item['fecha_orden'])->format('Y-m-d')
+                            : '9999-12-31';
+
+                        $createdAt = $item['created_at_orden']
+                            ? \Carbon\Carbon::parse($item['created_at_orden'])->format('H:i:s')
+                            : '00:00:00';
+
+                        return $fecha . ' ' . $createdAt . ' ' . str_pad($item['prioridad'], 2, '0', STR_PAD_LEFT);
+                    })
+                    ->values();
+
+                $saldoCalculado = max($saldoAntesMovimientos, 0);
+            @endphp
+
+
+            {{-- Monto inicial --}}
             <p class="mb-1">
                 <strong>Monto total inicial:</strong>
                 ${{ number_format($documento->monto_total, 0, ',', '.') }}
             </p>
 
 
-            {{-- Pago registrado --}}
-            @if($documento->pagos()->exists())
-                @php
-                    $pago = $documento->pagos()->latest('fecha_pago')->first();
-                @endphp
-
-                <div class="card mb-4 shadow-sm border-success">
-                    <div class="card-header bg-light fw-bold text-success">
-                        Documento marcado como Pagado
-                    </div>
-
-                    <div class="card-body d-flex justify-content-between align-items-center flex-wrap">
-                        <p class="mb-2 mb-md-0">
-                            Este documento fue marcado como <strong>Pagado</strong>
-                            {{ $pago->fecha_pago ? 'el ' . \Carbon\Carbon::parse($pago->fecha_pago)->format('d-m-Y') : '' }}.
-                        </p>
-
-                        <form action="{{ route('pagos.destroy', $pago->id) }}"
-                            method="POST"
-                            onsubmit="return confirm('¿Seguro que deseas eliminar el registro de Pago y restaurar el estado original del documento?')">
-                            @csrf
-                            @method('DELETE')
-
-                            @if (Auth::id() != 375)
-                                <button type="submit" class="btn btn-outline-danger btn-sm">
-                                    <i class="bi bi-x-circle"></i> Eliminar Pago
-                                </button>
-                            @endif
-                        </form>
-                    </div>
-                </div>
-            @endif
-
-
-            {{-- Pronto Pago registrado --}}
-            @if($documento->prontoPagos()->exists())
-                @php
-                    $prontoPago = $documento->prontoPagos()->latest('fecha_pronto_pago')->first();
-                @endphp
-
-                <div class="card mb-4 shadow-sm border-warning">
-                    <div class="card-header bg-light fw-bold text-warning">
-                        Documento marcado como Pronto Pago
-                    </div>
-
-                    <div class="card-body d-flex justify-content-between align-items-center flex-wrap">
-                        <p class="mb-2 mb-md-0">
-                            Este documento fue marcado como <strong>Pronto Pago</strong>
-                            {{ $prontoPago->fecha_pronto_pago ? 'el ' . \Carbon\Carbon::parse($prontoPago->fecha_pronto_pago)->format('d-m-Y') : '' }}.
-                        </p>
-
-                        <form action="{{ route('prontopagos.destroy', $prontoPago->id) }}"
-                            method="POST"
-                            onsubmit="return confirm('¿Seguro que deseas eliminar el registro de Pronto Pago y restaurar el estado original del documento?')">
-                            @csrf
-                            @method('DELETE')
-
-                            @if (Auth::id() != 375)
-                                <button type="submit" class="btn btn-outline-danger btn-sm">
-                                    <i class="bi bi-x-circle"></i> Eliminar Pronto Pago
-                                </button>
-                            @endif
-                        </form>
-                    </div>
-                </div>
-            @endif
-
-
-            {{-- Paso 2: Descuento por nota de crédito --}}
-            @if($referencias['referenciadoPor']->isNotEmpty())
-                @foreach ($referencias['referenciadoPor'] as $ref)
-                    <p class="mb-1">
-                        <strong>Descuento por Nota de Crédito folio {{ $ref->folio }}:</strong>
-                        - ${{ number_format($ref->monto_total, 0, ',', '.') }}
-                    </p>
-                @endforeach
-            @endif
-
-
-            {{-- Paso 3: Aplicación de abonos --}}
-            @if($documento->abonos->isNotEmpty())
-                @foreach ($documento->abonos as $abono)
-                    <p class="mb-1">
-                        <strong>Abono registrado el {{ \Carbon\Carbon::parse($abono->fecha_abono)->format('d-m-Y') }}:</strong>
-                        - ${{ number_format($abono->monto, 0, ',', '.') }}
-                    </p>
-                @endforeach
-            @endif
-
-
-            {{-- Paso 4: Aplicación de cruces --}}
-            @if($documento->cruces->isNotEmpty())
-                @foreach ($documento->cruces as $cruce)
-                    <p class="mb-1">
-                        <strong>Cruce registrado el {{ \Carbon\Carbon::parse($cruce->fecha_cruce)->format('d-m-Y') }}:</strong>
-                        - ${{ number_format($cruce->monto, 0, ',', '.') }}
-                    </p>
-                @endforeach
-            @endif
-
-
-            {{-- Paso 5: Aplicación de Factory --}}
-            @if($documento->factoryRegistro)
+            {{-- Notas de crédito / débito --}}
+            @foreach($lineasNotas as $lineaNota)
                 <p class="mb-1">
-                    <strong>Factory registrado el {{ \Carbon\Carbon::parse($documento->factoryRegistro->fecha_factory)->format('d-m-Y') }}:</strong>
-                    - ${{ number_format($documento->factoryRegistro->monto, 0, ',', '.') }}
+                    <strong>{{ $lineaNota['texto'] }}:</strong>
+                    {{ $lineaNota['signo'] }} ${{ number_format($lineaNota['monto'], 0, ',', '.') }}
                 </p>
-            @endif
+            @endforeach
+
+
+            {{-- Estados / movimientos ordenados --}}
+            @foreach($movimientosResumen as $movimiento)
+                @php
+                    if ($movimiento['monto'] === null) {
+                        $montoMovimiento = max($saldoCalculado, 0);
+                    } else {
+                        $montoMovimiento = (int) $movimiento['monto'];
+                    }
+
+                    $montoMovimiento = min($montoMovimiento, max($saldoCalculado, 0));
+                    $saldoCalculado = max($saldoCalculado - $montoMovimiento, 0);
+
+                    $fechaMovimiento = $movimiento['fecha']
+                        ? \Carbon\Carbon::parse($movimiento['fecha'])->format('d-m-Y')
+                        : '-';
+                @endphp
+
+                <p class="mb-1">
+                    <strong>{{ $movimiento['tipo'] }} registrado el {{ $fechaMovimiento }}:</strong>
+                    - ${{ number_format($montoMovimiento, 0, ',', '.') }}
+                </p>
+            @endforeach
 
 
             {{-- Resultado final --}}

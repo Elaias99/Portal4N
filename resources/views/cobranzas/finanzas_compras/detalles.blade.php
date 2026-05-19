@@ -81,10 +81,146 @@
         </div>
     @endif
 
+
+
+
+
+
     {{-- Resumen del cálculo del saldo pendiente --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Resumen del cálculo del saldo pendiente</div>
         <div class="card-body">
+
+            @php
+                $saldoBase = (int) ($documento->monto_total ?? 0);
+                $saldoAntesMovimientos = $saldoBase;
+
+                $lineasAjustes = collect();
+
+                /*
+                * En compras, las notas referenciadas tienen regla especial:
+                * - NC resta, pero evitando doble descuento si ya fue materializada como abono/pago por referencia.
+                * - ND suma.
+                */
+                if (!$esNotaCredito && $documento->referenciados->isNotEmpty()) {
+                    $totalNotasCredito = $documento->referenciados
+                        ->where('tipo_documento_id', 61)
+                        ->sum('monto_total');
+
+                    $totalAbonosReferencia = $documento->abonos
+                        ->where('origen', 'referencia_nc')
+                        ->sum('monto');
+
+                    $tienePagoReferencia = $documento->pagos
+                        ->where('origen', 'referencia_nc')
+                        ->isNotEmpty();
+
+                    $pendienteDescontarPorNC = $tienePagoReferencia
+                        ? 0
+                        : max($totalNotasCredito - $totalAbonosReferencia, 0);
+
+                    if ($pendienteDescontarPorNC > 0) {
+                        $saldoAntesMovimientos -= $pendienteDescontarPorNC;
+
+                        $lineasAjustes->push([
+                            'texto' => 'Descuento pendiente por Notas de Crédito referenciadas',
+                            'signo' => '-',
+                            'monto' => $pendienteDescontarPorNC,
+                        ]);
+                    }
+
+                    $notasDebito = $documento->referenciados
+                        ->where('tipo_documento_id', 56);
+
+                    foreach ($notasDebito as $notaDebito) {
+                        $montoNotaDebito = (int) ($notaDebito->monto_total ?? 0);
+                        $saldoAntesMovimientos += $montoNotaDebito;
+
+                        $lineasAjustes->push([
+                            'texto' => 'Aumento por Nota de Débito folio ' . $notaDebito->folio,
+                            'signo' => '+',
+                            'monto' => $montoNotaDebito,
+                        ]);
+                    }
+                }
+
+                $movimientosResumen = collect();
+
+                if (!$esNotaCredito) {
+                    foreach ($documento->abonos as $abono) {
+                        $movimientosResumen->push([
+                            'tipo' => $abono->origen === 'referencia_nc'
+                                ? 'Abono por referencia'
+                                : 'Abono',
+                            'fecha' => $abono->fecha_abono,
+                            'fecha_orden' => $abono->fecha_abono,
+                            'created_at_orden' => $abono->created_at,
+                            'monto' => (int) ($abono->monto ?? 0),
+                            'prioridad' => 10,
+                            'registro' => $abono,
+                            'origen' => $abono->origen,
+                        ]);
+                    }
+
+                    foreach ($documento->cruces as $cruce) {
+                        $movimientosResumen->push([
+                            'tipo' => 'Cruce',
+                            'fecha' => $cruce->fecha_cruce,
+                            'fecha_orden' => $cruce->fecha_cruce,
+                            'created_at_orden' => $cruce->created_at,
+                            'monto' => (int) ($cruce->monto ?? 0),
+                            'prioridad' => 20,
+                            'registro' => $cruce,
+                            'origen' => null,
+                        ]);
+                    }
+
+                    foreach ($documento->pagos as $pago) {
+                        $movimientosResumen->push([
+                            'tipo' => $pago->origen === 'referencia_nc'
+                                ? 'Pago por referencia'
+                                : 'Pago',
+                            'fecha' => $pago->fecha_pago,
+                            'fecha_orden' => $pago->fecha_pago,
+                            'created_at_orden' => $pago->created_at,
+                            'monto' => null,
+                            'prioridad' => 30,
+                            'registro' => $pago,
+                            'origen' => $pago->origen,
+                        ]);
+                    }
+
+                    foreach ($documento->prontoPagos as $prontoPago) {
+                        $movimientosResumen->push([
+                            'tipo' => 'Pronto pago',
+                            'fecha' => $prontoPago->fecha_pronto_pago,
+                            'fecha_orden' => $prontoPago->fecha_pronto_pago,
+                            'created_at_orden' => $prontoPago->created_at,
+                            'monto' => null,
+                            'prioridad' => 40,
+                            'registro' => $prontoPago,
+                            'origen' => null,
+                        ]);
+                    }
+                }
+
+                $movimientosResumen = $movimientosResumen
+                    ->sortBy(function ($item) {
+                        $fecha = $item['fecha_orden']
+                            ? \Carbon\Carbon::parse($item['fecha_orden'])->format('Y-m-d')
+                            : '9999-12-31';
+
+                        $createdAt = $item['created_at_orden']
+                            ? \Carbon\Carbon::parse($item['created_at_orden'])->format('H:i:s')
+                            : '00:00:00';
+
+                        return $fecha . ' ' . $createdAt . ' ' . str_pad($item['prioridad'], 2, '0', STR_PAD_LEFT);
+                    })
+                    ->values();
+
+                $saldoCalculado = max($saldoAntesMovimientos, 0);
+            @endphp
+
             <p class="mb-1">
                 <strong>Monto total inicial:</strong>
                 ${{ number_format($documento->monto_total, 0, ',', '.') }}
@@ -92,81 +228,68 @@
 
             @if(!$esNotaCredito)
 
-                {{-- Pago registrado --}}
-                @if($documento->pagos()->exists())
+                {{-- Ajustes por referencias --}}
+                @foreach($lineasAjustes as $lineaAjuste)
+                    <p class="mb-1">
+                        <strong>{{ $lineaAjuste['texto'] }}:</strong>
+                        {{ $lineaAjuste['signo'] }} ${{ number_format($lineaAjuste['monto'], 0, ',', '.') }}
+                    </p>
+                @endforeach
 
+                {{-- Estados / movimientos ordenados --}}
+                @foreach($movimientosResumen as $movimiento)
                     @php
-                        $pago = $documento->pagos()->latest('fecha_pago')->first();
+                        if ($movimiento['monto'] === null) {
+                            $montoMovimiento = max($saldoCalculado, 0);
+                        } else {
+                            $montoMovimiento = (int) $movimiento['monto'];
+                        }
+
+                        $montoMovimiento = min($montoMovimiento, max($saldoCalculado, 0));
+                        $saldoCalculado = max($saldoCalculado - $montoMovimiento, 0);
+
+                        $fechaMovimiento = $movimiento['fecha']
+                            ? \Carbon\Carbon::parse($movimiento['fecha'])->format('d-m-Y')
+                            : '-';
+
+                        $registro = $movimiento['registro'];
                     @endphp
 
-                    <div class="card mb-4 shadow-sm border-success">
-                        <div class="card-header bg-light fw-bold text-success">
-                            Documento marcado como Pago
-                        </div>
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-1">
+                        <p class="mb-0">
+                            <strong>{{ $movimiento['tipo'] }} registrado el {{ $fechaMovimiento }}:</strong>
+                            - ${{ number_format($montoMovimiento, 0, ',', '.') }}
+                        </p>
 
-                        <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        @if($movimiento['tipo'] === 'Pago por referencia')
+                            <span class="text-muted small">
+                                Generado por referencia. Para revertirlo, quite la referencia del documento.
+                            </span>
+                        @elseif($movimiento['tipo'] === 'Pago')
+                            <form action="{{ route('pagos.destroy', $registro->id) }}"
+                                method="POST"
+                                class="js-confirm-submit"
+                                data-no-loader
+                                data-confirm-title="Eliminar pago"
+                                data-confirm-message="¿Seguro que deseas eliminar este Pago y restaurar el estado original del documento?"
+                                data-confirm-button="Eliminar Pago">
+                                @csrf
+                                @method('DELETE')
 
-                            <p class="mb-2 mb-md-0">
-                                Este documento fue marcado como <strong>Pagado</strong>
-                                {{ $pago->fecha_pago ? 'el ' . \Carbon\Carbon::parse($pago->fecha_pago)->format('d-m-Y') : '' }}.
-                            </p>
-
-                            @if($pago->origen === 'referencia_nc')
-
-                                <span class="text-muted small">
-                                    Este pago fue generado automáticamente por una referencia.
-                                    Para revertirlo, quite la referencia del documento.
-                                </span>
-
-                            @else
-
-                                <form action="{{ route('pagos.destroy', $pago->id) }}"
-                                      method="POST"
-                                      class="js-confirm-submit"
-                                      data-no-loader
-                                      data-confirm-title="Eliminar pago"
-                                      data-confirm-message="¿Seguro que deseas eliminar este Pago y restaurar el estado original del documento?"
-                                      data-confirm-button="Eliminar Pago">
-                                    @csrf
-                                    @method('DELETE')
-
-                                    @if (Auth::id() != 375)
-                                        <button type="submit" class="btn btn-outline-danger btn-sm">
-                                            <i class="bi bi-x-circle"></i> Eliminar Pago
-                                        </button>
-                                    @endif
-
-                                </form>
-
-                            @endif
-
-                        </div>
-                    </div>
-
-                @endif
-
-                {{-- Pronto Pago --}}
-                @if($documento->prontoPagos()->exists())
-                    @php $pp = $documento->prontoPagos()->latest('fecha_pronto_pago')->first(); @endphp
-
-                    <div class="card mb-4 shadow-sm border-warning">
-                        <div class="card-header bg-light fw-bold text-warning">
-                            Documento marcado como Pronto Pago
-                        </div>
-
-                        <div class="card-body d-flex justify-content-between align-items-center flex-wrap">
-                            <p class="mb-2 mb-md-0">
-                                Este documento fue marcado como <strong>Pronto Pago</strong>
-                                {{ $pp->fecha_pronto_pago ? 'el ' . \Carbon\Carbon::parse($pp->fecha_pronto_pago)->format('d-m-Y') : '' }}.
-                            </p>
-
-                            <form action="{{ route('prontopagos.destroy', $pp->id) }}"
-                                  method="POST"
-                                  class="js-confirm-submit"
-                                  data-no-loader
-                                  data-confirm-title="Eliminar pronto pago"
-                                  data-confirm-message="¿Seguro que deseas eliminar el registro de Pronto Pago y restaurar el estado original del documento?"
-                                  data-confirm-button="Eliminar Pronto Pago">
+                                @if (Auth::id() != 375)
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                        <i class="bi bi-x-circle"></i> Eliminar Pago
+                                    </button>
+                                @endif
+                            </form>
+                        @elseif($movimiento['tipo'] === 'Pronto pago')
+                            <form action="{{ route('prontopagos.destroy', $registro->id) }}"
+                                method="POST"
+                                class="js-confirm-submit"
+                                data-no-loader
+                                data-confirm-title="Eliminar pronto pago"
+                                data-confirm-message="¿Seguro que deseas eliminar el registro de Pronto Pago y restaurar el estado original del documento?"
+                                data-confirm-button="Eliminar Pronto Pago">
                                 @csrf
                                 @method('DELETE')
 
@@ -176,29 +299,9 @@
                                     </button>
                                 @endif
                             </form>
-                        </div>
+                        @endif
                     </div>
-                @endif
-
-                {{-- Abonos --}}
-                @if($documento->abonos->isNotEmpty())
-                    @foreach ($documento->abonos as $abono)
-                        <p class="mb-1">
-                            <strong>Abono registrado el {{ \Carbon\Carbon::parse($abono->fecha_abono)->format('d-m-Y') }}:</strong>
-                            - ${{ number_format($abono->monto, 0, ',', '.') }}
-                        </p>
-                    @endforeach
-                @endif
-
-                {{-- Cruces --}}
-                @if($documento->cruces->isNotEmpty())
-                    @foreach ($documento->cruces as $cruce)
-                        <p class="mb-1">
-                            <strong>Cruce registrado el {{ \Carbon\Carbon::parse($cruce->fecha_cruce)->format('d-m-Y') }}:</strong>
-                            - ${{ number_format($cruce->monto, 0, ',', '.') }}
-                        </p>
-                    @endforeach
-                @endif
+                @endforeach
 
             @else
 
@@ -230,6 +333,13 @@
             </p>
         </div>
     </div>
+
+
+
+
+
+
+
 
     {{-- Sección de abonos: solo documentos que no sean NC --}}
     @if(!$esNotaCredito)
