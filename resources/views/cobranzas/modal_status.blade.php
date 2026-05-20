@@ -40,7 +40,7 @@
                         <label class="form-label small text-muted">Estado actual</label>
                         <input type="text"
                                class="form-control form-control-sm"
-                               value="{{ $doc->estado_visible }}"
+                               value="{{ $doc->estado_visible === 'Factory' ? 'Factoring' : $doc->estado_visible }}"
                                readonly>
                     </div>
 
@@ -56,7 +56,7 @@
                             <option value="Cruce" {{ $doc->status == 'Cruce' ? 'selected' : '' }}>Cruce</option>
                             <option value="Pago" {{ $doc->status == 'Pago' ? 'selected' : '' }}>Pagado</option>
                             <option value="Pronto pago" {{ $doc->status == 'Pronto pago' ? 'selected' : '' }}>Pronto pago</option>
-                            <option value="Factory" {{ $doc->status == 'Factory' ? 'selected' : '' }}>Factory</option>
+                            <option value="Factory" {{ $doc->status == 'Factory' ? 'selected' : '' }}>Factoring</option>
                             <option value="Cobranza judicial" {{ $doc->status == 'Cobranza judicial' ? 'selected' : '' }}>Cobranza judicial</option>
                         </select>
                     </div>
@@ -240,7 +240,7 @@
                     </div>
                 </form>
 
-                {{-- FORMULARIO DE FACTORY --}}
+                {{-- FORMULARIO DE FACTORING --}}
                 <form action="{{ route('documentos.factory.store', $doc->id) }}"
                     method="POST"
                     id="form-factory-{{ $doc->id }}"
@@ -258,12 +258,12 @@
 
                     @if($doc->factoryRegistro)
                         <div class="alert alert-info py-2 px-3 small">
-                            Este documento ya tiene un registro <strong>Factory</strong> asociado.
+                            Este documento ya tiene un registro <strong>Factoring</strong> asociado.
                             Para revertirlo, elimínalo desde el detalle del documento.
                         </div>
 
                         <div class="form-group mb-3">
-                            <label class="form-label small text-muted">Nombre Factory / Banco</label>
+                            <label class="form-label small text-muted">Nombre Factoring / Banco</label>
                             <input type="text"
                                 class="form-control form-control-sm"
                                 value="{{ $doc->factoryRegistro->banco?->nombre ?? 'Sin banco' }}"
@@ -271,7 +271,7 @@
                         </div>
 
                         <div class="form-group mb-3">
-                            <label class="form-label small text-muted">RUT Factory</label>
+                            <label class="form-label small text-muted">RUT Factoring</label>
                             <input type="text"
                                 class="form-control form-control-sm"
                                 value="{{ $doc->factoryRegistro->rut_factory }}"
@@ -287,7 +287,7 @@
                         </div>
 
                         <div class="form-group mb-3">
-                            <label class="form-label small text-muted">Fecha Factory</label>
+                            <label class="form-label small text-muted">Fecha Factoring</label>
                             <input type="text"
                                 class="form-control form-control-sm"
                                 value="{{ $doc->factoryRegistro->fecha_factory ? \Carbon\Carbon::parse($doc->factoryRegistro->fecha_factory)->format('d-m-Y') : '-' }}"
@@ -301,26 +301,10 @@
                                 value="${{ number_format($doc->factoryRegistro->monto ?? 0, 0, ',', '.') }}"
                                 readonly>
                         </div>
-
-                        <div class="form-group mb-3">
-                            <label class="form-label small text-muted">Saldo líquido</label>
-                            <input type="text"
-                                class="form-control form-control-sm"
-                                value="${{ number_format($doc->factoryRegistro->saldo_liquido ?? 0, 0, ',', '.') }}"
-                                readonly>
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label class="form-label small text-muted">Diferencia</label>
-                            <input type="text"
-                                class="form-control form-control-sm"
-                                value="${{ number_format($doc->factoryRegistro->diferencia ?? 0, 0, ',', '.') }}"
-                                readonly>
-                        </div>
                     @else
                         <div class="form-group mb-3">
                             <label for="banco-factory-{{ $doc->id }}" class="form-label small text-muted">
-                                Nombre Factory / Banco
+                                Nombre Factoring / Banco
                             </label>
 
                             <select name="banco_id"
@@ -328,7 +312,7 @@
                                     class="form-select form-select-sm @error('banco_id') is-invalid @enderror"
                                     onchange="toggleBancoFactoryOtro({{ $doc->id }})"
                                     required>
-                                <option value="">Seleccione banco / factory</option>
+                                <option value="">Seleccione banco / factoring</option>
 
                                 @foreach(($bancos ?? collect()) as $banco)
                                     <option value="{{ $banco->id }}">
@@ -343,14 +327,14 @@
                                 class="mt-2"
                                 style="display:none;">
                                 <label for="banco-factory-otro-{{ $doc->id }}" class="form-label small text-muted">
-                                    Nombre nuevo banco / Factory
+                                    Nombre nuevo banco / Factoring
                                 </label>
 
                                 <input type="text"
                                     name="banco_otro"
                                     id="banco-factory-otro-{{ $doc->id }}"
                                     class="form-control form-control-sm @error('banco_otro') is-invalid @enderror"
-                                    placeholder="Ingrese nombre del banco o Factory">
+                                    placeholder="Ingrese nombre del banco o Factoring">
                             </div>
 
                             @error('banco_id')
@@ -368,7 +352,7 @@
 
                         <div class="form-group mb-3">
                             <label for="rut-factory-{{ $doc->id }}" class="form-label small text-muted">
-                                RUT Factory
+                                RUT Factoring
                             </label>
 
                             <input type="text"
@@ -406,7 +390,7 @@
 
                         <div class="form-group mb-3">
                             <label class="form-label small text-muted">
-                                Fecha Factory
+                                Fecha Factoring
                             </label>
 
                             <input type="date"
@@ -419,45 +403,8 @@
                             </small>
                         </div>
 
-                        <div class="form-group mb-3">
-                            <label for="saldo-liquido-factory-{{ $doc->id }}" class="form-label small text-muted">
-                                Saldo líquido
-                            </label>
-
-                            <input type="text"
-                                name="saldo_liquido"
-                                id="saldo-liquido-factory-{{ $doc->id }}"
-                                class="form-control form-control-sm @error('saldo_liquido') is-invalid @enderror"
-                                data-saldo="{{ (int) $doc->saldo_pendiente }}"
-                                placeholder="Ej: {{ (int) $doc->saldo_pendiente }}"
-                                oninput="calcularDiferenciaFactoryIndividual({{ $doc->id }})"
-                                required>
-
-                            @error('saldo_liquido')
-                                <span class="invalid-feedback d-block text-danger">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                            @enderror
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label class="form-label small text-muted">
-                                Diferencia
-                            </label>
-
-                            <input type="text"
-                                id="diferencia-factory-{{ $doc->id }}"
-                                class="form-control form-control-sm"
-                                value="$0"
-                                readonly>
-
-                            <small class="text-muted">
-                                Diferencia entre el saldo pendiente y el saldo líquido informado.
-                            </small>
-                        </div>
-
                         <div class="alert alert-info py-1 px-2 small">
-                            Al registrar Factory, el saldo pendiente quedará automáticamente en <strong>0</strong>.
+                            Al registrar Factoring, el saldo pendiente quedará automáticamente en <strong>0</strong>.
                         </div>
                     @endif
                 </form>
@@ -475,7 +422,6 @@
     </div>
 </div>
 
-{{-- === SCRIPT === --}}
 {{-- === SCRIPT === --}}
 <script>
     function toggleEstadoFields(id) {
@@ -549,7 +495,7 @@
             }
 
             if (formFactory.dataset.tieneFactory === '1') {
-                alert('Este documento ya tiene un registro Factory. Para revertirlo, elimínalo desde el detalle del documento.');
+                alert('Este documento ya tiene un registro Factoring. Para revertirlo, elimínalo desde el detalle del documento.');
                 return;
             }
 
@@ -562,64 +508,6 @@
             formFactory.submit();
         } else {
             document.getElementById('form-status-' + id).submit();
-        }
-    }
-</script>
-
-<script>
-    function normalizarMontoFactoryIndividual(value) {
-        if (value === null || value === undefined || value === '') {
-            return 0;
-        }
-
-        return Number(String(value).replace(/[^\d]/g, '')) || 0;
-    }
-
-    function formatearCLPFactoryIndividual(value) {
-        return Number(value || 0).toLocaleString('es-CL', {
-            style: 'currency',
-            currency: 'CLP',
-            maximumFractionDigits: 0
-        });
-    }
-
-    function calcularDiferenciaFactoryIndividual(id) {
-        const inputSaldoLiquido = document.getElementById('saldo-liquido-factory-' + id);
-        const inputDiferencia = document.getElementById('diferencia-factory-' + id);
-
-        if (!inputSaldoLiquido || !inputDiferencia) {
-            return;
-        }
-
-        const saldoPendiente = Number(inputSaldoLiquido.dataset.saldo || 0);
-        const saldoLiquido = normalizarMontoFactoryIndividual(inputSaldoLiquido.value);
-        const diferencia = Math.max(saldoPendiente - saldoLiquido, 0);
-
-        inputDiferencia.value = formatearCLPFactoryIndividual(diferencia);
-
-        if (saldoLiquido > saldoPendiente) {
-            inputSaldoLiquido.setCustomValidity('El saldo líquido no puede ser mayor al saldo pendiente.');
-        } else {
-            inputSaldoLiquido.setCustomValidity('');
-        }
-    }
-
-    function toggleBancoFactoryOtro(id) {
-        const select = document.getElementById('banco-factory-' + id);
-        const wrapper = document.getElementById('banco-factory-otro-wrapper-' + id);
-        const input = document.getElementById('banco-factory-otro-' + id);
-
-        if (!select || !wrapper || !input) {
-            return;
-        }
-
-        if (select.value === '__otro__') {
-            wrapper.style.display = 'block';
-            input.required = true;
-        } else {
-            wrapper.style.display = 'none';
-            input.required = false;
-            input.value = '';
         }
     }
 </script>

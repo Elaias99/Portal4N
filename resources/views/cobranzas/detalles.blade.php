@@ -39,7 +39,7 @@
                     <p><strong>Monto Total:</strong> ${{ number_format($documento->monto_total, 0, ',', '.') }}</p>
                     <p><strong>Saldo Pendiente:</strong> ${{ number_format($documento->saldo_pendiente, 0, ',', '.') }}</p>
 
-                    <p><strong>Estado Actual:</strong> {{ $documento->estado_visible }}</p>
+                    <p><strong>Estado Actual:</strong> {{ $documento->estado_visible === 'Factory' ? 'Factoring' : $documento->estado_visible }}</p>
 
                     <p><strong>Fecha Documento:</strong> {{ $documento->fecha_docto ? \Carbon\Carbon::parse($documento->fecha_docto)->format('d-m-Y') : '-' }}</p>
                     <p><strong>Fecha Vencimiento:</strong> {{ $documento->fecha_vencimiento ? \Carbon\Carbon::parse($documento->fecha_vencimiento)->format('d-m-Y') : '-' }}</p>
@@ -89,8 +89,8 @@
 
                 /*
                 * Estados/movimientos ordenados por fecha real de gestión.
-                * Pago y Pronto pago no tienen monto guardado, por eso se calcula
-                * como el saldo restante al momento de llegar a esa línea.
+                * Pago, Pronto pago y Factoring no tienen monto a descontar guardado,
+                * por eso se calcula como el saldo restante al momento de llegar a esa línea.
                 */
                 $movimientosResumen = collect();
 
@@ -146,18 +146,17 @@
                     $factory = $documento->factoryRegistro;
 
                     $movimientosResumen->push([
-                        'tipo' => 'Factory',
+                        'tipo' => 'Factoring',
                         'fecha' => $factory->fecha_factory,
                         'fecha_orden' => $factory->fecha_factory,
                         'created_at_orden' => $factory->created_at,
-                        'monto' => (int) ($factory->monto ?? 0),
+                        'monto' => null,
                         'prioridad' => 50,
                         'detalle' => [
                             'banco' => $factory->banco?->nombre ?? 'Sin banco',
                             'rut_factory' => $factory->rut_factory,
                             'cesion' => $factory->cesion,
-                            'saldo_liquido' => (int) ($factory->saldo_liquido ?? 0),
-                            'diferencia' => (int) ($factory->diferencia ?? 0),
+                            'monto_cedido' => (int) ($factory->monto ?? 0),
                         ],
                     ]);
                 }
@@ -219,15 +218,15 @@
                         - ${{ number_format($montoMovimiento, 0, ',', '.') }}
                     </p>
 
-                    @if($movimiento['tipo'] === 'Factory' && $movimiento['detalle'])
+                    @if($movimiento['tipo'] === 'Factoring' && $movimiento['detalle'])
                         <div class="small text-muted ps-3">
                             <div>
-                                <strong>Nombre Factory / Banco:</strong>
+                                <strong>Nombre Factoring / Banco:</strong>
                                 {{ $movimiento['detalle']['banco'] }}
                             </div>
 
                             <div>
-                                <strong>RUT Factory:</strong>
+                                <strong>RUT Factoring:</strong>
                                 {{ $movimiento['detalle']['rut_factory'] }}
                             </div>
 
@@ -237,13 +236,8 @@
                             </div>
 
                             <div>
-                                <strong>Saldo líquido:</strong>
-                                ${{ number_format($movimiento['detalle']['saldo_liquido'], 0, ',', '.') }}
-                            </div>
-
-                            <div>
-                                <strong>Diferencia:</strong>
-                                ${{ number_format($movimiento['detalle']['diferencia'], 0, ',', '.') }}
+                                <strong>Monto cedido:</strong>
+                                ${{ number_format($movimiento['detalle']['monto_cedido'], 0, ',', '.') }}
                             </div>
                         </div>
                     @endif
@@ -364,20 +358,21 @@
     </div>
 
 
-    {{-- Sección de Factory --}}
+    {{-- Sección de Factoring --}}
     <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-light fw-bold">Factory registrado</div>
+        <div class="card-header bg-light fw-bold">Factoring registrado</div>
         <div class="card-body">
             @if(!$documento->factoryRegistro)
-                <p class="text-muted">Sin Factory registrado.</p>
+                <p class="text-muted">Sin Factoring registrado.</p>
             @else
                 <table class="table table-sm table-striped align-middle">
                     <thead>
                         <tr>
-                            <th>Fecha Factory</th>
-                            <th>Nombre Factory / Banco</th>
-                            <th>RUT Factory</th>
-                            <th>Monto</th>
+                            <th>Fecha Factoring</th>
+                            <th>Nombre Factoring / Banco</th>
+                            <th>RUT Factoring</th>
+                            <th>Cesión</th>
+                            <th class="text-end">Monto cedido</th>
                             <th class="text-center" style="width: 150px;">Acciones</th>
                         </tr>
                     </thead>
@@ -386,12 +381,13 @@
                             <td>{{ $documento->factoryRegistro->fecha_factory ? \Carbon\Carbon::parse($documento->factoryRegistro->fecha_factory)->format('d-m-Y') : '-' }}</td>
                             <td>{{ $documento->factoryRegistro->banco?->nombre ?? 'Sin banco' }}</td>
                             <td>{{ $documento->factoryRegistro->rut_factory }}</td>
-                            <td>${{ number_format($documento->factoryRegistro->monto, 0, ',', '.') }}</td>
+                            <td>{{ $documento->factoryRegistro->cesion ?? '-' }}</td>
+                            <td class="text-end">${{ number_format($documento->factoryRegistro->monto ?? 0, 0, ',', '.') }}</td>
                             <td class="text-center">
                                 <form action="{{ route('factories.destroy', $documento->factoryRegistro->id) }}"
                                       method="POST"
                                       class="d-inline"
-                                      onsubmit="return confirm('¿Seguro que deseas eliminar este Factory?')">
+                                      onsubmit="return confirm('¿Seguro que deseas eliminar este Factoring?')">
                                     @csrf
                                     @method('DELETE')
 

@@ -968,11 +968,12 @@ class DocumentoFinancieroController extends Controller
 
         if ($documento->factoryRegistro) {
             $movimientosGestion->push([
-                'tipo' => 'Factory',
+                'tipo' => 'Factoring',
                 'fecha' => $documento->factoryRegistro->fecha_factory,
-                'monto' => (int) $documento->factoryRegistro->monto,
-                'saldo_liquido' => (int) $documento->factoryRegistro->saldo_liquido,
-                'diferencia' => (int) $documento->factoryRegistro->diferencia,
+
+                'monto' => null,
+
+                'monto_cedido' => (int) $documento->factoryRegistro->monto,
                 'cesion' => $documento->factoryRegistro->cesion,
                 'registro' => $documento->factoryRegistro,
             ]);

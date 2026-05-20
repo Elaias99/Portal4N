@@ -11,7 +11,7 @@
             {{-- HEADER --}}
             <div class="modal-header position-relative">
                 <h5 class="modal-title fw-bold" id="modalFactoryMasivoLabel">
-                    Registrar Factory Masivo
+                    Registrar Factoring Masivo
                 </h5>
 
                 <button type="button"
@@ -66,11 +66,9 @@
                                     <th class="text-nowrap">RUT</th>
                                     <th class="text-nowrap" style="min-width: 130px;">Cesión</th>
                                     <th class="text-end text-nowrap">Saldo Pendiente</th>
-                                    <th class="text-nowrap" style="min-width: 230px;">Nombre Factory / Banco</th>
-                                    <th class="text-nowrap" style="min-width: 160px;">RUT Factory</th>
-                                    <th class="text-nowrap" style="min-width: 150px;">Fecha Factory</th>
-                                    <th class="text-nowrap" style="min-width: 160px;">Saldo Líquido</th>
-                                    <th class="text-end text-nowrap">Diferencia</th>
+                                    <th class="text-nowrap" style="min-width: 230px;">Nombre Factoring / Banco</th>
+                                    <th class="text-nowrap" style="min-width: 160px;">RUT Factoring</th>
+                                    <th class="text-nowrap" style="min-width: 150px;">Fecha Factoring</th>
                                     <th class="text-center text-nowrap" style="width: 80px;">Quitar</th>
                                 </tr>
                             </thead>
@@ -96,23 +94,12 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-4">
-                                <div class="border rounded p-2 bg-light">
-                                    <span class="text-muted small d-block">Total saldo líquido:</span>
-                                    <span id="factory-masivo-total-liquido" class="fw-bold text-success">
-                                        $0
-                                    </span>
-                                </div>
-                            </div>
+                        </div>
 
-                            <div class="col-md-4">
-                                <div class="border rounded p-2 bg-light">
-                                    <span class="text-muted small d-block">Total diferencia:</span>
-                                    <span id="factory-masivo-total-diferencia" class="fw-bold text-danger">
-                                        $0
-                                    </span>
-                                </div>
-                            </div>
+                        <div class="alert alert-info py-2 px-3 small mb-3">
+                            Al registrar Factoring masivo, cada documento seleccionado quedará con
+                            <strong>saldo pendiente 0</strong>. El monto registrado corresponderá al
+                            <strong>saldo cedido</strong> al momento de la operación.
                         </div>
 
                         <div class="d-flex justify-content-end gap-2">
@@ -126,7 +113,7 @@
                             <button type="submit"
                                     id="btn-submit-factory-masivo"
                                     class="btn btn-primary btn-sm">
-                                Registrar Factory Masivo
+                                Registrar Factoring Masivo
                             </button>
                         </div>
                     </div>
@@ -168,7 +155,7 @@
                                     class="form-select form-select-sm js-factory-masivo-banco"
                                     data-documento-id="__ID__"
                                     required>
-                                <option value="">Seleccione banco / factory</option>
+                                <option value="">Seleccione banco / factoring</option>
 
                                 @foreach(($bancos ?? collect()) as $banco)
                                     <option value="{{ $banco->id }}">
@@ -186,7 +173,7 @@
                                        name="documentos[__ID__][banco_otro]"
                                        class="form-control form-control-sm js-factory-masivo-banco-otro"
                                        data-documento-id="__ID__"
-                                       placeholder="Ingrese nuevo banco / Factory">
+                                       placeholder="Ingrese nuevo banco / Factoring">
                             </div>
                         </td>
 
@@ -206,23 +193,6 @@
                                    required>
                         </td>
 
-                        <td>
-                            <input type="text"
-                                   name="documentos[__ID__][saldo_liquido]"
-                                   class="form-control form-control-sm js-factory-masivo-saldo-liquido"
-                                   data-documento-id="__ID__"
-                                   data-saldo="__SALDO_RAW__"
-                                   placeholder="Ej: 4910196"
-                                   required>
-                        </td>
-
-                        <td class="text-end fw-bold text-danger">
-                            <span class="js-factory-masivo-diferencia"
-                                  data-documento-id="__ID__"
-                                  data-saldo="__SALDO_RAW__">
-                                $0
-                            </span>
-                        </td>
 
                         <td class="text-center">
                             <button type="button"

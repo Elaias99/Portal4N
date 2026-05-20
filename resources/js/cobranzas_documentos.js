@@ -17,7 +17,7 @@ function toggleFechaEstado(select, id) {
 
 document.addEventListener('DOMContentLoaded', () => {
     // =====================================================
-    // FACTORY MASIVO CxC - SELECCIÓN DE DOCUMENTOS
+    // FACTORING MASIVO CxC - SELECCIÓN DE DOCUMENTOS
     // =====================================================
     const STORAGE_KEY_FACTORY = 'documentosFactorySeleccionadosCxC';
 
@@ -31,8 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const alertaSinSeleccion = document.getElementById('factory-masivo-sin-seleccion');
 
     const totalGeneralFactory = document.getElementById('factory-masivo-total-general');
-    const totalLiquidoFactory = document.getElementById('factory-masivo-total-liquido');
-    const totalDiferenciaFactory = document.getElementById('factory-masivo-total-diferencia');
 
     const btnSubmitFactory = document.getElementById('btn-submit-factory-masivo');
 
@@ -113,14 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function normalizarMontoFactory(value) {
-        if (value === null || value === undefined || value === '') {
-            return 0;
-        }
-
-        return Number(String(value).replace(/[^\d]/g, '')) || 0;
-    }
-
     function escapeHtml(value) {
         return String(value ?? '')
             .replaceAll('&', '&amp;')
@@ -130,72 +120,24 @@ document.addEventListener('DOMContentLoaded', () => {
             .replaceAll("'", '&#039;');
     }
 
-    function resetTotalesFactoryMasivo() {
+    function resetTotalFactoryMasivo() {
         if (totalGeneralFactory) {
             totalGeneralFactory.textContent = formatCLP(0);
         }
-
-        if (totalLiquidoFactory) {
-            totalLiquidoFactory.textContent = formatCLP(0);
-        }
-
-        if (totalDiferenciaFactory) {
-            totalDiferenciaFactory.textContent = formatCLP(0);
-        }
     }
 
-    function recalcularFilaFactoryMasivo(inputSaldoLiquido) {
-        const documentoId = inputSaldoLiquido.dataset.documentoId;
-        const saldoPendiente = Number(inputSaldoLiquido.dataset.saldo || 0);
-        const saldoLiquido = normalizarMontoFactory(inputSaldoLiquido.value);
-
-        const diferencia = Math.max(saldoPendiente - saldoLiquido, 0);
-
-        const diferenciaElement = document.querySelector(
-            '.js-factory-masivo-diferencia[data-documento-id="' + documentoId + '"]'
-        );
-
-        if (diferenciaElement) {
-            diferenciaElement.textContent = formatCLP(diferencia);
-        }
-
-        if (saldoLiquido > saldoPendiente) {
-            inputSaldoLiquido.setCustomValidity(
-                'El saldo líquido no puede ser mayor al saldo pendiente.'
-            );
-        } else {
-            inputSaldoLiquido.setCustomValidity('');
-        }
-    }
-
-    function recalcularTotalesFactoryMasivo() {
+    function actualizarTotalFactoryMasivo() {
         const seleccion = getSeleccionFactory();
         const documentos = Object.values(seleccion);
 
         let totalSaldoPendiente = 0;
-        let totalSaldoLiquido = 0;
 
         documentos.forEach(doc => {
             totalSaldoPendiente += Number(doc.saldo || 0);
         });
 
-        document.querySelectorAll('.js-factory-masivo-saldo-liquido').forEach(input => {
-            recalcularFilaFactoryMasivo(input);
-            totalSaldoLiquido += normalizarMontoFactory(input.value);
-        });
-
-        const totalDiferencia = Math.max(totalSaldoPendiente - totalSaldoLiquido, 0);
-
         if (totalGeneralFactory) {
             totalGeneralFactory.textContent = formatCLP(totalSaldoPendiente);
-        }
-
-        if (totalLiquidoFactory) {
-            totalLiquidoFactory.textContent = formatCLP(totalSaldoLiquido);
-        }
-
-        if (totalDiferenciaFactory) {
-            totalDiferenciaFactory.textContent = formatCLP(totalDiferencia);
         }
     }
 
@@ -214,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alertaSinSeleccion.style.display = 'block';
             }
 
-            resetTotalesFactoryMasivo();
+            resetTotalFactoryMasivo();
 
             if (btnSubmitFactory) {
                 btnSubmitFactory.disabled = true;
@@ -242,13 +184,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 .replaceAll('__FOLIO__', escapeHtml(doc.folio))
                 .replaceAll('__RAZON__', escapeHtml(doc.razon))
                 .replaceAll('__RUT__', escapeHtml(doc.rut))
-                .replaceAll('__SALDO_FORMAT__', formatCLP(saldo))
-                .replaceAll('__SALDO_RAW__', String(saldo));
+                .replaceAll('__SALDO_FORMAT__', formatCLP(saldo));
 
             tbodyFactory.insertAdjacentHTML('beforeend', rowHtml);
         });
 
-        recalcularTotalesFactoryMasivo();
+        actualizarTotalFactoryMasivo();
     }
 
     function toggleBancoOtroFactoryMasivo(select) {
@@ -346,31 +287,28 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleBancoOtroFactoryMasivo(selectBanco);
     });
 
-    // Recalcular saldo líquido / diferencia por fila
-    document.addEventListener('input', function (event) {
-        const inputSaldoLiquido = event.target.closest('.js-factory-masivo-saldo-liquido');
-
-        if (!inputSaldoLiquido) {
-            return;
-        }
-
-        recalcularTotalesFactoryMasivo();
-    });
-
-    // Evitar enviar si no hay selección o si algún saldo líquido no calza
+    // Evitar enviar si no hay selección
     formFactoryMasivo?.addEventListener('submit', function (event) {
         const seleccion = getSeleccionFactory();
 
         if (Object.keys(seleccion).length === 0) {
             event.preventDefault();
-            alert('Debe seleccionar al menos un documento para registrar Factory masivo.');
+            alert('Debe seleccionar al menos un documento para registrar Factoring masivo.');
             return;
         }
 
-        recalcularTotalesFactoryMasivo();
+        actualizarTotalFactoryMasivo();
 
         if (typeof this.reportValidity === 'function' && !this.reportValidity()) {
             event.preventDefault();
+            return;
         }
+
+        localStorage.removeItem(STORAGE_KEY_FACTORY);
     });
+
+
+
+
+
 });

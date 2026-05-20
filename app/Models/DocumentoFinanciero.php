@@ -230,9 +230,7 @@ class DocumentoFinanciero extends Model
         }
 
         if ($tieneFactory) {
-            $factory = $this->factoryRegistro()->first();
-
-            return max((int) ($factory?->diferencia ?? 0), 0);
+            return 0;
         }
 
         /**
@@ -305,13 +303,9 @@ class DocumentoFinanciero extends Model
         // 3) Si tiene Factory → saldo = diferencia
         // =============================
         if ($this->factoryRegistro()->exists()) {
-            $factory = $this->factoryRegistro()->first();
+            $this->update(['saldo_pendiente' => 0]);
 
-            $saldo = max((int) ($factory?->diferencia ?? 0), 0);
-
-            $this->update(['saldo_pendiente' => $saldo]);
-
-            return $saldo;
+            return 0;
         }
 
         // ======================================

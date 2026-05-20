@@ -10,63 +10,71 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\Banco;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class FactoryController extends Controller
 {
-
-
-
-
-
     /**
-     * Registrar estado Factory para un documento financiero CxC.
+     * Registrar estado Factoring para un documento financiero CxC.
      */
     public function store(Request $request, DocumentoFinanciero $documento)
     {
+
+        Log::info('FACTORY STORE INDIVIDUAL - ENTRÓ AL MÉTODO', [
+            'documento_id' => $documento->id,
+            'folio' => $documento->folio,
+            'status_actual' => $documento->status,
+            'saldo_pendiente_actual' => $documento->saldo_pendiente,
+            'request_all' => $request->all(),
+        ]);
+
+
+
         $validated = $request->validate([
             'banco_id' => 'required|string|max:255',
             'banco_otro' => 'nullable|string|max:255',
             'rut_factory' => 'required|string|max:20',
-
             'cesion' => 'required|string|max:100',
-            'saldo_liquido' => 'required',
         ], [
-            'banco_id.required' => 'Debe seleccionar el banco o entidad Factory.',
-            'rut_factory.required' => 'Debe ingresar el RUT del Factory.',
-            'rut_factory.max' => 'El RUT del Factory no puede superar los 20 caracteres.',
-
-            'cesion.required' => 'Debe ingresar la cesión del Factory.',
-            'saldo_liquido.required' => 'Debe ingresar el saldo líquido.',
+            'banco_id.required' => 'Debe seleccionar el banco o entidad Factoring.',
+            'rut_factory.required' => 'Debe ingresar el RUT del Factoring.',
+            'rut_factory.max' => 'El RUT del Factoring no puede superar los 20 caracteres.',
+            'cesion.required' => 'Debe ingresar la cesión del Factoring.',
         ]);
 
         if ((int) $documento->tipo_documento_id === 61) {
             return back()
-                ->withErrors(['factory' => 'No se puede registrar Factory sobre una nota de crédito.'])
+                ->withErrors(['factory' => 'No se puede registrar Factoring sobre una nota de crédito.'])
                 ->withInput();
         }
 
+        Log::info('FACTORY STORE INDIVIDUAL - VALIDACIÓN OK', [
+            'documento_id' => $documento->id,
+            'validated' => $validated,
+        ]);
+
         if ((int) $documento->tipo_documento_id === 56) {
             return back()
-                ->withErrors(['factory' => 'No se puede registrar Factory sobre una nota de débito.'])
+                ->withErrors(['factory' => 'No se puede registrar Factoring sobre una nota de débito.'])
                 ->withInput();
         }
 
         if ($documento->factoryRegistro()->exists()) {
             return back()
-                ->withErrors(['factory' => 'Este documento ya tiene un registro Factory asociado.'])
+                ->withErrors(['factory' => 'Este documento ya tiene un registro Factoring asociado.'])
                 ->withInput();
         }
 
         if ($documento->pagos()->exists()) {
             return back()
-                ->withErrors(['factory' => 'No se puede registrar Factory porque el documento ya tiene un pago registrado.'])
+                ->withErrors(['factory' => 'No se puede registrar Factoring porque el documento ya tiene un pago registrado.'])
                 ->withInput();
         }
 
         if ($documento->prontoPagos()->exists()) {
             return back()
-                ->withErrors(['factory' => 'No se puede registrar Factory porque el documento ya tiene un pronto pago registrado.'])
+                ->withErrors(['factory' => 'No se puede registrar Factoring porque el documento ya tiene un pronto pago registrado.'])
                 ->withInput();
         }
 
@@ -74,25 +82,9 @@ class FactoryController extends Controller
 
         if ($saldoAnterior <= 0) {
             return back()
-                ->withErrors(['factory' => 'No se puede registrar Factory porque el documento no tiene saldo pendiente.'])
+                ->withErrors(['factory' => 'No se puede registrar Factoring porque el documento no tiene saldo pendiente.'])
                 ->withInput();
         }
-
-        $saldoLiquido = $this->normalizarMontoFactory($validated['saldo_liquido']);
-
-        if ($saldoLiquido < 0) {
-            return back()
-                ->withErrors(['saldo_liquido' => 'El saldo líquido no puede ser negativo.'])
-                ->withInput();
-        }
-
-        if ($saldoLiquido > $saldoAnterior) {
-            return back()
-                ->withErrors(['saldo_liquido' => 'El saldo líquido no puede ser mayor al saldo pendiente del documento.'])
-                ->withInput();
-        }
-
-        $diferencia = max($saldoAnterior - $saldoLiquido, 0);
 
         $bancoSeleccionado = $this->resolverBancoFactoryMasivo(
             bancoId: $validated['banco_id'],
@@ -107,12 +99,26 @@ class FactoryController extends Controller
                 $validated,
                 $documento,
                 $saldoAnterior,
-                $saldoLiquido,
-                $diferencia,
                 $estadoAnterior,
                 $statusOriginalAnterior,
                 $bancoSeleccionado
             ) {
+
+
+                Log::info('FACTORY STORE INDIVIDUAL - ANTES DE CREAR FACTORING', [
+                    'documento_id' => $documento->id,
+                    'saldo_anterior' => $saldoAnterior,
+                    'banco_id' => $bancoSeleccionado->id,
+                    'banco_nombre' => $bancoSeleccionado->nombre,
+                ]);
+
+
+
+
+
+
+
+
                 $factory = FactoryRegistro::create([
                     'documento_financiero_id' => $documento->id,
                     'banco_id' => $bancoSeleccionado->id,
@@ -120,22 +126,31 @@ class FactoryController extends Controller
                     'cesion' => trim($validated['cesion']),
                     'fecha_factory' => Carbon::today()->toDateString(),
                     'monto' => $saldoAnterior,
-                    'saldo_liquido' => $saldoLiquido,
-                    'diferencia' => $diferencia,
+                    'saldo_liquido' => 0,
+                    'diferencia' => 0,
                     'user_id' => Auth::id(),
                 ]);
 
                 $documento->update([
                     'status' => 'Factory',
                     'fecha_estado_manual' => now(),
-                    'saldo_pendiente' => $diferencia,
+                    'saldo_pendiente' => 0,
+                ]);
+
+                $documento->refresh();
+
+                Log::info('FACTORY STORE INDIVIDUAL - DOCUMENTO ACTUALIZADO', [
+                    'documento_id' => $documento->id,
+                    'status_nuevo' => $documento->status,
+                    'saldo_pendiente_nuevo' => $documento->saldo_pendiente,
+                    'factory_id' => $factory->id ?? null,
                 ]);
 
                 MovimientoDocumento::create([
                     'documento_financiero_id' => $documento->id,
                     'user_id' => Auth::id(),
-                    'tipo_movimiento' => 'Registro de Factory',
-                    'descripcion' => "El documento folio {$documento->folio} fue marcado como Factory por un monto de {$saldoAnterior}.",
+                    'tipo_movimiento' => 'Registro de Factoring',
+                    'descripcion' => "El documento folio {$documento->folio} fue marcado como Factoring. Saldo anterior: {$saldoAnterior}. Saldo actual: 0.",
                     'datos_anteriores' => [
                         'estado' => $estadoAnterior,
                         'status_original' => $statusOriginalAnterior,
@@ -149,10 +164,8 @@ class FactoryController extends Controller
                         'cesion' => $factory->cesion,
                         'fecha_factory' => $factory->fecha_factory,
                         'monto' => $factory->monto,
-                        'saldo_liquido' => $factory->saldo_liquido,
-                        'diferencia' => $factory->diferencia,
                         'nuevo_estado' => 'Factory',
-                        'saldo_actual' => $diferencia,
+                        'saldo_actual' => 0,
                     ],
                 ]);
             });
@@ -160,25 +173,18 @@ class FactoryController extends Controller
             report($e);
 
             return back()
-                ->withErrors(['factory' => 'Ocurrió un error al registrar Factory.'])
+                ->withErrors(['factory' => 'Ocurrió un error al registrar Factoring.'])
                 ->withInput();
         }
 
         return back()->with(
             'success',
-            'Factory registrado correctamente y saldo pendiente actualizado según la diferencia.'
+            'Factoring registrado correctamente. El saldo pendiente del documento quedó en 0.'
         );
     }
 
-
-
-
-
-
-
-
     /**
-     * Eliminar un registro Factory y restaurar saldo/estado según movimientos restantes.
+     * Eliminar un registro Factoring y restaurar saldo/estado según movimientos restantes.
      */
     public function destroy(FactoryRegistro $factory)
     {
@@ -194,7 +200,7 @@ class FactoryController extends Controller
 
         if (!$documento) {
             return back()->withErrors([
-                'factory' => 'No se encontró el documento financiero asociado al Factory.',
+                'factory' => 'No se encontró el documento financiero asociado al Factoring.',
             ]);
         }
 
@@ -207,8 +213,6 @@ class FactoryController extends Controller
             'cesion' => $factory->cesion,
             'fecha_factory' => $factory->fecha_factory,
             'monto' => $factory->monto,
-            'saldo_liquido' => $factory->saldo_liquido,
-            'diferencia' => $factory->diferencia,
         ];
 
         $estadoAnterior = $documento->status;
@@ -226,10 +230,6 @@ class FactoryController extends Controller
             ) {
                 $factory->delete();
 
-                /*
-                 * Liberar saldo persistido para que el modelo recalcule desde:
-                 * monto_total, notas, abonos y cruces restantes.
-                 */
                 $documento->update([
                     'saldo_pendiente' => null,
                 ]);
@@ -254,8 +254,8 @@ class FactoryController extends Controller
                 MovimientoDocumento::create([
                     'documento_financiero_id' => $documento->id,
                     'user_id' => Auth::id(),
-                    'tipo_movimiento' => 'Eliminación de Factory',
-                    'descripcion' => "Se eliminó el Factory del documento folio {$documento->folio}.",
+                    'tipo_movimiento' => 'Eliminación de Factoring',
+                    'descripcion' => "Se eliminó el Factoring del documento folio {$documento->folio}.",
                     'datos_anteriores' => array_merge($datosAnteriores, [
                         'estado_anterior' => $estadoAnterior,
                         'status_original_anterior' => $statusOriginalAnterior,
@@ -272,18 +272,15 @@ class FactoryController extends Controller
             report($e);
 
             return back()
-                ->withErrors(['factory' => 'Ocurrió un error al eliminar Factory.'])
+                ->withErrors(['factory' => 'Ocurrió un error al eliminar Factoring.'])
                 ->withInput();
         }
 
-        return back()->with('success', 'Factory eliminado, saldo recalculado y estado actualizado correctamente.');
+        return back()->with('success', 'Factoring eliminado, saldo recalculado y estado actualizado correctamente.');
     }
 
-
-
-
     /**
-     * Registrar Factory masivo para documentos financieros CxC.
+     * Registrar Factoring masivo para documentos financieros CxC.
      */
     public function storeMasivo(Request $request)
     {
@@ -296,20 +293,18 @@ class FactoryController extends Controller
             'documentos.*.fecha_factory' => 'required|date',
 
             'documentos.*.cesion' => 'required|string|max:100',
-            'documentos.*.saldo_liquido' => 'required',
         ], [
             'documentos.required' => 'Debe seleccionar al menos un documento.',
             'documentos.array' => 'La selección de documentos no es válida.',
             'documentos.min' => 'Debe seleccionar al menos un documento.',
 
-            'documentos.*.banco_id.required' => 'Debe seleccionar el banco o entidad Factory.',
-            'documentos.*.rut_factory.required' => 'Debe ingresar el RUT del Factory.',
-            'documentos.*.rut_factory.max' => 'El RUT del Factory no puede superar los 20 caracteres.',
-            'documentos.*.fecha_factory.required' => 'Debe ingresar la fecha Factory.',
-            'documentos.*.fecha_factory.date' => 'La fecha Factory no es válida.',
+            'documentos.*.banco_id.required' => 'Debe seleccionar el banco o entidad Factoring.',
+            'documentos.*.rut_factory.required' => 'Debe ingresar el RUT del Factoring.',
+            'documentos.*.rut_factory.max' => 'El RUT del Factoring no puede superar los 20 caracteres.',
+            'documentos.*.fecha_factory.required' => 'Debe ingresar la fecha Factoring.',
+            'documentos.*.fecha_factory.date' => 'La fecha Factoring no es válida.',
 
-            'documentos.*.cesion.required' => 'Debe ingresar la cesión del Factory.',
-            'documentos.*.saldo_liquido.required' => 'Debe ingresar el saldo líquido.',
+            'documentos.*.cesion.required' => 'Debe ingresar la cesión del Factoring.',
         ]);
 
         $items = $validated['documentos'];
@@ -349,11 +344,11 @@ class FactoryController extends Controller
             $identificador = "Folio {$documento->folio}";
 
             if ((int) $documento->tipo_documento_id === 61) {
-                $errores[] = "{$identificador}: no se puede registrar Factory sobre una nota de crédito.";
+                $errores[] = "{$identificador}: no se puede registrar Factoring sobre una nota de crédito.";
             }
 
             if ((int) $documento->tipo_documento_id === 56) {
-                $errores[] = "{$identificador}: no se puede registrar Factory sobre una nota de débito.";
+                $errores[] = "{$identificador}: no se puede registrar Factoring sobre una nota de débito.";
             }
 
             if ((int) $documento->saldo_pendiente <= 0) {
@@ -361,7 +356,7 @@ class FactoryController extends Controller
             }
 
             if ($documento->factoryRegistro) {
-                $errores[] = "{$identificador}: ya tiene un registro Factory asociado.";
+                $errores[] = "{$identificador}: ya tiene un registro Factoring asociado.";
             }
 
             if ($documento->pagos->isNotEmpty()) {
@@ -373,7 +368,7 @@ class FactoryController extends Controller
             }
 
             if (!$data) {
-                $errores[] = "{$identificador}: no tiene datos Factory enviados.";
+                $errores[] = "{$identificador}: no tiene datos Factoring enviados.";
                 continue;
             }
 
@@ -381,21 +376,11 @@ class FactoryController extends Controller
             $bancoOtro = trim((string) ($data['banco_otro'] ?? ''));
 
             if ($bancoId === '__otro__' && $bancoOtro === '') {
-                $errores[] = "{$identificador}: debe ingresar el nombre del banco o Factory.";
+                $errores[] = "{$identificador}: debe ingresar el nombre del banco o Factoring.";
             }
 
             if ($bancoId !== '__otro__' && !Banco::whereKey($bancoId)->exists()) {
                 $errores[] = "{$identificador}: el banco seleccionado no es válido.";
-            }
-
-            $saldoLiquido = $this->normalizarMontoFactory($data['saldo_liquido'] ?? null);
-
-            if ($saldoLiquido < 0) {
-                $errores[] = "{$identificador}: el saldo líquido no puede ser negativo.";
-            }
-
-            if ($saldoLiquido > (int) $documento->saldo_pendiente) {
-                $errores[] = "{$identificador}: el saldo líquido no puede ser mayor al saldo pendiente.";
             }
         }
 
@@ -420,7 +405,7 @@ class FactoryController extends Controller
                         $documento->prontoPagos()->exists()
                     ) {
                         throw ValidationException::withMessages([
-                            'factory_masivo' => "El documento folio {$documento->folio} ya no cumple las condiciones para registrar Factory.",
+                            'factory_masivo' => "El documento folio {$documento->folio} ya no cumple las condiciones para registrar Factoring.",
                         ]);
                     }
 
@@ -432,14 +417,6 @@ class FactoryController extends Controller
                     );
 
                     $saldoAnterior = (int) $documento->saldo_pendiente;
-                    $saldoLiquido = $this->normalizarMontoFactory($data['saldo_liquido']);
-                    $diferencia = max($saldoAnterior - $saldoLiquido, 0);
-
-                    if ($saldoLiquido > $saldoAnterior) {
-                        throw ValidationException::withMessages([
-                            'factory_masivo' => "El saldo líquido del folio {$documento->folio} no puede ser mayor al saldo pendiente.",
-                        ]);
-                    }
 
                     $estadoAnterior = $documento->status;
                     $statusOriginalAnterior = $documento->status_original;
@@ -451,22 +428,22 @@ class FactoryController extends Controller
                         'cesion' => trim($data['cesion']),
                         'fecha_factory' => $data['fecha_factory'],
                         'monto' => $saldoAnterior,
-                        'saldo_liquido' => $saldoLiquido,
-                        'diferencia' => $diferencia,
+                        'saldo_liquido' => 0,
+                        'diferencia' => 0,
                         'user_id' => Auth::id(),
                     ]);
 
                     $documento->update([
                         'status' => 'Factory',
                         'fecha_estado_manual' => now(),
-                        'saldo_pendiente' => $diferencia,
+                        'saldo_pendiente' => 0,
                     ]);
 
                     MovimientoDocumento::create([
                         'documento_financiero_id' => $documento->id,
                         'user_id' => Auth::id(),
-                        'tipo_movimiento' => 'Registro de Factory masivo',
-                        'descripcion' => "El documento folio {$documento->folio} fue marcado como Factory masivo por un monto de {$saldoAnterior}.",
+                        'tipo_movimiento' => 'Registro de Factoring masivo',
+                        'descripcion' => "El documento folio {$documento->folio} fue marcado como Factoring masivo. Saldo anterior: {$saldoAnterior}. Saldo actual: 0.",
                         'datos_anteriores' => [
                             'estado' => $estadoAnterior,
                             'status_original' => $statusOriginalAnterior,
@@ -480,8 +457,6 @@ class FactoryController extends Controller
                             'cesion' => $factory->cesion,
                             'fecha_factory' => $factory->fecha_factory,
                             'monto' => $factory->monto,
-                            'saldo_liquido' => $factory->saldo_liquido,
-                            'diferencia' => $factory->diferencia,
                             'nuevo_estado' => 'Factory',
                             'saldo_actual' => 0,
                         ],
@@ -494,18 +469,15 @@ class FactoryController extends Controller
             report($e);
 
             return back()
-                ->withErrors(['factory_masivo' => 'Ocurrió un error al registrar Factory masivo.'])
+                ->withErrors(['factory_masivo' => 'Ocurrió un error al registrar Factoring masivo.'])
                 ->withInput();
         }
 
-        return back()->with('success', 'Factory masivo registrado correctamente.');
+        return back()->with('success', 'Factoring masivo registrado correctamente. Los documentos quedaron con saldo pendiente 0.');
     }
 
-
-
-
     /**
-     * Define qué estado manual debe quedar después de eliminar Factory.
+     * Define qué estado manual debe quedar después de eliminar Factoring.
      */
     private function resolverEstadoManualDespuesDeEliminarFactory(DocumentoFinanciero $documento): ?string
     {
@@ -542,11 +514,8 @@ class FactoryController extends Controller
             : 'Al día';
     }
 
-
-
-
     /**
-     * Resolver banco para Factory masivo.
+     * Resolver banco para Factoring masivo.
      * Si viene "__otro__", crea el banco si no existe.
      */
     private function resolverBancoFactoryMasivo(string $bancoId, ?string $bancoOtro): Banco
@@ -556,7 +525,7 @@ class FactoryController extends Controller
         if ($bancoId === '__otro__') {
             if ($bancoOtro === '') {
                 throw ValidationException::withMessages([
-                    'banco_otro' => 'Debe ingresar el nombre del banco o Factory.',
+                    'banco_otro' => 'Debe ingresar el nombre del banco o Factoring.',
                 ]);
             }
 
@@ -585,26 +554,4 @@ class FactoryController extends Controller
 
         return $banco;
     }
-
-
-
-
-    /**
-     * Normaliza montos ingresados desde formularios.
-     */
-    private function normalizarMontoFactory($value): int
-    {
-        if ($value === null || $value === '') {
-            return 0;
-        }
-
-        $normalizado = preg_replace('/[^\d]/', '', (string) $value);
-
-        return (int) $normalizado;
-    }
-
-
-
-
-
 }
