@@ -223,14 +223,39 @@ class DocumentoFinanciero extends Model
         }
 
         /**
-         * Si tiene pago, pronto pago o Factory → saldo = 0.
+         * Si tiene pago o pronto pago → saldo = 0.
          */
         if ($tienePagos || $esProntoPago) {
             return 0;
         }
 
+        /**
+         * Si tiene Factoring:
+         * saldo pendiente = monto cedido - saldo líquido.
+         *
+         * factories.monto representa el saldo pendiente al momento de registrar Factoring.
+         * factories.saldo_liquido representa el monto líquido recibido/definido.
+         * La diferencia queda como saldo pendiente del documento.
+         */
         if ($tieneFactory) {
-            return 0;
+            $factory = $this->factoryRegistro()->first();
+
+            $montoCedido = (int) ($factory->monto ?? 0);
+            $saldoLiquido = (int) ($factory->saldo_liquido ?? 0);
+
+            $saldo = max($montoCedido - $saldoLiquido, 0);
+
+            if ($factory?->created_at) {
+                $saldo -= $this->abonos()
+                    ->where('created_at', '>', $factory->created_at)
+                    ->sum('monto');
+
+                $saldo -= $this->cruces()
+                    ->where('created_at', '>', $factory->created_at)
+                    ->sum('monto');
+            }
+
+            return max($saldo, 0);
         }
 
         /**
@@ -299,13 +324,40 @@ class DocumentoFinanciero extends Model
             return 0;
         }
 
-        // =============================
-        // 3) Si tiene Factory → saldo = diferencia
-        // =============================
+        // ==========================================================
+        // 3) Si tiene Factoring → saldo = monto cedido - saldo líquido
+        // ==========================================================
         if ($this->factoryRegistro()->exists()) {
-            $this->update(['saldo_pendiente' => 0]);
+            $factory = $this->factoryRegistro()->first();
 
-            return 0;
+            $montoCedido = (int) ($factory->monto ?? 0);
+            $saldoLiquido = (int) ($factory->saldo_liquido ?? 0);
+
+            $diferenciaOriginal = max($montoCedido - $saldoLiquido, 0);
+
+            $factory->update([
+                'diferencia' => $diferenciaOriginal,
+            ]);
+
+            $saldo = $diferenciaOriginal;
+
+            if ($factory?->created_at) {
+                $saldo -= $this->abonos()
+                    ->where('created_at', '>', $factory->created_at)
+                    ->sum('monto');
+
+                $saldo -= $this->cruces()
+                    ->where('created_at', '>', $factory->created_at)
+                    ->sum('monto');
+            }
+
+            $saldo = max($saldo, 0);
+
+            $this->update([
+                'saldo_pendiente' => $saldo,
+            ]);
+
+            return $saldo;
         }
 
         // ======================================

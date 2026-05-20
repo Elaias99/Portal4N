@@ -34,6 +34,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const btnSubmitFactory = document.getElementById('btn-submit-factory-masivo');
 
+    // Campos generales del modal masivo
+    const inputGlobalCesion = document.getElementById('factory-masivo-global-cesion');
+    const selectGlobalBanco = document.getElementById('factory-masivo-global-banco');
+    const wrapperGlobalBancoOtro = document.getElementById('factory-masivo-global-banco-otro-wrapper');
+    const inputGlobalBancoOtro = document.getElementById('factory-masivo-global-banco-otro');
+    const inputGlobalRutFactory = document.getElementById('factory-masivo-global-rut');
+    const inputGlobalSaldoLiquido = document.getElementById('factory-masivo-global-saldo-liquido');
+    const btnAplicarDatosFactoryMasivo = document.getElementById('btn-aplicar-datos-factory-masivo');
+
     function getSeleccionFactory() {
         try {
             return JSON.parse(localStorage.getItem(STORAGE_KEY_FACTORY)) || {};
@@ -217,6 +226,140 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function toggleBancoOtroFactoryMasivoGlobal() {
+        if (!selectGlobalBanco || !wrapperGlobalBancoOtro || !inputGlobalBancoOtro) {
+            return;
+        }
+
+        if (selectGlobalBanco.value === '__otro__') {
+            wrapperGlobalBancoOtro.style.display = 'block';
+            inputGlobalBancoOtro.required = true;
+        } else {
+            wrapperGlobalBancoOtro.style.display = 'none';
+            inputGlobalBancoOtro.required = false;
+            inputGlobalBancoOtro.value = '';
+        }
+    }
+
+    function aplicarDatosGlobalesFactoryMasivo() {
+        if (
+            !inputGlobalCesion ||
+            !selectGlobalBanco ||
+            !inputGlobalRutFactory ||
+            !inputGlobalSaldoLiquido
+        ) {
+            return false;
+        }
+
+        toggleBancoOtroFactoryMasivoGlobal();
+
+        const cesion = inputGlobalCesion.value.trim();
+        const bancoId = selectGlobalBanco.value;
+        const bancoOtro = inputGlobalBancoOtro ? inputGlobalBancoOtro.value.trim() : '';
+        const rutFactory = inputGlobalRutFactory.value.trim();
+        const saldoLiquido = Number(inputGlobalSaldoLiquido.value || 0);
+
+        if (!cesion) {
+            inputGlobalCesion.reportValidity();
+            return false;
+        }
+
+        if (!bancoId) {
+            selectGlobalBanco.reportValidity();
+            return false;
+        }
+
+        if (bancoId === '__otro__' && !bancoOtro) {
+            inputGlobalBancoOtro.reportValidity();
+            return false;
+        }
+
+        if (!rutFactory) {
+            inputGlobalRutFactory.reportValidity();
+            return false;
+        }
+
+        if (inputGlobalSaldoLiquido.value === '') {
+            inputGlobalSaldoLiquido.reportValidity();
+            return false;
+        }
+
+        if (saldoLiquido < 0) {
+            inputGlobalSaldoLiquido.reportValidity();
+            return false;
+        }
+
+        const seleccion = getSeleccionFactory();
+        const documentos = Object.values(seleccion);
+
+        const documentosConSaldoMenor = documentos.filter(doc => {
+            return saldoLiquido > Number(doc.saldo || 0);
+        });
+
+        if (documentosConSaldoMenor.length > 0) {
+            const folios = documentosConSaldoMenor
+                .map(doc => doc.folio)
+                .filter(Boolean)
+                .join(', ');
+
+            alert(
+                'El saldo líquido no puede ser mayor al saldo pendiente de los documentos seleccionados. ' +
+                'Revisa los folios: ' + folios
+            );
+
+            return false;
+        }
+
+        document
+            .querySelectorAll('#factory-masivo-documentos-seleccionados tr[data-documento-id]')
+            .forEach(row => {
+                const documentoId = row.dataset.documentoId;
+
+                const inputCesionFila = row.querySelector(
+                    '[name="documentos[' + documentoId + '][cesion]"]'
+                );
+
+                const selectBancoFila = row.querySelector(
+                    '[name="documentos[' + documentoId + '][banco_id]"]'
+                );
+
+                const inputBancoOtroFila = row.querySelector(
+                    '[name="documentos[' + documentoId + '][banco_otro]"]'
+                );
+
+                const inputRutFila = row.querySelector(
+                    '[name="documentos[' + documentoId + '][rut_factory]"]'
+                );
+
+                const inputSaldoLiquidoFila = row.querySelector(
+                    '[name="documentos[' + documentoId + '][saldo_liquido]"]'
+                );
+
+                if (inputCesionFila) {
+                    inputCesionFila.value = cesion;
+                }
+
+                if (selectBancoFila) {
+                    selectBancoFila.value = bancoId;
+                    toggleBancoOtroFactoryMasivo(selectBancoFila);
+                }
+
+                if (inputBancoOtroFila) {
+                    inputBancoOtroFila.value = bancoId === '__otro__' ? bancoOtro : '';
+                }
+
+                if (inputRutFila) {
+                    inputRutFila.value = rutFactory;
+                }
+
+                if (inputSaldoLiquidoFila) {
+                    inputSaldoLiquidoFila.value = saldoLiquido;
+                }
+            });
+
+        return true;
+    }
+
     // Restaurar checkboxes al cargar/paginar
     const seleccionInicial = getSeleccionFactory();
 
@@ -287,6 +430,20 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleBancoOtroFactoryMasivo(selectBanco);
     });
 
+    // Mostrar input "Otro" en los campos generales
+    selectGlobalBanco?.addEventListener('change', function () {
+        toggleBancoOtroFactoryMasivoGlobal();
+    });
+
+    // Aplicar datos generales a todas las filas seleccionadas
+    btnAplicarDatosFactoryMasivo?.addEventListener('click', function () {
+        const aplicado = aplicarDatosGlobalesFactoryMasivo();
+
+        if (aplicado) {
+            alert('Datos de Factoring aplicados a todos los documentos seleccionados.');
+        }
+    });
+
     // Evitar enviar si no hay selección
     formFactoryMasivo?.addEventListener('submit', function (event) {
         const seleccion = getSeleccionFactory();
@@ -299,6 +456,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         actualizarTotalFactoryMasivo();
 
+        const aplicado = aplicarDatosGlobalesFactoryMasivo();
+
+        if (!aplicado) {
+            event.preventDefault();
+            return;
+        }
+
         if (typeof this.reportValidity === 'function' && !this.reportValidity()) {
             event.preventDefault();
             return;
@@ -306,9 +470,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
         localStorage.removeItem(STORAGE_KEY_FACTORY);
     });
-
-
-
-
-
 });

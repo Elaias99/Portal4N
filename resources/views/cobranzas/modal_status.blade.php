@@ -249,7 +249,7 @@
                     @csrf
 
                     <div class="form-group mb-3">
-                        <label class="form-label small text-muted">Saldo pendiente</label>
+                        <label class="form-label small text-muted">Saldo pendiente actual</label>
                         <input type="text"
                             class="form-control form-control-sm"
                             value="${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}"
@@ -299,6 +299,22 @@
                             <input type="text"
                                 class="form-control form-control-sm"
                                 value="${{ number_format($doc->factoryRegistro->monto ?? 0, 0, ',', '.') }}"
+                                readonly>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">Saldo líquido</label>
+                            <input type="text"
+                                class="form-control form-control-sm"
+                                value="${{ number_format($doc->factoryRegistro->saldo_liquido ?? 0, 0, ',', '.') }}"
+                                readonly>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">Diferencia / saldo pendiente resultante</label>
+                            <input type="text"
+                                class="form-control form-control-sm"
+                                value="${{ number_format($doc->factoryRegistro->diferencia ?? 0, 0, ',', '.') }}"
                                 readonly>
                         </div>
                     @else
@@ -389,6 +405,32 @@
                         </div>
 
                         <div class="form-group mb-3">
+                            <label for="saldo-liquido-factory-{{ $doc->id }}" class="form-label small text-muted">
+                                Saldo líquido
+                            </label>
+
+                            <input type="number"
+                                name="saldo_liquido"
+                                id="saldo-liquido-factory-{{ $doc->id }}"
+                                class="form-control form-control-sm @error('saldo_liquido') is-invalid @enderror"
+                                min="0"
+                                max="{{ (int) $doc->saldo_pendiente }}"
+                                step="1"
+                                placeholder="Ej: {{ (int) $doc->saldo_pendiente }}"
+                                required>
+
+                            <small class="text-muted">
+                                El saldo pendiente quedará como la diferencia entre el saldo actual y el saldo líquido ingresado.
+                            </small>
+
+                            @error('saldo_liquido')
+                                <span class="invalid-feedback d-block text-danger">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+
+                        <div class="form-group mb-3">
                             <label class="form-label small text-muted">
                                 Fecha Factoring
                             </label>
@@ -404,7 +446,7 @@
                         </div>
 
                         <div class="alert alert-info py-1 px-2 small">
-                            Al registrar Factoring, el saldo pendiente quedará automáticamente en <strong>0</strong>.
+                            Al registrar Factoring, el sistema guardará el saldo cedido, el saldo líquido y dejará como saldo pendiente la diferencia.
                         </div>
                     @endif
                 </form>

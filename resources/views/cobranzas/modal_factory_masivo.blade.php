@@ -56,6 +56,107 @@
                       method="POST">
                     @csrf
 
+                    {{-- CAMPOS GENERALES PARA APLICAR A TODOS LOS DOCUMENTOS --}}
+                    <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-header bg-light fw-bold">
+                            Datos generales del Factoring
+                        </div>
+
+                        <div class="card-body">
+                            <div class="row g-3 align-items-end">
+
+                                <div class="col-md-2">
+                                    <label for="factory-masivo-global-cesion" class="form-label small text-muted">
+                                        Cesión
+                                    </label>
+
+                                    <input type="text"
+                                           id="factory-masivo-global-cesion"
+                                           class="form-control form-control-sm"
+                                           placeholder="Ej: 665162"
+                                           required>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label for="factory-masivo-global-banco" class="form-label small text-muted">
+                                        Nombre Factoring / Banco
+                                    </label>
+
+                                    <select id="factory-masivo-global-banco"
+                                            class="form-select form-select-sm"
+                                            required>
+                                        <option value="">Seleccione banco / factoring</option>
+
+                                        @foreach(($bancos ?? collect()) as $banco)
+                                            <option value="{{ $banco->id }}">
+                                                {{ $banco->nombre }}
+                                            </option>
+                                        @endforeach
+
+                                        <option value="__otro__">Otro</option>
+                                    </select>
+
+                                    <div id="factory-masivo-global-banco-otro-wrapper"
+                                         class="mt-2"
+                                         style="display:none;">
+                                        <label for="factory-masivo-global-banco-otro" class="form-label small text-muted">
+                                            Nombre nuevo banco / Factoring
+                                        </label>
+
+                                        <input type="text"
+                                               id="factory-masivo-global-banco-otro"
+                                               class="form-control form-control-sm"
+                                               placeholder="Ingrese nuevo banco / Factoring">
+                                    </div>
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label for="factory-masivo-global-rut" class="form-label small text-muted">
+                                        RUT Factoring
+                                    </label>
+
+                                    <input type="text"
+                                           id="factory-masivo-global-rut"
+                                           class="form-control form-control-sm"
+                                           placeholder="Ej: 76000000-0"
+                                           required>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label for="factory-masivo-global-saldo-liquido" class="form-label small text-muted">
+                                        Saldo líquido
+                                    </label>
+
+                                    <input type="number"
+                                           id="factory-masivo-global-saldo-liquido"
+                                           class="form-control form-control-sm"
+                                           min="0"
+                                           step="1"
+                                           placeholder="Ej: 850000"
+                                           required>
+
+                                    <small class="text-muted">
+                                        Se copiará a todos los documentos seleccionados.
+                                    </small>
+                                </div>
+
+                                <div class="col-md-2">
+                                    <button type="button"
+                                            id="btn-aplicar-datos-factory-masivo"
+                                            class="btn btn-outline-primary btn-sm w-100">
+                                        Aplicar a todos
+                                    </button>
+                                </div>
+
+                            </div>
+
+                            <small class="text-muted d-block mt-2">
+                                Estos datos se copiarán a todos los documentos seleccionados del modal.
+                                El saldo pendiente final de cada documento será la diferencia entre su saldo actual y el saldo líquido informado.
+                            </small>
+                        </div>
+                    </div>
+
                     <div class="table-responsive">
                         <table class="table table-sm table-striped align-middle mb-3">
                             <thead>
@@ -66,6 +167,7 @@
                                     <th class="text-nowrap">RUT</th>
                                     <th class="text-nowrap" style="min-width: 130px;">Cesión</th>
                                     <th class="text-end text-nowrap">Saldo Pendiente</th>
+                                    <th class="text-nowrap" style="min-width: 150px;">Saldo Líquido</th>
                                     <th class="text-nowrap" style="min-width: 230px;">Nombre Factoring / Banco</th>
                                     <th class="text-nowrap" style="min-width: 160px;">RUT Factoring</th>
                                     <th class="text-nowrap" style="min-width: 150px;">Fecha Factoring</th>
@@ -87,19 +189,18 @@
                         <div class="row g-2 mb-3">
                             <div class="col-md-4">
                                 <div class="border rounded p-2 bg-light">
-                                    <span class="text-muted small d-block">Total saldo pendiente:</span>
+                                    <span class="text-muted small d-block">Total saldo pendiente seleccionado:</span>
                                     <span id="factory-masivo-total-general" class="fw-bold text-primary">
                                         $0
                                     </span>
                                 </div>
                             </div>
-
                         </div>
 
                         <div class="alert alert-info py-2 px-3 small mb-3">
-                            Al registrar Factoring masivo, cada documento seleccionado quedará con
-                            <strong>saldo pendiente 0</strong>. El monto registrado corresponderá al
-                            <strong>saldo cedido</strong> al momento de la operación.
+                            Al registrar Factoring masivo, cada documento seleccionado guardará su
+                            <strong>saldo cedido</strong>, su <strong>saldo líquido</strong> y quedará con saldo pendiente igual a la
+                            <strong>diferencia</strong> entre ambos valores.
                         </div>
 
                         <div class="d-flex justify-content-end gap-2">
@@ -151,6 +252,16 @@
                         </td>
 
                         <td>
+                            <input type="number"
+                                   name="documentos[__ID__][saldo_liquido]"
+                                   class="form-control form-control-sm"
+                                   min="0"
+                                   step="1"
+                                   placeholder="Saldo líquido"
+                                   required>
+                        </td>
+
+                        <td>
                             <select name="documentos[__ID__][banco_id]"
                                     class="form-select form-select-sm js-factory-masivo-banco"
                                     data-documento-id="__ID__"
@@ -192,7 +303,6 @@
                                    value="{{ now()->format('Y-m-d') }}"
                                    required>
                         </td>
-
 
                         <td class="text-center">
                             <button type="button"
