@@ -152,15 +152,15 @@
 
                 $movimientosResumen = $movimientosResumen
                     ->sortBy(function ($item) {
-                        $fecha = $item['fecha_orden']
-                            ? \Carbon\Carbon::parse($item['fecha_orden'])->format('Y-m-d')
-                            : '9999-12-31';
-
                         $createdAt = $item['created_at_orden']
-                            ? \Carbon\Carbon::parse($item['created_at_orden'])->format('H:i:s')
-                            : '00:00:00';
+                            ? \Carbon\Carbon::parse($item['created_at_orden'])->format('Y-m-d H:i:s')
+                            : null;
 
-                        return $fecha . ' ' . $createdAt . ' ' . str_pad($item['prioridad'], 2, '0', STR_PAD_LEFT);
+                        $fechaMovimiento = $item['fecha_orden']
+                            ? \Carbon\Carbon::parse($item['fecha_orden'])->format('Y-m-d') . ' 00:00:00'
+                            : '9999-12-31 00:00:00';
+
+                        return ($createdAt ?? $fechaMovimiento) . ' ' . str_pad($item['prioridad'], 2, '0', STR_PAD_LEFT);
                     })
                     ->values();
 

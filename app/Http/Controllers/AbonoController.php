@@ -49,6 +49,7 @@ class AbonoController extends Controller
     public function update(Request $request, $id)
     {
         $abono = \App\Models\Abono::findOrFail($id);
+        $documento = $abono->documento ?? $abono->documentoCompra;
 
         $request->validate([
             'monto' => 'required|integer|min:1',
@@ -58,15 +59,30 @@ class AbonoController extends Controller
             'fecha_abono.required' => 'La fecha del abono es obligatoria.',
         ]);
 
+        $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
+
         $abono->update([
             'monto' => $request->monto,
             'fecha_abono' => $request->fecha_abono,
         ]);
 
+        if (method_exists($documento, 'recalcularSaldoPendiente')) {
+            $documento->recalcularSaldoPendiente();
+        }
+
+        $documento->refresh();
+
+        if ($tipoDocumento === 'financiero' && method_exists($documento, 'sincronizarEstadosDesdeMovimientos')) {
+            $documento->sincronizarEstadosDesdeMovimientos();
+            $documento->refresh();
+        }
+
         return redirect()
             ->route('abonos.index', $abono->documento_financiero_id)
             ->with('success', 'Abono actualizado correctamente.');
     }
+
+    
 
     /**
      * Eliminar un abono específico.
@@ -76,64 +92,66 @@ class AbonoController extends Controller
         $abono = \App\Models\Abono::findOrFail($id);
         $documento = $abono->documento ?? $abono->documentoCompra;
 
-        //  Detectar tipo de documento
         $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
 
-        //  Guardar datos antes de eliminar
         $datosAnteriores = [
             'monto' => $abono->monto,
             'fecha_abono' => $abono->fecha_abono,
         ];
 
-        $estadoAnterior = $documento->estado;
+        $estadoAnterior = $tipoDocumento === 'compra'
+            ? $documento->estado
+            : $documento->status;
 
-        //  Eliminar el abono
         $abono->delete();
 
-        //  Recalcular saldo pendiente
         if (method_exists($documento, 'recalcularSaldoPendiente')) {
             $documento->recalcularSaldoPendiente();
         }
 
-        //  Recalcular totales
+        $documento->refresh();
+
         $totalAbonos = $documento->abonos()->sum('monto');
         $totalCruces = $documento->cruces()->sum('monto');
 
-        //  Determinar nuevo estado
-        if ($totalAbonos > 0) {
-            $nuevoEstado = 'Abono';
-        } elseif ($totalCruces > 0) {
-            $nuevoEstado = 'Cruce';
-        } else {
-            $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
-                ? 'Vencido'
-                : 'Al día';
-        }
-
-        //  Actualizar documento según tipo
         if ($tipoDocumento === 'compra') {
+            if ($totalAbonos > 0) {
+                $nuevoEstado = 'Abono';
+            } elseif ($totalCruces > 0) {
+                $nuevoEstado = 'Cruce';
+            } else {
+                $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
+                    ? 'Vencido'
+                    : 'Al día';
+            }
+
             $documento->update([
                 'estado' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
                 'status_original' => $nuevoEstado,
                 'fecha_estado_manual' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
             ]);
-        } else {
-
-            $documento->update([
-                'status' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : $nuevoEstado,
-                'status_original' => $nuevoEstado,
-                'fecha_estado_manual' => in_array($nuevoEstado, ['Vencido', 'Al día']) ? null : now(),
-            ]);
         }
 
-        //  Registrar movimiento según tipo de documento
+        if ($tipoDocumento === 'financiero') {
+            if (method_exists($documento, 'sincronizarEstadosDesdeMovimientos')) {
+                $nuevoEstadoManual = $documento->sincronizarEstadosDesdeMovimientos();
+                $documento->refresh();
+
+                $nuevoEstado = $nuevoEstadoManual ?? $documento->status_original;
+            } else {
+                $nuevoEstado = $documento->status ?? $documento->status_original;
+            }
+        }
+
         if ($tipoDocumento === 'financiero') {
             \App\Models\MovimientoDocumento::create([
                 'documento_financiero_id' => $documento->id,
                 'user_id' => Auth::id(),
                 'tipo_movimiento' => 'Eliminación de abono',
                 'descripcion' => "Se eliminó un abono de {$datosAnteriores['monto']} correspondiente al documento folio {$documento->folio}.",
-                'datos_anteriores' => $datosAnteriores,
+                'datos_anteriores' => array_merge($datosAnteriores, [
+                    'estado_anterior' => $estadoAnterior,
+                ]),
                 'datos_nuevos' => [
                     'nuevo_estado' => $nuevoEstado,
                     'saldo_actual' => $documento->saldo_pendiente,
@@ -156,7 +174,6 @@ class AbonoController extends Controller
             ]);
         }
 
-        //  Redirección inteligente
         if ($tipoDocumento === 'compra') {
             return redirect()
                 ->route('finanzas_compras.show', $documento->id)

@@ -431,18 +431,22 @@
                         </div>
 
                         <div class="form-group mb-3">
-                            <label class="form-label small text-muted">
+                            <label for="fecha-factory-{{ $doc->id }}" class="form-label small text-muted">
                                 Fecha Factoring
                             </label>
 
                             <input type="date"
-                                class="form-control form-control-sm"
-                                value="{{ now()->format('Y-m-d') }}"
-                                readonly>
+                                name="fecha_factory"
+                                id="fecha-factory-{{ $doc->id }}"
+                                class="form-control form-control-sm @error('fecha_factory') is-invalid @enderror"
+                                value="{{ old('fecha_factory', now()->format('Y-m-d')) }}"
+                                required>
 
-                            <small class="text-muted">
-                                La fecha se registrará automáticamente con la fecha actual.
-                            </small>
+                            @error('fecha_factory')
+                                <span class="invalid-feedback d-block text-danger">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
                         </div>
 
                         <div class="alert alert-info py-1 px-2 small">

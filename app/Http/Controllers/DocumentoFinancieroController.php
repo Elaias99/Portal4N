@@ -1002,6 +1002,7 @@ class DocumentoFinancieroController extends Controller
 
 
     // Almacenamiento de estados relacionados (abonos y cruces)
+    // Almacenamiento de estados relacionados (abonos y cruces)
     public function storeAbono(Request $request, DocumentoFinanciero $documento)
     {
         $request->validate([
@@ -1012,8 +1013,7 @@ class DocumentoFinancieroController extends Controller
             'fecha_abono.required' => 'La fecha del abono es obligatoria.',
         ]);
 
-        // Validar que el abono no supere el saldo pendiente
-        $saldoPendiente = $documento->saldo_pendiente; // usa el accessor del modelo
+        $saldoPendiente = $documento->saldo_pendiente;
 
         if ($request->monto > $saldoPendiente) {
             return back()
@@ -1021,32 +1021,28 @@ class DocumentoFinancieroController extends Controller
                 ->withInput();
         }
 
-
-        // Guardar el abono
         $documento->abonos()->create([
             'monto' => $request->monto,
             'fecha_abono' => $request->fecha_abono,
         ]);
 
-
-
-        // Recalcular saldo pendiente en BD
         $documento->recalcularSaldoPendiente();
 
+        $documento->refresh();
+        $documento->sincronizarEstadosDesdeMovimientos();
+        $documento->refresh();
 
-        // Actualizar estado del documento
-        $documento->update([
-            'status' => 'Abono',
-            'fecha_estado_manual' => now(),
-        ]);
-
-        // Registrar movimiento
         MovimientoDocumento::create([
             'documento_financiero_id' => $documento->id,
             'user_id' => Auth::id(),
             'tipo_movimiento' => 'Abono registrado',
             'descripcion' => "Se registró un abono de {$request->monto} el {$request->fecha_abono}",
-            'datos_nuevos' => ['monto' => $request->monto, 'fecha_abono' => $request->fecha_abono],
+            'datos_nuevos' => [
+                'monto' => $request->monto,
+                'fecha_abono' => $request->fecha_abono,
+                'nuevo_estado' => $documento->status,
+                'saldo_actual' => $documento->saldo_pendiente,
+            ],
         ]);
 
         return back()->with('success', 'Abono registrado correctamente.');
@@ -1078,7 +1074,7 @@ class DocumentoFinancieroController extends Controller
                 ->withInput();
         }
 
-        $cruce = $documento->cruces()->create([
+        $documento->cruces()->create([
             'monto' => $request->monto,
             'fecha_cruce' => $request->fecha_cruce,
             'cobranza_id' => $documento->cobranza_id,
@@ -1086,10 +1082,9 @@ class DocumentoFinancieroController extends Controller
 
         $documento->recalcularSaldoPendiente();
 
-        $documento->update([
-            'status' => 'Cruce',
-            'fecha_estado_manual' => now(),
-        ]);
+        $documento->refresh();
+        $documento->sincronizarEstadosDesdeMovimientos();
+        $documento->refresh();
 
         \App\Models\MovimientoDocumento::create([
             'documento_financiero_id' => $documento->id,
@@ -1101,6 +1096,8 @@ class DocumentoFinancieroController extends Controller
                 'fecha_cruce' => $request->fecha_cruce,
                 'cobranza_id' => $documento->cobranza_id,
                 'cobranza_razon_social' => $documento->cobranza?->razon_social,
+                'nuevo_estado' => $documento->status,
+                'saldo_actual' => $documento->saldo_pendiente,
             ],
         ]);
 
