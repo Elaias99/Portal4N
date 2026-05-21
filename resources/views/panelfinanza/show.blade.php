@@ -102,49 +102,14 @@
                     @forelse($movimientos as $mov)
                         @php
                             $tipo = strtolower($mov->tipo_movimiento ?? '');
-                            $monto = 0;
-                            $signo = '+';
-                            $color = 'text-success';
 
-                            // ==== Monto del movimiento ====
-                            if (Str::contains($tipo, 'abono') || Str::contains($tipo, 'cruce')) {
-                                $monto = $mov->datos_nuevos['monto']
-                                    ?? $mov->datos_anteriores['monto']
-                                    ?? 0;
-                            } elseif (Str::contains($tipo, 'pago') || Str::contains($tipo, 'pronto pago')) {
-                                $monto = $mov->documento->monto_total ?? 0;
-                            }
+                            $montoFirmado = (int) ($mov->monto_movimiento_historial ?? 0);
+                            $monto = abs($montoFirmado);
 
-                            if (Str::contains($tipo, 'eliminación')) {
-                                $monto *= -1;
-                                $signo = '–';
-                                $color = 'text-danger';
-                            }
+                            $signo = $montoFirmado < 0 ? '–' : '+';
+                            $color = $montoFirmado < 0 ? 'text-danger' : 'text-success';
 
-                            // ==== Fecha del estado (abono, cruce, pago, pronto pago) ====
-                            $fechaEstado = null;
-
-                            if (Str::contains($tipo, 'abono')) {
-                                $fechaEstado = $mov->datos_nuevos['fecha_abono']
-                                    ?? $mov->datos_anteriores['fecha_abono']
-                                    ?? null;
-                            }
-                            elseif (Str::contains($tipo, 'cruce')) {
-                                $fechaEstado = $mov->datos_nuevos['fecha_cruce']
-                                    ?? $mov->datos_anteriores['fecha_cruce']
-                                    ?? null;
-                            }
-                            elseif (Str::contains(Str::ascii($tipo), 'pronto pago')) {
-                                $fechaEstado = $mov->datos_nuevos['fecha_pronto_pago']
-                                    ?? $mov->datos_anteriores['fecha_pronto_pago']
-                                    ?? null;
-                            }
-                            elseif (Str::contains($tipo, 'pago')) {
-                                $fechaEstado = $mov->datos_nuevos['fecha_pago']
-                                    ?? $mov->datos_anteriores['fecha_pago']
-                                    ?? null;
-                            }
-
+                            $fechaEstado = $mov->fecha_estado_historial ?? null;
                         @endphp
 
 

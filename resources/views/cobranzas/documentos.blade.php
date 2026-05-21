@@ -391,7 +391,6 @@
                             (int) $doc->tipo_documento_id !== 61 &&
                             (int) $doc->tipo_documento_id !== 56 &&
                             (int) $doc->saldo_pendiente > 0 &&
-                            !$doc->factoryRegistro &&
                             $doc->pagos->isEmpty() &&
                             $doc->prontoPagos->isEmpty();
                     @endphp
