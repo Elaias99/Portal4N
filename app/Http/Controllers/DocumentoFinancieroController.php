@@ -30,87 +30,15 @@ class DocumentoFinancieroController extends Controller
             abort(403, 'Acceso denegado. No tienes permiso para ingresar a este módulo.');
         }
 
-        // === BASE QUERY (para totales dinámicos) ===
         $baseQuery = DocumentoFinanciero::query();
 
         $fechaCorte = $this->resolverFechaCorte($request);
         $this->aplicarFiltroFechaCorte($baseQuery, $fechaCorte);
+        $this->aplicarFiltrosGeneralesListado($baseQuery, $request);
+        $this->aplicarFiltrosColumnasListado($baseQuery, $request);
 
-        // === APLICAR FILTROS GENERALES ANTES DE CONTAR ===
-        if ($request->filled('razon_social')) {
-            $busqueda = $request->razon_social;
+        [$sortBy, $sortOrder] = $this->resolverOrdenListado($request);
 
-            // Normaliza quitando símbolos y exceso de espacios
-            $busquedaNormalizada = preg_replace('/[^a-zA-Z0-9\s]/u', '', $busqueda);
-
-            // Busca ignorando puntos, comas o dobles espacios
-            $baseQuery->whereRaw("
-                REPLACE(REPLACE(REPLACE(razon_social, '.', ''), ',', ''), '  ', ' ')
-                LIKE ?
-            ", ["%{$busquedaNormalizada}%"]);
-        }
-
-        if ($request->filled('rut_cliente')) {
-            $baseQuery->where('rut_cliente', 'like', "%{$request->rut_cliente}%");
-        }
-
-        if ($request->filled('folio')) {
-            $baseQuery->where('folio', 'like', "%{$request->folio}%");
-        }
-
-        if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
-            $baseQuery->whereBetween('fecha_docto', [$request->fecha_inicio, $request->fecha_fin]);
-        } elseif ($request->filled('fecha_inicio')) {
-            $baseQuery->whereDate('fecha_docto', '>=', $request->fecha_inicio);
-        } elseif ($request->filled('fecha_fin')) {
-            $baseQuery->whereDate('fecha_docto', '<=', $request->fecha_fin);
-        }
-
-        if ($request->filled('vencimiento_inicio') && $request->filled('vencimiento_fin')) {
-            $baseQuery->whereBetween('fecha_vencimiento', [$request->vencimiento_inicio, $request->vencimiento_fin]);
-        } elseif ($request->filled('vencimiento_inicio')) {
-            $baseQuery->whereDate('fecha_vencimiento', '>=', $request->vencimiento_inicio);
-        } elseif ($request->filled('vencimiento_fin')) {
-            $baseQuery->whereDate('fecha_vencimiento', '<=', $request->vencimiento_fin);
-        }
-
-        if ($request->filled('saldo_valor')) {
-            // Normalizar número (quita puntos y comas)
-            $valor = (float) str_replace(['.', ','], '', $request->saldo_valor);
-
-            // Determinar tipo de saldo (default: saldo_pendiente)
-            $tipoSaldo = $request->input('saldo_tipo', 'saldo_pendiente');
-
-            // Whitelist de columnas permitidas
-            $columnasPermitidas = [
-                'saldo_pendiente',
-                'monto_total',
-            ];
-
-            // Fallback de seguridad
-            if (!in_array($tipoSaldo, $columnasPermitidas, true)) {
-                $tipoSaldo = 'saldo_pendiente';
-            }
-
-            // Aplicar filtro con tolerancia ±1
-            $baseQuery->whereBetween($tipoSaldo, [
-                $valor - 1,
-                $valor + 1,
-            ]);
-        }
-
-        // === FILTRO POR ESTADO DE PAGO (GLOBAL) ===
-        if ($request->filled('estado_pago')) {
-            if ($request->estado_pago === 'Pagado') {
-                $baseQuery->where('saldo_pendiente', '<=', 0);
-            }
-
-            if ($request->estado_pago === 'Pendiente') {
-                $baseQuery->where('saldo_pendiente', '>', 0);
-            }
-        }
-
-        // === CLONAR PARA CONTAR ESTADOS ===
         $totales = (clone $baseQuery)
             ->selectRaw('status_original, COUNT(*) as total')
             ->groupBy('status_original')
@@ -119,44 +47,40 @@ class DocumentoFinancieroController extends Controller
         $totalAlDia = $totales['Al día'] ?? 0;
         $totalVencido = $totales['Vencido'] ?? 0;
 
-        // === QUERY PRINCIPAL (con relaciones) ===
-        $query = $baseQuery->with([
+        if ($request->filled('status')) {
+            $baseQuery->where('status_original', $request->status);
+        }
+
+        $query = (clone $baseQuery)->with([
             'cobranza:id,razon_social,rut_cliente',
             'empresa:id,Nombre',
             'tipoDocumento:id,nombre',
-
             'abonos:id,documento_financiero_id,fecha_abono,monto',
             'cruces:id,documento_financiero_id,documento_compra_id,cobranza_compra_id,monto,fecha_cruce',
             'cruces.documentoCompra:id,folio,razon_social,rut_proveedor',
-
             'pagos:id,documento_financiero_id,fecha_pago',
             'prontoPagos:id,documento_financiero_id,fecha_pronto_pago',
-
-            // Nuevo estado Factory
             'factoryRegistro:id,documento_financiero_id,banco_id,rut_factory,fecha_factory,monto,user_id',
             'factoryRegistro.banco:id,nombre',
-
             'referencia:id,folio,tipo_documento_id',
             'referenciados:id,referencia_id,folio',
         ]);
 
-        if ($request->filled('status')) {
-            $query->where('status_original', $request->status);
-        }
-
-        // === CALCULAR SALDO PENDIENTE GLOBAL (Optimizado SQL) ===
         $totalSaldoPendiente = (clone $baseQuery)
-            ->whereNotIn('tipo_documento_id', [61, 56])   // excluir NC y ND
-            ->where('saldo_pendiente', '>', 0)            // excluir documentos pagados / cerrados
+            ->whereNotIn('tipo_documento_id', [61, 56])
+            ->where('saldo_pendiente', '>', 0)
             ->sum('saldo_pendiente');
 
-        // === OBTENER DATOS BASE PAGINADOS ===
         $documentosOriginal = $query
-            ->orderByRaw('fecha_vencimiento IS NULL, fecha_vencimiento DESC')
-            ->orderBy('folio', 'DESC')
+            ->when(
+                $sortBy,
+                fn ($q) => $q->orderBy($sortBy, $sortOrder),
+                fn ($q) => $q
+                    ->orderByRaw('fecha_vencimiento IS NULL, fecha_vencimiento DESC')
+                    ->orderBy('folio', 'DESC')
+            )
             ->paginate(10);
 
-        // === ACTUALIZAR ESTADO AUTOMÁTICO ===
         DB::table('documentos_financieros')
             ->whereDate('fecha_vencimiento', '<', now())
             ->where('saldo_pendiente', '>', 0)
@@ -169,7 +93,6 @@ class DocumentoFinancieroController extends Controller
             ->where('status_original', '!=', 'Al día')
             ->update(['status_original' => 'Al día']);
 
-        // === CONTAR PAGADOS / PENDIENTES (GLOBAL) ===
         $totalPagados = (clone $baseQuery)
             ->where('saldo_pendiente', '<=', 0)
             ->count();
@@ -178,21 +101,11 @@ class DocumentoFinancieroController extends Controller
             ->where('saldo_pendiente', '>', 0)
             ->count();
 
-        $empresas = Empresa::orderBy('Nombre')
-            ->get(['id', 'Nombre']);
-
-        $tiposDocumento = TipoDocumento::orderBy('nombre')
-            ->get(['id', 'nombre']);
-
-        $proveedores = \App\Models\Proveedor::orderBy('razon_social')
-            ->get(['id', 'razon_social', 'rut']);
-
-        $cobranzas = Cobranza::orderBy('razon_social')
-            ->get(['id', 'razon_social', 'rut_cliente']);
-
-        // Bancos para el formulario Factory del modal_status
-        $bancos = \App\Models\Banco::orderBy('nombre')
-            ->get(['id', 'nombre']);
+        $empresas = Empresa::orderBy('Nombre')->get(['id', 'Nombre']);
+        $tiposDocumento = TipoDocumento::orderBy('nombre')->get(['id', 'nombre']);
+        $proveedores = \App\Models\Proveedor::orderBy('razon_social')->get(['id', 'razon_social', 'rut']);
+        $cobranzas = Cobranza::orderBy('razon_social')->get(['id', 'razon_social', 'rut_cliente']);
+        $bancos = \App\Models\Banco::orderBy('nombre')->get(['id', 'nombre']);
 
         return view('cobranzas.documentos', compact(
             'documentosOriginal',
@@ -205,153 +118,52 @@ class DocumentoFinancieroController extends Controller
             'tiposDocumento',
             'proveedores',
             'cobranzas',
-            'bancos'
+            'bancos',
+            'sortBy',
+            'sortOrder'
         ));
     }
 
-
     public function filtrarColumnas(Request $request)
     {
-        //Control de acceso
         $usuariosFinanzas = [1, 405, 374, 375];
+
         if (!in_array(Auth::id(), $usuariosFinanzas)) {
             abort(403, 'Acceso denegado.');
         }
 
-        // === BASE QUERY ===
-        $query = DocumentoFinanciero::with(['empresa', 'tipoDocumento']);
+        $parametros = $request->query();
 
-        // === PARAMETROS DE FILTRO DIRECTO (desde el dropdown) ===
-        $columna = $request->get('columna');
-        $valor = $request->get('valor');
+        if (($parametros['sort_by'] ?? null) === 'tipo_doc_id') {
+            $parametros['sort_by'] = 'tipo_documento_id';
+        }
 
-        // === APLICAR FILTRO DIRECTO SEGÚN EL TIPO DE COLUMNA ===
-        if ($columna && $valor) {
-            switch ($columna) {
-                case 'razon_social':
-                case 'rut_cliente':
-                case 'folio':
-                    $query->where($columna, 'like', "%{$valor}%");
-                    break;
+        $mapaColumnas = [
+            'empresa_id' => 'cf_empresa_id',
+            'tipo_documento_id' => 'cf_tipo_documento_id',
+            'tipo_doc_id' => 'cf_tipo_documento_id',
+            'rut_cliente' => 'cf_rut_cliente',
+            'razon_social' => 'cf_razon_social',
+            'folio' => 'cf_folio',
+            'fecha_docto' => 'cf_fecha_docto',
+            'fecha_vencimiento' => 'cf_fecha_vencimiento',
+            'monto_total' => 'cf_monto_total',
+        ];
 
-                case 'fecha_docto':
-                case 'fecha_vencimiento':
-                    $query->whereDate($columna, '=', $valor);
-                    break;
+        $columna = $request->input('columna');
+        $valor = $request->input('valor');
 
-                case 'monto_total':
-                    $query->where($columna, '=', $valor);
-                    break;
+        unset($parametros['columna'], $parametros['valor'], $parametros['page']);
 
-                case 'empresa_id':
-                    $query->where('empresa_id', $valor);
-                    break;
+        if ($columna && array_key_exists($columna, $mapaColumnas)) {
+            unset($parametros[$mapaColumnas[$columna]]);
 
-                case 'tipo_documento_id':
-                    $query->where('tipo_documento_id', $valor);
-                    break;
-
+            if ($valor !== null && $valor !== '') {
+                $parametros[$mapaColumnas[$columna]] = $valor;
             }
         }
 
-        // === FILTROS GENERALES ===
-        if ($request->filled('razon_social')) {
-            $query->where('razon_social', 'like', "%{$request->razon_social}%");
-        }
-
-        if ($request->filled('rut_cliente')) {
-            $query->where('rut_cliente', 'like', "%{$request->rut_cliente}%");
-        }
-
-        if ($request->filled('folio')) {
-            $query->where('folio', 'like', "%{$request->folio}%");
-        }
-
-        if ($request->filled('empresa_id')) {
-            $query->where('empresa_id', $request->empresa_id);
-        }
-
-        if ($request->filled('tipo_documento_id')) {
-            $query->where('tipo_documento_id', $request->tipo_documento_id);
-        }
-
-
-        if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
-            $query->whereBetween('fecha_docto', [$request->fecha_inicio, $request->fecha_fin]);
-        } elseif ($request->filled('fecha_inicio')) {
-            $query->whereDate('fecha_docto', '>=', $request->fecha_inicio);
-        } elseif ($request->filled('fecha_fin')) {
-            $query->whereDate('fecha_docto', '<=', $request->fecha_fin);
-        }
-
-        if ($request->filled('vencimiento_inicio') && $request->filled('vencimiento_fin')) {
-            $query->whereBetween('fecha_vencimiento', [$request->vencimiento_inicio, $request->vencimiento_fin]);
-        } elseif ($request->filled('vencimiento_inicio')) {
-            $query->whereDate('fecha_vencimiento', '>=', $request->vencimiento_inicio);
-        } elseif ($request->filled('vencimiento_fin')) {
-            $query->whereDate('fecha_vencimiento', '<=', $request->vencimiento_fin);
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status_original', $request->status);
-        }
-
-        // === ORDENAMIENTO ===
-        $sortBy = $request->get('sort_by', 'razon_social');
-        $sortOrder = $request->get('sort_order', 'asc');
-
-        $columnasPermitidas = [
-            'razon_social',
-            'rut_cliente',
-            'folio',
-            'fecha_docto',
-            'fecha_vencimiento',
-            'monto_total',
-            'empresa_id',
-            'tipo_documento_id',
-        ];
-
-        if (!in_array($sortBy, $columnasPermitidas)) {
-            $sortBy = 'razon_social';
-        }
-
-        if (!in_array(strtolower($sortOrder), ['asc', 'desc'])) {
-            $sortOrder = 'asc';
-        }
-
-        // === CONSULTA FINAL ===
-        $documentoFinancieros = $query->orderBy($sortBy, $sortOrder)->paginate(10);
-
-        $documentosOriginal = $documentoFinancieros;
-
-        // === CALCULOS AUXILIARES ===
-        $totalSaldoPendiente = $documentoFinancieros->sum(fn($d) => $d->saldo_pendiente);
-        $totalPagados = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente <= 0)->count();
-        $totalPendientes = $documentoFinancieros->filter(fn($d) => $d->saldo_pendiente > 0)->count();
-
-        // Variables adicionales para mantener coherencia con index()
-        $totalAlDia = DocumentoFinanciero::where('status_original', 'Al día')->count();
-        $totalVencido = DocumentoFinanciero::where('status_original', 'Vencido')->count();
-
-        $empresas = Empresa::orderBy('Nombre')->get(['id', 'Nombre']);
-        $tiposDocumento = TipoDocumento::orderBy('nombre')->get(['id', 'nombre']);
-        $proveedores = \App\Models\Proveedor::orderBy('razon_social')->get(['id', 'razon_social', 'rut']); 
-
-        // === RENDERIZAR VISTA ===
-        return view('cobranzas.documentos', compact(
-            'documentoFinancieros',
-            'documentosOriginal', 
-            'totalSaldoPendiente',
-            'totalPagados',
-            'totalPendientes',
-            'totalAlDia',
-            'totalVencido',
-            'sortBy',
-            'sortOrder',
-            'empresas',
-            'tiposDocumento',
-            'proveedores'
-        ));
+        return redirect()->route('cobranzas.documentos', $parametros);
     }
 
 
@@ -1002,7 +814,6 @@ class DocumentoFinancieroController extends Controller
 
 
     // Almacenamiento de estados relacionados (abonos y cruces)
-    // Almacenamiento de estados relacionados (abonos y cruces)
     public function storeAbono(Request $request, DocumentoFinanciero $documento)
     {
         $request->validate([
@@ -1013,7 +824,8 @@ class DocumentoFinancieroController extends Controller
             'fecha_abono.required' => 'La fecha del abono es obligatoria.',
         ]);
 
-        $saldoPendiente = $documento->saldo_pendiente;
+        // Validar que el abono no supere el saldo pendiente
+        $saldoPendiente = $documento->saldo_pendiente; // usa el accessor del modelo
 
         if ($request->monto > $saldoPendiente) {
             return back()
@@ -1021,28 +833,32 @@ class DocumentoFinancieroController extends Controller
                 ->withInput();
         }
 
+
+        // Guardar el abono
         $documento->abonos()->create([
             'monto' => $request->monto,
             'fecha_abono' => $request->fecha_abono,
         ]);
 
+
+
+        // Recalcular saldo pendiente en BD
         $documento->recalcularSaldoPendiente();
 
-        $documento->refresh();
-        $documento->sincronizarEstadosDesdeMovimientos();
-        $documento->refresh();
 
+        // Actualizar estado del documento
+        $documento->update([
+            'status' => 'Abono',
+            'fecha_estado_manual' => now(),
+        ]);
+
+        // Registrar movimiento
         MovimientoDocumento::create([
             'documento_financiero_id' => $documento->id,
             'user_id' => Auth::id(),
             'tipo_movimiento' => 'Abono registrado',
             'descripcion' => "Se registró un abono de {$request->monto} el {$request->fecha_abono}",
-            'datos_nuevos' => [
-                'monto' => $request->monto,
-                'fecha_abono' => $request->fecha_abono,
-                'nuevo_estado' => $documento->status,
-                'saldo_actual' => $documento->saldo_pendiente,
-            ],
+            'datos_nuevos' => ['monto' => $request->monto, 'fecha_abono' => $request->fecha_abono],
         ]);
 
         return back()->with('success', 'Abono registrado correctamente.');
@@ -1074,7 +890,7 @@ class DocumentoFinancieroController extends Controller
                 ->withInput();
         }
 
-        $documento->cruces()->create([
+        $cruce = $documento->cruces()->create([
             'monto' => $request->monto,
             'fecha_cruce' => $request->fecha_cruce,
             'cobranza_id' => $documento->cobranza_id,
@@ -1082,9 +898,10 @@ class DocumentoFinancieroController extends Controller
 
         $documento->recalcularSaldoPendiente();
 
-        $documento->refresh();
-        $documento->sincronizarEstadosDesdeMovimientos();
-        $documento->refresh();
+        $documento->update([
+            'status' => 'Cruce',
+            'fecha_estado_manual' => now(),
+        ]);
 
         \App\Models\MovimientoDocumento::create([
             'documento_financiero_id' => $documento->id,
@@ -1096,8 +913,6 @@ class DocumentoFinancieroController extends Controller
                 'fecha_cruce' => $request->fecha_cruce,
                 'cobranza_id' => $documento->cobranza_id,
                 'cobranza_razon_social' => $documento->cobranza?->razon_social,
-                'nuevo_estado' => $documento->status,
-                'saldo_actual' => $documento->saldo_pendiente,
             ],
         ]);
 
@@ -1155,5 +970,142 @@ class DocumentoFinancieroController extends Controller
             $nombreArchivo
         );
     }
+
+
+
+
+
+    // Métodos privados
+    private function aplicarFiltrosGeneralesListado(Builder $query, Request $request): void
+    {
+        if ($request->filled('razon_social')) {
+            $this->aplicarFiltroRazonSocial($query, $request->input('razon_social'));
+        }
+
+        if ($request->filled('rut_cliente')) {
+            $query->where('rut_cliente', 'like', "%{$request->rut_cliente}%");
+        }
+
+        if ($request->filled('folio')) {
+            $query->where('folio', 'like', "%{$request->folio}%");
+        }
+
+        if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
+            $query->whereBetween('fecha_docto', [$request->fecha_inicio, $request->fecha_fin]);
+        } elseif ($request->filled('fecha_inicio')) {
+            $query->whereDate('fecha_docto', '>=', $request->fecha_inicio);
+        } elseif ($request->filled('fecha_fin')) {
+            $query->whereDate('fecha_docto', '<=', $request->fecha_fin);
+        }
+
+        if ($request->filled('vencimiento_inicio') && $request->filled('vencimiento_fin')) {
+            $query->whereBetween('fecha_vencimiento', [$request->vencimiento_inicio, $request->vencimiento_fin]);
+        } elseif ($request->filled('vencimiento_inicio')) {
+            $query->whereDate('fecha_vencimiento', '>=', $request->vencimiento_inicio);
+        } elseif ($request->filled('vencimiento_fin')) {
+            $query->whereDate('fecha_vencimiento', '<=', $request->vencimiento_fin);
+        }
+
+        if ($request->filled('saldo_valor')) {
+            $valor = (float) str_replace(['.', ','], '', $request->saldo_valor);
+            $tipoSaldo = $request->input('saldo_tipo', 'saldo_pendiente');
+
+            if (!in_array($tipoSaldo, ['saldo_pendiente', 'monto_total'], true)) {
+                $tipoSaldo = 'saldo_pendiente';
+            }
+
+            $query->whereBetween($tipoSaldo, [$valor - 1, $valor + 1]);
+        }
+
+        if ($request->filled('estado_pago')) {
+            if ($request->estado_pago === 'Pagado') {
+                $query->where('saldo_pendiente', '<=', 0);
+            }
+
+            if ($request->estado_pago === 'Pendiente') {
+                $query->where('saldo_pendiente', '>', 0);
+            }
+        }
+    }
+
+    private function aplicarFiltrosColumnasListado(Builder $query, Request $request): void
+    {
+        if ($request->filled('cf_empresa_id')) {
+            $query->where('empresa_id', $request->input('cf_empresa_id'));
+        }
+
+        if ($request->filled('cf_tipo_documento_id')) {
+            $query->where('tipo_documento_id', $request->input('cf_tipo_documento_id'));
+        }
+
+        if ($request->filled('cf_rut_cliente')) {
+            $query->where('rut_cliente', 'like', '%' . $request->input('cf_rut_cliente') . '%');
+        }
+
+        if ($request->filled('cf_razon_social')) {
+            $this->aplicarFiltroRazonSocial($query, $request->input('cf_razon_social'));
+        }
+
+        if ($request->filled('cf_folio')) {
+            $query->where('folio', 'like', '%' . $request->input('cf_folio') . '%');
+        }
+
+        if ($request->filled('cf_fecha_docto')) {
+            $query->whereDate('fecha_docto', $request->input('cf_fecha_docto'));
+        }
+
+        if ($request->filled('cf_fecha_vencimiento')) {
+            $query->whereDate('fecha_vencimiento', $request->input('cf_fecha_vencimiento'));
+        }
+
+        if ($request->filled('cf_monto_total')) {
+            $valor = (float) str_replace(['.', ','], '', $request->input('cf_monto_total'));
+            $query->where('monto_total', $valor);
+        }
+    }
+
+    private function aplicarFiltroRazonSocial(Builder $query, string $busqueda): void
+    {
+        $busquedaNormalizada = preg_replace('/[^a-zA-Z0-9\s]/u', '', $busqueda);
+
+        $query->whereRaw("
+            REPLACE(REPLACE(REPLACE(razon_social, '.', ''), ',', ''), '  ', ' ')
+            LIKE ?
+        ", ["%{$busquedaNormalizada}%"]);
+    }
+
+    private function resolverOrdenListado(Request $request): array
+    {
+        $sortBy = $request->input('sort_by');
+        $sortOrder = strtolower($request->input('sort_order', 'asc'));
+
+        if ($sortBy === 'tipo_doc_id') {
+            $sortBy = 'tipo_documento_id';
+        }
+
+        $columnasPermitidas = [
+            'razon_social',
+            'rut_cliente',
+            'folio',
+            'fecha_docto',
+            'fecha_vencimiento',
+            'monto_total',
+            'empresa_id',
+            'tipo_documento_id',
+        ];
+
+        if (!in_array($sortBy, $columnasPermitidas, true)) {
+            return [null, 'asc'];
+        }
+
+        if (!in_array($sortOrder, ['asc', 'desc'], true)) {
+            $sortOrder = 'asc';
+        }
+
+        return [$sortBy, $sortOrder];
+    }
+
+
+
 
 }

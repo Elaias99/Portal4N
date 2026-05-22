@@ -105,10 +105,31 @@
         />
 
         <x-finanzas.top-section>
+
+
+
+
             <x-slot:filters>
                 <x-finanzas.filters-card>
+
+
                     <form method="GET" action="{{ route('cobranzas.documentos') }}">
-                        <input type="hidden" name="page" value="{{ request('page', 1) }}">
+                        @foreach(request()->only([
+                            'cf_empresa_id',
+                            'cf_tipo_documento_id',
+                            'cf_rut_cliente',
+                            'cf_razon_social',
+                            'cf_folio',
+                            'cf_fecha_docto',
+                            'cf_fecha_vencimiento',
+                            'cf_monto_total',
+                            'sort_by',
+                            'sort_order',
+                        ]) as $key => $value)
+                            @if($value !== null && $value !== '')
+                                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                            @endif
+                        @endforeach
 
                         <div class="row g-3 align-items-end">
                             
@@ -286,6 +307,9 @@
                             </a>
                         </div>
                     </form>
+
+
+                    
                 </x-finanzas.filters-card>
             </x-slot:filters>
 
