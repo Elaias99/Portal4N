@@ -289,6 +289,11 @@
                 </x-finanzas.filters-card>
             </x-slot:filters>
 
+
+
+
+
+
             <x-slot:actions>
                 <x-finanzas.mass-actions-card title="Gestión Masiva">
                     @if (Auth::id() != 375)
@@ -316,6 +321,13 @@
                         <i class="bi bi-file-earmark-arrow-down"></i>
                         <span>Exportar Excel</span>
                     </button>
+
+
+                    <a href="{{ route('factoring.index') }}"
+                        class="btn btn-outline-primary btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
+                            <i class="bi bi-building-check"></i>
+                            <span>Factoring Registrados</span>
+                    </a>
 
 
 
@@ -367,6 +379,17 @@
 
                 </x-finanzas.mass-actions-card>
             </x-slot:actions>
+
+
+
+
+
+
+
+
+
+
+
         </x-finanzas.top-section>
 
 

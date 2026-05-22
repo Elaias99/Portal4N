@@ -15,6 +15,113 @@ use Illuminate\Validation\ValidationException;
 
 class FactoryController extends Controller
 {
+
+
+
+    /**
+     * Listado informativo de registros Factoring asociados a documentos CxC.
+     * Muestra únicamente información almacenada, sin recalcular saldos ni montos.
+     */
+    public function index(Request $request)
+    {
+        $usuariosFinanzas = [1, 405, 374];
+
+        if (!in_array(Auth::id(), $usuariosFinanzas)) {
+            abort(403, 'Acceso denegado.');
+        }
+
+        $cesion       = trim((string) $request->input('cesion'));
+        $folio        = trim((string) $request->input('folio'));
+        $razonSocial  = trim((string) $request->input('razon_social'));
+        $rutCliente   = trim((string) $request->input('rut_cliente'));
+        $empresaId    = $request->input('empresa_id');
+        $bancoId      = $request->input('banco_id');
+        $fechaInicio  = $request->input('fecha_inicio');
+        $fechaFin     = $request->input('fecha_fin');
+        $perPage      = 10;
+
+        $query = FactoryRegistro::query()
+            ->with([
+                'documentoFinanciero:id,empresa_id,tipo_documento_id,folio,razon_social,rut_cliente,status,status_original',
+                'documentoFinanciero.empresa:id,Nombre',
+                'documentoFinanciero.tipoDocumento:id,nombre',
+                'banco:id,nombre',
+                'usuario:id,name',
+            ])
+
+            ->when($cesion !== '', function ($q) use ($cesion) {
+                $q->where('cesion', 'like', "%{$cesion}%");
+            })
+
+            ->when($folio !== '', function ($q) use ($folio) {
+                $q->whereHas('documentoFinanciero', function ($documentoQuery) use ($folio) {
+                    $documentoQuery->where('folio', 'like', "%{$folio}%");
+                });
+            })
+
+            ->when($razonSocial !== '', function ($q) use ($razonSocial) {
+                $q->whereHas('documentoFinanciero', function ($documentoQuery) use ($razonSocial) {
+                    $documentoQuery->where('razon_social', 'like', "%{$razonSocial}%");
+                });
+            })
+
+            ->when($rutCliente !== '', function ($q) use ($rutCliente) {
+                $q->whereHas('documentoFinanciero', function ($documentoQuery) use ($rutCliente) {
+                    $documentoQuery->where('rut_cliente', 'like', "%{$rutCliente}%");
+                });
+            })
+
+            ->when($empresaId, function ($q) use ($empresaId) {
+                $q->whereHas('documentoFinanciero', function ($documentoQuery) use ($empresaId) {
+                    $documentoQuery->where('empresa_id', $empresaId);
+                });
+            })
+
+            ->when($bancoId, function ($q) use ($bancoId) {
+                $q->where('banco_id', $bancoId);
+            })
+
+            ->when($fechaInicio, function ($q) use ($fechaInicio) {
+                $q->whereDate('fecha_factory', '>=', $fechaInicio);
+            })
+
+            ->when($fechaFin, function ($q) use ($fechaFin) {
+                $q->whereDate('fecha_factory', '<=', $fechaFin);
+            })
+
+            ->orderByDesc('fecha_factory')
+            ->orderByDesc('id');
+
+        $factories = $query
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $empresas = \App\Models\Empresa::orderBy('Nombre')
+            ->get(['id', 'Nombre']);
+
+        $bancos = Banco::orderBy('nombre')
+            ->get(['id', 'nombre']);
+
+        return view('factoring.index', compact(
+            'factories',
+            'empresas',
+            'bancos'
+        ));
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     /**
      * Registrar estado Factoring para un documento financiero CxC.
      */

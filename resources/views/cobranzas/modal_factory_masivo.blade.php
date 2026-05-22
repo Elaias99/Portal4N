@@ -59,7 +59,7 @@
                     {{-- CAMPOS GENERALES PARA APLICAR A TODOS LOS DOCUMENTOS --}}
                     <div class="card border-0 shadow-sm mb-3">
                         <div class="card-header bg-light fw-bold">
-                            Datos generales del Factoring
+                            Datos generales de la operación de Factoring
                         </div>
 
                         <div class="card-body">
@@ -67,7 +67,7 @@
 
                                 <div class="col-md-2">
                                     <label for="factory-masivo-global-cesion" class="form-label small text-muted">
-                                        Cesión
+                                        N° Cesión
                                     </label>
 
                                     <input type="text"
@@ -79,13 +79,13 @@
 
                                 <div class="col-md-3">
                                     <label for="factory-masivo-global-banco" class="form-label small text-muted">
-                                        Nombre Factoring / Banco
+                                        Entidad Factoring / Banco
                                     </label>
 
                                     <select id="factory-masivo-global-banco"
                                             class="form-select form-select-sm"
                                             required>
-                                        <option value="">Seleccione banco / factoring</option>
+                                        <option value="">Seleccione entidad / banco</option>
 
                                         @foreach(($bancos ?? collect()) as $banco)
                                             <option value="{{ $banco->id }}">
@@ -93,26 +93,26 @@
                                             </option>
                                         @endforeach
 
-                                        <option value="__otro__">Otro</option>
+                                        <option value="__otro__">Otra entidad</option>
                                     </select>
 
                                     <div id="factory-masivo-global-banco-otro-wrapper"
                                          class="mt-2"
                                          style="display:none;">
                                         <label for="factory-masivo-global-banco-otro" class="form-label small text-muted">
-                                            Nombre nuevo banco / Factoring
+                                            Nueva entidad Factoring / Banco
                                         </label>
 
                                         <input type="text"
                                                id="factory-masivo-global-banco-otro"
                                                class="form-control form-control-sm"
-                                               placeholder="Ingrese nuevo banco / Factoring">
+                                               placeholder="Ingrese nueva entidad / banco">
                                     </div>
                                 </div>
 
                                 <div class="col-md-2">
                                     <label for="factory-masivo-global-rut" class="form-label small text-muted">
-                                        RUT Factoring
+                                        RUT Entidad Factoring
                                     </label>
 
                                     <input type="text"
@@ -124,7 +124,7 @@
 
                                 <div class="col-md-3">
                                     <label for="factory-masivo-global-saldo-liquido" class="form-label small text-muted">
-                                        Saldo líquido
+                                        Monto aplicado por Factoring
                                     </label>
 
                                     <input type="number"
@@ -134,10 +134,6 @@
                                            step="1"
                                            placeholder="Ej: 850000"
                                            required>
-
-                                    <small class="text-muted">
-                                        Se copiará a todos los documentos seleccionados.
-                                    </small>
                                 </div>
 
                                 <div class="col-md-2">
@@ -152,7 +148,7 @@
 
                             <small class="text-muted d-block mt-2">
                                 Estos datos se copiarán a todos los documentos seleccionados del modal.
-                                El saldo pendiente final de cada documento será la diferencia entre su saldo actual y el saldo líquido informado.
+                                El monto aplicado por Factoring se descontará del saldo pendiente actual de cada documento.
                             </small>
                         </div>
                     </div>
@@ -164,13 +160,13 @@
                                     <th class="text-nowrap">Empresa</th>
                                     <th class="text-nowrap">Folio</th>
                                     <th class="text-nowrap">Razón Social</th>
-                                    <th class="text-nowrap">RUT</th>
-                                    <th class="text-nowrap" style="min-width: 130px;">Cesión</th>
-                                    <th class="text-end text-nowrap">Saldo Pendiente</th>
-                                    <th class="text-nowrap" style="min-width: 150px;">Saldo Líquido</th>
-                                    <th class="text-nowrap" style="min-width: 230px;">Nombre Factoring / Banco</th>
-                                    <th class="text-nowrap" style="min-width: 160px;">RUT Factoring</th>
-                                    <th class="text-nowrap" style="min-width: 150px;">Fecha Factoring</th>
+                                    <th class="text-nowrap">RUT Cliente</th>
+                                    <th class="text-nowrap" style="min-width: 130px;">N° Cesión</th>
+                                    <th class="text-end text-nowrap">Saldo pendiente actual</th>
+                                    <th class="text-nowrap" style="min-width: 185px;">Monto aplicado por Factoring</th>
+                                    <th class="text-nowrap" style="min-width: 230px;">Entidad Factoring / Banco</th>
+                                    <th class="text-nowrap" style="min-width: 175px;">RUT Entidad Factoring</th>
+                                    <th class="text-nowrap" style="min-width: 150px;">Fecha operación</th>
                                     <th class="text-center text-nowrap" style="width: 80px;">Quitar</th>
                                 </tr>
                             </thead>
@@ -189,7 +185,10 @@
                         <div class="row g-2 mb-3">
                             <div class="col-md-4">
                                 <div class="border rounded p-2 bg-light">
-                                    <span class="text-muted small d-block">Total saldo pendiente seleccionado:</span>
+                                    <span class="text-muted small d-block">
+                                        Total saldo pendiente seleccionado:
+                                    </span>
+
                                     <span id="factory-masivo-total-general" class="fw-bold text-primary">
                                         $0
                                     </span>
@@ -198,9 +197,9 @@
                         </div>
 
                         <div class="alert alert-info py-2 px-3 small mb-3">
-                            Al registrar Factoring masivo, cada documento seleccionado guardará su
-                            <strong>saldo cedido</strong>, su <strong>saldo líquido</strong> y quedará con saldo pendiente igual a la
-                            <strong>diferencia</strong> entre ambos valores.
+                            Al registrar Factoring masivo, cada documento seleccionado guardará el
+                            <strong>monto aplicado por Factoring</strong> y quedará con saldo pendiente igual a la
+                            <strong>diferencia entre su saldo pendiente actual y dicho monto</strong>.
                         </div>
 
                         <div class="d-flex justify-content-end gap-2">
@@ -257,7 +256,7 @@
                                    class="form-control form-control-sm"
                                    min="0"
                                    step="1"
-                                   placeholder="Saldo líquido"
+                                   placeholder="Monto aplicado"
                                    required>
                         </td>
 
@@ -266,7 +265,7 @@
                                     class="form-select form-select-sm js-factory-masivo-banco"
                                     data-documento-id="__ID__"
                                     required>
-                                <option value="">Seleccione banco / factoring</option>
+                                <option value="">Seleccione entidad / banco</option>
 
                                 @foreach(($bancos ?? collect()) as $banco)
                                     <option value="{{ $banco->id }}">
@@ -274,7 +273,7 @@
                                     </option>
                                 @endforeach
 
-                                <option value="__otro__">Otro</option>
+                                <option value="__otro__">Otra entidad</option>
                             </select>
 
                             <div class="mt-2 js-factory-masivo-banco-otro-wrapper"
@@ -284,7 +283,7 @@
                                        name="documentos[__ID__][banco_otro]"
                                        class="form-control form-control-sm js-factory-masivo-banco-otro"
                                        data-documento-id="__ID__"
-                                       placeholder="Ingrese nuevo banco / Factoring">
+                                       placeholder="Ingrese nueva entidad / banco">
                             </div>
                         </td>
 
