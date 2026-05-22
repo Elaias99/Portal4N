@@ -20,10 +20,34 @@
         {{-- === FILTROS + GESTIÓN MASIVA === --}}
         <x-finanzas.top-section>
 
+
+
             {{-- Sección de filtros --}}
             <x-slot:filters>
                 <x-finanzas.filters-card>
                     <form method="GET" action="{{ route('finanzas_compras.index') }}">
+
+
+                        @foreach(request()->only([
+                            'cf_empresa_id',
+                            'cf_status_original',
+                            'cf_tipo_documento_id',
+                            'cf_rut_proveedor',
+                            'cf_razon_social',
+                            'cf_folio',
+                            'cf_fecha_docto',
+                            'cf_fecha_vencimiento',
+                            'cf_monto_total',
+                            'sort_by',
+                            'sort_order',
+                        ]) as $key => $value)
+                            @if($value !== null && $value !== '')
+                                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                            @endif
+                        @endforeach
+
+
+
                         <div class="row g-3 align-items-end">
 
                             <div class="col-md-2">
@@ -222,6 +246,10 @@
                     </form>
                 </x-finanzas.filters-card>
             </x-slot:filters>
+
+
+
+
 
             {{-- Sección de acciones masivas --}}
             <x-slot:actions>
