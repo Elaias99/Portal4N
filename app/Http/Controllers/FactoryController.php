@@ -310,28 +310,38 @@ class FactoryController extends Controller
                 $statusOriginalAnterior,
                 $saldoAnterior
             ) {
+                /*
+                |--------------------------------------------------------------------------
+                | Eliminar Factoring y recalcular saldo real
+                |--------------------------------------------------------------------------
+                | Al desaparecer el registro Factory, el saldo se vuelve a calcular
+                | únicamente con los movimientos que continúan asociados al documento.
+                |--------------------------------------------------------------------------
+                */
                 $factory->delete();
 
                 $documento->update([
                     'saldo_pendiente' => null,
                 ]);
 
-                if (method_exists($documento, 'recalcularSaldoPendiente')) {
-                    $documento->recalcularSaldoPendiente();
-                }
+                $documento->recalcularSaldoPendiente();
+                $documento->refresh();
+
+                /*
+                |--------------------------------------------------------------------------
+                | Restaurar estado manual vigente desde movimientos reales
+                |--------------------------------------------------------------------------
+                | Se utiliza la misma lógica central de DocumentoFinanciero aplicada
+                | al eliminar Pago y Pronto pago. De esta forma, Factoring no aplica
+                | una prioridad propia entre Abono y Cruce.
+                |--------------------------------------------------------------------------
+                */
+                $nuevoEstadoManual = $documento->sincronizarEstadosDesdeMovimientos();
 
                 $documento->refresh();
 
-                $nuevoEstadoManual = $this->resolverEstadoManualDespuesDeEliminarFactory($documento);
-                $nuevoStatusOriginal = $this->resolverStatusOriginal($documento);
-
-                $documento->update([
-                    'status' => $nuevoEstadoManual,
-                    'status_original' => $nuevoStatusOriginal,
-                    'fecha_estado_manual' => $nuevoEstadoManual ? now() : null,
-                ]);
-
-                $documento->refresh();
+                $nuevoStatusOriginal = $documento->status_original;
+                $nuevoEstadoVisible = $nuevoEstadoManual ?? $nuevoStatusOriginal;
 
                 MovimientoDocumento::create([
                     'documento_financiero_id' => $documento->id,
@@ -346,6 +356,7 @@ class FactoryController extends Controller
                     'datos_nuevos' => [
                         'nuevo_estado_manual' => $nuevoEstadoManual,
                         'nuevo_status_original' => $nuevoStatusOriginal,
+                        'nuevo_estado_visible' => $nuevoEstadoVisible,
                         'saldo_actual' => $documento->saldo_pendiente,
                     ],
                 ]);
@@ -358,7 +369,10 @@ class FactoryController extends Controller
                 ->withInput();
         }
 
-        return back()->with('success', 'Factoring eliminado, saldo recalculado y estado actualizado correctamente.');
+        return back()->with(
+            'success',
+            'Factoring eliminado, saldo recalculado y estado actualizado correctamente.'
+        );
     }
 
     /**

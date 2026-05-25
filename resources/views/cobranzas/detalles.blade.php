@@ -135,6 +135,7 @@
                         'created_at_orden' => $prontoPago->created_at,
                         'monto' => null,
                         'prioridad' => 40,
+                        'registro' => $prontoPago,
                     ]);
                 }
 
@@ -207,6 +208,10 @@
                         - ${{ number_format($montoMovimiento, 0, ',', '.') }}
                     </p>
 
+
+
+
+
                     @if($movimiento['tipo'] === 'Pago' && $registroMovimiento && Auth::id() != 375)
                         <form action="{{ route('pagos.destroy', $registroMovimiento->id) }}"
                             method="POST"
@@ -219,7 +224,24 @@
                                 <i class="bi bi-x-circle"></i> Eliminar Pago
                             </button>
                         </form>
+
+                    @elseif($movimiento['tipo'] === 'Pronto pago' && $registroMovimiento && Auth::id() != 375)
+                        <form action="{{ route('prontopagos.destroy', $registroMovimiento->id) }}"
+                            method="POST"
+                            class="d-inline"
+                            onsubmit="return confirm('¿Seguro que deseas eliminar este pronto pago y recalcular el saldo del documento?')">
+                            @csrf
+                            @method('DELETE')
+
+                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                <i class="bi bi-x-circle"></i> Eliminar Pronto Pago
+                            </button>
+                        </form>
                     @endif
+
+
+
+
                 </div>
             @endforeach
 

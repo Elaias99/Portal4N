@@ -87,9 +87,6 @@ class CruceController extends Controller
             ->with('success', 'Cruce actualizado correctamente.');
     }
 
-
-
-
     public function destroy($id)
     {
         $cruce = Cruce::with([
@@ -244,11 +241,6 @@ class CruceController extends Controller
 
         return back()->with('success', 'Cruce eliminado correctamente.');
     }
-
-
-
-
-
 
     public function show()
     {

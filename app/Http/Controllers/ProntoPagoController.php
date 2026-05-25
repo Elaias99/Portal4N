@@ -102,68 +102,50 @@ class ProntoPagoController extends Controller
         $prontoPago = \App\Models\ProntoPago::findOrFail($id);
         $documento = $prontoPago->documentoFinanciero ?? $prontoPago->documentoCompra;
 
-        // Detectar tipo de documento
-        $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
+        $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra
+            ? 'compra'
+            : 'financiero';
 
-        // Guardar datos antes de eliminar
+        $estadoAnterior = $documento->estado ?? $documento->status;
+        $saldoAnterior = $documento->saldo_pendiente;
+
         $datosAnteriores = [
             'fecha_pronto_pago' => $prontoPago->fecha_pronto_pago,
             'user_id' => $prontoPago->user_id,
         ];
 
-        $estadoAnterior = $documento->estado ?? $documento->status;
-        $saldoAnterior = $documento->saldo_pendiente;
-
-        // Eliminar el registro
+        /*
+        |--------------------------------------------------------------------------
+        | Eliminar pronto pago y recalcular saldo real
+        |--------------------------------------------------------------------------
+        */
         $prontoPago->delete();
 
-        // Si ya no quedan pronto pagos → limpiar estado ANTES del recálculo
-        if ($documento->prontoPagos()->count() === 0) {
-            $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
-                ? 'Vencido'
-                : 'Al día';
-
-            $campoEstado = $tipoDocumento === 'compra' ? 'estado' : 'status';
-            $documento->update([
-                $campoEstado => null,
-                'status_original' => $nuevoEstado,
-                'fecha_estado_manual' => null,
-            ]);
-        } else {
-            $nuevoEstado = 'Pronto pago';
-        }
-
-        // Liberar saldo_pendiente para recalcular correctamente
-        $documento->update(['saldo_pendiente' => null]);
-
-        // Recalcular saldo pendiente
         if (method_exists($documento, 'recalcularSaldoPendiente')) {
             $documento->recalcularSaldoPendiente();
         }
 
-        // Refrescar instancia
         $documento->refresh();
 
-
-        // Si es documento de compra y tiene NC referenciadas,
-        // resincronizar para restaurar estado Abono/Pago por referencia.
-        if (
-            $tipoDocumento === 'compra' &&
-            method_exists($documento, 'referenciados') &&
-            $documento->referenciados()->where('tipo_documento_id', 61)->exists()
-        ) {
-            $syncMovimientoReferencia = app(\App\Services\SincronizarMovimientoReferenciaCompraService::class);
-            $syncMovimientoReferencia->sincronizar($documento);
-
-            $documento->refresh();
-
-            $nuevoEstado = $documento->estado
-                ?? $documento->status_original
-                ?? $nuevoEstado;
-        }
-
-        // Registrar movimiento detallado
+        /*
+        |--------------------------------------------------------------------------
+        | CxC / Ventas
+        |--------------------------------------------------------------------------
+        | Después de eliminar Pronto pago, el documento debe recuperar el estado
+        | manual vigente según los movimientos reales que permanezcan registrados:
+        | Pago, Factory, Cruce, Abono u otro estado manual respaldado.
+        |--------------------------------------------------------------------------
+        */
         if ($tipoDocumento === 'financiero') {
+            if (method_exists($documento, 'sincronizarEstadosDesdeMovimientos')) {
+                $nuevoEstadoManual = $documento->sincronizarEstadosDesdeMovimientos();
+                $documento->refresh();
+
+                $nuevoEstado = $nuevoEstadoManual ?? $documento->status_original;
+            } else {
+                $nuevoEstado = $documento->status ?? $documento->status_original;
+            }
+
             \App\Models\MovimientoDocumento::create([
                 'documento_financiero_id' => $documento->id,
                 'user_id' => Auth::id(),
@@ -178,30 +160,101 @@ class ProntoPagoController extends Controller
                     'saldo_actual' => $documento->saldo_pendiente,
                 ],
             ]);
-        } elseif ($tipoDocumento === 'compra') {
-            \App\Models\MovimientoCompra::create([
-                'documento_compra_id' => $documento->id,
-                'usuario_id' => Auth::id(),
-                'estado_anterior' => $estadoAnterior,
-                'nuevo_estado' => $nuevoEstado,
-                'fecha_cambio' => now(),
-                'tipo_movimiento' => 'Eliminación de pronto pago',
-                'descripcion' => "Se eliminó un pronto pago registrado el {$datosAnteriores['fecha_pronto_pago']} correspondiente al documento de compra folio {$documento->folio}.",
-                'datos_anteriores' => array_merge($datosAnteriores, [
-                    'estado_anterior' => $estadoAnterior,
-                    'saldo_anterior' => $saldoAnterior,
-                ]),
-                'datos_nuevos' => [
-                    'nuevo_estado' => $nuevoEstado,
-                    'saldo_actual' => $documento->saldo_pendiente,
-                ],
-            ]);
+
+            return redirect()
+                ->route('documentos.detalles', $documento->id)
+                ->with('success', 'Pronto pago eliminado, saldo recalculado y estado actualizado correctamente.');
         }
 
-        // Redirección final
-        $route = $tipoDocumento === 'compra' ? 'finanzas_compras.show' : 'documentos.detalles';
+        /*
+        |--------------------------------------------------------------------------
+        | CxP / Compras: resincronizar referencias NC cuando correspondan
+        |--------------------------------------------------------------------------
+        | Si existen Notas de Crédito referenciadas, el servicio mantiene o
+        | reconstruye el Abono/Pago automático que corresponda por referencia.
+        |--------------------------------------------------------------------------
+        */
+        if (
+            method_exists($documento, 'referenciados') &&
+            $documento->referenciados()->where('tipo_documento_id', 61)->exists()
+        ) {
+            $syncMovimientoReferencia = app(\App\Services\SincronizarMovimientoReferenciaCompraService::class);
+
+            $syncMovimientoReferencia->sincronizar($documento);
+
+            $documento->refresh();
+            $documento->recalcularSaldoPendiente();
+            $documento->refresh();
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | CxP / Compras: resolver estado automático actual
+        |--------------------------------------------------------------------------
+        | Se mantiene la regla existente de Compras: documentos sin fecha de
+        | vencimiento pueden conservar status_original = Pendiente.
+        |--------------------------------------------------------------------------
+        */
+        $nuevoStatusOriginal = 'Pendiente';
+
+        if ($documento->fecha_vencimiento) {
+            $nuevoStatusOriginal = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
+                ? 'Vencido'
+                : 'Al día';
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | CxP / Compras: recuperar estado vigente después de eliminar Pronto pago
+        |--------------------------------------------------------------------------
+        | Se mantiene el mismo criterio actualmente utilizado al eliminar Pago.
+        |--------------------------------------------------------------------------
+        */
+        if (
+            $documento->pagosReales()->exists() ||
+            $documento->pagosPorReferencia()->exists()
+        ) {
+            $nuevoEstadoManual = 'Pago';
+        } elseif ($documento->prontoPagos()->exists()) {
+            $nuevoEstadoManual = 'Pronto pago';
+        } elseif ($documento->cruces()->exists()) {
+            $nuevoEstadoManual = 'Cruce';
+        } elseif ($documento->abonos()->exists()) {
+            $nuevoEstadoManual = 'Abono';
+        } else {
+            $nuevoEstadoManual = null;
+        }
+
+        $documento->update([
+            'estado' => $nuevoEstadoManual,
+            'status_original' => $nuevoStatusOriginal,
+            'fecha_estado_manual' => $nuevoEstadoManual ? now() : null,
+        ]);
+
+        $documento->refresh();
+
+        $nuevoEstado = $nuevoEstadoManual ?? $nuevoStatusOriginal;
+
+        \App\Models\MovimientoCompra::create([
+            'documento_compra_id' => $documento->id,
+            'usuario_id' => Auth::id(),
+            'estado_anterior' => $estadoAnterior,
+            'nuevo_estado' => $nuevoEstado,
+            'fecha_cambio' => now(),
+            'tipo_movimiento' => 'Eliminación de pronto pago',
+            'descripcion' => "Se eliminó un pronto pago registrado el {$datosAnteriores['fecha_pronto_pago']} correspondiente al documento de compra folio {$documento->folio}.",
+            'datos_anteriores' => array_merge($datosAnteriores, [
+                'estado_anterior' => $estadoAnterior,
+                'saldo_anterior' => $saldoAnterior,
+            ]),
+            'datos_nuevos' => [
+                'nuevo_estado' => $nuevoEstado,
+                'saldo_actual' => $documento->saldo_pendiente,
+            ],
+        ]);
+
         return redirect()
-            ->route($route, $documento->id)
+            ->route('finanzas_compras.show', $documento->id)
             ->with('success', 'Pronto pago eliminado, movimiento registrado y estado actualizado correctamente.');
     }
 

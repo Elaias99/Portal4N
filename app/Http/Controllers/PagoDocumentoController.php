@@ -91,9 +91,6 @@ class PagoDocumentoController extends Controller
     }
 
 
-
-
-
     public function destroy($id)
     {
         $pago = \App\Models\Pago::findOrFail($id);
@@ -276,11 +273,6 @@ class PagoDocumentoController extends Controller
             ->route('finanzas_compras.show', $documento->id)
             ->with('success', 'Pago eliminado, movimiento registrado y estado actualizado correctamente.');
     }
-
-
-
-
-
 
 
     public function storeMasivo(Request $request)

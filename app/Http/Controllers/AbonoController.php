@@ -8,16 +8,9 @@ use Illuminate\Support\Facades\Auth;
 
 class AbonoController extends Controller
 {
-
-
-
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // El método que guarda los abonos se encuentra en el controlador DocumentoFinancieroController, llamado storeAbono //
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-
     //
     public function index(DocumentoFinanciero $documento)
     {
@@ -31,8 +24,7 @@ class AbonoController extends Controller
         return view('abonos.index', compact('documento', 'abonos', 'totalAbonado', 'saldoPendiente'));
     }
 
-
-        /**
+    /**
      * Mostrar formulario de edición de un abono específico.
      */
     public function edit($id)
@@ -81,8 +73,6 @@ class AbonoController extends Controller
             ->route('abonos.index', $abono->documento_financiero_id)
             ->with('success', 'Abono actualizado correctamente.');
     }
-
-    
 
     /**
      * Eliminar un abono específico.
@@ -185,10 +175,6 @@ class AbonoController extends Controller
             ->with('success', 'Abono eliminado, movimiento registrado y estado actualizado correctamente.');
     }
 
-
-
-
-
     public function show()
     {
         // Traer todos los abonos con su documento asociado
@@ -202,10 +188,6 @@ class AbonoController extends Controller
 
         return view('abonos.show', compact('abonos', 'totalAbonado', 'cantidadAbonos'));
     }
-
-
-
-
 
 
 }
