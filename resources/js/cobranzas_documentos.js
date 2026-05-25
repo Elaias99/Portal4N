@@ -9,11 +9,10 @@ function toggleFechaEstado(select, id) {
             inputFecha.style.display = 'none';
             inputFecha.value = '';
         }
+
         if (hiddenFecha) hiddenFecha.value = '';
     }
 }
-
-
 
 document.addEventListener('DOMContentLoaded', () => {
     // =====================================================
@@ -360,6 +359,52 @@ document.addEventListener('DOMContentLoaded', () => {
         return true;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Validar valores finales por fila
+    |--------------------------------------------------------------------------
+    | Esta validación usa los montos que finalmente quedaron en cada documento,
+    | incluyendo ajustes manuales posteriores al botón "Aplicar a todos".
+    |--------------------------------------------------------------------------
+    */
+    function validarFilasFactoryMasivo() {
+        const seleccion = getSeleccionFactory();
+        const documentosConMontoInvalido = [];
+
+        document
+            .querySelectorAll('#factory-masivo-documentos-seleccionados tr[data-documento-id]')
+            .forEach(row => {
+                const documentoId = row.dataset.documentoId;
+                const documento = seleccion[documentoId];
+
+                const inputSaldoLiquido = row.querySelector(
+                    '[name="documentos[' + documentoId + '][saldo_liquido]"]'
+                );
+
+                if (!documento || !inputSaldoLiquido || inputSaldoLiquido.value === '') {
+                    return;
+                }
+
+                const saldoPendiente = Number(documento.saldo || 0);
+                const saldoLiquido = Number(inputSaldoLiquido.value || 0);
+
+                if (saldoLiquido > saldoPendiente) {
+                    documentosConMontoInvalido.push(documento.folio || documentoId);
+                }
+            });
+
+        if (documentosConMontoInvalido.length > 0) {
+            alert(
+                'El monto aplicado por Factoring no puede ser mayor al saldo pendiente actual. ' +
+                'Revisa los folios: ' + documentosConMontoInvalido.join(', ')
+            );
+
+            return false;
+        }
+
+        return true;
+    }
+
     // Restaurar checkboxes al cargar/paginar
     const seleccionInicial = getSeleccionFactory();
 
@@ -444,7 +489,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Evitar enviar si no hay selección
+    /*
+    |--------------------------------------------------------------------------
+    | Enviar Factoring masivo sin sobrescribir ajustes individuales
+    |--------------------------------------------------------------------------
+    | Los datos generales solo se copian al presionar "Aplicar a todos".
+    | Al enviar, se validan los valores finales de cada fila tal como el
+    | usuario los dejó.
+    |--------------------------------------------------------------------------
+    */
     formFactoryMasivo?.addEventListener('submit', function (event) {
         const seleccion = getSeleccionFactory();
 
@@ -456,14 +509,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         actualizarTotalFactoryMasivo();
 
-        const aplicado = aplicarDatosGlobalesFactoryMasivo();
-
-        if (!aplicado) {
+        if (typeof this.reportValidity === 'function' && !this.reportValidity()) {
             event.preventDefault();
             return;
         }
 
-        if (typeof this.reportValidity === 'function' && !this.reportValidity()) {
+        if (!validarFilasFactoryMasivo()) {
             event.preventDefault();
             return;
         }
