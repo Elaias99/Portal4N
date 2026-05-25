@@ -123,6 +123,7 @@
                         'created_at_orden' => $pago->created_at,
                         'monto' => null,
                         'prioridad' => 30,
+                        'registro' => $pago,
                     ]);
                 }
 
@@ -196,13 +197,29 @@
                     $fechaMovimiento = $movimiento['fecha']
                         ? \Carbon\Carbon::parse($movimiento['fecha'])->format('d-m-Y')
                         : '-';
+
+                    $registroMovimiento = $movimiento['registro'] ?? null;
                 @endphp
 
-                <div class="mb-2">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
                     <p class="mb-1">
                         <strong>{{ $movimiento['tipo'] }} registrado el {{ $fechaMovimiento }}:</strong>
                         - ${{ number_format($montoMovimiento, 0, ',', '.') }}
                     </p>
+
+                    @if($movimiento['tipo'] === 'Pago' && $registroMovimiento && Auth::id() != 375)
+                        <form action="{{ route('pagos.destroy', $registroMovimiento->id) }}"
+                            method="POST"
+                            class="d-inline"
+                            onsubmit="return confirm('¿Seguro que deseas eliminar este pago y recalcular el saldo del documento?')">
+                            @csrf
+                            @method('DELETE')
+
+                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                <i class="bi bi-x-circle"></i> Eliminar Pago
+                            </button>
+                        </form>
+                    @endif
                 </div>
             @endforeach
 

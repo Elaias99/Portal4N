@@ -92,20 +92,36 @@ class PagoDocumentoController extends Controller
 
 
 
+
+
     public function destroy($id)
     {
         $pago = \App\Models\Pago::findOrFail($id);
         $documento = $pago->documentoFinanciero ?? $pago->documentoCompra;
 
-        $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra ? 'compra' : 'financiero';
+        $tipoDocumento = $documento instanceof \App\Models\DocumentoCompra
+            ? 'compra'
+            : 'financiero';
 
-        // Bloquear eliminación manual de pagos generados por referencia
+        /*
+        |--------------------------------------------------------------------------
+        | Protección de pagos automáticos por referencia en Compras
+        |--------------------------------------------------------------------------
+        | Estos pagos no deben eliminarse manualmente. Para revertirlos,
+        | corresponde quitar la referencia de la Nota de Crédito.
+        |--------------------------------------------------------------------------
+        */
         if ($pago->origen === 'referencia_nc') {
-            $route = $tipoDocumento === 'compra' ? 'finanzas_compras.show' : 'documentos.detalles';
+            $route = $tipoDocumento === 'compra'
+                ? 'finanzas_compras.show'
+                : 'documentos.detalles';
 
             return redirect()
                 ->route($route, $documento->id)
-                ->with('warning', 'Este pago fue generado automáticamente por una referencia. Para revertirlo, quite la referencia asociada.');
+                ->with(
+                    'warning',
+                    'Este pago fue generado automáticamente por una referencia. Para revertirlo, quite la referencia asociada.'
+                );
         }
 
         $estadoAnterior = $documento->estado ?? $documento->status;
@@ -117,88 +133,42 @@ class PagoDocumentoController extends Controller
             'origen' => $pago->origen,
         ];
 
-        // Eliminar pago
+        /*
+        |--------------------------------------------------------------------------
+        | Eliminar pago y recalcular saldo real
+        |--------------------------------------------------------------------------
+        */
         $pago->delete();
 
-        // Recalcular saldo
         if (method_exists($documento, 'recalcularSaldoPendiente')) {
             $documento->recalcularSaldoPendiente();
         }
 
-        // Determinar nuevo estado
-        if ($documento->pagos()->count() === 0) {
-            $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
-                ? 'Vencido'
-                : 'Al día';
+        $documento->refresh();
 
-            $campoEstado = $tipoDocumento === 'compra' ? 'estado' : 'status';
-            $documento->update([
-                $campoEstado => null,
-                'status_original' => $nuevoEstado,
-                'fecha_estado_manual' => null,
-            ]);
-        } else {
-            $nuevoEstado = 'Pago';
-        }
-
-
-        // Determinar nuevo estado
-        if ($documento->pagos()->count() === 0) {
-            $nuevoEstado = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
-                ? 'Vencido'
-                : 'Al día';
-
-            $campoEstado = $tipoDocumento === 'compra' ? 'estado' : 'status';
-            $documento->update([
-                $campoEstado => null,
-                'status_original' => $nuevoEstado,
-                'fecha_estado_manual' => null,
-            ]);
-        } else {
-            $nuevoEstado = 'Pago';
-        }
-
-        // Si es documento de compra y tiene NC referenciadas,
-        // resincronizar para restaurar estado Abono/Pago por referencia.
-        if (
-            $tipoDocumento === 'compra' &&
-            method_exists($documento, 'referenciados') &&
-            $documento->referenciados()->where('tipo_documento_id', 61)->exists()
-        ) {
-            $documento->refresh();
-
-            $syncMovimientoReferencia = app(\App\Services\SincronizarMovimientoReferenciaCompraService::class);
-            $syncMovimientoReferencia->sincronizar($documento);
-
-            $documento->refresh();
-
-            $nuevoEstado = $documento->estado
-                ?? $documento->status_original
-                ?? $nuevoEstado;
-        }
-
-        // Registrar movimiento
+        /*
+        |--------------------------------------------------------------------------
+        | CxC / Ventas
+        |--------------------------------------------------------------------------
+        | Se utiliza la sincronización propia del modelo financiero para recuperar
+        | el movimiento manual vigente: Abono, Cruce, Factory, Pronto pago o Pago.
+        |--------------------------------------------------------------------------
+        */
         if ($tipoDocumento === 'financiero') {
+            if (method_exists($documento, 'sincronizarEstadosDesdeMovimientos')) {
+                $nuevoEstadoManual = $documento->sincronizarEstadosDesdeMovimientos();
+                $documento->refresh();
+
+                $nuevoEstado = $nuevoEstadoManual ?? $documento->status_original;
+            } else {
+                $nuevoEstado = $documento->status ?? $documento->status_original;
+            }
+
             \App\Models\MovimientoDocumento::create([
                 'documento_financiero_id' => $documento->id,
                 'user_id' => Auth::id(),
                 'tipo_movimiento' => 'Eliminación de pago',
                 'descripcion' => "Se eliminó un pago registrado el {$datosAnteriores['fecha_pago']} correspondiente al documento folio {$documento->folio}.",
-                'datos_anteriores' => $datosAnteriores,
-                'datos_nuevos' => [
-                    'nuevo_estado' => $nuevoEstado,
-                    'saldo_actual' => $documento->saldo_pendiente,
-                ],
-            ]);
-        } else {
-            \App\Models\MovimientoCompra::create([
-                'documento_compra_id' => $documento->id,
-                'usuario_id' => Auth::id(),
-                'estado_anterior' => $estadoAnterior,
-                'nuevo_estado' => $nuevoEstado,
-                'fecha_cambio' => now(),
-                'tipo_movimiento' => 'Eliminación de pago',
-                'descripcion' => "Se eliminó un pago registrado el {$datosAnteriores['fecha_pago']} correspondiente al documento de compra folio {$documento->folio}.",
                 'datos_anteriores' => array_merge($datosAnteriores, [
                     'estado_anterior' => $estadoAnterior,
                     'saldo_anterior' => $saldoAnterior,
@@ -208,18 +178,104 @@ class PagoDocumentoController extends Controller
                     'saldo_actual' => $documento->saldo_pendiente,
                 ],
             ]);
+
+            return redirect()
+                ->route('documentos.detalles', $documento->id)
+                ->with('success', 'Pago eliminado, saldo recalculado y estado actualizado correctamente.');
         }
 
-        // Redirección
-        $route = $tipoDocumento === 'compra' ? 'finanzas_compras.show' : 'documentos.detalles';
+        /*
+        |--------------------------------------------------------------------------
+        | CxP / Compras: resincronizar referencias NC cuando correspondan
+        |--------------------------------------------------------------------------
+        | Si la factura tiene Notas de Crédito referenciadas, primero se permite
+        | que el servicio reconstruya los abonos o pagos automáticos aplicables.
+        |--------------------------------------------------------------------------
+        */
+        if (
+            method_exists($documento, 'referenciados') &&
+            $documento->referenciados()->where('tipo_documento_id', 61)->exists()
+        ) {
+            $syncMovimientoReferencia = app(\App\Services\SincronizarMovimientoReferenciaCompraService::class);
+
+            $syncMovimientoReferencia->sincronizar($documento);
+
+            $documento->refresh();
+            $documento->recalcularSaldoPendiente();
+            $documento->refresh();
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | CxP / Compras: resolver estado automático actual
+        |--------------------------------------------------------------------------
+        | Se respeta que documentos sin vencimiento pueden conservar Pendiente,
+        | sin aplicar la regla estricta definida exclusivamente para Ventas.
+        |--------------------------------------------------------------------------
+        */
+        $nuevoStatusOriginal = 'Pendiente';
+
+        if ($documento->fecha_vencimiento) {
+            $nuevoStatusOriginal = now()->gt(\Carbon\Carbon::parse($documento->fecha_vencimiento))
+                ? 'Vencido'
+                : 'Al día';
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | CxP / Compras: recuperar el movimiento manual vigente
+        |--------------------------------------------------------------------------
+        | Prioridad coherente con el cierre del documento:
+        | Pago > Pronto pago > Cruce > Abono > estado automático.
+        |--------------------------------------------------------------------------
+        */
+        if (
+            $documento->pagosReales()->exists() ||
+            $documento->pagosPorReferencia()->exists()
+        ) {
+            $nuevoEstadoManual = 'Pago';
+        } elseif ($documento->prontoPagos()->exists()) {
+            $nuevoEstadoManual = 'Pronto pago';
+        } elseif ($documento->cruces()->exists()) {
+            $nuevoEstadoManual = 'Cruce';
+        } elseif ($documento->abonos()->exists()) {
+            $nuevoEstadoManual = 'Abono';
+        } else {
+            $nuevoEstadoManual = null;
+        }
+
+        $documento->update([
+            'estado' => $nuevoEstadoManual,
+            'status_original' => $nuevoStatusOriginal,
+            'fecha_estado_manual' => $nuevoEstadoManual ? now() : null,
+        ]);
+
+        $documento->refresh();
+
+        $nuevoEstado = $nuevoEstadoManual ?? $nuevoStatusOriginal;
+
+        \App\Models\MovimientoCompra::create([
+            'documento_compra_id' => $documento->id,
+            'usuario_id' => Auth::id(),
+            'estado_anterior' => $estadoAnterior,
+            'nuevo_estado' => $nuevoEstado,
+            'fecha_cambio' => now(),
+            'tipo_movimiento' => 'Eliminación de pago',
+            'descripcion' => "Se eliminó un pago registrado el {$datosAnteriores['fecha_pago']} correspondiente al documento de compra folio {$documento->folio}.",
+            'datos_anteriores' => array_merge($datosAnteriores, [
+                'estado_anterior' => $estadoAnterior,
+                'saldo_anterior' => $saldoAnterior,
+            ]),
+            'datos_nuevos' => [
+                'nuevo_estado' => $nuevoEstado,
+                'saldo_actual' => $documento->saldo_pendiente,
+            ],
+        ]);
+
         return redirect()
-            ->route($route, $documento->id)
+            ->route('finanzas_compras.show', $documento->id)
             ->with('success', 'Pago eliminado, movimiento registrado y estado actualizado correctamente.');
     }
-
-
-
-
 
 
 
@@ -438,10 +494,6 @@ class PagoDocumentoController extends Controller
     }
 
 
-
-
-
-
     public function exportPagosMasivos()
     {
         $ids = session('pagos_masivos_export');
@@ -609,16 +661,6 @@ class PagoDocumentoController extends Controller
             'message'    => "Pagos registrados correctamente. Procesados: {$procesados}. Omitidos: {$omitidos}.",
         ]);
     }
-
-
-
-
-
-
-
-
-
-
 
     public function buscarDocumentos(Request $request)
     {

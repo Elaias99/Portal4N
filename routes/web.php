@@ -396,7 +396,7 @@ Route::get('/cruces/show', [App\Http\Controllers\CruceController::class, 'show']
 use App\Http\Controllers\FactoryController;
 
 
-Route::get('/cobranzas/factoring', [FactoryController::class, 'index'])
+Route::get('/factoring', [FactoryController::class, 'index'])
     ->name('factoring.index');
 
 Route::post('/documentos/{documento}/factory', [FactoryController::class, 'store'])

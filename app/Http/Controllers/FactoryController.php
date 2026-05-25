@@ -111,29 +111,11 @@ class FactoryController extends Controller
 
 
 
-
-
-
-
-
-
-
-
-
-
-
     /**
      * Registrar estado Factoring para un documento financiero CxC.
      */
     public function store(Request $request, DocumentoFinanciero $documento)
     {
-        Log::info('FACTORY STORE INDIVIDUAL - ENTRÓ AL MÉTODO', [
-            'documento_id' => $documento->id,
-            'folio' => $documento->folio,
-            'status_actual' => $documento->status,
-            'saldo_pendiente_actual' => $documento->saldo_pendiente,
-            'request_all' => $request->all(),
-        ]);
 
         $validated = $request->validate([
             'banco_id' => 'required|string|max:255',
@@ -157,10 +139,6 @@ class FactoryController extends Controller
                 ->withInput();
         }
 
-        Log::info('FACTORY STORE INDIVIDUAL - VALIDACIÓN OK', [
-            'documento_id' => $documento->id,
-            'validated' => $validated,
-        ]);
 
         if ((int) $documento->tipo_documento_id === 56) {
             return back()
@@ -224,14 +202,6 @@ class FactoryController extends Controller
                 $statusOriginalAnterior,
                 $bancoSeleccionado
             ) {
-                Log::info('FACTORY STORE INDIVIDUAL - ANTES DE CREAR FACTORING', [
-                    'documento_id' => $documento->id,
-                    'saldo_anterior' => $saldoAnterior,
-                    'saldo_liquido' => $saldoLiquido,
-                    'diferencia' => $diferencia,
-                    'banco_id' => $bancoSeleccionado->id,
-                    'banco_nombre' => $bancoSeleccionado->nombre,
-                ]);
 
                 $factory = FactoryRegistro::create([
                     'documento_financiero_id' => $documento->id,
@@ -253,12 +223,6 @@ class FactoryController extends Controller
 
                 $documento->refresh();
 
-                Log::info('FACTORY STORE INDIVIDUAL - DOCUMENTO ACTUALIZADO', [
-                    'documento_id' => $documento->id,
-                    'status_nuevo' => $documento->status,
-                    'saldo_pendiente_nuevo' => $documento->saldo_pendiente,
-                    'factory_id' => $factory->id ?? null,
-                ]);
 
                 MovimientoDocumento::create([
                     'documento_financiero_id' => $documento->id,
