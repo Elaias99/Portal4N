@@ -20,26 +20,75 @@ class FactoryController extends Controller
 
     /**
      * Listado informativo de registros Factoring asociados a documentos CxC.
-     * Muestra únicamente información almacenada, sin recalcular saldos ni montos.
+     *
+     * Presenta la información almacenada agrupada por mes y por operación
+     * Factoring, sin modificar ni recalcular el saldo pendiente de los documentos.
+     *
+     * La operación se identifica, con la estructura actualmente disponible, por:
+     * fecha_factory + cesion + banco_id.
      */
     public function index(Request $request)
     {
         $usuariosFinanzas = [1, 405, 374];
 
-        if (!in_array(Auth::id(), $usuariosFinanzas)) {
+        if (!in_array(Auth::id(), $usuariosFinanzas, true)) {
             abort(403, 'Acceso denegado.');
         }
 
-        $cesion       = trim((string) $request->input('cesion'));
-        $folio        = trim((string) $request->input('folio'));
-        $razonSocial  = trim((string) $request->input('razon_social'));
-        $rutCliente   = trim((string) $request->input('rut_cliente'));
-        $empresaId    = $request->input('empresa_id');
-        $bancoId      = $request->input('banco_id');
-        $fechaInicio  = $request->input('fecha_inicio');
-        $fechaFin     = $request->input('fecha_fin');
-        $perPage      = 10;
+        $cesion        = trim((string) $request->input('cesion'));
+        $folio         = trim((string) $request->input('folio'));
+        $razonSocial   = trim((string) $request->input('razon_social'));
+        $rutCliente    = trim((string) $request->input('rut_cliente'));
+        $empresaId     = $request->input('empresa_id');
+        $bancoId       = $request->input('banco_id');
+        $mesOperacion  = trim((string) $request->input('mes_operacion'));
 
+        /*
+        |--------------------------------------------------------------------------
+        | Compatibilidad temporal con los filtros anteriores
+        |--------------------------------------------------------------------------
+        | Mientras se reemplaza la vista, se mantienen fecha_inicio y fecha_fin.
+        | Cuando existe mes_operacion válido, este tiene prioridad.
+        |--------------------------------------------------------------------------
+        */
+        $fechaInicio = $request->input('fecha_inicio');
+        $fechaFin    = $request->input('fecha_fin');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Paginación por operación completa
+        |--------------------------------------------------------------------------
+        | No se pagina por fila Factory porque eso podría dividir una cesión con
+        | varios documentos entre páginas y dejar su resumen incompleto.
+        |--------------------------------------------------------------------------
+        */
+        $perPage = 10;
+
+        $inicioMes = null;
+        $finMes = null;
+
+        if (
+            $mesOperacion !== '' &&
+            preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $mesOperacion)
+        ) {
+            $mes = \Carbon\Carbon::createFromFormat(
+                'Y-m-d',
+                $mesOperacion . '-01'
+            )->startOfMonth();
+
+            $inicioMes = $mes->toDateString();
+            $finMes = $mes->copy()->endOfMonth()->toDateString();
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Consulta base
+        |--------------------------------------------------------------------------
+        | Aquí solo se aplican filtros propios de la operación. Los filtros de
+        | documento se aplican después de agrupar, para que al coincidir un folio
+        | se siga mostrando la operación completa y no un resumen parcial.
+        |--------------------------------------------------------------------------
+        */
         $query = FactoryRegistro::query()
             ->with([
                 'documentoFinanciero:id,empresa_id,tipo_documento_id,folio,razon_social,rut_cliente,status,status_original',
@@ -53,48 +102,281 @@ class FactoryController extends Controller
                 $q->where('cesion', 'like', "%{$cesion}%");
             })
 
-            ->when($folio !== '', function ($q) use ($folio) {
-                $q->whereHas('documentoFinanciero', function ($documentoQuery) use ($folio) {
-                    $documentoQuery->where('folio', 'like', "%{$folio}%");
-                });
-            })
-
-            ->when($razonSocial !== '', function ($q) use ($razonSocial) {
-                $q->whereHas('documentoFinanciero', function ($documentoQuery) use ($razonSocial) {
-                    $documentoQuery->where('razon_social', 'like', "%{$razonSocial}%");
-                });
-            })
-
-            ->when($rutCliente !== '', function ($q) use ($rutCliente) {
-                $q->whereHas('documentoFinanciero', function ($documentoQuery) use ($rutCliente) {
-                    $documentoQuery->where('rut_cliente', 'like', "%{$rutCliente}%");
-                });
-            })
-
-            ->when($empresaId, function ($q) use ($empresaId) {
-                $q->whereHas('documentoFinanciero', function ($documentoQuery) use ($empresaId) {
-                    $documentoQuery->where('empresa_id', $empresaId);
-                });
-            })
-
             ->when($bancoId, function ($q) use ($bancoId) {
                 $q->where('banco_id', $bancoId);
             })
 
-            ->when($fechaInicio, function ($q) use ($fechaInicio) {
+            ->when($inicioMes && $finMes, function ($q) use ($inicioMes, $finMes) {
+                $q->whereBetween('fecha_factory', [$inicioMes, $finMes]);
+            })
+
+            ->when(!$inicioMes && $fechaInicio, function ($q) use ($fechaInicio) {
                 $q->whereDate('fecha_factory', '>=', $fechaInicio);
             })
 
-            ->when($fechaFin, function ($q) use ($fechaFin) {
+            ->when(!$inicioMes && $fechaFin, function ($q) use ($fechaFin) {
                 $q->whereDate('fecha_factory', '<=', $fechaFin);
             })
 
             ->orderByDesc('fecha_factory')
             ->orderByDesc('id');
 
-        $factories = $query
-            ->paginate($perPage)
-            ->withQueryString();
+        $registros = $query->get();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Agrupar registros por operación Factoring
+        |--------------------------------------------------------------------------
+        | comision_total y monto_a_recibir se encuentran repetidos en las filas
+        | de una misma carga masiva, por lo que se toman una sola vez.
+        |
+        | monto, saldo_liquido, monto_no_anticipado y diferencia_precio sí son
+        | importes propios de cada documento y se consolidan mediante suma.
+        |--------------------------------------------------------------------------
+        */
+        $operaciones = $registros
+            ->groupBy(function ($factory) {
+                $fechaOperacion = $factory->fecha_factory
+                    ? $factory->fecha_factory->format('Y-m-d')
+                    : 'sin-fecha';
+
+                return implode('|', [
+                    $fechaOperacion,
+                    (string) ($factory->cesion ?? 'sin-cesion'),
+                    (string) ($factory->banco_id ?? 'sin-banco'),
+                ]);
+            })
+            ->map(function ($documentosOperacion, $claveOperacion) {
+                $factoryBase = $documentosOperacion->first();
+
+                $fechaOperacion = $factoryBase->fecha_factory;
+
+                $mesClave = $fechaOperacion
+                    ? $fechaOperacion->format('Y-m')
+                    : 'sin-fecha';
+
+                $mesEtiqueta = $fechaOperacion
+                    ? ucfirst(
+                        $fechaOperacion
+                            ->copy()
+                            ->locale('es')
+                            ->translatedFormat('F Y')
+                    )
+                    : 'Sin fecha de operación';
+
+                $montoDocumentos = (int) $documentosOperacion->sum(function ($factory) {
+                    return (int) ($factory->monto ?? 0);
+                });
+
+                /*
+                |--------------------------------------------------------------------------
+                | En el resumen del comprobante:
+                | Monto Anticipado = suma de saldo_liquido informado por documento.
+                |--------------------------------------------------------------------------
+                */
+                $montoAnticipado = (int) $documentosOperacion->sum(function ($factory) {
+                    return (int) ($factory->saldo_liquido ?? 0);
+                });
+
+                $montoNoAnticipado = (int) $documentosOperacion->sum(function ($factory) {
+                    return (int) ($factory->monto_no_anticipado ?? 0);
+                });
+
+                $diferenciaPrecio = (int) $documentosOperacion->sum(function ($factory) {
+                    return (int) ($factory->diferencia_precio ?? 0);
+                });
+
+                /*
+                |--------------------------------------------------------------------------
+                | Valores de presentación del resumen tipo comprobante
+                |--------------------------------------------------------------------------
+                | No intervienen en saldo_pendiente; solo consolidan información
+                | persistida para mostrar la operación.
+                |--------------------------------------------------------------------------
+                */
+                $montoLiquido = $montoAnticipado + $diferenciaPrecio;
+                $precioCompra = $montoLiquido;
+
+                $comisionesRegistradas = $documentosOperacion
+                    ->pluck('comision_total')
+                    ->filter(function ($valor) {
+                        return $valor !== null;
+                    })
+                    ->unique()
+                    ->values();
+
+                $montosARecibirRegistrados = $documentosOperacion
+                    ->pluck('monto_a_recibir')
+                    ->filter(function ($valor) {
+                        return $valor !== null;
+                    })
+                    ->unique()
+                    ->values();
+
+                return [
+                    'clave_operacion' => $claveOperacion,
+                    'mes_clave' => $mesClave,
+                    'mes_etiqueta' => $mesEtiqueta,
+
+                    'cesion' => $factoryBase->cesion,
+                    'fecha_factory' => $fechaOperacion,
+                    'banco' => $factoryBase->banco,
+                    'usuario' => $factoryBase->usuario,
+
+                    'cantidad_documentos' => $documentosOperacion->count(),
+                    'monto_documentos' => $montoDocumentos,
+                    'monto_anticipado' => $montoAnticipado,
+                    'monto_no_anticipado' => $montoNoAnticipado,
+                    'diferencia_precio' => $diferenciaPrecio,
+                    'monto_liquido' => $montoLiquido,
+                    'precio_compra' => $precioCompra,
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Valores globales ya almacenados
+                    |--------------------------------------------------------------------------
+                    | Se muestran una vez por operación y no se suman por documento.
+                    |--------------------------------------------------------------------------
+                    */
+                    'comision_total' => $comisionesRegistradas->first(),
+                    'monto_a_recibir' => $montosARecibirRegistrados->first(),
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Control informativo para la futura vista
+                    |--------------------------------------------------------------------------
+                    | Permite advertir si una misma operación quedó con valores
+                    | globales distintos en sus filas.
+                    |--------------------------------------------------------------------------
+                    */
+                    'valores_globales_consistentes' =>
+                        $comisionesRegistradas->count() <= 1 &&
+                        $montosARecibirRegistrados->count() <= 1,
+
+                    'documentos' => $documentosOperacion
+                        ->sortBy(function ($factory) {
+                            return (int) ($factory->documentoFinanciero?->folio ?? 0);
+                        })
+                        ->values(),
+                ];
+            })
+            ->values();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Filtros asociados a documentos
+        |--------------------------------------------------------------------------
+        | Si un documento coincide, se conserva la operación completa para que el
+        | resumen mantenga todos sus importes y documentos relacionados.
+        |--------------------------------------------------------------------------
+        */
+        $operaciones = $operaciones
+            ->filter(function ($operacion) use (
+                $folio,
+                $razonSocial,
+                $rutCliente,
+                $empresaId
+            ) {
+                if (
+                    $folio === '' &&
+                    $razonSocial === '' &&
+                    $rutCliente === '' &&
+                    !$empresaId
+                ) {
+                    return true;
+                }
+
+                return $operacion['documentos']->contains(function ($factory) use (
+                    $folio,
+                    $razonSocial,
+                    $rutCliente,
+                    $empresaId
+                ) {
+                    $documento = $factory->documentoFinanciero;
+
+                    if (!$documento) {
+                        return false;
+                    }
+
+                    if (
+                        $folio !== '' &&
+                        mb_stripos((string) ($documento->folio ?? ''), $folio) === false
+                    ) {
+                        return false;
+                    }
+
+                    if (
+                        $razonSocial !== '' &&
+                        mb_stripos(
+                            (string) ($documento->razon_social ?? ''),
+                            $razonSocial
+                        ) === false
+                    ) {
+                        return false;
+                    }
+
+                    if (
+                        $rutCliente !== '' &&
+                        mb_stripos(
+                            (string) ($documento->rut_cliente ?? ''),
+                            $rutCliente
+                        ) === false
+                    ) {
+                        return false;
+                    }
+
+                    if (
+                        $empresaId &&
+                        (string) $documento->empresa_id !== (string) $empresaId
+                    ) {
+                        return false;
+                    }
+
+                    return true;
+                });
+            })
+            ->values();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Paginar operaciones completas
+        |--------------------------------------------------------------------------
+        | Cada item del paginador es una operación Factoring completa.
+        |--------------------------------------------------------------------------
+        */
+        $paginaActual = \Illuminate\Pagination\Paginator::resolveCurrentPage('page');
+
+        $operacionesPagina = $operaciones
+            ->forPage($paginaActual, $perPage)
+            ->values();
+
+        $paginadorOperaciones = new \Illuminate\Pagination\LengthAwarePaginator(
+            $operacionesPagina,
+            $operaciones->count(),
+            $perPage,
+            $paginaActual,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+                'pageName' => 'page',
+            ]
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Agrupación visual por mes dentro de la página actual
+        |--------------------------------------------------------------------------
+        */
+        $operacionesPorMes = $operacionesPagina
+            ->groupBy('mes_clave')
+            ->map(function ($operacionesDelMes) {
+                return [
+                    'mes_clave' => $operacionesDelMes->first()['mes_clave'],
+                    'mes_etiqueta' => $operacionesDelMes->first()['mes_etiqueta'],
+                    'operaciones' => $operacionesDelMes,
+                ];
+            })
+            ->values();
 
         $empresas = \App\Models\Empresa::orderBy('Nombre')
             ->get(['id', 'Nombre']);
@@ -103,7 +385,8 @@ class FactoryController extends Controller
             ->get(['id', 'nombre']);
 
         return view('factoring.index', compact(
-            'factories',
+            'operacionesPorMes',
+            'paginadorOperaciones',
             'empresas',
             'bancos'
         ));
