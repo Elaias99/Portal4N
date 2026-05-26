@@ -57,13 +57,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputGlobalFechaFactory = document.getElementById('factory-masivo-global-fecha');
     const inputGlobalComisionTotal = document.getElementById('factory-masivo-global-comision-total');
 
-    // =====================================================
-    // CAMPOS AUXILIARES PARA COPIAR MONTOS A LAS FILAS
-    // =====================================================
-    const inputGlobalSaldoLiquido = document.getElementById('factory-masivo-global-saldo-liquido');
-    const inputGlobalMontoNoAnticipado = document.getElementById('factory-masivo-global-monto-no-anticipado');
-    const btnAplicarDatosFactoryMasivo = document.getElementById('btn-aplicar-datos-factory-masivo');
-
     function getSeleccionFactory() {
         try {
             return JSON.parse(localStorage.getItem(STORAGE_KEY_FACTORY)) || {};
@@ -117,7 +110,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             /*
             |--------------------------------------------------------------------------
-            | Mantener valores personalizados de cada fila
+            | Mantener valores personalizados de cada documento
+            |--------------------------------------------------------------------------
+            | Monto Líquido y Monto No Anticipado son individuales por fila.
             |--------------------------------------------------------------------------
             */
             saldoLiquido: datosExistentes.saldoLiquido ?? '',
@@ -166,8 +161,13 @@ document.addEventListener('DOMContentLoaded', () => {
             '[name="documentos[' + documentoId + '][monto_no_anticipado]"]'
         );
 
-        documento.saldoLiquido = inputSaldoLiquido ? inputSaldoLiquido.value : '';
-        documento.montoNoAnticipado = inputMontoNoAnticipado ? inputMontoNoAnticipado.value : '';
+        documento.saldoLiquido = inputSaldoLiquido
+            ? inputSaldoLiquido.value
+            : '';
+
+        documento.montoNoAnticipado = inputMontoNoAnticipado
+            ? inputMontoNoAnticipado.value
+            : '';
 
         seleccion[documentoId] = documento;
 
@@ -187,7 +187,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const checksMarcados = Array.from(checks).filter(checkbox => checkbox.checked);
+        const checksMarcados = Array.from(checks)
+            .filter(checkbox => checkbox.checked);
 
         checkAllFactory.checked = checksMarcados.length === checks.length;
         checkAllFactory.indeterminate =
@@ -290,7 +291,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const resultado = row.querySelector(
-            '.js-factory-masivo-diferencia-precio[data-documento-id="' + calculo.documentoId + '"]'
+            '.js-factory-masivo-diferencia-precio[data-documento-id="' +
+            calculo.documentoId +
+            '"]'
         );
 
         if (calculo.inputSaldoLiquido) {
@@ -625,97 +628,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return true;
     }
 
-    function aplicarMontosGlobalesFactoryMasivo() {
-        if (!inputGlobalSaldoLiquido || !inputGlobalMontoNoAnticipado) {
-            return false;
-        }
-
-        const rows = document.querySelectorAll(
-            '#factory-masivo-documentos-seleccionados tr[data-documento-id]'
-        );
-
-        if (rows.length === 0) {
-            alert('Debe seleccionar al menos un documento antes de aplicar montos.');
-            return false;
-        }
-
-        if (inputGlobalSaldoLiquido.value === '') {
-            inputGlobalSaldoLiquido.focus();
-            alert('Debe ingresar el Monto Líquido que desea aplicar a todos.');
-            return false;
-        }
-
-        if (inputGlobalMontoNoAnticipado.value === '') {
-            inputGlobalMontoNoAnticipado.focus();
-            alert('Debe ingresar el Monto No Anticipado que desea aplicar a todos.');
-            return false;
-        }
-
-        const saldoLiquido = Number(inputGlobalSaldoLiquido.value);
-        const montoNoAnticipado = Number(inputGlobalMontoNoAnticipado.value);
-
-        if (
-            !Number.isFinite(saldoLiquido) ||
-            !Number.isFinite(montoNoAnticipado) ||
-            saldoLiquido < 0 ||
-            montoNoAnticipado < 0
-        ) {
-            alert('Los montos ingresados deben ser números enteros mayores o iguales a cero.');
-            return false;
-        }
-
-        const foliosInvalidos = [];
-
-        rows.forEach(row => {
-            const monto = Number(row.dataset.monto || 0);
-            const diferenciaPrecio = monto - saldoLiquido - montoNoAnticipado;
-
-            if (diferenciaPrecio < 0) {
-                const documentoId = row.dataset.documentoId;
-                const seleccion = getSeleccionFactory();
-                const documento = seleccion[documentoId];
-
-                foliosInvalidos.push(documento?.folio || documentoId);
-            }
-        });
-
-        if (foliosInvalidos.length > 0) {
-            alert(
-                'La suma del Monto Líquido y el Monto No Anticipado supera el Monto de los siguientes documentos: ' +
-                foliosInvalidos.join(', ')
-            );
-
-            return false;
-        }
-
-        rows.forEach(row => {
-            const documentoId = row.dataset.documentoId;
-
-            const inputSaldoLiquidoFila = row.querySelector(
-                '[name="documentos[' + documentoId + '][saldo_liquido]"]'
-            );
-
-            const inputMontoNoAnticipadoFila = row.querySelector(
-                '[name="documentos[' + documentoId + '][monto_no_anticipado]"]'
-            );
-
-            if (inputSaldoLiquidoFila) {
-                inputSaldoLiquidoFila.value = saldoLiquido;
-            }
-
-            if (inputMontoNoAnticipadoFila) {
-                inputMontoNoAnticipadoFila.value = montoNoAnticipado;
-            }
-
-            persistirMontosFila(row);
-            actualizarDiferenciaPrecioFila(row);
-        });
-
-        actualizarTotalesFactoryMasivo();
-
-        return true;
-    }
-
     function validarFilasFactoryMasivo() {
         const foliosInvalidos = [];
         let primerInputInvalido = null;
@@ -830,7 +742,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderFactoryMasivoModal();
     });
 
-    // Recalcular diferencias y totales al editar montos por fila
+    // Recalcular diferencias y totales al editar montos individuales
     document.addEventListener('input', function (event) {
         const inputMonto = event.target.closest(
             '.js-factory-masivo-saldo-liquido, .js-factory-masivo-monto-no-anticipado'
@@ -850,7 +762,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Recalcular Monto a Recibir al modificar Comisión Total
+        // Recalcular Monto a Recibir al modificar Comisión Total global
         if (event.target === inputGlobalComisionTotal) {
             actualizarTotalesFactoryMasivo();
         }
@@ -863,23 +775,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     toggleBancoOtroFactoryMasivoGlobal();
 
-    // Aplicar ambos montos generales a todas las filas seleccionadas
-    btnAplicarDatosFactoryMasivo?.addEventListener('click', function () {
-        const aplicado = aplicarMontosGlobalesFactoryMasivo();
-
-        if (aplicado) {
-            alert(
-                'Monto Líquido y Monto No Anticipado copiados a todos los documentos seleccionados.'
-            );
-        }
-    });
-
     /*
     |--------------------------------------------------------------------------
     | Enviar Factoring masivo sin sobrescribir ajustes individuales
     |--------------------------------------------------------------------------
     | Cesión, banco, fecha y comisión se envían como datos generales.
-    | Cada fila envía exactamente sus montos finales personalizados.
+    | Cada fila envía exactamente su Monto Líquido y Monto No Anticipado.
     |--------------------------------------------------------------------------
     */
     formFactoryMasivo?.addEventListener('submit', function (event) {

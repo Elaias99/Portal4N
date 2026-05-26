@@ -362,7 +362,7 @@
                                 data-bs-toggle="modal"
                                 data-bs-target="#modalFactoryMasivo">
                             <i class="bi bi-building"></i>
-                            <span>Factory masivo</span>
+                            <span>Factoring masivo</span>
                         </button>
                     @endif
 

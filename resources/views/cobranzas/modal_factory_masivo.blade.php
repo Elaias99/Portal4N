@@ -71,8 +71,7 @@
                         </div>
 
                         <div class="card-body">
-
-                            <div class="row g-3 align-items-end mb-3">
+                            <div class="row g-3 align-items-end">
 
                                 {{-- Cesión --}}
                                 <div class="col-md-3">
@@ -199,61 +198,11 @@
                                 </div>
                             </div>
 
-                            <hr class="my-3">
-
-                            {{--
-                            |--------------------------------------------------------------------------
-                            | Herramienta para copiar montos a todas las filas
-                            |--------------------------------------------------------------------------
-                            | Estos campos no llevan name porque no se envían al backend.
-                            | Solo permiten cargar rápidamente los montos individuales.
-                            |--------------------------------------------------------------------------
-                            --}}
-
-                            <div class="row g-3 align-items-end">
-
-                                <div class="col-md-3">
-                                    <label for="factory-masivo-global-saldo-liquido"
-                                           class="form-label small text-muted">
-                                        Monto Líquido para aplicar a todos
-                                    </label>
-
-                                    <input type="number"
-                                           id="factory-masivo-global-saldo-liquido"
-                                           class="form-control form-control-sm"
-                                           min="0"
-                                           step="1"
-                                           placeholder="Ej: 3099297">
-                                </div>
-
-                                <div class="col-md-3">
-                                    <label for="factory-masivo-global-monto-no-anticipado"
-                                           class="form-label small text-muted">
-                                        Monto No Anticipado para aplicar a todos
-                                    </label>
-
-                                    <input type="number"
-                                           id="factory-masivo-global-monto-no-anticipado"
-                                           class="form-control form-control-sm"
-                                           min="0"
-                                           step="1"
-                                           placeholder="Ej: 31968">
-                                </div>
-
-                                <div class="col-md-3">
-                                    <button type="button"
-                                            id="btn-aplicar-datos-factory-masivo"
-                                            class="btn btn-outline-primary btn-sm w-100">
-                                        Aplicar montos a todos
-                                    </button>
-                                </div>
-                            </div>
-
                             <small class="text-muted d-block mt-3">
-                                La cesión, la entidad Factoring / Banco, la fecha de operación y la
-                                comisión total corresponden a la operación completa. Los montos por
-                                documento pueden copiarse inicialmente a todas las filas y luego
-                                ajustarse individualmente antes de registrar.
+                                La cesión, la entidad Factoring / Banco, la fecha de operación
+                                y la comisión total corresponden a la operación completa.
+                                El Monto Líquido y el Monto No Anticipado se ingresan
+                                individualmente para cada documento en la tabla inferior.
                             </small>
                         </div>
                     </div>
@@ -269,9 +218,17 @@
                                 <table class="table table-sm table-striped align-middle mb-0">
                                     <thead>
                                         <tr>
-                                            <th class="text-nowrap">Empresa</th>
-                                            <th class="text-nowrap">Folio</th>
-                                            <th class="text-nowrap">Razón Social</th>
+                                            <th class="text-nowrap">
+                                                Empresa
+                                            </th>
+
+                                            <th class="text-nowrap">
+                                                Folio
+                                            </th>
+
+                                            <th class="text-nowrap">
+                                                Razón Social
+                                            </th>
 
                                             <th class="text-end text-nowrap"
                                                 style="min-width: 150px;">
@@ -399,21 +356,21 @@
                             </div>
 
                             <small class="text-muted d-block mt-2">
-                                En este resumen, el Monto Anticipado corresponde a la suma de los
-                                montos líquidos ingresados por documento. El Monto Líquido y el
-                                Precio de Compra se obtienen sumando el Monto Anticipado y la
-                                Diferencia de Precio. El Monto a Recibir se obtiene descontando
-                                del Monto Líquido la Comisión Total y la Diferencia de Precio.
+                                El Monto Anticipado corresponde a la suma de los montos líquidos
+                                ingresados por documento. El Monto Líquido y el Precio de Compra
+                                se obtienen sumando el Monto Anticipado y la Diferencia de Precio.
+                                El Monto a Recibir se obtiene descontando del Monto Líquido la
+                                Comisión Total y la Diferencia de Precio.
                             </small>
                         </div>
                     </div>
 
                     <div class="alert alert-info py-2 px-3 small mb-3">
                         Para cada documento, la
-                        <strong>Diferencia de Precio</strong> se calculará como:
+                        <strong>Diferencia de Precio</strong> se calcula como:
                         <strong>Monto - Monto Líquido - Monto No Anticipado</strong>.
                         Para la operación completa, el
-                        <strong>Monto a Recibir</strong> se calculará como:
+                        <strong>Monto a Recibir</strong> se calcula como:
                         <strong>Monto Líquido - Comisión Total - Diferencia de Precio</strong>.
                     </div>
 
