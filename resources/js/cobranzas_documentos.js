@@ -20,55 +20,8 @@ function toggleFechaEstado(select, id) {
 
 document.addEventListener('DOMContentLoaded', () => {
     // =====================================================
-    // FACTORING MASIVO CxC - SELECCIÓN DE DOCUMENTOS
+    // FUNCIONES COMPARTIDAS FACTORING CxC
     // =====================================================
-    const STORAGE_KEY_FACTORY = 'documentosFactorySeleccionadosCxC';
-
-    const checkAllFactory = document.getElementById('check-all-documentos-factory');
-    const modalFactory = document.getElementById('modalFactoryMasivo');
-    const btnFactoryMasivo = document.getElementById('btn-factory-masivo-documentos');
-
-    const formFactoryMasivo = document.getElementById('form-factory-masivo');
-    const tbodyFactory = document.getElementById('factory-masivo-documentos-seleccionados');
-    const templateFactory = document.getElementById('factory-masivo-row-template');
-    const alertaSinSeleccion = document.getElementById('factory-masivo-sin-seleccion');
-
-    const btnSubmitFactory = document.getElementById('btn-submit-factory-masivo');
-
-    // =====================================================
-    // RESUMEN CONSOLIDADO DE LA OPERACIÓN
-    // =====================================================
-    const totalDocumentosFactory = document.getElementById('factory-masivo-total-documentos');
-    const totalMontoFactory = document.getElementById('factory-masivo-total-general');
-    const totalAnticipadoFactory = document.getElementById('factory-masivo-total-liquido');
-    const totalDiferenciaPrecioFactory = document.getElementById('factory-masivo-total-diferencia-precio');
-    const totalMontoLiquidoResumenFactory = document.getElementById('factory-masivo-total-monto-liquido-resumen');
-    const totalPrecioCompraFactory = document.getElementById('factory-masivo-total-precio-compra');
-    const totalComisionFactory = document.getElementById('factory-masivo-total-comision');
-    const totalMontoARecibirFactory = document.getElementById('factory-masivo-total-monto-a-recibir');
-
-    // =====================================================
-    // DATOS GENERALES DE LA OPERACIÓN
-    // =====================================================
-    const inputGlobalCesion = document.getElementById('factory-masivo-global-cesion');
-    const selectGlobalBanco = document.getElementById('factory-masivo-global-banco');
-    const wrapperGlobalBancoOtro = document.getElementById('factory-masivo-global-banco-otro-wrapper');
-    const inputGlobalBancoOtro = document.getElementById('factory-masivo-global-banco-otro');
-    const inputGlobalFechaFactory = document.getElementById('factory-masivo-global-fecha');
-    const inputGlobalComisionTotal = document.getElementById('factory-masivo-global-comision-total');
-
-    function getSeleccionFactory() {
-        try {
-            return JSON.parse(localStorage.getItem(STORAGE_KEY_FACTORY)) || {};
-        } catch (error) {
-            return {};
-        }
-    }
-
-    function saveSeleccionFactory(data) {
-        localStorage.setItem(STORAGE_KEY_FACTORY, JSON.stringify(data));
-    }
-
     function formatCLP(value) {
         return Number(value || 0).toLocaleString('es-CL', {
             style: 'currency',
@@ -94,6 +47,258 @@ document.addEventListener('DOMContentLoaded', () => {
         const valor = Number(input.value);
 
         return Number.isFinite(valor) ? valor : null;
+    }
+
+    // =====================================================
+    // FACTORING MANUAL CxC - MODAL DE ESTADO
+    // =====================================================
+    const formulariosFactoryIndividual = document.querySelectorAll(
+        '.js-form-factory-individual[data-tiene-factory="0"]'
+    );
+
+    /**
+     * Calcular vista previa de Factoring individual.
+     *
+     * Reglas vigentes:
+     *
+     * Diferencia de Precio =
+     *     Monto documento - Monto Líquido - Monto No Anticipado
+     *
+     * Monto Líquido de la operación =
+     *     Monto Líquido ingresado + Diferencia de Precio
+     *
+     * Monto a Recibir =
+     *     Monto Líquido de la operación
+     *     - Comisión Total
+     *     - Diferencia de Precio
+     */
+    function actualizarCalculoFactoryIndividual(formulario) {
+        if (!formulario || formulario.dataset.tieneFactory === '1') {
+            return null;
+        }
+
+        const monto = Number(formulario.dataset.monto || 0);
+
+        const inputSaldoLiquido = formulario.querySelector(
+            '.js-factory-individual-saldo-liquido'
+        );
+
+        const inputMontoNoAnticipado = formulario.querySelector(
+            '.js-factory-individual-monto-no-anticipado'
+        );
+
+        const inputComisionTotal = formulario.querySelector(
+            '.js-factory-individual-comision-total'
+        );
+
+        const outputDiferenciaPrecio = formulario.querySelector(
+            '.js-factory-individual-diferencia-precio'
+        );
+
+        const outputMontoARecibir = formulario.querySelector(
+            '.js-factory-individual-monto-a-recibir'
+        );
+
+        if (
+            !inputSaldoLiquido ||
+            !inputMontoNoAnticipado ||
+            !inputComisionTotal ||
+            !outputDiferenciaPrecio ||
+            !outputMontoARecibir
+        ) {
+            return null;
+        }
+
+        inputSaldoLiquido.setCustomValidity('');
+        inputMontoNoAnticipado.setCustomValidity('');
+        inputComisionTotal.setCustomValidity('');
+
+        const saldoLiquido = obtenerNumeroInput(inputSaldoLiquido);
+        const montoNoAnticipado = obtenerNumeroInput(inputMontoNoAnticipado);
+        const comisionTotal = obtenerNumeroInput(inputComisionTotal);
+
+        if (saldoLiquido === null || montoNoAnticipado === null) {
+            outputDiferenciaPrecio.value = '—';
+            outputMontoARecibir.value = '—';
+
+            return {
+                completo: false,
+                valido: true,
+                monto: monto,
+                saldoLiquido: saldoLiquido,
+                montoNoAnticipado: montoNoAnticipado,
+                comisionTotal: comisionTotal,
+                diferenciaPrecio: null,
+                montoARecibir: null,
+            };
+        }
+
+        const diferenciaPrecio = monto
+            - saldoLiquido
+            - montoNoAnticipado;
+
+        outputDiferenciaPrecio.value = formatCLP(diferenciaPrecio);
+
+        if (diferenciaPrecio < 0) {
+            const mensaje =
+                'La suma del Monto Líquido y el Monto No Anticipado no puede ser mayor al monto pendiente actual del documento.';
+
+            inputSaldoLiquido.setCustomValidity(mensaje);
+            inputMontoNoAnticipado.setCustomValidity(mensaje);
+
+            outputMontoARecibir.value = '—';
+
+            return {
+                completo: true,
+                valido: false,
+                monto: monto,
+                saldoLiquido: saldoLiquido,
+                montoNoAnticipado: montoNoAnticipado,
+                comisionTotal: comisionTotal,
+                diferenciaPrecio: diferenciaPrecio,
+                montoARecibir: null,
+            };
+        }
+
+        if (comisionTotal === null) {
+            outputMontoARecibir.value = '—';
+
+            return {
+                completo: false,
+                valido: true,
+                monto: monto,
+                saldoLiquido: saldoLiquido,
+                montoNoAnticipado: montoNoAnticipado,
+                comisionTotal: comisionTotal,
+                diferenciaPrecio: diferenciaPrecio,
+                montoARecibir: null,
+            };
+        }
+
+        const montoLiquidoOperacion = saldoLiquido
+            + diferenciaPrecio;
+
+        const montoARecibir = montoLiquidoOperacion
+            - comisionTotal
+            - diferenciaPrecio;
+
+        outputMontoARecibir.value = formatCLP(montoARecibir);
+
+        if (montoARecibir < 0) {
+            inputComisionTotal.setCustomValidity(
+                'La Comisión Total genera un Monto a Recibir negativo para la operación.'
+            );
+
+            return {
+                completo: true,
+                valido: false,
+                monto: monto,
+                saldoLiquido: saldoLiquido,
+                montoNoAnticipado: montoNoAnticipado,
+                comisionTotal: comisionTotal,
+                diferenciaPrecio: diferenciaPrecio,
+                montoARecibir: montoARecibir,
+            };
+        }
+
+        return {
+            completo: true,
+            valido: true,
+            monto: monto,
+            saldoLiquido: saldoLiquido,
+            montoNoAnticipado: montoNoAnticipado,
+            comisionTotal: comisionTotal,
+            diferenciaPrecio: diferenciaPrecio,
+            montoARecibir: montoARecibir,
+        };
+    }
+
+    function validarFactoryIndividual(formulario) {
+        const calculo = actualizarCalculoFactoryIndividual(formulario);
+
+        if (!calculo) {
+            return true;
+        }
+
+        if (typeof formulario.reportValidity === 'function' && !formulario.reportValidity()) {
+            return false;
+        }
+
+        return calculo.valido !== false;
+    }
+
+    formulariosFactoryIndividual.forEach(formulario => {
+        actualizarCalculoFactoryIndividual(formulario);
+
+        formulario.addEventListener('input', function (event) {
+            const campoCalculo = event.target.closest(
+                '.js-factory-individual-saldo-liquido, ' +
+                '.js-factory-individual-monto-no-anticipado, ' +
+                '.js-factory-individual-comision-total'
+            );
+
+            if (!campoCalculo) {
+                return;
+            }
+
+            actualizarCalculoFactoryIndividual(this);
+        });
+
+        formulario.addEventListener('submit', function (event) {
+            if (!validarFactoryIndividual(this)) {
+                event.preventDefault();
+            }
+        });
+    });
+
+    // =====================================================
+    // FACTORING MASIVO CxC - SELECCIÓN DE DOCUMENTOS
+    // =====================================================
+    const STORAGE_KEY_FACTORY = 'documentosFactorySeleccionadosCxC';
+
+    const checkAllFactory = document.getElementById('check-all-documentos-factory');
+    const modalFactory = document.getElementById('modalFactoryMasivo');
+    const btnFactoryMasivo = document.getElementById('btn-factory-masivo-documentos');
+
+    const formFactoryMasivo = document.getElementById('form-factory-masivo');
+    const tbodyFactory = document.getElementById('factory-masivo-documentos-seleccionados');
+    const templateFactory = document.getElementById('factory-masivo-row-template');
+    const alertaSinSeleccion = document.getElementById('factory-masivo-sin-seleccion');
+
+    const btnSubmitFactory = document.getElementById('btn-submit-factory-masivo');
+
+    // =====================================================
+    // RESUMEN CONSOLIDADO DE LA OPERACIÓN MASIVA
+    // =====================================================
+    const totalDocumentosFactory = document.getElementById('factory-masivo-total-documentos');
+    const totalMontoFactory = document.getElementById('factory-masivo-total-general');
+    const totalAnticipadoFactory = document.getElementById('factory-masivo-total-liquido');
+    const totalDiferenciaPrecioFactory = document.getElementById('factory-masivo-total-diferencia-precio');
+    const totalMontoLiquidoResumenFactory = document.getElementById('factory-masivo-total-monto-liquido-resumen');
+    const totalPrecioCompraFactory = document.getElementById('factory-masivo-total-precio-compra');
+    const totalComisionFactory = document.getElementById('factory-masivo-total-comision');
+    const totalMontoARecibirFactory = document.getElementById('factory-masivo-total-monto-a-recibir');
+
+    // =====================================================
+    // DATOS GENERALES DE LA OPERACIÓN MASIVA
+    // =====================================================
+    const inputGlobalCesion = document.getElementById('factory-masivo-global-cesion');
+    const selectGlobalBanco = document.getElementById('factory-masivo-global-banco');
+    const wrapperGlobalBancoOtro = document.getElementById('factory-masivo-global-banco-otro-wrapper');
+    const inputGlobalBancoOtro = document.getElementById('factory-masivo-global-banco-otro');
+    const inputGlobalFechaFactory = document.getElementById('factory-masivo-global-fecha');
+    const inputGlobalComisionTotal = document.getElementById('factory-masivo-global-comision-total');
+
+    function getSeleccionFactory() {
+        try {
+            return JSON.parse(localStorage.getItem(STORAGE_KEY_FACTORY)) || {};
+        } catch (error) {
+            return {};
+        }
+    }
+
+    function saveSeleccionFactory(data) {
+        localStorage.setItem(STORAGE_KEY_FACTORY, JSON.stringify(data));
     }
 
     function addDocumentoFactory(checkbox) {
@@ -721,7 +926,7 @@ document.addEventListener('DOMContentLoaded', () => {
         actualizarCheckAllFactory();
     });
 
-    // Renderizar modal al abrir
+    // Renderizar modal masivo al abrir
     btnFactoryMasivo?.addEventListener('click', function () {
         renderFactoryMasivoModal();
     });
@@ -730,7 +935,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderFactoryMasivoModal();
     });
 
-    // Quitar documento desde el modal
+    // Quitar documento desde el modal masivo
     document.addEventListener('click', function (event) {
         const btnQuitar = event.target.closest('.js-factory-masivo-quitar');
 
@@ -742,7 +947,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderFactoryMasivoModal();
     });
 
-    // Recalcular diferencias y totales al editar montos individuales
+    // Recalcular diferencias y totales al editar montos masivos individuales
     document.addEventListener('input', function (event) {
         const inputMonto = event.target.closest(
             '.js-factory-masivo-saldo-liquido, .js-factory-masivo-monto-no-anticipado'
@@ -762,13 +967,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Recalcular Monto a Recibir al modificar Comisión Total global
+        // Recalcular Monto a Recibir masivo al modificar Comisión Total global
         if (event.target === inputGlobalComisionTotal) {
             actualizarTotalesFactoryMasivo();
         }
     });
 
-    // Mostrar input "Otra entidad" en los campos generales
+    // Mostrar input "Otra entidad" en los campos generales masivos
     selectGlobalBanco?.addEventListener('change', function () {
         toggleBancoOtroFactoryMasivoGlobal();
     });

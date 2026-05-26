@@ -239,88 +239,161 @@
                         @enderror
                     </div>
                 </form>
-
                 {{-- FORMULARIO DE FACTORING --}}
                 <form action="{{ route('documentos.factory.store', $doc->id) }}"
                     method="POST"
                     id="form-factory-{{ $doc->id }}"
+                    class="js-form-factory-individual"
+                    data-documento-id="{{ $doc->id }}"
+                    data-monto="{{ (int) $doc->saldo_pendiente }}"
                     style="display: {{ $doc->status == 'Factory' ? 'block' : 'none' }};"
                     data-tiene-factory="{{ $doc->factoryRegistro ? '1' : '0' }}">
                     @csrf
 
-                    <div class="form-group mb-3">
-                        <label class="form-label small text-muted">Saldo pendiente actual</label>
-                        <input type="text"
-                            class="form-control form-control-sm"
-                            value="${{ number_format($doc->saldo_pendiente, 0, ',', '.') }}"
-                            readonly>
-                    </div>
-
                     @if($doc->factoryRegistro)
-                        <div class="alert alert-info py-2 px-3 small">
+                        @php
+                            $factory = $doc->factoryRegistro;
+
+                            $esRegistroNuevaEstructura =
+                                $factory->monto_no_anticipado !== null ||
+                                $factory->diferencia_precio !== null ||
+                                $factory->comision_total !== null ||
+                                $factory->monto_a_recibir !== null;
+
+                            $saldoFactoringRegistrado = $factory->diferencia_precio !== null
+                                ? $factory->diferencia_precio
+                                : $factory->diferencia;
+                        @endphp
+
+                        <div class="alert alert-info py-2 px-3 small mb-3">
                             Este documento ya tiene un registro <strong>Factoring</strong> asociado.
                             Para revertirlo, elimínalo desde el detalle del documento.
                         </div>
 
+                        @unless($esRegistroNuevaEstructura)
+                            <div class="alert alert-secondary py-2 px-3 small mb-3">
+                                Este registro corresponde a una estructura anterior de Factoring
+                                y no contiene el nuevo desglose completo de la operación.
+                            </div>
+                        @endunless
+
                         <div class="form-group mb-3">
-                            <label class="form-label small text-muted">Nombre Factoring / Banco</label>
+                            <label class="form-label small text-muted">
+                                Entidad Factoring / Banco
+                            </label>
+
                             <input type="text"
                                 class="form-control form-control-sm"
-                                value="{{ $doc->factoryRegistro->banco?->nombre ?? 'Sin banco' }}"
+                                value="{{ $factory->banco?->nombre ?? 'Sin entidad' }}"
                                 readonly>
                         </div>
 
                         <div class="form-group mb-3">
-                            <label class="form-label small text-muted">RUT Factoring</label>
+                            <label class="form-label small text-muted">
+                                N° Cesión
+                            </label>
+
                             <input type="text"
                                 class="form-control form-control-sm"
-                                value="{{ $doc->factoryRegistro->rut_factory }}"
+                                value="{{ $factory->cesion ?? '—' }}"
                                 readonly>
                         </div>
 
                         <div class="form-group mb-3">
-                            <label class="form-label small text-muted">Cesión</label>
+                            <label class="form-label small text-muted">
+                                Fecha operación
+                            </label>
+
                             <input type="text"
                                 class="form-control form-control-sm"
-                                value="{{ $doc->factoryRegistro->cesion ?? '-' }}"
+                                value="{{ $factory->fecha_factory ? \Carbon\Carbon::parse($factory->fecha_factory)->format('d-m-Y') : '—' }}"
                                 readonly>
                         </div>
 
                         <div class="form-group mb-3">
-                            <label class="form-label small text-muted">Fecha Factoring</label>
+                            <label class="form-label small text-muted">
+                                Monto documento / saldo cedido
+                            </label>
+
                             <input type="text"
                                 class="form-control form-control-sm"
-                                value="{{ $doc->factoryRegistro->fecha_factory ? \Carbon\Carbon::parse($doc->factoryRegistro->fecha_factory)->format('d-m-Y') : '-' }}"
+                                value="${{ number_format((int) ($factory->monto ?? 0), 0, ',', '.') }}"
                                 readonly>
                         </div>
 
                         <div class="form-group mb-3">
-                            <label class="form-label small text-muted">Monto documento / saldo cedido</label>
+                            <label class="form-label small text-muted">
+                                Monto Líquido
+                            </label>
+
                             <input type="text"
                                 class="form-control form-control-sm"
-                                value="${{ number_format($doc->factoryRegistro->monto ?? 0, 0, ',', '.') }}"
+                                value="${{ number_format((int) ($factory->saldo_liquido ?? 0), 0, ',', '.') }}"
                                 readonly>
                         </div>
 
                         <div class="form-group mb-3">
-                            <label class="form-label small text-muted">Saldo líquido</label>
+                            <label class="form-label small text-muted">
+                                Monto No Anticipado
+                            </label>
+
                             <input type="text"
                                 class="form-control form-control-sm"
-                                value="${{ number_format($doc->factoryRegistro->saldo_liquido ?? 0, 0, ',', '.') }}"
+                                value="{{ $factory->monto_no_anticipado !== null ? '$' . number_format((int) $factory->monto_no_anticipado, 0, ',', '.') : '—' }}"
                                 readonly>
                         </div>
 
                         <div class="form-group mb-3">
-                            <label class="form-label small text-muted">Diferencia / saldo pendiente resultante</label>
+                            <label class="form-label small text-muted">
+                                Diferencia de Precio
+                            </label>
+
                             <input type="text"
                                 class="form-control form-control-sm"
-                                value="${{ number_format($doc->factoryRegistro->diferencia ?? 0, 0, ',', '.') }}"
+                                value="{{ $saldoFactoringRegistrado !== null ? '$' . number_format((int) $saldoFactoringRegistrado, 0, ',', '.') : '—' }}"
                                 readonly>
                         </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">
+                                Comisión Total (1)
+                            </label>
+
+                            <input type="text"
+                                class="form-control form-control-sm"
+                                value="{{ $factory->comision_total !== null ? '$' . number_format((int) $factory->comision_total, 0, ',', '.') : '—' }}"
+                                readonly>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">
+                                Monto a Recibir
+                            </label>
+
+                            <input type="text"
+                                class="form-control form-control-sm"
+                                value="{{ $factory->monto_a_recibir !== null ? '$' . number_format((int) $factory->monto_a_recibir, 0, ',', '.') : '—' }}"
+                                readonly>
+                        </div>
+
                     @else
+                        {{-- MONTO DEL DOCUMENTO --}}
                         <div class="form-group mb-3">
-                            <label for="banco-factory-{{ $doc->id }}" class="form-label small text-muted">
-                                Nombre Factoring / Banco
+                            <label class="form-label small text-muted">
+                                Monto documento / saldo cedido
+                            </label>
+
+                            <input type="text"
+                                class="form-control form-control-sm"
+                                value="${{ number_format((int) $doc->saldo_pendiente, 0, ',', '.') }}"
+                                readonly>
+                        </div>
+
+                        {{-- BANCO / ENTIDAD FACTORING --}}
+                        <div class="form-group mb-3">
+                            <label for="banco-factory-{{ $doc->id }}"
+                                class="form-label small text-muted">
+                                Entidad Factoring / Banco
                             </label>
 
                             <select name="banco_id"
@@ -328,30 +401,22 @@
                                     class="form-select form-select-sm @error('banco_id') is-invalid @enderror"
                                     onchange="toggleBancoFactoryOtro({{ $doc->id }})"
                                     required>
-                                <option value="">Seleccione banco / factoring</option>
+                                <option value="">
+                                    Seleccione entidad / banco
+                                </option>
 
                                 @foreach(($bancos ?? collect()) as $banco)
-                                    <option value="{{ $banco->id }}">
+                                    <option value="{{ $banco->id }}"
+                                        {{ (string) old('banco_id') === (string) $banco->id ? 'selected' : '' }}>
                                         {{ $banco->nombre }}
                                     </option>
                                 @endforeach
 
-                                <option value="__otro__">Otro</option>
+                                <option value="__otro__"
+                                    {{ old('banco_id') === '__otro__' ? 'selected' : '' }}>
+                                    Otra entidad
+                                </option>
                             </select>
-
-                            <div id="banco-factory-otro-wrapper-{{ $doc->id }}"
-                                class="mt-2"
-                                style="display:none;">
-                                <label for="banco-factory-otro-{{ $doc->id }}" class="form-label small text-muted">
-                                    Nombre nuevo banco / Factoring
-                                </label>
-
-                                <input type="text"
-                                    name="banco_otro"
-                                    id="banco-factory-otro-{{ $doc->id }}"
-                                    class="form-control form-control-sm @error('banco_otro') is-invalid @enderror"
-                                    placeholder="Ingrese nombre del banco o Factoring">
-                            </div>
 
                             @error('banco_id')
                                 <span class="invalid-feedback d-block text-danger">
@@ -359,41 +424,43 @@
                                 </span>
                             @enderror
 
-                            @error('banco_otro')
-                                <span class="invalid-feedback d-block text-danger">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                            @enderror
+                            <div id="banco-factory-otro-wrapper-{{ $doc->id }}"
+                                class="mt-2"
+                                style="display: {{ old('banco_id') === '__otro__' ? 'block' : 'none' }};">
+
+                                <label for="banco-factory-otro-{{ $doc->id }}"
+                                    class="form-label small text-muted">
+                                    Nueva entidad Factoring / Banco
+                                </label>
+
+                                <input type="text"
+                                    name="banco_otro"
+                                    id="banco-factory-otro-{{ $doc->id }}"
+                                    class="form-control form-control-sm @error('banco_otro') is-invalid @enderror"
+                                    value="{{ old('banco_otro') }}"
+                                    placeholder="Ingrese nueva entidad / banco"
+                                    {{ old('banco_id') === '__otro__' ? 'required' : '' }}>
+
+                                @error('banco_otro')
+                                    <span class="invalid-feedback d-block text-danger">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                @enderror
+                            </div>
                         </div>
 
+                        {{-- CESIÓN --}}
                         <div class="form-group mb-3">
-                            <label for="rut-factory-{{ $doc->id }}" class="form-label small text-muted">
-                                RUT Factoring
-                            </label>
-
-                            <input type="text"
-                                name="rut_factory"
-                                id="rut-factory-{{ $doc->id }}"
-                                class="form-control form-control-sm @error('rut_factory') is-invalid @enderror"
-                                placeholder="Ej: 76000000-0"
-                                required>
-
-                            @error('rut_factory')
-                                <span class="invalid-feedback d-block text-danger">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                            @enderror
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label for="cesion-factory-{{ $doc->id }}" class="form-label small text-muted">
-                                Cesión
+                            <label for="cesion-factory-{{ $doc->id }}"
+                                class="form-label small text-muted">
+                                N° Cesión
                             </label>
 
                             <input type="text"
                                 name="cesion"
                                 id="cesion-factory-{{ $doc->id }}"
                                 class="form-control form-control-sm @error('cesion') is-invalid @enderror"
+                                value="{{ old('cesion') }}"
                                 placeholder="Ej: 665162"
                                 required>
 
@@ -404,35 +471,11 @@
                             @enderror
                         </div>
 
+                        {{-- FECHA OPERACIÓN --}}
                         <div class="form-group mb-3">
-                            <label for="saldo-liquido-factory-{{ $doc->id }}" class="form-label small text-muted">
-                                Saldo líquido
-                            </label>
-
-                            <input type="number"
-                                name="saldo_liquido"
-                                id="saldo-liquido-factory-{{ $doc->id }}"
-                                class="form-control form-control-sm @error('saldo_liquido') is-invalid @enderror"
-                                min="0"
-                                max="{{ (int) $doc->saldo_pendiente }}"
-                                step="1"
-                                placeholder="Ej: {{ (int) $doc->saldo_pendiente }}"
-                                required>
-
-                            <small class="text-muted">
-                                El saldo pendiente quedará como la diferencia entre el saldo actual y el saldo líquido ingresado.
-                            </small>
-
-                            @error('saldo_liquido')
-                                <span class="invalid-feedback d-block text-danger">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                            @enderror
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label for="fecha-factory-{{ $doc->id }}" class="form-label small text-muted">
-                                Fecha Factoring
+                            <label for="fecha-factory-{{ $doc->id }}"
+                                class="form-label small text-muted">
+                                Fecha operación
                             </label>
 
                             <input type="date"
@@ -449,12 +492,125 @@
                             @enderror
                         </div>
 
-                        <div class="alert alert-info py-1 px-2 small">
-                            Al registrar Factoring, el sistema guardará el saldo cedido, el saldo líquido y dejará como saldo pendiente la diferencia.
+                        {{-- MONTO LÍQUIDO --}}
+                        <div class="form-group mb-3">
+                            <label for="saldo-liquido-factory-{{ $doc->id }}"
+                                class="form-label small text-muted">
+                                Monto Líquido
+                            </label>
+
+                            <input type="number"
+                                name="saldo_liquido"
+                                id="saldo-liquido-factory-{{ $doc->id }}"
+                                class="form-control form-control-sm js-factory-individual-saldo-liquido @error('saldo_liquido') is-invalid @enderror"
+                                data-documento-id="{{ $doc->id }}"
+                                value="{{ old('saldo_liquido') }}"
+                                min="0"
+                                max="{{ (int) $doc->saldo_pendiente }}"
+                                step="1"
+                                placeholder="Ej: {{ (int) $doc->saldo_pendiente }}"
+                                required>
+
+                            @error('saldo_liquido')
+                                <span class="invalid-feedback d-block text-danger">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+
+                        {{-- MONTO NO ANTICIPADO --}}
+                        <div class="form-group mb-3">
+                            <label for="monto-no-anticipado-factory-{{ $doc->id }}"
+                                class="form-label small text-muted">
+                                Monto No Anticipado
+                            </label>
+
+                            <input type="number"
+                                name="monto_no_anticipado"
+                                id="monto-no-anticipado-factory-{{ $doc->id }}"
+                                class="form-control form-control-sm js-factory-individual-monto-no-anticipado @error('monto_no_anticipado') is-invalid @enderror"
+                                data-documento-id="{{ $doc->id }}"
+                                value="{{ old('monto_no_anticipado') }}"
+                                min="0"
+                                max="{{ (int) $doc->saldo_pendiente }}"
+                                step="1"
+                                placeholder="Ej: 0"
+                                required>
+
+                            @error('monto_no_anticipado')
+                                <span class="invalid-feedback d-block text-danger">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+
+                        {{-- DIFERENCIA DE PRECIO CALCULADA --}}
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">
+                                Diferencia de Precio
+                            </label>
+
+                            <input type="text"
+                                id="diferencia-precio-factory-preview-{{ $doc->id }}"
+                                class="form-control form-control-sm js-factory-individual-diferencia-precio"
+                                value="—"
+                                readonly>
+
+                            <small class="text-muted">
+                                Monto documento - Monto Líquido - Monto No Anticipado.
+                            </small>
+                        </div>
+
+                        {{-- COMISIÓN TOTAL --}}
+                        <div class="form-group mb-3">
+                            <label for="comision-total-factory-{{ $doc->id }}"
+                                class="form-label small text-muted">
+                                Comisión Total (1)
+                            </label>
+
+                            <input type="number"
+                                name="comision_total"
+                                id="comision-total-factory-{{ $doc->id }}"
+                                class="form-control form-control-sm js-factory-individual-comision-total @error('comision_total') is-invalid @enderror"
+                                data-documento-id="{{ $doc->id }}"
+                                value="{{ old('comision_total') }}"
+                                min="0"
+                                step="1"
+                                placeholder="Ej: 71118"
+                                required>
+
+                            @error('comision_total')
+                                <span class="invalid-feedback d-block text-danger">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+
+                        {{-- MONTO A RECIBIR CALCULADO --}}
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">
+                                Monto a Recibir
+                            </label>
+
+                            <input type="text"
+                                id="monto-a-recibir-factory-preview-{{ $doc->id }}"
+                                class="form-control form-control-sm js-factory-individual-monto-a-recibir"
+                                value="—"
+                                readonly>
+
+                            <small class="text-muted">
+                                Monto Líquido de la operación - Comisión Total - Diferencia de Precio.
+                            </small>
+                        </div>
+
+                        <div class="alert alert-info py-2 px-3 small mb-0">
+                            Al registrar Factoring, la
+                            <strong>Diferencia de Precio</strong> quedará como saldo pendiente
+                            del documento. El <strong>Monto a Recibir</strong> se almacenará
+                            como parte de la operación registrada.
                         </div>
                     @endif
                 </form>
-
             </div>
 
             {{-- === FOOTER === --}}
