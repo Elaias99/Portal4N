@@ -24,6 +24,12 @@ class Factory extends Model
         'saldo_liquido',
         'diferencia',
 
+        'monto_no_anticipado',
+        'diferencia_precio',
+
+        'comision_total',
+        'monto_a_recibir',
+
 
 
 
@@ -33,7 +39,18 @@ class Factory extends Model
         'fecha_factory' => 'date',
         'monto' => 'integer',
         'saldo_liquido' => 'integer',
+
+        // Campo legado, pendiente de eliminación posterior.
         'diferencia' => 'integer',
+
+        'monto_no_anticipado' => 'integer',
+        'diferencia_precio' => 'integer',
+
+        'comision_total' => 'integer',
+        'monto_a_recibir' => 'integer',
+
+
+
     ];
 
     public function documentoFinanciero()

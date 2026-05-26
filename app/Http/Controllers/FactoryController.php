@@ -294,7 +294,17 @@ class FactoryController extends Controller
             'fecha_factory' => $factory->fecha_factory,
             'monto' => $factory->monto,
             'saldo_liquido' => $factory->saldo_liquido,
-            'diferencia' => $factory->diferencia,
+            'monto_no_anticipado' => $factory->monto_no_anticipado,
+            'diferencia_precio' => $factory->diferencia_precio,
+            'comision_total' => $factory->comision_total,
+            'monto_a_recibir' => $factory->monto_a_recibir,
+
+            /*
+            |--------------------------------------------------------------------------
+            | Compatibilidad histórica temporal
+            |--------------------------------------------------------------------------
+            */
+            'diferencia_legacy' => $factory->diferencia,
         ];
 
         $estadoAnterior = $documento->status;
@@ -375,6 +385,8 @@ class FactoryController extends Controller
         );
     }
 
+
+
     /**
      * Registrar Factoring masivo para documentos financieros CxC.
      */
@@ -383,26 +395,48 @@ class FactoryController extends Controller
         $validated = $request->validate([
             'documentos' => 'required|array|min:1',
 
-            'documentos.*.banco_id' => 'required|string|max:255',
-            'documentos.*.banco_otro' => 'nullable|string|max:255',
-            'documentos.*.rut_factory' => 'required|string|max:20',
-            'documentos.*.fecha_factory' => 'required|date',
-            'documentos.*.cesion' => 'required|string|max:100',
+            /*
+            |--------------------------------------------------------------------------
+            | Datos generales de la operación Factoring
+            |--------------------------------------------------------------------------
+            | Se registran una sola vez desde el modal y se almacenan en todos los
+            | documentos pertenecientes a esta misma operación masiva.
+            |--------------------------------------------------------------------------
+            */
+            'banco_id' => 'required|string|max:255',
+            'banco_otro' => 'nullable|string|max:255',
+            'cesion' => 'required|string|max:255',
+            'fecha_factory' => 'required|date',
+            'comision_total' => 'required|integer|min:0',
+
+            /*
+            |--------------------------------------------------------------------------
+            | Datos propios de cada documento
+            |--------------------------------------------------------------------------
+            */
             'documentos.*.saldo_liquido' => 'required|integer|min:0',
+            'documentos.*.monto_no_anticipado' => 'required|integer|min:0',
         ], [
             'documentos.required' => 'Debe seleccionar al menos un documento.',
             'documentos.array' => 'La selección de documentos no es válida.',
             'documentos.min' => 'Debe seleccionar al menos un documento.',
 
-            'documentos.*.banco_id.required' => 'Debe seleccionar el banco o entidad Factoring.',
-            'documentos.*.rut_factory.required' => 'Debe ingresar el RUT del Factoring.',
-            'documentos.*.rut_factory.max' => 'El RUT del Factoring no puede superar los 20 caracteres.',
-            'documentos.*.fecha_factory.required' => 'Debe ingresar la fecha Factoring.',
-            'documentos.*.fecha_factory.date' => 'La fecha Factoring no es válida.',
-            'documentos.*.cesion.required' => 'Debe ingresar la cesión del Factoring.',
-            'documentos.*.saldo_liquido.required' => 'Debe ingresar el saldo líquido del Factoring.',
-            'documentos.*.saldo_liquido.integer' => 'El saldo líquido debe ser un número entero.',
-            'documentos.*.saldo_liquido.min' => 'El saldo líquido no puede ser negativo.',
+            'banco_id.required' => 'Debe seleccionar el banco o entidad Factoring.',
+            'cesion.required' => 'Debe ingresar la cesión del Factoring.',
+            'fecha_factory.required' => 'Debe ingresar la fecha de operación Factoring.',
+            'fecha_factory.date' => 'La fecha de operación Factoring no es válida.',
+
+            'comision_total.required' => 'Debe ingresar la comisión total de la operación.',
+            'comision_total.integer' => 'La comisión total debe ser un número entero.',
+            'comision_total.min' => 'La comisión total no puede ser negativa.',
+
+            'documentos.*.saldo_liquido.required' => 'Debe ingresar el monto líquido del Factoring.',
+            'documentos.*.saldo_liquido.integer' => 'El monto líquido debe ser un número entero.',
+            'documentos.*.saldo_liquido.min' => 'El monto líquido no puede ser negativo.',
+
+            'documentos.*.monto_no_anticipado.required' => 'Debe ingresar el monto no anticipado.',
+            'documentos.*.monto_no_anticipado.integer' => 'El monto no anticipado debe ser un número entero.',
+            'documentos.*.monto_no_anticipado.min' => 'El monto no anticipado no puede ser negativo.',
         ]);
 
         $items = $validated['documentos'];
@@ -415,10 +449,17 @@ class FactoryController extends Controller
 
         if ($documentoIds->isEmpty()) {
             return back()
-                ->withErrors(['factory_masivo' => 'Debe seleccionar al menos un documento válido.'])
+                ->withErrors([
+                    'factory_masivo' => 'Debe seleccionar al menos un documento válido.',
+                ])
                 ->withInput();
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Validación previa para entregar errores agrupados antes de guardar
+        |--------------------------------------------------------------------------
+        */
         $documentos = DocumentoFinanciero::with([
                 'factoryRegistro',
                 'pagos',
@@ -429,6 +470,17 @@ class FactoryController extends Controller
             ->keyBy('id');
 
         $errores = [];
+
+        $bancoId = $validated['banco_id'];
+        $bancoOtro = trim((string) ($validated['banco_otro'] ?? ''));
+
+        if ($bancoId === '__otro__' && $bancoOtro === '') {
+            $errores[] = 'Debe ingresar el nombre del banco o Factoring.';
+        }
+
+        if ($bancoId !== '__otro__' && !Banco::whereKey($bancoId)->exists()) {
+            $errores[] = 'El banco seleccionado no es válido.';
+        }
 
         foreach ($documentoIds as $documentoId) {
             $documento = $documentos->get($documentoId);
@@ -470,21 +522,12 @@ class FactoryController extends Controller
                 continue;
             }
 
-            $bancoId = $data['banco_id'] ?? null;
-            $bancoOtro = trim((string) ($data['banco_otro'] ?? ''));
+            $monto = (int) $documento->saldo_pendiente;
             $saldoLiquido = (int) ($data['saldo_liquido'] ?? 0);
-            $saldoPendienteActual = (int) $documento->saldo_pendiente;
+            $montoNoAnticipado = (int) ($data['monto_no_anticipado'] ?? 0);
 
-            if ($bancoId === '__otro__' && $bancoOtro === '') {
-                $errores[] = "{$identificador}: debe ingresar el nombre del banco o Factoring.";
-            }
-
-            if ($bancoId !== '__otro__' && !Banco::whereKey($bancoId)->exists()) {
-                $errores[] = "{$identificador}: el banco seleccionado no es válido.";
-            }
-
-            if ($saldoLiquido > $saldoPendienteActual) {
-                $errores[] = "{$identificador}: el saldo líquido no puede ser mayor al saldo pendiente actual.";
+            if (($saldoLiquido + $montoNoAnticipado) > $monto) {
+                $errores[] = "{$identificador}: la suma del monto líquido y el monto no anticipado no puede ser mayor al monto del documento.";
             }
         }
 
@@ -495,7 +538,29 @@ class FactoryController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($documentoIds, $items) {
+            DB::transaction(function () use ($documentoIds, $items, $validated) {
+                $banco = $this->resolverBancoFactoryMasivo(
+                    bancoId: $validated['banco_id'],
+                    bancoOtro: $validated['banco_otro'] ?? null,
+                );
+
+                $cesion = trim($validated['cesion']);
+                $fechaFactory = $validated['fecha_factory'];
+                $comisionTotal = (int) $validated['comision_total'];
+
+                /*
+                |--------------------------------------------------------------------------
+                | Primera pasada: bloquear y calcular la operación completa
+                |--------------------------------------------------------------------------
+                | monto_a_recibir depende de los totales de todos los documentos, por
+                | eso se calcula antes de crear cualquier registro Factory.
+                |--------------------------------------------------------------------------
+                */
+                $calculosPorDocumento = collect();
+
+                $montoAnticipadoTotal = 0;
+                $diferenciaPrecioTotal = 0;
+
                 foreach ($documentoIds as $documentoId) {
                     $documento = DocumentoFinanciero::whereKey($documentoId)
                         ->lockForUpdate()
@@ -515,65 +580,147 @@ class FactoryController extends Controller
 
                     $data = $items[$documentoId];
 
-                    $banco = $this->resolverBancoFactoryMasivo(
-                        bancoId: $data['banco_id'],
-                        bancoOtro: $data['banco_otro'] ?? null,
-                    );
-
-                    $saldoAnterior = (int) $documento->saldo_pendiente;
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Valores individuales del documento
+                    |--------------------------------------------------------------------------
+                    | monto corresponde al saldo pendiente cedido al registrar.
+                    | saldo_liquido corresponde al monto ingresado por documento.
+                    |--------------------------------------------------------------------------
+                    */
+                    $monto = (int) $documento->saldo_pendiente;
                     $saldoLiquido = (int) $data['saldo_liquido'];
+                    $montoNoAnticipado = (int) $data['monto_no_anticipado'];
 
-                    if ($saldoLiquido > $saldoAnterior) {
+                    if (($saldoLiquido + $montoNoAnticipado) > $monto) {
                         throw ValidationException::withMessages([
-                            'factory_masivo' => "El saldo líquido del documento folio {$documento->folio} no puede ser mayor al saldo pendiente actual.",
+                            'factory_masivo' => "La suma del monto líquido y el monto no anticipado del documento folio {$documento->folio} no puede ser mayor al monto del documento.",
                         ]);
                     }
 
-                    $diferencia = max($saldoAnterior - $saldoLiquido, 0);
+                    $diferenciaPrecio = $monto
+                        - $saldoLiquido
+                        - $montoNoAnticipado;
 
-                    $estadoAnterior = $documento->status;
-                    $statusOriginalAnterior = $documento->status_original;
+                    $montoAnticipadoTotal += $saldoLiquido;
+                    $diferenciaPrecioTotal += $diferenciaPrecio;
+
+                    $calculosPorDocumento->push([
+                        'documento' => $documento,
+                        'monto' => $monto,
+                        'saldo_liquido' => $saldoLiquido,
+                        'monto_no_anticipado' => $montoNoAnticipado,
+                        'diferencia_precio' => $diferenciaPrecio,
+                        'estado_anterior' => $documento->status,
+                        'status_original_anterior' => $documento->status_original,
+                    ]);
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Totales generales de la operación
+                |--------------------------------------------------------------------------
+                | Regla aprobada:
+                |
+                | Monto Líquido operación = Monto Anticipado + Diferencia de Precio
+                |
+                | Monto a Recibir =
+                |     Monto Líquido operación
+                |     - Comisión Total
+                |     - Diferencia de Precio
+                |--------------------------------------------------------------------------
+                */
+                $montoLiquidoOperacion = $montoAnticipadoTotal
+                    + $diferenciaPrecioTotal;
+
+                $montoARecibir = $montoLiquidoOperacion
+                    - $comisionTotal
+                    - $diferenciaPrecioTotal;
+
+                if ($montoARecibir < 0) {
+                    throw ValidationException::withMessages([
+                        'comision_total' => 'La comisión total genera un monto a recibir negativo para la operación.',
+                    ]);
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Segunda pasada: crear registros y movimientos
+                |--------------------------------------------------------------------------
+                | comision_total y monto_a_recibir son valores generales de la cesión.
+                | Por decisión actual de estructura, se almacenan en cada Factory de
+                | esta operación masiva.
+                |--------------------------------------------------------------------------
+                */
+                foreach ($calculosPorDocumento as $calculo) {
+                    /** @var DocumentoFinanciero $documento */
+                    $documento = $calculo['documento'];
 
                     $factory = FactoryRegistro::create([
                         'documento_financiero_id' => $documento->id,
                         'banco_id' => $banco->id,
-                        'rut_factory' => trim($data['rut_factory']),
-                        'cesion' => trim($data['cesion']),
-                        'fecha_factory' => $data['fecha_factory'],
-                        'monto' => $saldoAnterior,
-                        'saldo_liquido' => $saldoLiquido,
-                        'diferencia' => $diferencia,
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | Campo sin uso en el flujo masivo actual
+                        |--------------------------------------------------------------------------
+                        | La columna rut_factory continúa siendo NOT NULL.
+                        |--------------------------------------------------------------------------
+                        */
+                        'rut_factory' => '',
+
+                        'cesion' => $cesion,
+                        'fecha_factory' => $fechaFactory,
+                        'monto' => $calculo['monto'],
+                        'saldo_liquido' => $calculo['saldo_liquido'],
+                        'monto_no_anticipado' => $calculo['monto_no_anticipado'],
+                        'diferencia_precio' => $calculo['diferencia_precio'],
+                        'comision_total' => $comisionTotal,
+                        'monto_a_recibir' => $montoARecibir,
                         'user_id' => Auth::id(),
                     ]);
 
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Saldo pendiente resultante del documento
+                    |--------------------------------------------------------------------------
+                    | diferencia_precio reemplaza funcionalmente al campo diferencia
+                    | en los registros Factoring nuevos.
+                    |--------------------------------------------------------------------------
+                    */
                     $documento->update([
                         'status' => 'Factory',
                         'fecha_estado_manual' => now(),
-                        'saldo_pendiente' => $diferencia,
+                        'saldo_pendiente' => $calculo['diferencia_precio'],
                     ]);
 
                     MovimientoDocumento::create([
                         'documento_financiero_id' => $documento->id,
                         'user_id' => Auth::id(),
                         'tipo_movimiento' => 'Registro de Factoring masivo',
-                        'descripcion' => "El documento folio {$documento->folio} fue marcado como Factoring masivo. Saldo anterior: {$saldoAnterior}. Saldo líquido: {$saldoLiquido}. Saldo actual: {$diferencia}.",
+                        'descripcion' => "El documento folio {$documento->folio} fue marcado como Factoring masivo. Monto: {$calculo['monto']}. Monto líquido: {$calculo['saldo_liquido']}. Monto no anticipado: {$calculo['monto_no_anticipado']}. Diferencia de precio: {$calculo['diferencia_precio']}. Comisión total operación: {$comisionTotal}. Monto a recibir operación: {$montoARecibir}.",
                         'datos_anteriores' => [
-                            'estado' => $estadoAnterior,
-                            'status_original' => $statusOriginalAnterior,
-                            'saldo_anterior' => $saldoAnterior,
+                            'estado' => $calculo['estado_anterior'],
+                            'status_original' => $calculo['status_original_anterior'],
+                            'saldo_anterior' => $calculo['monto'],
                         ],
                         'datos_nuevos' => [
                             'factory_id' => $factory->id,
                             'banco_id' => $factory->banco_id,
                             'banco' => $banco->nombre,
-                            'rut_factory' => $factory->rut_factory,
                             'cesion' => $factory->cesion,
                             'fecha_factory' => $factory->fecha_factory,
+
                             'monto' => $factory->monto,
                             'saldo_liquido' => $factory->saldo_liquido,
-                            'diferencia' => $factory->diferencia,
+                            'monto_no_anticipado' => $factory->monto_no_anticipado,
+                            'diferencia_precio' => $factory->diferencia_precio,
+
+                            'comision_total' => $factory->comision_total,
+                            'monto_a_recibir' => $factory->monto_a_recibir,
+
                             'nuevo_estado' => 'Factory',
-                            'saldo_actual' => $diferencia,
+                            'saldo_actual' => $calculo['diferencia_precio'],
                         ],
                     ]);
                 }
@@ -584,15 +731,19 @@ class FactoryController extends Controller
             report($e);
 
             return back()
-                ->withErrors(['factory_masivo' => 'Ocurrió un error al registrar Factoring masivo.'])
+                ->withErrors([
+                    'factory_masivo' => 'Ocurrió un error al registrar Factoring masivo.',
+                ])
                 ->withInput();
         }
 
         return back()->with(
             'success',
-            'Factoring masivo registrado correctamente. Los saldos pendientes fueron actualizados según el saldo líquido informado.'
+            'Factoring masivo registrado correctamente. Los saldos pendientes y los totales de la operación fueron almacenados.'
         );
     }
+
+
 
     /**
      * Define qué estado manual debe quedar después de eliminar Factoring.

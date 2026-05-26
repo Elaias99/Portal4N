@@ -210,10 +210,21 @@ class DocumentoFinanciero extends Model
         return max($saldo, 0);
     }
 
+
+
+
     protected function calcularSaldoConFactory(Factory $factory, bool $persistirFactory = false): int
     {
         $saldoBaseDocumento = $this->calcularSaldoBaseDocumento();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Monto cedido vigente
+        |--------------------------------------------------------------------------
+        | Mantiene la lógica existente: Factoring se registra sobre el saldo real
+        | que existía después de abonos o cruces anteriores al registro.
+        |--------------------------------------------------------------------------
+        */
         $montoCedidoActual = $saldoBaseDocumento;
 
         if ($factory->created_at) {
@@ -229,10 +240,76 @@ class DocumentoFinanciero extends Model
         $montoCedidoActual = max($montoCedidoActual, 0);
 
         $saldoLiquido = (int) ($factory->saldo_liquido ?? 0);
-        $diferenciaFactory = max($montoCedidoActual - $saldoLiquido, 0);
 
-        $saldo = $diferenciaFactory;
+        /*
+        |--------------------------------------------------------------------------
+        | Compatibilidad con registros históricos
+        |--------------------------------------------------------------------------
+        | Los registros anteriores a la integración no tienen informado
+        | monto_no_anticipado ni diferencia_precio.
+        |
+        | En esos casos se conserva el cálculo anterior para no inventar una
+        | composición histórica que no fue registrada originalmente.
+        |--------------------------------------------------------------------------
+        */
+        $usaNuevaEstructuraFactory =
+            $factory->monto_no_anticipado !== null ||
+            $factory->diferencia_precio !== null;
 
+        if ($usaNuevaEstructuraFactory) {
+            /*
+            |--------------------------------------------------------------------------
+            | Nueva estructura Factoring
+            |--------------------------------------------------------------------------
+            | diferencia_precio reemplaza funcionalmente a diferencia:
+            |
+            | diferencia_precio = monto - saldo_liquido - monto_no_anticipado
+            |--------------------------------------------------------------------------
+            */
+            $montoNoAnticipado = (int) ($factory->monto_no_anticipado ?? 0);
+
+            $diferenciaPrecioActual = max(
+                $montoCedidoActual - $saldoLiquido - $montoNoAnticipado,
+                0
+            );
+
+            $saldo = $diferenciaPrecioActual;
+
+            if ($persistirFactory) {
+                $factory->update([
+                    'monto' => $montoCedidoActual,
+                    'diferencia_precio' => $diferenciaPrecioActual,
+                ]);
+            }
+        } else {
+            /*
+            |--------------------------------------------------------------------------
+            | Estructura histórica
+            |--------------------------------------------------------------------------
+            | Se mantiene exclusivamente para registros antiguos mientras
+            | diferencia aún exista en la tabla.
+            |--------------------------------------------------------------------------
+            */
+            $diferenciaLegacy = max($montoCedidoActual - $saldoLiquido, 0);
+
+            $saldo = $diferenciaLegacy;
+
+            if ($persistirFactory) {
+                $factory->update([
+                    'monto' => $montoCedidoActual,
+                    'diferencia' => $diferenciaLegacy,
+                ]);
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Movimientos posteriores al Factoring
+        |--------------------------------------------------------------------------
+        | Se mantiene la regla existente: abonos o cruces posteriores reducen
+        | el saldo que todavía permanezca vigente.
+        |--------------------------------------------------------------------------
+        */
         if ($factory->created_at) {
             $saldo -= (int) $this->abonos()
                 ->where('created_at', '>', $factory->created_at)
@@ -243,17 +320,12 @@ class DocumentoFinanciero extends Model
                 ->sum('monto');
         }
 
-        $saldo = max($saldo, 0);
-
-        if ($persistirFactory) {
-            $factory->update([
-                'monto' => $montoCedidoActual,
-                'diferencia' => $diferenciaFactory,
-            ]);
-        }
-
-        return $saldo;
+        return max($saldo, 0);
     }
+
+
+
+
 
     protected function calcularSaldoBaseDocumento(): int
     {

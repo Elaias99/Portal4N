@@ -3,14 +3,18 @@ function toggleFechaEstado(select, id) {
     const hiddenFecha = document.getElementById('fecha-hidden-' + id);
 
     if (['Abono', 'Pago', 'Pronto pago', 'Cobranza judicial'].includes(select.value)) {
-        if (inputFecha) inputFecha.style.display = 'block';
+        if (inputFecha) {
+            inputFecha.style.display = 'block';
+        }
     } else {
         if (inputFecha) {
             inputFecha.style.display = 'none';
             inputFecha.value = '';
         }
 
-        if (hiddenFecha) hiddenFecha.value = '';
+        if (hiddenFecha) {
+            hiddenFecha.value = '';
+        }
     }
 }
 
@@ -29,17 +33,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const templateFactory = document.getElementById('factory-masivo-row-template');
     const alertaSinSeleccion = document.getElementById('factory-masivo-sin-seleccion');
 
-    const totalGeneralFactory = document.getElementById('factory-masivo-total-general');
-
     const btnSubmitFactory = document.getElementById('btn-submit-factory-masivo');
 
-    // Campos generales del modal masivo
+    // =====================================================
+    // RESUMEN CONSOLIDADO DE LA OPERACIÓN
+    // =====================================================
+    const totalDocumentosFactory = document.getElementById('factory-masivo-total-documentos');
+    const totalMontoFactory = document.getElementById('factory-masivo-total-general');
+    const totalAnticipadoFactory = document.getElementById('factory-masivo-total-liquido');
+    const totalDiferenciaPrecioFactory = document.getElementById('factory-masivo-total-diferencia-precio');
+    const totalMontoLiquidoResumenFactory = document.getElementById('factory-masivo-total-monto-liquido-resumen');
+    const totalPrecioCompraFactory = document.getElementById('factory-masivo-total-precio-compra');
+    const totalComisionFactory = document.getElementById('factory-masivo-total-comision');
+    const totalMontoARecibirFactory = document.getElementById('factory-masivo-total-monto-a-recibir');
+
+    // =====================================================
+    // DATOS GENERALES DE LA OPERACIÓN
+    // =====================================================
     const inputGlobalCesion = document.getElementById('factory-masivo-global-cesion');
     const selectGlobalBanco = document.getElementById('factory-masivo-global-banco');
     const wrapperGlobalBancoOtro = document.getElementById('factory-masivo-global-banco-otro-wrapper');
     const inputGlobalBancoOtro = document.getElementById('factory-masivo-global-banco-otro');
-    const inputGlobalRutFactory = document.getElementById('factory-masivo-global-rut');
+    const inputGlobalFechaFactory = document.getElementById('factory-masivo-global-fecha');
+    const inputGlobalComisionTotal = document.getElementById('factory-masivo-global-comision-total');
+
+    // =====================================================
+    // CAMPOS AUXILIARES PARA COPIAR MONTOS A LAS FILAS
+    // =====================================================
     const inputGlobalSaldoLiquido = document.getElementById('factory-masivo-global-saldo-liquido');
+    const inputGlobalMontoNoAnticipado = document.getElementById('factory-masivo-global-monto-no-anticipado');
     const btnAplicarDatosFactoryMasivo = document.getElementById('btn-aplicar-datos-factory-masivo');
 
     function getSeleccionFactory() {
@@ -54,20 +76,52 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem(STORAGE_KEY_FACTORY, JSON.stringify(data));
     }
 
-    function addDocumentoFactory(cb) {
+    function formatCLP(value) {
+        return Number(value || 0).toLocaleString('es-CL', {
+            style: 'currency',
+            currency: 'CLP',
+            maximumFractionDigits: 0,
+        });
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+
+    function obtenerNumeroInput(input) {
+        if (!input || input.value === '') {
+            return null;
+        }
+
+        const valor = Number(input.value);
+
+        return Number.isFinite(valor) ? valor : null;
+    }
+
+    function addDocumentoFactory(checkbox) {
         const seleccion = getSeleccionFactory();
-        const id = cb.dataset.id;
+        const id = checkbox.dataset.id;
+        const datosExistentes = seleccion[id] || {};
 
         seleccion[id] = {
             id: id,
-            empresa: cb.dataset.empresa || '',
-            folio: cb.dataset.folio || '',
-            razon: cb.dataset.razon || '',
-            rut: cb.dataset.rut || '',
-            fechaDocto: cb.dataset.fechaDocto || '',
-            fechaVencimiento: cb.dataset.fechaVencimiento || '',
-            saldo: Number(cb.dataset.saldo || 0),
-            total: Number(cb.dataset.total || 0),
+            empresa: checkbox.dataset.empresa || '',
+            folio: checkbox.dataset.folio || '',
+            razon: checkbox.dataset.razon || '',
+            saldo: Number(checkbox.dataset.saldo || 0),
+
+            /*
+            |--------------------------------------------------------------------------
+            | Mantener valores personalizados de cada fila
+            |--------------------------------------------------------------------------
+            */
+            saldoLiquido: datosExistentes.saldoLiquido ?? '',
+            montoNoAnticipado: datosExistentes.montoNoAnticipado ?? '',
         };
 
         saveSeleccionFactory(seleccion);
@@ -91,6 +145,35 @@ document.addEventListener('DOMContentLoaded', () => {
         actualizarCheckAllFactory();
     }
 
+    function persistirMontosFila(row) {
+        if (!row) {
+            return;
+        }
+
+        const documentoId = row.dataset.documentoId;
+        const seleccion = getSeleccionFactory();
+        const documento = seleccion[documentoId];
+
+        if (!documento) {
+            return;
+        }
+
+        const inputSaldoLiquido = row.querySelector(
+            '[name="documentos[' + documentoId + '][saldo_liquido]"]'
+        );
+
+        const inputMontoNoAnticipado = row.querySelector(
+            '[name="documentos[' + documentoId + '][monto_no_anticipado]"]'
+        );
+
+        documento.saldoLiquido = inputSaldoLiquido ? inputSaldoLiquido.value : '';
+        documento.montoNoAnticipado = inputMontoNoAnticipado ? inputMontoNoAnticipado.value : '';
+
+        seleccion[documentoId] = documento;
+
+        saveSeleccionFactory(seleccion);
+    }
+
     function actualizarCheckAllFactory() {
         if (!checkAllFactory) {
             return;
@@ -104,49 +187,294 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const checksMarcados = Array.from(checks).filter(cb => cb.checked);
+        const checksMarcados = Array.from(checks).filter(checkbox => checkbox.checked);
 
         checkAllFactory.checked = checksMarcados.length === checks.length;
         checkAllFactory.indeterminate =
             checksMarcados.length > 0 && checksMarcados.length < checks.length;
     }
 
-    function formatCLP(value) {
-        return Number(value || 0).toLocaleString('es-CL', {
-            style: 'currency',
-            currency: 'CLP',
-            maximumFractionDigits: 0,
-        });
-    }
+    function resetTotalesFactoryMasivo() {
+        if (inputGlobalComisionTotal) {
+            inputGlobalComisionTotal.setCustomValidity('');
+        }
 
-    function escapeHtml(value) {
-        return String(value ?? '')
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#039;');
-    }
+        if (totalDocumentosFactory) {
+            totalDocumentosFactory.textContent = '0';
+        }
 
-    function resetTotalFactoryMasivo() {
-        if (totalGeneralFactory) {
-            totalGeneralFactory.textContent = formatCLP(0);
+        if (totalMontoFactory) {
+            totalMontoFactory.textContent = formatCLP(0);
+        }
+
+        if (totalAnticipadoFactory) {
+            totalAnticipadoFactory.textContent = formatCLP(0);
+        }
+
+        if (totalDiferenciaPrecioFactory) {
+            totalDiferenciaPrecioFactory.textContent = formatCLP(0);
+        }
+
+        if (totalMontoLiquidoResumenFactory) {
+            totalMontoLiquidoResumenFactory.textContent = formatCLP(0);
+        }
+
+        if (totalPrecioCompraFactory) {
+            totalPrecioCompraFactory.textContent = formatCLP(0);
+        }
+
+        if (totalComisionFactory) {
+            totalComisionFactory.textContent = formatCLP(0);
+        }
+
+        if (totalMontoARecibirFactory) {
+            totalMontoARecibirFactory.textContent = formatCLP(0);
+            totalMontoARecibirFactory.classList.remove('text-danger', 'text-muted');
+            totalMontoARecibirFactory.classList.add('text-success');
         }
     }
 
-    function actualizarTotalFactoryMasivo() {
+    function obtenerCalculoFila(row) {
+        if (!row) {
+            return null;
+        }
+
+        const documentoId = row.dataset.documentoId;
+        const monto = Number(row.dataset.monto || 0);
+
+        const inputSaldoLiquido = row.querySelector(
+            '[name="documentos[' + documentoId + '][saldo_liquido]"]'
+        );
+
+        const inputMontoNoAnticipado = row.querySelector(
+            '[name="documentos[' + documentoId + '][monto_no_anticipado]"]'
+        );
+
+        const saldoLiquido = obtenerNumeroInput(inputSaldoLiquido);
+        const montoNoAnticipado = obtenerNumeroInput(inputMontoNoAnticipado);
+
+        if (saldoLiquido === null || montoNoAnticipado === null) {
+            return {
+                documentoId: documentoId,
+                monto: monto,
+                saldoLiquido: saldoLiquido,
+                montoNoAnticipado: montoNoAnticipado,
+                diferenciaPrecio: null,
+                inputSaldoLiquido: inputSaldoLiquido,
+                inputMontoNoAnticipado: inputMontoNoAnticipado,
+                completo: false,
+                esInvalido: false,
+            };
+        }
+
+        const diferenciaPrecio = monto - saldoLiquido - montoNoAnticipado;
+
+        return {
+            documentoId: documentoId,
+            monto: monto,
+            saldoLiquido: saldoLiquido,
+            montoNoAnticipado: montoNoAnticipado,
+            diferenciaPrecio: diferenciaPrecio,
+            inputSaldoLiquido: inputSaldoLiquido,
+            inputMontoNoAnticipado: inputMontoNoAnticipado,
+            completo: true,
+            esInvalido: diferenciaPrecio < 0,
+        };
+    }
+
+    function actualizarDiferenciaPrecioFila(row) {
+        const calculo = obtenerCalculoFila(row);
+
+        if (!calculo) {
+            return null;
+        }
+
+        const resultado = row.querySelector(
+            '.js-factory-masivo-diferencia-precio[data-documento-id="' + calculo.documentoId + '"]'
+        );
+
+        if (calculo.inputSaldoLiquido) {
+            calculo.inputSaldoLiquido.setCustomValidity('');
+        }
+
+        if (calculo.inputMontoNoAnticipado) {
+            calculo.inputMontoNoAnticipado.setCustomValidity('');
+        }
+
+        if (!calculo.completo) {
+            if (resultado) {
+                resultado.textContent = '—';
+                resultado.classList.remove('text-success', 'text-danger');
+                resultado.classList.add('text-muted');
+            }
+
+            return calculo;
+        }
+
+        if (resultado) {
+            resultado.textContent = formatCLP(calculo.diferenciaPrecio);
+            resultado.classList.remove('text-muted');
+
+            if (calculo.esInvalido) {
+                resultado.classList.remove('text-success');
+                resultado.classList.add('text-danger');
+            } else {
+                resultado.classList.remove('text-danger');
+                resultado.classList.add('text-success');
+            }
+        }
+
+        if (calculo.esInvalido) {
+            const mensaje =
+                'La suma del Monto Líquido y el Monto No Anticipado no puede ser mayor al Monto del documento.';
+
+            if (calculo.inputSaldoLiquido) {
+                calculo.inputSaldoLiquido.setCustomValidity(mensaje);
+            }
+
+            if (calculo.inputMontoNoAnticipado) {
+                calculo.inputMontoNoAnticipado.setCustomValidity(mensaje);
+            }
+        }
+
+        return calculo;
+    }
+
+    function actualizarTotalesFactoryMasivo() {
         const seleccion = getSeleccionFactory();
         const documentos = Object.values(seleccion);
 
-        let totalSaldoPendiente = 0;
+        const cantidadDocumentos = documentos.length;
 
-        documentos.forEach(doc => {
-            totalSaldoPendiente += Number(doc.saldo || 0);
-        });
+        const montoDocto = documentos.reduce((total, documento) => {
+            return total + Number(documento.saldo || 0);
+        }, 0);
 
-        if (totalGeneralFactory) {
-            totalGeneralFactory.textContent = formatCLP(totalSaldoPendiente);
+        let montoAnticipado = 0;
+        let diferenciaPrecioTotal = 0;
+        let filasCompletas = documentos.length > 0;
+        let existeFilaInvalida = false;
+
+        document
+            .querySelectorAll('#factory-masivo-documentos-seleccionados tr[data-documento-id]')
+            .forEach(row => {
+                const calculo = obtenerCalculoFila(row);
+
+                if (!calculo || !calculo.completo) {
+                    filasCompletas = false;
+                    return;
+                }
+
+                montoAnticipado += calculo.saldoLiquido;
+                diferenciaPrecioTotal += calculo.diferenciaPrecio;
+
+                if (calculo.esInvalido) {
+                    existeFilaInvalida = true;
+                }
+            });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Resumen consolidado de la operación
+        |--------------------------------------------------------------------------
+        | Monto Anticipado = suma de saldo_liquido por documento.
+        | Monto Líquido    = Monto Anticipado + Diferencia de Precio.
+        | Precio de Compra = Monto Líquido.
+        |--------------------------------------------------------------------------
+        */
+        const montoLiquido = montoAnticipado + diferenciaPrecioTotal;
+        const precioCompra = montoLiquido;
+
+        const comisionTotal = obtenerNumeroInput(inputGlobalComisionTotal);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Fórmula aprobada de Monto a Recibir
+        |--------------------------------------------------------------------------
+        | Monto a Recibir =
+        |     Monto Líquido - Comisión Total - Diferencia de Precio
+        |--------------------------------------------------------------------------
+        */
+        const puedeCalcularMontoARecibir =
+            filasCompletas &&
+            !existeFilaInvalida &&
+            comisionTotal !== null;
+
+        const montoARecibir = puedeCalcularMontoARecibir
+            ? montoLiquido - comisionTotal - diferenciaPrecioTotal
+            : null;
+
+        if (inputGlobalComisionTotal) {
+            inputGlobalComisionTotal.setCustomValidity('');
+
+            if (montoARecibir !== null && montoARecibir < 0) {
+                inputGlobalComisionTotal.setCustomValidity(
+                    'La Comisión Total genera un Monto a Recibir negativo para la operación.'
+                );
+            }
         }
+
+        if (totalDocumentosFactory) {
+            totalDocumentosFactory.textContent = String(cantidadDocumentos);
+        }
+
+        if (totalMontoFactory) {
+            totalMontoFactory.textContent = formatCLP(montoDocto);
+        }
+
+        if (totalAnticipadoFactory) {
+            totalAnticipadoFactory.textContent = formatCLP(montoAnticipado);
+        }
+
+        if (totalDiferenciaPrecioFactory) {
+            totalDiferenciaPrecioFactory.textContent = formatCLP(diferenciaPrecioTotal);
+        }
+
+        if (totalMontoLiquidoResumenFactory) {
+            totalMontoLiquidoResumenFactory.textContent = formatCLP(montoLiquido);
+        }
+
+        if (totalPrecioCompraFactory) {
+            totalPrecioCompraFactory.textContent = formatCLP(precioCompra);
+        }
+
+        if (totalComisionFactory) {
+            totalComisionFactory.textContent = comisionTotal !== null
+                ? formatCLP(comisionTotal)
+                : '—';
+        }
+
+        if (totalMontoARecibirFactory) {
+            if (montoARecibir === null) {
+                totalMontoARecibirFactory.textContent = '—';
+                totalMontoARecibirFactory.classList.remove('text-success', 'text-danger');
+                totalMontoARecibirFactory.classList.add('text-muted');
+            } else {
+                totalMontoARecibirFactory.textContent = formatCLP(montoARecibir);
+                totalMontoARecibirFactory.classList.remove('text-muted');
+
+                if (montoARecibir < 0) {
+                    totalMontoARecibirFactory.classList.remove('text-success');
+                    totalMontoARecibirFactory.classList.add('text-danger');
+                } else {
+                    totalMontoARecibirFactory.classList.remove('text-danger');
+                    totalMontoARecibirFactory.classList.add('text-success');
+                }
+            }
+        }
+
+        return {
+            cantidadDocumentos: cantidadDocumentos,
+            montoDocto: montoDocto,
+            montoAnticipado: montoAnticipado,
+            diferenciaPrecioTotal: diferenciaPrecioTotal,
+            montoLiquido: montoLiquido,
+            precioCompra: precioCompra,
+            comisionTotal: comisionTotal,
+            montoARecibir: montoARecibir,
+            filasCompletas: filasCompletas,
+            existeFilaInvalida: existeFilaInvalida,
+        };
     }
 
     function renderFactoryMasivoModal() {
@@ -164,7 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alertaSinSeleccion.style.display = 'block';
             }
 
-            resetTotalFactoryMasivo();
+            resetTotalesFactoryMasivo();
 
             if (btnSubmitFactory) {
                 btnSubmitFactory.disabled = true;
@@ -181,48 +509,47 @@ document.addEventListener('DOMContentLoaded', () => {
             btnSubmitFactory.disabled = false;
         }
 
-        documentos.forEach(doc => {
-            const saldo = Number(doc.saldo || 0);
+        documentos.forEach(documento => {
+            const monto = Number(documento.saldo || 0);
 
             let rowHtml = templateFactory.innerHTML;
 
             rowHtml = rowHtml
-                .replaceAll('__ID__', escapeHtml(doc.id))
-                .replaceAll('__EMPRESA__', escapeHtml(doc.empresa))
-                .replaceAll('__FOLIO__', escapeHtml(doc.folio))
-                .replaceAll('__RAZON__', escapeHtml(doc.razon))
-                .replaceAll('__RUT__', escapeHtml(doc.rut))
-                .replaceAll('__SALDO_FORMAT__', formatCLP(saldo));
+                .replaceAll('__ID__', escapeHtml(documento.id))
+                .replaceAll('__EMPRESA__', escapeHtml(documento.empresa))
+                .replaceAll('__FOLIO__', escapeHtml(documento.folio))
+                .replaceAll('__RAZON__', escapeHtml(documento.razon))
+                .replaceAll('__SALDO__', String(monto))
+                .replaceAll('__SALDO_FORMAT__', formatCLP(monto));
 
             tbodyFactory.insertAdjacentHTML('beforeend', rowHtml);
+
+            const row = tbodyFactory.lastElementChild;
+
+            if (!row) {
+                return;
+            }
+
+            const inputSaldoLiquido = row.querySelector(
+                '[name="documentos[' + documento.id + '][saldo_liquido]"]'
+            );
+
+            const inputMontoNoAnticipado = row.querySelector(
+                '[name="documentos[' + documento.id + '][monto_no_anticipado]"]'
+            );
+
+            if (inputSaldoLiquido && documento.saldoLiquido !== '') {
+                inputSaldoLiquido.value = documento.saldoLiquido;
+            }
+
+            if (inputMontoNoAnticipado && documento.montoNoAnticipado !== '') {
+                inputMontoNoAnticipado.value = documento.montoNoAnticipado;
+            }
+
+            actualizarDiferenciaPrecioFila(row);
         });
 
-        actualizarTotalFactoryMasivo();
-    }
-
-    function toggleBancoOtroFactoryMasivo(select) {
-        const documentoId = select.dataset.documentoId;
-
-        const wrapper = document.querySelector(
-            '.js-factory-masivo-banco-otro-wrapper[data-documento-id="' + documentoId + '"]'
-        );
-
-        const input = document.querySelector(
-            '.js-factory-masivo-banco-otro[data-documento-id="' + documentoId + '"]'
-        );
-
-        if (!wrapper || !input) {
-            return;
-        }
-
-        if (select.value === '__otro__') {
-            wrapper.style.display = 'block';
-            input.required = true;
-        } else {
-            wrapper.style.display = 'none';
-            input.required = false;
-            input.value = '';
-        }
+        actualizarTotalesFactoryMasivo();
     }
 
     function toggleBancoOtroFactoryMasivoGlobal() {
@@ -240,164 +567,194 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function aplicarDatosGlobalesFactoryMasivo() {
+    function validarDatosGeneralesFactoryMasivo() {
         if (
             !inputGlobalCesion ||
             !selectGlobalBanco ||
-            !inputGlobalRutFactory ||
-            !inputGlobalSaldoLiquido
+            !inputGlobalFechaFactory ||
+            !inputGlobalComisionTotal
         ) {
             return false;
         }
 
         toggleBancoOtroFactoryMasivoGlobal();
 
-        const cesion = inputGlobalCesion.value.trim();
-        const bancoId = selectGlobalBanco.value;
-        const bancoOtro = inputGlobalBancoOtro ? inputGlobalBancoOtro.value.trim() : '';
-        const rutFactory = inputGlobalRutFactory.value.trim();
-        const saldoLiquido = Number(inputGlobalSaldoLiquido.value || 0);
-
-        if (!cesion) {
+        if (!inputGlobalCesion.value.trim()) {
             inputGlobalCesion.reportValidity();
             return false;
         }
 
-        if (!bancoId) {
+        if (!selectGlobalBanco.value) {
             selectGlobalBanco.reportValidity();
             return false;
         }
 
-        if (bancoId === '__otro__' && !bancoOtro) {
+        if (
+            selectGlobalBanco.value === '__otro__' &&
+            inputGlobalBancoOtro &&
+            !inputGlobalBancoOtro.value.trim()
+        ) {
             inputGlobalBancoOtro.reportValidity();
             return false;
         }
 
-        if (!rutFactory) {
-            inputGlobalRutFactory.reportValidity();
+        if (!inputGlobalFechaFactory.value) {
+            inputGlobalFechaFactory.reportValidity();
+            return false;
+        }
+
+        if (inputGlobalComisionTotal.value === '') {
+            inputGlobalComisionTotal.reportValidity();
+            return false;
+        }
+
+        const comisionTotal = Number(inputGlobalComisionTotal.value);
+
+        if (!Number.isFinite(comisionTotal) || comisionTotal < 0) {
+            inputGlobalComisionTotal.reportValidity();
+            return false;
+        }
+
+        const resumen = actualizarTotalesFactoryMasivo();
+
+        if (resumen.montoARecibir !== null && resumen.montoARecibir < 0) {
+            inputGlobalComisionTotal.reportValidity();
+            return false;
+        }
+
+        return true;
+    }
+
+    function aplicarMontosGlobalesFactoryMasivo() {
+        if (!inputGlobalSaldoLiquido || !inputGlobalMontoNoAnticipado) {
+            return false;
+        }
+
+        const rows = document.querySelectorAll(
+            '#factory-masivo-documentos-seleccionados tr[data-documento-id]'
+        );
+
+        if (rows.length === 0) {
+            alert('Debe seleccionar al menos un documento antes de aplicar montos.');
             return false;
         }
 
         if (inputGlobalSaldoLiquido.value === '') {
-            inputGlobalSaldoLiquido.reportValidity();
+            inputGlobalSaldoLiquido.focus();
+            alert('Debe ingresar el Monto Líquido que desea aplicar a todos.');
             return false;
         }
 
-        if (saldoLiquido < 0) {
-            inputGlobalSaldoLiquido.reportValidity();
+        if (inputGlobalMontoNoAnticipado.value === '') {
+            inputGlobalMontoNoAnticipado.focus();
+            alert('Debe ingresar el Monto No Anticipado que desea aplicar a todos.');
             return false;
         }
 
-        const seleccion = getSeleccionFactory();
-        const documentos = Object.values(seleccion);
+        const saldoLiquido = Number(inputGlobalSaldoLiquido.value);
+        const montoNoAnticipado = Number(inputGlobalMontoNoAnticipado.value);
 
-        const documentosConSaldoMenor = documentos.filter(doc => {
-            return saldoLiquido > Number(doc.saldo || 0);
+        if (
+            !Number.isFinite(saldoLiquido) ||
+            !Number.isFinite(montoNoAnticipado) ||
+            saldoLiquido < 0 ||
+            montoNoAnticipado < 0
+        ) {
+            alert('Los montos ingresados deben ser números enteros mayores o iguales a cero.');
+            return false;
+        }
+
+        const foliosInvalidos = [];
+
+        rows.forEach(row => {
+            const monto = Number(row.dataset.monto || 0);
+            const diferenciaPrecio = monto - saldoLiquido - montoNoAnticipado;
+
+            if (diferenciaPrecio < 0) {
+                const documentoId = row.dataset.documentoId;
+                const seleccion = getSeleccionFactory();
+                const documento = seleccion[documentoId];
+
+                foliosInvalidos.push(documento?.folio || documentoId);
+            }
         });
 
-        if (documentosConSaldoMenor.length > 0) {
-            const folios = documentosConSaldoMenor
-                .map(doc => doc.folio)
-                .filter(Boolean)
-                .join(', ');
-
+        if (foliosInvalidos.length > 0) {
             alert(
-                'El saldo líquido no puede ser mayor al saldo pendiente de los documentos seleccionados. ' +
-                'Revisa los folios: ' + folios
+                'La suma del Monto Líquido y el Monto No Anticipado supera el Monto de los siguientes documentos: ' +
+                foliosInvalidos.join(', ')
             );
 
             return false;
         }
 
-        document
-            .querySelectorAll('#factory-masivo-documentos-seleccionados tr[data-documento-id]')
-            .forEach(row => {
-                const documentoId = row.dataset.documentoId;
+        rows.forEach(row => {
+            const documentoId = row.dataset.documentoId;
 
-                const inputCesionFila = row.querySelector(
-                    '[name="documentos[' + documentoId + '][cesion]"]'
-                );
+            const inputSaldoLiquidoFila = row.querySelector(
+                '[name="documentos[' + documentoId + '][saldo_liquido]"]'
+            );
 
-                const selectBancoFila = row.querySelector(
-                    '[name="documentos[' + documentoId + '][banco_id]"]'
-                );
+            const inputMontoNoAnticipadoFila = row.querySelector(
+                '[name="documentos[' + documentoId + '][monto_no_anticipado]"]'
+            );
 
-                const inputBancoOtroFila = row.querySelector(
-                    '[name="documentos[' + documentoId + '][banco_otro]"]'
-                );
+            if (inputSaldoLiquidoFila) {
+                inputSaldoLiquidoFila.value = saldoLiquido;
+            }
 
-                const inputRutFila = row.querySelector(
-                    '[name="documentos[' + documentoId + '][rut_factory]"]'
-                );
+            if (inputMontoNoAnticipadoFila) {
+                inputMontoNoAnticipadoFila.value = montoNoAnticipado;
+            }
 
-                const inputSaldoLiquidoFila = row.querySelector(
-                    '[name="documentos[' + documentoId + '][saldo_liquido]"]'
-                );
+            persistirMontosFila(row);
+            actualizarDiferenciaPrecioFila(row);
+        });
 
-                if (inputCesionFila) {
-                    inputCesionFila.value = cesion;
-                }
-
-                if (selectBancoFila) {
-                    selectBancoFila.value = bancoId;
-                    toggleBancoOtroFactoryMasivo(selectBancoFila);
-                }
-
-                if (inputBancoOtroFila) {
-                    inputBancoOtroFila.value = bancoId === '__otro__' ? bancoOtro : '';
-                }
-
-                if (inputRutFila) {
-                    inputRutFila.value = rutFactory;
-                }
-
-                if (inputSaldoLiquidoFila) {
-                    inputSaldoLiquidoFila.value = saldoLiquido;
-                }
-            });
+        actualizarTotalesFactoryMasivo();
 
         return true;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Validar valores finales por fila
-    |--------------------------------------------------------------------------
-    | Esta validación usa los montos que finalmente quedaron en cada documento,
-    | incluyendo ajustes manuales posteriores al botón "Aplicar a todos".
-    |--------------------------------------------------------------------------
-    */
     function validarFilasFactoryMasivo() {
-        const seleccion = getSeleccionFactory();
-        const documentosConMontoInvalido = [];
+        const foliosInvalidos = [];
+        let primerInputInvalido = null;
 
         document
             .querySelectorAll('#factory-masivo-documentos-seleccionados tr[data-documento-id]')
             .forEach(row => {
-                const documentoId = row.dataset.documentoId;
-                const documento = seleccion[documentoId];
+                const calculo = actualizarDiferenciaPrecioFila(row);
 
-                const inputSaldoLiquido = row.querySelector(
-                    '[name="documentos[' + documentoId + '][saldo_liquido]"]'
-                );
-
-                if (!documento || !inputSaldoLiquido || inputSaldoLiquido.value === '') {
+                if (!calculo || !calculo.completo) {
                     return;
                 }
 
-                const saldoPendiente = Number(documento.saldo || 0);
-                const saldoLiquido = Number(inputSaldoLiquido.value || 0);
+                if (calculo.esInvalido) {
+                    const seleccion = getSeleccionFactory();
+                    const documento = seleccion[calculo.documentoId];
 
-                if (saldoLiquido > saldoPendiente) {
-                    documentosConMontoInvalido.push(documento.folio || documentoId);
+                    foliosInvalidos.push(documento?.folio || calculo.documentoId);
+
+                    if (!primerInputInvalido) {
+                        primerInputInvalido = calculo.inputMontoNoAnticipado;
+                    }
                 }
             });
 
-        if (documentosConMontoInvalido.length > 0) {
+        actualizarTotalesFactoryMasivo();
+
+        if (foliosInvalidos.length > 0) {
             alert(
-                'El monto aplicado por Factoring no puede ser mayor al saldo pendiente actual. ' +
-                'Revisa los folios: ' + documentosConMontoInvalido.join(', ')
+                'La Diferencia de Precio no puede ser negativa. Revisa los folios: ' +
+                foliosInvalidos.join(', ')
             );
+
+            if (
+                primerInputInvalido &&
+                typeof primerInputInvalido.reportValidity === 'function'
+            ) {
+                primerInputInvalido.reportValidity();
+            }
 
             return false;
         }
@@ -405,17 +762,26 @@ document.addEventListener('DOMContentLoaded', () => {
         return true;
     }
 
-    // Restaurar checkboxes al cargar/paginar
+    // =====================================================
+    // RESTAURAR CHECKBOXES AL CARGAR O PAGINAR
+    // =====================================================
     const seleccionInicial = getSeleccionFactory();
 
-    document.querySelectorAll('.check-documento-factory').forEach(cb => {
-        const id = cb.dataset.id;
+    document.querySelectorAll('.check-documento-factory').forEach(checkbox => {
+        const id = checkbox.dataset.id;
 
         if (seleccionInicial[id]) {
-            cb.checked = true;
+            checkbox.checked = true;
+
+            /*
+            |--------------------------------------------------------------------------
+            | Refrescar datos visibles sin perder montos digitados
+            |--------------------------------------------------------------------------
+            */
+            addDocumentoFactory(checkbox);
         }
 
-        cb.addEventListener('change', function () {
+        checkbox.addEventListener('change', function () {
             if (this.checked) {
                 addDocumentoFactory(this);
             } else {
@@ -430,13 +796,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Seleccionar todos los documentos visibles disponibles
     checkAllFactory?.addEventListener('change', function () {
-        document.querySelectorAll('.check-documento-factory').forEach(cb => {
-            cb.checked = this.checked;
+        document.querySelectorAll('.check-documento-factory').forEach(checkbox => {
+            checkbox.checked = this.checked;
 
             if (this.checked) {
-                addDocumentoFactory(cb);
+                addDocumentoFactory(checkbox);
             } else {
-                removeDocumentoFactory(cb.dataset.id);
+                removeDocumentoFactory(checkbox.dataset.id);
             }
         });
 
@@ -464,28 +830,47 @@ document.addEventListener('DOMContentLoaded', () => {
         renderFactoryMasivoModal();
     });
 
-    // Mostrar input "Otro" por fila
-    document.addEventListener('change', function (event) {
-        const selectBanco = event.target.closest('.js-factory-masivo-banco');
+    // Recalcular diferencias y totales al editar montos por fila
+    document.addEventListener('input', function (event) {
+        const inputMonto = event.target.closest(
+            '.js-factory-masivo-saldo-liquido, .js-factory-masivo-monto-no-anticipado'
+        );
 
-        if (!selectBanco) {
+        if (inputMonto) {
+            const row = inputMonto.closest('tr[data-documento-id]');
+
+            if (!row) {
+                return;
+            }
+
+            persistirMontosFila(row);
+            actualizarDiferenciaPrecioFila(row);
+            actualizarTotalesFactoryMasivo();
+
             return;
         }
 
-        toggleBancoOtroFactoryMasivo(selectBanco);
+        // Recalcular Monto a Recibir al modificar Comisión Total
+        if (event.target === inputGlobalComisionTotal) {
+            actualizarTotalesFactoryMasivo();
+        }
     });
 
-    // Mostrar input "Otro" en los campos generales
+    // Mostrar input "Otra entidad" en los campos generales
     selectGlobalBanco?.addEventListener('change', function () {
         toggleBancoOtroFactoryMasivoGlobal();
     });
 
-    // Aplicar datos generales a todas las filas seleccionadas
+    toggleBancoOtroFactoryMasivoGlobal();
+
+    // Aplicar ambos montos generales a todas las filas seleccionadas
     btnAplicarDatosFactoryMasivo?.addEventListener('click', function () {
-        const aplicado = aplicarDatosGlobalesFactoryMasivo();
+        const aplicado = aplicarMontosGlobalesFactoryMasivo();
 
         if (aplicado) {
-            alert('Datos de Factoring aplicados a todos los documentos seleccionados.');
+            alert(
+                'Monto Líquido y Monto No Anticipado copiados a todos los documentos seleccionados.'
+            );
         }
     });
 
@@ -493,9 +878,8 @@ document.addEventListener('DOMContentLoaded', () => {
     |--------------------------------------------------------------------------
     | Enviar Factoring masivo sin sobrescribir ajustes individuales
     |--------------------------------------------------------------------------
-    | Los datos generales solo se copian al presionar "Aplicar a todos".
-    | Al enviar, se validan los valores finales de cada fila tal como el
-    | usuario los dejó.
+    | Cesión, banco, fecha y comisión se envían como datos generales.
+    | Cada fila envía exactamente sus montos finales personalizados.
     |--------------------------------------------------------------------------
     */
     formFactoryMasivo?.addEventListener('submit', function (event) {
@@ -507,14 +891,28 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        actualizarTotalFactoryMasivo();
+        toggleBancoOtroFactoryMasivoGlobal();
 
-        if (typeof this.reportValidity === 'function' && !this.reportValidity()) {
+        document
+            .querySelectorAll('#factory-masivo-documentos-seleccionados tr[data-documento-id]')
+            .forEach(row => {
+                persistirMontosFila(row);
+                actualizarDiferenciaPrecioFila(row);
+            });
+
+        actualizarTotalesFactoryMasivo();
+
+        if (!validarFilasFactoryMasivo()) {
             event.preventDefault();
             return;
         }
 
-        if (!validarFilasFactoryMasivo()) {
+        if (!validarDatosGeneralesFactoryMasivo()) {
+            event.preventDefault();
+            return;
+        }
+
+        if (typeof this.reportValidity === 'function' && !this.reportValidity()) {
             event.preventDefault();
             return;
         }
