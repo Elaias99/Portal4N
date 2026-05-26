@@ -435,25 +435,841 @@
 
             <x-finanzas.plain-table>
 
+                @php
+                    $queryBaseColumnas = request()->except(['page']);
+
+                    $ordenUrl = function (string $sortByNuevo, string $sortOrderNuevo) use ($queryBaseColumnas) {
+                        return route('honorarios.mensual.index', array_merge(
+                            $queryBaseColumnas,
+                            [
+                                'sort_by' => $sortByNuevo,
+                                'sort_order' => $sortOrderNuevo,
+                            ]
+                        ));
+                    };
+
+                    $queryFiltroColumna = function (string $filtroActual) {
+                        return request()->except(['page', $filtroActual]);
+                    };
+
+                    $limpiarFiltroUrl = function (string $filtroActual) {
+                        return route(
+                            'honorarios.mensual.index',
+                            request()->except(['page', $filtroActual])
+                        );
+                    };
+
+                    $filtroActivo = fn (string $filtro) => request()->filled($filtro);
+                @endphp
+
                 <thead>
                     <tr>
                         <th class="hm-nowrap text-center">
                             <input type="checkbox" id="check-all-honorarios">
                         </th>
-                        <th>Empresa</th>
-                        <th>Tipo boleta</th>
-                        <th>Estado</th>
-                        <th>RUT</th>
+
+                        {{-- EMPRESA --}}
+                        <th>
+                            <div class="dropdown d-inline">
+                                <button
+                                    class="btn btn-light btn-sm dropdown-toggle px-2 py-1 {{ $filtroActivo('cf_empresa_id') ? 'hm-column-filter-active' : '' }}"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                >
+                                    Empresa
+
+                                    @if(($sortBy ?? null) === 'empresa_id')
+                                        <i class="bi {{ ($sortOrder ?? 'asc') === 'asc' ? 'bi-sort-alpha-down' : 'bi-sort-alpha-up' }} ms-1 text-primary"></i>
+                                    @endif
+                                </button>
+
+                                <ul class="dropdown-menu shadow-sm small p-2" style="min-width: 230px;">
+                                    <li>
+                                        <a class="dropdown-item mb-1" href="{{ $ordenUrl('empresa_id', 'asc') }}">
+                                            <i class="bi bi-sort-alpha-down"></i> Ordenar A → Z
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item mb-2" href="{{ $ordenUrl('empresa_id', 'desc') }}">
+                                            <i class="bi bi-sort-alpha-up"></i> Ordenar Z → A
+                                        </a>
+                                    </li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <li class="px-2">
+                                        <form method="GET" action="{{ route('honorarios.mensual.index') }}">
+                                            @foreach($queryFiltroColumna('cf_empresa_id') as $key => $value)
+                                                @if(is_array($value))
+                                                    @foreach($value as $item)
+                                                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                                                    @endforeach
+                                                @else
+                                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                                @endif
+                                            @endforeach
+
+                                            <div class="mb-2">
+                                                <select name="cf_empresa_id" class="form-select form-select-sm">
+                                                    <option value="">-- Seleccionar empresa --</option>
+
+                                                    @foreach($empresas as $empresa)
+                                                        <option value="{{ $empresa->id }}"
+                                                            {{ request('cf_empresa_id') == $empresa->id ? 'selected' : '' }}>
+                                                            {{ $empresa->Nombre }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between">
+                                                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 me-1">
+                                                    <i class="bi bi-filter"></i> Filtrar
+                                                </button>
+
+                                                @if($filtroActivo('cf_empresa_id'))
+                                                    <a href="{{ $limpiarFiltroUrl('cf_empresa_id') }}" class="btn btn-outline-secondary btn-sm">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </th>
+
+                        {{-- TIPO BOLETA --}}
+                        <th>
+                            <div class="dropdown d-inline">
+                                <button
+                                    class="btn btn-light btn-sm dropdown-toggle px-2 py-1 {{ $filtroActivo('cf_tipo_boleta') ? 'hm-column-filter-active' : '' }}"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                >
+                                    Tipo boleta
+
+                                    @if(($sortBy ?? null) === 'tipo_boleta')
+                                        <i class="bi {{ ($sortOrder ?? 'asc') === 'asc' ? 'bi-sort-alpha-down' : 'bi-sort-alpha-up' }} ms-1 text-primary"></i>
+                                    @endif
+                                </button>
+
+                                <ul class="dropdown-menu shadow-sm small p-2" style="min-width: 230px;">
+                                    <li>
+                                        <a class="dropdown-item mb-1" href="{{ $ordenUrl('tipo_boleta', 'asc') }}">
+                                            <i class="bi bi-sort-alpha-down"></i> Ordenar A → Z
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item mb-2" href="{{ $ordenUrl('tipo_boleta', 'desc') }}">
+                                            <i class="bi bi-sort-alpha-up"></i> Ordenar Z → A
+                                        </a>
+                                    </li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <li class="px-2">
+                                        <form method="GET" action="{{ route('honorarios.mensual.index') }}">
+                                            @foreach($queryFiltroColumna('cf_tipo_boleta') as $key => $value)
+                                                @if(is_array($value))
+                                                    @foreach($value as $item)
+                                                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                                                    @endforeach
+                                                @else
+                                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                                @endif
+                                            @endforeach
+
+                                            <div class="mb-2">
+                                                <select name="cf_tipo_boleta" class="form-select form-select-sm">
+                                                    <option value="">-- Seleccionar tipo --</option>
+
+                                                    @foreach($tiposBoletaColumna as $tipoBoleta)
+                                                        <option value="{{ $tipoBoleta }}"
+                                                            {{ request('cf_tipo_boleta') === $tipoBoleta ? 'selected' : '' }}>
+                                                            {{ $tipoBoleta }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between">
+                                                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 me-1">
+                                                    <i class="bi bi-filter"></i> Filtrar
+                                                </button>
+
+                                                @if($filtroActivo('cf_tipo_boleta'))
+                                                    <a href="{{ $limpiarFiltroUrl('cf_tipo_boleta') }}" class="btn btn-outline-secondary btn-sm">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </th>
+
+                        {{-- ESTADO FINANCIERO VISIBLE --}}
+                        <th>
+                            <div class="dropdown d-inline">
+                                <button
+                                    class="btn btn-light btn-sm dropdown-toggle px-2 py-1 {{ $filtroActivo('cf_estado_financiero') ? 'hm-column-filter-active' : '' }}"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                >
+                                    Estado
+
+                                    @if(($sortBy ?? null) === 'estado_financiero_inicial')
+                                        <i class="bi {{ ($sortOrder ?? 'asc') === 'asc' ? 'bi-sort-alpha-down' : 'bi-sort-alpha-up' }} ms-1 text-primary"></i>
+                                    @endif
+                                </button>
+
+                                <ul class="dropdown-menu shadow-sm small p-2" style="min-width: 230px;">
+                                    <li>
+                                        <a class="dropdown-item mb-1" href="{{ $ordenUrl('estado_financiero_inicial', 'asc') }}">
+                                            <i class="bi bi-sort-alpha-down"></i> Ordenar A → Z
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item mb-2" href="{{ $ordenUrl('estado_financiero_inicial', 'desc') }}">
+                                            <i class="bi bi-sort-alpha-up"></i> Ordenar Z → A
+                                        </a>
+                                    </li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <li class="px-2">
+                                        <form method="GET" action="{{ route('honorarios.mensual.index') }}">
+                                            @foreach($queryFiltroColumna('cf_estado_financiero') as $key => $value)
+                                                @if(is_array($value))
+                                                    @foreach($value as $item)
+                                                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                                                    @endforeach
+                                                @else
+                                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                                @endif
+                                            @endforeach
+
+                                            <div class="mb-2">
+                                                <select name="cf_estado_financiero" class="form-select form-select-sm">
+                                                    <option value="">-- Seleccionar estado --</option>
+
+                                                    @foreach($estadosFinancierosColumna as $estadoFinanciero)
+                                                        <option value="{{ $estadoFinanciero }}"
+                                                            {{ request('cf_estado_financiero') === $estadoFinanciero ? 'selected' : '' }}>
+                                                            {{ $estadoFinanciero === 'Pago' ? 'Pagado' : $estadoFinanciero }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between">
+                                                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 me-1">
+                                                    <i class="bi bi-filter"></i> Filtrar
+                                                </button>
+
+                                                @if($filtroActivo('cf_estado_financiero'))
+                                                    <a href="{{ $limpiarFiltroUrl('cf_estado_financiero') }}" class="btn btn-outline-secondary btn-sm">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </th>
+
+                        {{-- RUT EMISOR --}}
+                        <th>
+                            <div class="dropdown d-inline">
+                                <button
+                                    class="btn btn-light btn-sm dropdown-toggle px-2 py-1 {{ $filtroActivo('cf_rut_emisor') ? 'hm-column-filter-active' : '' }}"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                >
+                                    RUT
+
+                                    @if(($sortBy ?? null) === 'rut_emisor')
+                                        <i class="bi {{ ($sortOrder ?? 'asc') === 'asc' ? 'bi-sort-alpha-down' : 'bi-sort-alpha-up' }} ms-1 text-primary"></i>
+                                    @endif
+                                </button>
+
+                                <ul class="dropdown-menu shadow-sm small p-2" style="min-width: 230px;">
+                                    <li>
+                                        <a class="dropdown-item mb-1" href="{{ $ordenUrl('rut_emisor', 'asc') }}">
+                                            <i class="bi bi-sort-alpha-down"></i> Ordenar A → Z
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item mb-2" href="{{ $ordenUrl('rut_emisor', 'desc') }}">
+                                            <i class="bi bi-sort-alpha-up"></i> Ordenar Z → A
+                                        </a>
+                                    </li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <li class="px-2">
+                                        <form method="GET" action="{{ route('honorarios.mensual.index') }}">
+                                            @foreach($queryFiltroColumna('cf_rut_emisor') as $key => $value)
+                                                @if(is_array($value))
+                                                    @foreach($value as $item)
+                                                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                                                    @endforeach
+                                                @else
+                                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                                @endif
+                                            @endforeach
+
+                                            <div class="mb-2">
+                                                <select name="cf_rut_emisor" class="form-select form-select-sm">
+                                                    <option value="">-- Seleccionar RUT --</option>
+
+                                                    @foreach($rutsEmisorColumna as $rutEmisor)
+                                                        <option value="{{ $rutEmisor }}"
+                                                            {{ request('cf_rut_emisor') === $rutEmisor ? 'selected' : '' }}>
+                                                            {{ $rutEmisor }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between">
+                                                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 me-1">
+                                                    <i class="bi bi-filter"></i> Filtrar
+                                                </button>
+
+                                                @if($filtroActivo('cf_rut_emisor'))
+                                                    <a href="{{ $limpiarFiltroUrl('cf_rut_emisor') }}" class="btn btn-outline-secondary btn-sm">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </th>
+
+                        {{-- EMISOR: SIN FILTRO POR COLUMNA --}}
                         <th>Emisor</th>
-                        <th>Folio</th>
+
+                        {{-- FOLIO --}}
+                        <th>
+                            <div class="dropdown d-inline">
+                                <button
+                                    class="btn btn-light btn-sm dropdown-toggle px-2 py-1 {{ $filtroActivo('cf_folio') ? 'hm-column-filter-active' : '' }}"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                >
+                                    Folio
+
+                                    @if(($sortBy ?? null) === 'folio')
+                                        <i class="bi {{ ($sortOrder ?? 'asc') === 'asc' ? 'bi-sort-numeric-down' : 'bi-sort-numeric-up' }} ms-1 text-primary"></i>
+                                    @endif
+                                </button>
+
+                                <ul class="dropdown-menu shadow-sm small p-2" style="min-width: 230px;">
+                                    <li>
+                                        <a class="dropdown-item mb-1" href="{{ $ordenUrl('folio', 'asc') }}">
+                                            <i class="bi bi-sort-numeric-down"></i> Ordenar 0 → 9
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item mb-2" href="{{ $ordenUrl('folio', 'desc') }}">
+                                            <i class="bi bi-sort-numeric-up"></i> Ordenar 9 → 0
+                                        </a>
+                                    </li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <li class="px-2">
+                                        <form method="GET" action="{{ route('honorarios.mensual.index') }}">
+                                            @foreach($queryFiltroColumna('cf_folio') as $key => $value)
+                                                @if(is_array($value))
+                                                    @foreach($value as $item)
+                                                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                                                    @endforeach
+                                                @else
+                                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                                @endif
+                                            @endforeach
+
+                                            <div class="mb-2">
+                                                <select name="cf_folio" class="form-select form-select-sm">
+                                                    <option value="">-- Seleccionar folio --</option>
+
+                                                    @foreach($foliosColumna as $folioColumna)
+                                                        <option value="{{ $folioColumna }}"
+                                                            {{ (string) request('cf_folio') === (string) $folioColumna ? 'selected' : '' }}>
+                                                            {{ $folioColumna }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between">
+                                                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 me-1">
+                                                    <i class="bi bi-filter"></i> Filtrar
+                                                </button>
+
+                                                @if($filtroActivo('cf_folio'))
+                                                    <a href="{{ $limpiarFiltroUrl('cf_folio') }}" class="btn btn-outline-secondary btn-sm">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </th>
+
+                        {{-- SERVICIO: SIN FILTRO POR COLUMNA --}}
                         <th>Servicio</th>
+
+                        {{-- SERVICIO FINAL: SIN FILTRO POR COLUMNA --}}
                         <th>Servicio Final</th>
-                        <th>Fecha Emisión</th>
-                        <th>Fecha Vencimiento</th>
-                        <th>Estado SII</th>
-                        <th>Fecha Anulación</th>
-                        <th class="text-end">Monto Pagado</th>
-                        <th class="text-end">Saldo pendiente</th>
+
+                        {{-- FECHA EMISIÓN --}}
+                        <th>
+                            <div class="dropdown d-inline">
+                                <button
+                                    class="btn btn-light btn-sm dropdown-toggle px-2 py-1 {{ $filtroActivo('cf_fecha_emision') ? 'hm-column-filter-active' : '' }}"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                >
+                                    Fecha Emisión
+
+                                    @if(($sortBy ?? null) === 'fecha_emision')
+                                        <i class="bi {{ ($sortOrder ?? 'asc') === 'asc' ? 'bi-sort-down-alt' : 'bi-sort-up-alt' }} ms-1 text-primary"></i>
+                                    @endif
+                                </button>
+
+                                <ul class="dropdown-menu shadow-sm small p-2" style="min-width: 230px;">
+                                    <li>
+                                        <a class="dropdown-item mb-1" href="{{ $ordenUrl('fecha_emision', 'asc') }}">
+                                            <i class="bi bi-sort-down-alt"></i> Más antigua primero
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item mb-2" href="{{ $ordenUrl('fecha_emision', 'desc') }}">
+                                            <i class="bi bi-sort-up-alt"></i> Más reciente primero
+                                        </a>
+                                    </li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <li class="px-2">
+                                        <form method="GET" action="{{ route('honorarios.mensual.index') }}">
+                                            @foreach($queryFiltroColumna('cf_fecha_emision') as $key => $value)
+                                                @if(is_array($value))
+                                                    @foreach($value as $item)
+                                                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                                                    @endforeach
+                                                @else
+                                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                                @endif
+                                            @endforeach
+
+                                            <div class="mb-2">
+                                                <select name="cf_fecha_emision" class="form-select form-select-sm">
+                                                    <option value="">-- Seleccionar fecha --</option>
+
+                                                    @foreach($fechasEmisionColumna as $fechaEmision)
+                                                        <option value="{{ $fechaEmision }}"
+                                                            {{ request('cf_fecha_emision') === $fechaEmision ? 'selected' : '' }}>
+                                                            {{ \Carbon\Carbon::parse($fechaEmision)->format('d-m-Y') }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between">
+                                                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 me-1">
+                                                    <i class="bi bi-filter"></i> Filtrar
+                                                </button>
+
+                                                @if($filtroActivo('cf_fecha_emision'))
+                                                    <a href="{{ $limpiarFiltroUrl('cf_fecha_emision') }}" class="btn btn-outline-secondary btn-sm">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </th>
+
+                        {{-- FECHA VENCIMIENTO --}}
+                        <th>
+                            <div class="dropdown d-inline">
+                                <button
+                                    class="btn btn-light btn-sm dropdown-toggle px-2 py-1 {{ $filtroActivo('cf_fecha_vencimiento') ? 'hm-column-filter-active' : '' }}"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                >
+                                    Fecha Vencimiento
+
+                                    @if(($sortBy ?? null) === 'fecha_vencimiento')
+                                        <i class="bi {{ ($sortOrder ?? 'asc') === 'asc' ? 'bi-sort-down-alt' : 'bi-sort-up-alt' }} ms-1 text-primary"></i>
+                                    @endif
+                                </button>
+
+                                <ul class="dropdown-menu shadow-sm small p-2" style="min-width: 230px;">
+                                    <li>
+                                        <a class="dropdown-item mb-1" href="{{ $ordenUrl('fecha_vencimiento', 'asc') }}">
+                                            <i class="bi bi-sort-down-alt"></i> Más antigua primero
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item mb-2" href="{{ $ordenUrl('fecha_vencimiento', 'desc') }}">
+                                            <i class="bi bi-sort-up-alt"></i> Más reciente primero
+                                        </a>
+                                    </li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <li class="px-2">
+                                        <form method="GET" action="{{ route('honorarios.mensual.index') }}">
+                                            @foreach($queryFiltroColumna('cf_fecha_vencimiento') as $key => $value)
+                                                @if(is_array($value))
+                                                    @foreach($value as $item)
+                                                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                                                    @endforeach
+                                                @else
+                                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                                @endif
+                                            @endforeach
+
+                                            <div class="mb-2">
+                                                <select name="cf_fecha_vencimiento" class="form-select form-select-sm">
+                                                    <option value="">-- Seleccionar fecha --</option>
+
+                                                    @foreach($fechasVencimientoColumna as $fechaVencimiento)
+                                                        <option value="{{ $fechaVencimiento }}"
+                                                            {{ request('cf_fecha_vencimiento') === $fechaVencimiento ? 'selected' : '' }}>
+                                                            {{ \Carbon\Carbon::parse($fechaVencimiento)->format('d-m-Y') }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between">
+                                                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 me-1">
+                                                    <i class="bi bi-filter"></i> Filtrar
+                                                </button>
+
+                                                @if($filtroActivo('cf_fecha_vencimiento'))
+                                                    <a href="{{ $limpiarFiltroUrl('cf_fecha_vencimiento') }}" class="btn btn-outline-secondary btn-sm">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </th>
+
+                        {{-- ESTADO SII --}}
+                        <th>
+                            <div class="dropdown d-inline">
+                                <button
+                                    class="btn btn-light btn-sm dropdown-toggle px-2 py-1 {{ $filtroActivo('cf_estado_sii') ? 'hm-column-filter-active' : '' }}"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                >
+                                    Estado SII
+
+                                    @if(($sortBy ?? null) === 'estado')
+                                        <i class="bi {{ ($sortOrder ?? 'asc') === 'asc' ? 'bi-sort-alpha-down' : 'bi-sort-alpha-up' }} ms-1 text-primary"></i>
+                                    @endif
+                                </button>
+
+                                <ul class="dropdown-menu shadow-sm small p-2" style="min-width: 230px;">
+                                    <li>
+                                        <a class="dropdown-item mb-1" href="{{ $ordenUrl('estado', 'asc') }}">
+                                            <i class="bi bi-sort-alpha-down"></i> Ordenar A → Z
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item mb-2" href="{{ $ordenUrl('estado', 'desc') }}">
+                                            <i class="bi bi-sort-alpha-up"></i> Ordenar Z → A
+                                        </a>
+                                    </li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <li class="px-2">
+                                        <form method="GET" action="{{ route('honorarios.mensual.index') }}">
+                                            @foreach($queryFiltroColumna('cf_estado_sii') as $key => $value)
+                                                @if(is_array($value))
+                                                    @foreach($value as $item)
+                                                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                                                    @endforeach
+                                                @else
+                                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                                @endif
+                                            @endforeach
+
+                                            <div class="mb-2">
+                                                <select name="cf_estado_sii" class="form-select form-select-sm">
+                                                    <option value="">-- Seleccionar estado --</option>
+
+                                                    @foreach($estadosSiiColumna as $estadoSii)
+                                                        <option value="{{ $estadoSii }}"
+                                                            {{ request('cf_estado_sii') === $estadoSii ? 'selected' : '' }}>
+                                                            {{ $estadoSii }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between">
+                                                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 me-1">
+                                                    <i class="bi bi-filter"></i> Filtrar
+                                                </button>
+
+                                                @if($filtroActivo('cf_estado_sii'))
+                                                    <a href="{{ $limpiarFiltroUrl('cf_estado_sii') }}" class="btn btn-outline-secondary btn-sm">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </th>
+
+                        {{-- FECHA ANULACIÓN --}}
+                        <th>
+                            <div class="dropdown d-inline">
+                                <button
+                                    class="btn btn-light btn-sm dropdown-toggle px-2 py-1 {{ $filtroActivo('cf_fecha_anulacion') ? 'hm-column-filter-active' : '' }}"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                >
+                                    Fecha Anulación
+
+                                    @if(($sortBy ?? null) === 'fecha_anulacion')
+                                        <i class="bi {{ ($sortOrder ?? 'asc') === 'asc' ? 'bi-sort-down-alt' : 'bi-sort-up-alt' }} ms-1 text-primary"></i>
+                                    @endif
+                                </button>
+
+                                <ul class="dropdown-menu shadow-sm small p-2" style="min-width: 230px;">
+                                    <li>
+                                        <a class="dropdown-item mb-1" href="{{ $ordenUrl('fecha_anulacion', 'asc') }}">
+                                            <i class="bi bi-sort-down-alt"></i> Más antigua primero
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item mb-2" href="{{ $ordenUrl('fecha_anulacion', 'desc') }}">
+                                            <i class="bi bi-sort-up-alt"></i> Más reciente primero
+                                        </a>
+                                    </li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <li class="px-2">
+                                        <form method="GET" action="{{ route('honorarios.mensual.index') }}">
+                                            @foreach($queryFiltroColumna('cf_fecha_anulacion') as $key => $value)
+                                                @if(is_array($value))
+                                                    @foreach($value as $item)
+                                                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                                                    @endforeach
+                                                @else
+                                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                                @endif
+                                            @endforeach
+
+                                            <div class="mb-2">
+                                                <select name="cf_fecha_anulacion" class="form-select form-select-sm">
+                                                    <option value="">-- Seleccionar fecha --</option>
+
+                                                    @foreach($fechasAnulacionColumna as $fechaAnulacion)
+                                                        <option value="{{ $fechaAnulacion }}"
+                                                            {{ request('cf_fecha_anulacion') === $fechaAnulacion ? 'selected' : '' }}>
+                                                            {{ \Carbon\Carbon::parse($fechaAnulacion)->format('d-m-Y') }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between">
+                                                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 me-1">
+                                                    <i class="bi bi-filter"></i> Filtrar
+                                                </button>
+
+                                                @if($filtroActivo('cf_fecha_anulacion'))
+                                                    <a href="{{ $limpiarFiltroUrl('cf_fecha_anulacion') }}" class="btn btn-outline-secondary btn-sm">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </th>
+
+                        {{-- MONTO PAGADO --}}
+                        <th class="text-end">
+                            <div class="dropdown d-inline">
+                                <button
+                                    class="btn btn-light btn-sm dropdown-toggle px-2 py-1 {{ $filtroActivo('cf_monto_pagado') ? 'hm-column-filter-active' : '' }}"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                >
+                                    Monto Pagado
+
+                                    @if(($sortBy ?? null) === 'monto_pagado')
+                                        <i class="bi {{ ($sortOrder ?? 'asc') === 'asc' ? 'bi-sort-numeric-down' : 'bi-sort-numeric-up' }} ms-1 text-primary"></i>
+                                    @endif
+                                </button>
+
+                                <ul class="dropdown-menu shadow-sm small p-2" style="min-width: 230px;">
+                                    <li>
+                                        <a class="dropdown-item mb-1" href="{{ $ordenUrl('monto_pagado', 'asc') }}">
+                                            <i class="bi bi-sort-numeric-down"></i> Menor a mayor
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item mb-2" href="{{ $ordenUrl('monto_pagado', 'desc') }}">
+                                            <i class="bi bi-sort-numeric-up"></i> Mayor a menor
+                                        </a>
+                                    </li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <li class="px-2">
+                                        <form method="GET" action="{{ route('honorarios.mensual.index') }}">
+                                            @foreach($queryFiltroColumna('cf_monto_pagado') as $key => $value)
+                                                @if(is_array($value))
+                                                    @foreach($value as $item)
+                                                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                                                    @endforeach
+                                                @else
+                                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                                @endif
+                                            @endforeach
+
+                                            <div class="mb-2">
+                                                <select name="cf_monto_pagado" class="form-select form-select-sm">
+                                                    <option value="">-- Seleccionar monto --</option>
+
+                                                    @foreach($montosPagadosColumna as $montoPagadoColumna)
+                                                        <option value="{{ $montoPagadoColumna }}"
+                                                            {{ (string) request('cf_monto_pagado') === (string) $montoPagadoColumna ? 'selected' : '' }}>
+                                                            ${{ number_format($montoPagadoColumna, 0, ',', '.') }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between">
+                                                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 me-1">
+                                                    <i class="bi bi-filter"></i> Filtrar
+                                                </button>
+
+                                                @if($filtroActivo('cf_monto_pagado'))
+                                                    <a href="{{ $limpiarFiltroUrl('cf_monto_pagado') }}" class="btn btn-outline-secondary btn-sm">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </th>
+
+                        {{-- SALDO PENDIENTE --}}
+                        <th class="text-end">
+                            <div class="dropdown d-inline">
+                                <button
+                                    class="btn btn-light btn-sm dropdown-toggle px-2 py-1 {{ $filtroActivo('cf_saldo_pendiente') ? 'hm-column-filter-active' : '' }}"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                >
+                                    Saldo pendiente
+
+                                    @if(($sortBy ?? null) === 'saldo_pendiente')
+                                        <i class="bi {{ ($sortOrder ?? 'asc') === 'asc' ? 'bi-sort-numeric-down' : 'bi-sort-numeric-up' }} ms-1 text-primary"></i>
+                                    @endif
+                                </button>
+
+                                <ul class="dropdown-menu shadow-sm small p-2" style="min-width: 230px;">
+                                    <li>
+                                        <a class="dropdown-item mb-1" href="{{ $ordenUrl('saldo_pendiente', 'asc') }}">
+                                            <i class="bi bi-sort-numeric-down"></i> Menor a mayor
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item mb-2" href="{{ $ordenUrl('saldo_pendiente', 'desc') }}">
+                                            <i class="bi bi-sort-numeric-up"></i> Mayor a menor
+                                        </a>
+                                    </li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <li class="px-2">
+                                        <form method="GET" action="{{ route('honorarios.mensual.index') }}">
+                                            @foreach($queryFiltroColumna('cf_saldo_pendiente') as $key => $value)
+                                                @if(is_array($value))
+                                                    @foreach($value as $item)
+                                                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                                                    @endforeach
+                                                @else
+                                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                                @endif
+                                            @endforeach
+
+                                            <div class="mb-2">
+                                                <select name="cf_saldo_pendiente" class="form-select form-select-sm">
+                                                    <option value="">-- Seleccionar saldo --</option>
+
+                                                    @foreach($saldosPendientesColumna as $saldoPendienteColumna)
+                                                        <option value="{{ $saldoPendienteColumna }}"
+                                                            {{ (string) request('cf_saldo_pendiente') === (string) $saldoPendienteColumna ? 'selected' : '' }}>
+                                                            ${{ number_format($saldoPendienteColumna, 0, ',', '.') }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between">
+                                                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 me-1">
+                                                    <i class="bi bi-filter"></i> Filtrar
+                                                </button>
+
+                                                @if($filtroActivo('cf_saldo_pendiente'))
+                                                    <a href="{{ $limpiarFiltroUrl('cf_saldo_pendiente') }}" class="btn btn-outline-secondary btn-sm">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </th>
+
+                        {{-- FECHA ÚLTIMO MOVIMIENTO: SIN FILTRO POR COLUMNA --}}
                         <th>Fecha Último Movimiento</th>
                     </tr>
                 </thead>

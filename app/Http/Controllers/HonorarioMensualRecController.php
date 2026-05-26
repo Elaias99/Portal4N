@@ -90,7 +90,7 @@ class HonorarioMensualRecController extends Controller
 
 
     // =========================
-    // Muesta listado general con filtros + detalle individual + importación
+    // Muestra listado general con filtros + detalle individual + importación
     // =========================
     public function index(Request $request)
     {
@@ -200,8 +200,11 @@ class HonorarioMensualRecController extends Controller
         // FILTRO: SALDO
         // =========================
         if ($request->filled('saldo_monto')) {
-
-            $monto = (float) str_replace(['.', ',', ' '], '', (string) $request->saldo_monto);
+            $monto = (float) str_replace(
+                ['.', ',', ' '],
+                '',
+                (string) $request->saldo_monto
+            );
 
             $tipo = $request->input('saldo_tipo', 'pendiente');
 
@@ -219,7 +222,6 @@ class HonorarioMensualRecController extends Controller
         // FILTRO: SERVICIO
         // =========================
         if ($request->filled('servicio_valor')) {
-
             $valor = trim($request->servicio_valor);
 
             $query->where(function ($q) use ($valor) {
@@ -234,7 +236,10 @@ class HonorarioMensualRecController extends Controller
         // FILTRO: ESTADO ORIGINAL
         // =========================
         if ($request->filled('estado_original')) {
-            $query->where('estado_financiero_inicial', $request->estado_original);
+            $query->where(
+                'estado_financiero_inicial',
+                $request->estado_original
+            );
         }
 
         // =========================
@@ -250,18 +255,54 @@ class HonorarioMensualRecController extends Controller
             }
         }
 
+        // =========================
+        // FILTROS POR COLUMNAS
+        // =========================
+        $this->aplicarFiltrosColumnasListado($query, $request);
+
+        // =========================
+        // ORDENAMIENTO POR COLUMNAS
+        // =========================
+        [$sortBy, $sortOrder] = $this->resolverOrdenListado($request);
+
+        // =========================
+        // TOTALES SOBRE EL LISTADO FILTRADO
+        // =========================
+        $totalAlDia = (clone $query)
+            ->where('estado_financiero_inicial', 'Al día')
+            ->count();
+
+        $totalVencido = (clone $query)
+            ->where('estado_financiero_inicial', 'Vencido')
+            ->count();
+
+        $totalPagados = (clone $query)
+            ->where('saldo_pendiente', '<=', 0)
+            ->count();
+
+        $totalPendientes = (clone $query)
+            ->where('saldo_pendiente', '>', 0)
+            ->count();
 
         // =========================
         // ORDEN + PAGINACIÓN
         // =========================
         $registros = $query
-            ->orderBy('fecha_vencimiento', 'desc')
-            ->orderBy('fecha_emision', 'desc')
-            ->orderBy('id', 'desc')
+            ->when(
+                $sortBy,
+                fn ($q) => $q
+                    ->orderBy($sortBy, $sortOrder)
+                    ->orderBy('id', 'desc'),
+                fn ($q) => $q
+                    ->orderBy('fecha_vencimiento', 'desc')
+                    ->orderBy('fecha_emision', 'desc')
+                    ->orderBy('id', 'desc')
+            )
             ->paginate(10)
             ->appends($request->query());
+
         // =========================
-        // DATOS PARA SELECTORES
+        // DATOS PARA SELECTORES GENERALES
         // =========================
         $empresas = \App\Models\Empresa::orderBy('Nombre')->get();
 
@@ -301,16 +342,83 @@ class HonorarioMensualRecController extends Controller
                 ->all();
         }
 
-        $totalAlDia = (clone $query)->where('estado_financiero_inicial', 'Al día')->count();
-        $totalVencido = (clone $query)->where('estado_financiero_inicial', 'Vencido')->count();
-
-        $totalPagados = (clone $query)->where('saldo_pendiente', '<=', 0)->count();
-        $totalPendientes = (clone $query)->where('saldo_pendiente', '>', 0)->count();
-
         $anios = HonorarioMensualRec::select('anio')
             ->distinct()
             ->orderBy('anio', 'desc')
             ->pluck('anio');
+
+        // =========================
+        // OPCIONES PARA FILTROS POR COLUMNAS
+        // =========================
+        $tiposBoletaColumna = HonorarioMensualRec::query()
+            ->whereNotNull('tipo_boleta')
+            ->where('tipo_boleta', '!=', '')
+            ->distinct()
+            ->orderBy('tipo_boleta')
+            ->pluck('tipo_boleta');
+
+        $estadosFinancierosColumna = collect([
+            'Al día',
+            'Vencido',
+            'Abono',
+            'Cruce',
+            'Pago',
+            'Pronto pago',
+        ]);
+
+        $rutsEmisorColumna = HonorarioMensualRec::query()
+            ->whereNotNull('rut_emisor')
+            ->where('rut_emisor', '!=', '')
+            ->distinct()
+            ->orderBy('rut_emisor')
+            ->pluck('rut_emisor');
+
+        $foliosColumna = HonorarioMensualRec::query()
+            ->whereNotNull('folio')
+            ->where('folio', '!=', '')
+            ->distinct()
+            ->orderBy('folio')
+            ->pluck('folio');
+
+        $fechasEmisionColumna = HonorarioMensualRec::query()
+            ->whereNotNull('fecha_emision')
+            ->selectRaw('DATE(fecha_emision) as fecha')
+            ->distinct()
+            ->orderBy('fecha')
+            ->pluck('fecha');
+
+        $fechasVencimientoColumna = HonorarioMensualRec::query()
+            ->whereNotNull('fecha_vencimiento')
+            ->selectRaw('DATE(fecha_vencimiento) as fecha')
+            ->distinct()
+            ->orderBy('fecha')
+            ->pluck('fecha');
+
+        $estadosSiiColumna = HonorarioMensualRec::query()
+            ->whereNotNull('estado')
+            ->where('estado', '!=', '')
+            ->distinct()
+            ->orderBy('estado')
+            ->pluck('estado');
+
+        $fechasAnulacionColumna = HonorarioMensualRec::query()
+            ->whereNotNull('fecha_anulacion')
+            ->selectRaw('DATE(fecha_anulacion) as fecha')
+            ->distinct()
+            ->orderBy('fecha')
+            ->pluck('fecha');
+
+        $montosPagadosColumna = HonorarioMensualRec::query()
+            ->whereNotNull('monto_pagado')
+            ->distinct()
+            ->orderBy('monto_pagado')
+            ->pluck('monto_pagado');
+
+        $saldosPendientesColumna = HonorarioMensualRec::query()
+            ->whereNotNull('saldo_pendiente')
+            ->distinct()
+            ->orderBy('saldo_pendiente')
+            ->pluck('saldo_pendiente');
 
         return view('boleta_mensual.index', compact(
             'registros',
@@ -322,9 +430,22 @@ class HonorarioMensualRecController extends Controller
             'totalAlDia',
             'totalVencido',
             'totalPagados',
-            'totalPendientes'
+            'totalPendientes',
+            'sortBy',
+            'sortOrder',
+            'tiposBoletaColumna',
+            'estadosFinancierosColumna',
+            'rutsEmisorColumna',
+            'foliosColumna',
+            'fechasEmisionColumna',
+            'fechasVencimientoColumna',
+            'estadosSiiColumna',
+            'fechasAnulacionColumna',
+            'montosPagadosColumna',
+            'saldosPendientesColumna'
         ));
     }
+
 
 
 
@@ -1929,8 +2050,103 @@ class HonorarioMensualRecController extends Controller
     }
 
 
+    private function aplicarFiltrosColumnasListado( \Illuminate\Database\Eloquent\Builder $query, Request $request): void 
+    {
+        if ($request->filled('cf_empresa_id')) {
+            $query->where('empresa_id', $request->input('cf_empresa_id'));
+        }
+
+        if ($request->filled('cf_tipo_boleta')) {
+            $query->where('tipo_boleta', $request->input('cf_tipo_boleta'));
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Estado visible de la tabla
+        |--------------------------------------------------------------------------
+        | La vista muestra:
+        | estado_financiero ?? estado_financiero_inicial
+        |
+        | Por eso:
+        | - Si existe estado_financiero manual, ese valor prevalece.
+        | - Solo se consulta estado_financiero_inicial cuando no existe manual.
+        |--------------------------------------------------------------------------
+        */
+        if ($request->filled('cf_estado_financiero')) {
+            $estado = $request->input('cf_estado_financiero');
+
+            $query->where(function ($q) use ($estado) {
+                $q->where('estado_financiero', $estado)
+                    ->orWhere(function ($subQuery) use ($estado) {
+                        $subQuery->whereNull('estado_financiero')
+                            ->where('estado_financiero_inicial', $estado);
+                    });
+            });
+        }
+
+        if ($request->filled('cf_rut_emisor')) {
+            $query->where('rut_emisor', $request->input('cf_rut_emisor'));
+        }
+
+        if ($request->filled('cf_folio')) {
+            $query->where('folio', $request->input('cf_folio'));
+        }
+
+        if ($request->filled('cf_fecha_emision')) {
+            $query->whereDate('fecha_emision', $request->input('cf_fecha_emision'));
+        }
+
+        if ($request->filled('cf_fecha_vencimiento')) {
+            $query->whereDate('fecha_vencimiento', $request->input('cf_fecha_vencimiento'));
+        }
+
+        if ($request->filled('cf_estado_sii')) {
+            $query->where('estado', $request->input('cf_estado_sii'));
+        }
+
+        if ($request->filled('cf_fecha_anulacion')) {
+            $query->whereDate('fecha_anulacion', $request->input('cf_fecha_anulacion'));
+        }
+
+        if ($request->filled('cf_monto_pagado')) {
+            $query->where('monto_pagado', (int) $request->input('cf_monto_pagado'));
+        }
+
+        if ($request->filled('cf_saldo_pendiente')) {
+            $query->where('saldo_pendiente', (int) $request->input('cf_saldo_pendiente'));
+        }
+    }
 
 
+    private function resolverOrdenListado(Request $request): array
+    {
+        $sortBy = $request->input('sort_by');
+        $sortOrder = strtolower($request->input('sort_order', 'asc'));
+
+        $columnasPermitidas = [
+            'empresa_id',
+            'tipo_boleta',
+            'estado_financiero_inicial',
+            'rut_emisor',
+            'folio',
+            'fecha_emision',
+            'fecha_vencimiento',
+            'estado',
+            'fecha_anulacion',
+            'monto_pagado',
+            'saldo_pendiente',
+        ];
+
+        if (!in_array($sortBy, $columnasPermitidas, true)) {
+            return [null, 'asc'];
+        }
+
+        if (!in_array($sortOrder, ['asc', 'desc'], true)) {
+            $sortOrder = 'asc';
+        }
+
+        return [$sortBy, $sortOrder];
+    }
 
 
 
