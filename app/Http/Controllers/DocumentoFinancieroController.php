@@ -60,8 +60,19 @@ class DocumentoFinancieroController extends Controller
             'cruces.documentoCompra:id,folio,razon_social,rut_proveedor',
             'pagos:id,documento_financiero_id,fecha_pago',
             'prontoPagos:id,documento_financiero_id,fecha_pronto_pago',
-            'factoryRegistro:id,documento_financiero_id,banco_id,rut_factory,fecha_factory,monto,user_id',
-            'factoryRegistro.banco:id,nombre',
+
+            /*
+            |--------------------------------------------------------------------------
+            | Factoring múltiple
+            |--------------------------------------------------------------------------
+            | Se carga la colección completa utilizada actualmente por el modal.
+            | No se carga factoryRegistro porque latestOfMany() genera un JOIN
+            | interno y la carga limitada por columnas produce ambigüedad SQL.
+            |--------------------------------------------------------------------------
+            */
+            'factories:id,documento_financiero_id,banco_id,rut_factory,cesion,fecha_factory,monto,saldo_liquido,monto_no_anticipado,diferencia_precio,comision_total,monto_a_recibir,user_id,created_at',
+            'factories.banco:id,nombre',
+
             'referencia:id,folio,tipo_documento_id',
             'referenciados:id,referencia_id,folio',
         ]);
@@ -678,16 +689,17 @@ class DocumentoFinancieroController extends Controller
     ////////////////////////////////////////////////////
     ////////////////////////////////////////////////////
 
-
-    
-
-
-
-
-
     public function show(DocumentoFinanciero $documento)
     {
-        // Cargar relaciones relevantes
+        /*
+        |--------------------------------------------------------------------------
+        | Cargar relaciones relevantes
+        |--------------------------------------------------------------------------
+        | factories contiene todos los registros Factoring asociados al documento.
+        | Ya no se requiere cargar factoryRegistro porque las vistas fueron
+        | migradas para consumir la colección completa.
+        |--------------------------------------------------------------------------
+        */
         $documento->load([
             'empresa',
             'tipoDocumento',
@@ -698,8 +710,8 @@ class DocumentoFinancieroController extends Controller
             'pagos',
             'prontoPagos',
 
-            'factoryRegistro.banco',
-            'factoryRegistro.usuario',
+            'factories.banco',
+            'factories.usuario',
 
             'referencia',
             'referenciados',
@@ -729,7 +741,7 @@ class DocumentoFinancieroController extends Controller
         $cobranzas = \App\Models\Cobranza::orderBy('razon_social')
             ->get(['id', 'razon_social', 'rut_cliente']);
 
-        // Bancos disponibles para el nuevo estado Factory
+        // Bancos disponibles para nuevas operaciones Factoring
         $bancos = \App\Models\Banco::orderBy('nombre')
             ->get(['id', 'nombre']);
 
@@ -737,8 +749,8 @@ class DocumentoFinancieroController extends Controller
         |--------------------------------------------------------------------------
         | Línea de tiempo de movimientos de gestión
         |--------------------------------------------------------------------------
-        | Se usa en la vista detalle para mostrar abonos, cruces, pagos,
-        | pronto pagos y Factory en orden cronológico.
+        | Se incorporan todos los Factorings vigentes del documento.
+        |--------------------------------------------------------------------------
         */
         $movimientosGestion = collect();
 
@@ -746,6 +758,7 @@ class DocumentoFinancieroController extends Controller
             $movimientosGestion->push([
                 'tipo' => 'Abono',
                 'fecha' => $abono->fecha_abono,
+                'created_at' => $abono->created_at,
                 'monto' => (int) $abono->monto,
                 'registro' => $abono,
             ]);
@@ -755,17 +768,24 @@ class DocumentoFinancieroController extends Controller
             $movimientosGestion->push([
                 'tipo' => 'Cruce',
                 'fecha' => $cruce->fecha_cruce,
+                'created_at' => $cruce->created_at,
                 'monto' => (int) $cruce->monto,
                 'registro' => $cruce,
             ]);
         }
 
-        foreach ($documento->pagos as $pago) {
+        foreach ($documento->factories as $factory) {
             $movimientosGestion->push([
-                'tipo' => 'Pago',
-                'fecha' => $pago->fecha_pago,
+                'tipo' => 'Factoring',
+                'fecha' => $factory->fecha_factory,
+                'created_at' => $factory->created_at,
                 'monto' => null,
-                'registro' => $pago,
+                'monto_cedido' => (int) ($factory->monto ?? 0),
+                'saldo_liquido' => (int) ($factory->saldo_liquido ?? 0),
+                'monto_no_anticipado' => (int) ($factory->monto_no_anticipado ?? 0),
+                'diferencia_precio' => (int) ($factory->diferencia_precio ?? 0),
+                'cesion' => $factory->cesion,
+                'registro' => $factory,
             ]);
         }
 
@@ -773,27 +793,34 @@ class DocumentoFinancieroController extends Controller
             $movimientosGestion->push([
                 'tipo' => 'Pronto pago',
                 'fecha' => $prontoPago->fecha_pronto_pago,
+                'created_at' => $prontoPago->created_at,
                 'monto' => null,
                 'registro' => $prontoPago,
             ]);
         }
 
-        if ($documento->factoryRegistro) {
+        foreach ($documento->pagos as $pago) {
             $movimientosGestion->push([
-                'tipo' => 'Factoring',
-                'fecha' => $documento->factoryRegistro->fecha_factory,
-
+                'tipo' => 'Pago',
+                'fecha' => $pago->fecha_pago,
+                'created_at' => $pago->created_at,
                 'monto' => null,
-
-                'monto_cedido' => (int) $documento->factoryRegistro->monto,
-                'cesion' => $documento->factoryRegistro->cesion,
-                'registro' => $documento->factoryRegistro,
+                'registro' => $pago,
             ]);
         }
 
         $movimientosGestion = $movimientosGestion
             ->filter(fn ($item) => !empty($item['fecha']))
-            ->sortBy('fecha')
+            ->sortBy(function ($item) {
+                $fechaCreacion = !empty($item['created_at'])
+                    ? \Carbon\Carbon::parse($item['created_at'])->format('Y-m-d H:i:s')
+                    : null;
+
+                $fechaMovimiento = \Carbon\Carbon::parse($item['fecha'])
+                    ->format('Y-m-d') . ' 00:00:00';
+
+                return $fechaCreacion ?? $fechaMovimiento;
+            })
             ->values();
 
         return view('cobranzas.detalles', compact(
@@ -805,11 +832,6 @@ class DocumentoFinancieroController extends Controller
             'movimientosGestion'
         ));
     }
-
-
-
-
-
 
 
 
@@ -918,13 +940,6 @@ class DocumentoFinancieroController extends Controller
 
         return back()->with('success', 'Cruce registrado correctamente.');
     }
-
-
-
-
-
-
-
 
 
 
