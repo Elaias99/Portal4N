@@ -1,6 +1,19 @@
 @extends('layouts.app')
 
 @section('content')
+
+@php
+    $formatoMonto = fn ($valor) => '$' . number_format((int) ($valor ?? 0), 0, ',', '.');
+
+    $formatoFecha = fn ($fecha) => $fecha
+        ? \Carbon\Carbon::parse($fecha)->format('d-m-Y')
+        : '-';
+
+    $mostrarEstado = fn ($estado) => $estado === 'Factory'
+        ? 'Factoring'
+        : ($estado ?: '—');
+@endphp
+
 <div class="container mt-4" style="max-width: 1100px;">
 
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -20,7 +33,7 @@
         @endif
     </div>
 
-    {{-- Información general del documento --}}
+    {{-- Información general --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Información general</div>
 
@@ -35,30 +48,18 @@
                 </div>
 
                 <div class="col-md-6">
-                    <p>
-                        <strong>Monto Total:</strong>
-                        ${{ number_format($documento->monto_total, 0, ',', '.') }}
-                    </p>
+                    <p><strong>Monto Total:</strong> {{ $formatoMonto($documento->monto_total) }}</p>
 
                     <p>
                         <strong>Saldo Pendiente:</strong>
-                        ${{ number_format($documento->saldo_pendiente, 0, ',', '.') }}
+                        <span class="{{ (int) $documento->saldo_pendiente <= 0 ? 'text-success fw-bold' : 'text-danger fw-bold' }}">
+                            {{ $formatoMonto($documento->saldo_pendiente) }}
+                        </span>
                     </p>
 
-                    <p>
-                        <strong>Estado Actual:</strong>
-                        {{ $documento->estado_visible === 'Factory' ? 'Factoring' : $documento->estado_visible }}
-                    </p>
-
-                    <p>
-                        <strong>Fecha Documento:</strong>
-                        {{ $documento->fecha_docto ? \Carbon\Carbon::parse($documento->fecha_docto)->format('d-m-Y') : '-' }}
-                    </p>
-
-                    <p>
-                        <strong>Fecha Vencimiento:</strong>
-                        {{ $documento->fecha_vencimiento ? \Carbon\Carbon::parse($documento->fecha_vencimiento)->format('d-m-Y') : '-' }}
-                    </p>
+                    <p><strong>Estado Actual:</strong> {{ $mostrarEstado($documento->estado_visible) }}</p>
+                    <p><strong>Fecha Documento:</strong> {{ $formatoFecha($documento->fecha_docto) }}</p>
+                    <p><strong>Fecha Vencimiento:</strong> {{ $formatoFecha($documento->fecha_vencimiento) }}</p>
                 </div>
             </div>
         </div>
@@ -72,17 +73,8 @@
 
         <div class="card-body">
             @php
-                /*
-                |--------------------------------------------------------------------------
-                | Saldo base del documento
-                |--------------------------------------------------------------------------
-                | Mantiene la misma lógica central del modelo:
-                | monto_total - notas de crédito + notas de débito.
-                |--------------------------------------------------------------------------
-                */
                 $saldoBase = (int) ($documento->monto_total ?? 0);
                 $saldoAntesMovimientos = $saldoBase;
-
                 $lineasNotas = collect();
 
                 foreach ($referencias['referenciadoPor'] as $ref) {
@@ -92,7 +84,7 @@
                         $saldoAntesMovimientos -= $montoNota;
 
                         $lineasNotas->push([
-                            'texto' => 'Descuento por Nota de Crédito folio ' . $ref->folio,
+                            'texto' => 'Nota de Crédito folio ' . $ref->folio,
                             'signo' => '-',
                             'monto' => $montoNota,
                         ]);
@@ -102,34 +94,24 @@
                         $saldoAntesMovimientos += $montoNota;
 
                         $lineasNotas->push([
-                            'texto' => 'Aumento por Nota de Débito folio ' . $ref->folio,
+                            'texto' => 'Nota de Débito folio ' . $ref->folio,
                             'signo' => '+',
                             'monto' => $montoNota,
                         ]);
                     }
                 }
 
-                /*
-                |--------------------------------------------------------------------------
-                | Movimientos reales existentes
-                |--------------------------------------------------------------------------
-                | Esta vista no utiliza movimientos_documentos para calcular saldo.
-                | Solo muestra los registros operativos que continúan asociados:
-                | Abonos, Cruces, Pagos, Pronto pagos y todos los Factorings.
-                |--------------------------------------------------------------------------
-                */
                 $movimientosResumen = collect();
 
                 foreach ($documento->abonos as $abono) {
                     $movimientosResumen->push([
                         'tipo' => 'Abono',
                         'fecha' => $abono->fecha_abono,
-                        'fecha_orden' => $abono->fecha_abono,
-                        'created_at_orden' => $abono->created_at,
+                        'created_at' => $abono->created_at,
                         'monto' => (int) ($abono->monto ?? 0),
-                        'prioridad' => 10,
-                        'registro_id' => (int) $abono->id,
+                        'detalle' => 'Abono registrado',
                         'registro' => $abono,
+                        'prioridad' => 10,
                     ]);
                 }
 
@@ -137,30 +119,34 @@
                     $movimientosResumen->push([
                         'tipo' => 'Cruce',
                         'fecha' => $cruce->fecha_cruce,
-                        'fecha_orden' => $cruce->fecha_cruce,
-                        'created_at_orden' => $cruce->created_at,
+                        'created_at' => $cruce->created_at,
                         'monto' => (int) ($cruce->monto ?? 0),
-                        'prioridad' => 20,
-                        'registro_id' => (int) $cruce->id,
+                        'detalle' => 'Cruce registrado',
                         'registro' => $cruce,
+                        'prioridad' => 20,
                     ]);
                 }
 
                 foreach ($documento->factories as $factory) {
+                    $detalleFactoring = 'Factoring registrado';
+
+                    if ($factory->cesion) {
+                        $detalleFactoring .= ' · Cesión ' . $factory->cesion;
+                    }
+
+                    if ($factory->banco?->nombre) {
+                        $detalleFactoring .= ' · ' . $factory->banco->nombre;
+                    }
+
                     $movimientosResumen->push([
                         'tipo' => 'Factoring',
                         'fecha' => $factory->fecha_factory,
-                        'fecha_orden' => $factory->fecha_factory,
-                        'created_at_orden' => $factory->created_at,
+                        'created_at' => $factory->created_at,
                         'monto' => null,
-                        'monto_cedido' => (int) ($factory->monto ?? 0),
-                        'saldo_liquido' => (int) ($factory->saldo_liquido ?? 0),
-                        'monto_no_anticipado' => (int) ($factory->monto_no_anticipado ?? 0),
+                        'detalle' => $detalleFactoring,
                         'diferencia_precio' => (int) ($factory->diferencia_precio ?? 0),
-                        'cesion' => $factory->cesion,
-                        'prioridad' => 30,
-                        'registro_id' => (int) $factory->id,
                         'registro' => $factory,
+                        'prioridad' => 30,
                     ]);
                 }
 
@@ -168,12 +154,11 @@
                     $movimientosResumen->push([
                         'tipo' => 'Pronto pago',
                         'fecha' => $prontoPago->fecha_pronto_pago,
-                        'fecha_orden' => $prontoPago->fecha_pronto_pago,
-                        'created_at_orden' => $prontoPago->created_at,
+                        'created_at' => $prontoPago->created_at,
                         'monto' => null,
-                        'prioridad' => 40,
-                        'registro_id' => (int) $prontoPago->id,
+                        'detalle' => 'Pronto pago registrado',
                         'registro' => $prontoPago,
+                        'prioridad' => 40,
                     ]);
                 }
 
@@ -181,204 +166,170 @@
                     $movimientosResumen->push([
                         'tipo' => 'Pago',
                         'fecha' => $pago->fecha_pago,
-                        'fecha_orden' => $pago->fecha_pago,
-                        'created_at_orden' => $pago->created_at,
+                        'created_at' => $pago->created_at,
                         'monto' => null,
-                        'prioridad' => 50,
-                        'registro_id' => (int) $pago->id,
+                        'detalle' => 'Pago registrado',
                         'registro' => $pago,
+                        'prioridad' => 50,
                     ]);
                 }
 
-                /*
-                |--------------------------------------------------------------------------
-                | Orden de presentación
-                |--------------------------------------------------------------------------
-                | Se mantiene el mismo criterio utilizado por el modelo para saldo:
-                | created_at determina la secuencia real de registro y la fecha propia
-                | del movimiento se utiliza solo si no existe created_at.
-                |--------------------------------------------------------------------------
-                */
                 $movimientosResumen = $movimientosResumen
                     ->sortBy(function ($item) {
-                        $createdAt = $item['created_at_orden']
-                            ? \Carbon\Carbon::parse($item['created_at_orden'])->format('Y-m-d H:i:s')
-                            : null;
+                        $fechaOrden = $item['created_at']
+                            ? \Carbon\Carbon::parse($item['created_at'])->format('Y-m-d H:i:s')
+                            : (
+                                $item['fecha']
+                                    ? \Carbon\Carbon::parse($item['fecha'])->format('Y-m-d') . ' 00:00:00'
+                                    : '0000-00-00 00:00:00'
+                            );
 
-                        $fechaMovimiento = $item['fecha_orden']
-                            ? \Carbon\Carbon::parse($item['fecha_orden'])->format('Y-m-d') . ' 00:00:00'
-                            : '0000-00-00 00:00:00';
-
-                        return ($createdAt ?? $fechaMovimiento)
-                            . ' '
-                            . str_pad($item['prioridad'], 2, '0', STR_PAD_LEFT)
-                            . ' '
-                            . str_pad($item['registro_id'], 20, '0', STR_PAD_LEFT);
+                        return $fechaOrden . '-' . str_pad($item['prioridad'], 2, '0', STR_PAD_LEFT);
                     })
                     ->values();
 
                 $saldoCalculado = max($saldoAntesMovimientos, 0);
+                $lineasSaldo = collect();
+
+                foreach ($movimientosResumen as $movimiento) {
+                    $saldoAntes = max((int) $saldoCalculado, 0);
+                    $saldoDespues = $saldoAntes;
+                    $montoAplicado = 0;
+
+                    if (in_array($movimiento['tipo'], ['Abono', 'Cruce'], true)) {
+                        $montoAplicado = min((int) ($movimiento['monto'] ?? 0), $saldoAntes);
+                        $saldoDespues = max($saldoAntes - $montoAplicado, 0);
+                    }
+
+                    if ($movimiento['tipo'] === 'Factoring') {
+                        $saldoDespues = max((int) ($movimiento['diferencia_precio'] ?? 0), 0);
+                        $montoAplicado = max($saldoAntes - $saldoDespues, 0);
+                    }
+
+                    if (in_array($movimiento['tipo'], ['Pago', 'Pronto pago'], true)) {
+                        $montoAplicado = $saldoAntes;
+                        $saldoDespues = 0;
+                    }
+
+                    $lineasSaldo->push([
+                        'fecha' => $movimiento['fecha'],
+                        'tipo' => $movimiento['tipo'],
+                        'detalle' => $movimiento['detalle'],
+                        'monto_aplicado' => $montoAplicado,
+                        'saldo_despues' => $saldoDespues,
+                        'registro' => $movimiento['registro'],
+                    ]);
+
+                    $saldoCalculado = $saldoDespues;
+                }
             @endphp
 
-            {{-- Monto inicial --}}
-            <p class="mb-1">
-                <strong>Monto total inicial:</strong>
-                ${{ number_format($documento->monto_total, 0, ',', '.') }}
-            </p>
+            <table class="table table-sm table-bordered align-middle">
+                <tbody>
+                    <tr>
+                        <th style="width: 280px;">Monto total inicial</th>
+                        <td class="text-end fw-semibold">{{ $formatoMonto($documento->monto_total) }}</td>
+                    </tr>
 
-            {{-- Notas de crédito / débito --}}
-            @foreach($lineasNotas as $lineaNota)
-                <p class="mb-1">
-                    <strong>{{ $lineaNota['texto'] }}:</strong>
-                    {{ $lineaNota['signo'] }} ${{ number_format($lineaNota['monto'], 0, ',', '.') }}
-                </p>
-            @endforeach
+                    @foreach($lineasNotas as $lineaNota)
+                        <tr>
+                            <th>{{ $lineaNota['texto'] }}</th>
+                            <td class="text-end">
+                                {{ $lineaNota['signo'] }} {{ $formatoMonto($lineaNota['monto']) }}
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
 
-            @if($movimientosResumen->isEmpty())
-                <p class="text-muted mt-3 mb-0">
-                    Sin movimientos de gestión registrados.
-                </p>
+            @if($lineasSaldo->isEmpty())
+                <p class="text-muted mb-0">Sin movimientos de gestión registrados.</p>
             @else
-                <hr>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Movimiento</th>
+                                <th>Detalle</th>
+                                <th class="text-end">Monto aplicado</th>
+                                <th class="text-end">Saldo después</th>
+                                <th class="text-center" style="width: 150px;">Acción</th>
+                            </tr>
+                        </thead>
 
-                {{-- Estados / movimientos ordenados --}}
-                @foreach($movimientosResumen as $movimiento)
-                    @php
-                        $fechaMovimiento = $movimiento['fecha']
-                            ? \Carbon\Carbon::parse($movimiento['fecha'])->format('d-m-Y')
-                            : '-';
+                        <tbody>
+                            @foreach($lineasSaldo as $linea)
+                                @php($registroMovimiento = $linea['registro'])
 
-                        $registroMovimiento = $movimiento['registro'] ?? null;
+                                <tr>
+                                    <td>{{ $formatoFecha($linea['fecha']) }}</td>
+                                    <td class="fw-semibold">{{ $linea['tipo'] }}</td>
+                                    <td>{{ $linea['detalle'] }}</td>
 
-                        $saldoAntesMovimiento = max((int) $saldoCalculado, 0);
-                        $montoMovimiento = 0;
+                                    <td class="text-end">
+                                        {{ (int) $linea['monto_aplicado'] > 0 ? '- ' . $formatoMonto($linea['monto_aplicado']) : $formatoMonto(0) }}
+                                    </td>
 
-                        if (in_array($movimiento['tipo'], ['Abono', 'Cruce'], true)) {
-                            $montoMovimiento = min(
-                                (int) ($movimiento['monto'] ?? 0),
-                                $saldoAntesMovimiento
-                            );
+                                    <td class="text-end fw-bold {{ (int) $linea['saldo_despues'] <= 0 ? 'text-success' : 'text-danger' }}">
+                                        {{ $formatoMonto($linea['saldo_despues']) }}
+                                    </td>
 
-                            $saldoCalculado = max(
-                                $saldoAntesMovimiento - $montoMovimiento,
-                                0
-                            );
-                        }
+                                    <td class="text-center">
+                                        @if($linea['tipo'] === 'Pago' && $registroMovimiento && Auth::id() != 375)
+                                            <form action="{{ route('pagos.destroy', $registroMovimiento->id) }}"
+                                                  method="POST"
+                                                  class="d-inline"
+                                                  onsubmit="return confirm('¿Seguro que deseas eliminar este pago y recalcular el saldo del documento?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-outline-danger btn-sm">Eliminar</button>
+                                            </form>
+                                        @elseif($linea['tipo'] === 'Pronto pago' && $registroMovimiento && Auth::id() != 375)
+                                            <form action="{{ route('prontopagos.destroy', $registroMovimiento->id) }}"
+                                                  method="POST"
+                                                  class="d-inline"
+                                                  onsubmit="return confirm('¿Seguro que deseas eliminar este pronto pago y recalcular el saldo del documento?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-outline-danger btn-sm">Eliminar</button>
+                                            </form>
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
 
-                        if ($movimiento['tipo'] === 'Factoring') {
-                            $saldoLiquidoFactory = (int) ($movimiento['saldo_liquido'] ?? 0);
-                            $montoNoAnticipadoFactory = (int) ($movimiento['monto_no_anticipado'] ?? 0);
-
-                            $montoMovimiento = min(
-                                $saldoLiquidoFactory + $montoNoAnticipadoFactory,
-                                $saldoAntesMovimiento
-                            );
-
-                            $saldoCalculado = max(
-                                $saldoAntesMovimiento - $montoMovimiento,
-                                0
-                            );
-                        }
-
-                        if (in_array($movimiento['tipo'], ['Pago', 'Pronto pago'], true)) {
-                            $montoMovimiento = $saldoAntesMovimiento;
-                            $saldoCalculado = 0;
-                        }
-                    @endphp
-
-                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-                        <div>
-                            @if($movimiento['tipo'] === 'Factoring')
-                                <p class="mb-1">
-                                    <strong>
-                                        Factoring registrado el {{ $fechaMovimiento }}
-                                        @if(!empty($movimiento['cesion']))
-                                            — Cesión {{ $movimiento['cesion'] }}
-                                        @endif:
-                                    </strong>
-                                </p>
-
-                                <div class="small text-muted ms-2">
-                                    <div>
-                                        Monto cedido:
-                                        ${{ number_format((int) ($movimiento['monto_cedido'] ?? 0), 0, ',', '.') }}
-                                    </div>
-
-                                    <div>
-                                        Monto líquido:
-                                        - ${{ number_format((int) ($movimiento['saldo_liquido'] ?? 0), 0, ',', '.') }}
-                                    </div>
-
-                                    <div>
-                                        Monto no anticipado:
-                                        - ${{ number_format((int) ($movimiento['monto_no_anticipado'] ?? 0), 0, ',', '.') }}
-                                    </div>
-
-                                    <div class="fw-semibold text-dark">
-                                        Diferencia de precio pendiente:
-                                        ${{ number_format((int) ($movimiento['diferencia_precio'] ?? 0), 0, ',', '.') }}
-                                    </div>
-                                </div>
-                            @else
-                                <p class="mb-1">
-                                    <strong>{{ $movimiento['tipo'] }} registrado el {{ $fechaMovimiento }}:</strong>
-                                    - ${{ number_format($montoMovimiento, 0, ',', '.') }}
-                                </p>
-                            @endif
-                        </div>
-
-                        @if($movimiento['tipo'] === 'Pago' && $registroMovimiento && Auth::id() != 375)
-                            <form action="{{ route('pagos.destroy', $registroMovimiento->id) }}"
-                                  method="POST"
-                                  class="d-inline"
-                                  onsubmit="return confirm('¿Seguro que deseas eliminar este pago y recalcular el saldo del documento?')">
-                                @csrf
-                                @method('DELETE')
-
-                                <button type="submit" class="btn btn-outline-danger btn-sm">
-                                    <i class="bi bi-x-circle"></i> Eliminar Pago
-                                </button>
-                            </form>
-
-                        @elseif($movimiento['tipo'] === 'Pronto pago' && $registroMovimiento && Auth::id() != 375)
-                            <form action="{{ route('prontopagos.destroy', $registroMovimiento->id) }}"
-                                  method="POST"
-                                  class="d-inline"
-                                  onsubmit="return confirm('¿Seguro que deseas eliminar este pronto pago y recalcular el saldo del documento?')">
-                                @csrf
-                                @method('DELETE')
-
-                                <button type="submit" class="btn btn-outline-danger btn-sm">
-                                    <i class="bi bi-x-circle"></i> Eliminar Pronto Pago
-                                </button>
-                            </form>
-                        @endif
-                    </div>
-                @endforeach
+                        <tfoot>
+                            <tr>
+                                <th colspan="4" class="text-end">Saldo pendiente actual</th>
+                                <th class="text-end fw-bold {{ (int) $documento->saldo_pendiente <= 0 ? 'text-success' : 'text-danger' }}">
+                                    {{ $formatoMonto($documento->saldo_pendiente) }}
+                                </th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             @endif
-
-            <hr>
-
-            <p class="fw-bold text-success mb-0">
-                <strong>Saldo pendiente actual:</strong>
-                ${{ number_format($documento->saldo_pendiente, 0, ',', '.') }}
-            </p>
         </div>
     </div>
 
-    {{-- Sección de abonos --}}
+    {{-- Abonos --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Abonos registrados</div>
 
         <div class="card-body">
             @if($documento->abonos->isEmpty())
-                <p class="text-muted">Sin abonos registrados.</p>
+                <p class="text-muted mb-0">Sin abonos registrados.</p>
             @else
                 <table class="table table-sm table-striped align-middle">
                     <thead>
                         <tr>
                             <th>Fecha Abono</th>
-                            <th>Monto</th>
+                            <th class="text-end">Monto</th>
                             <th class="text-center" style="width: 150px;">Acciones</th>
                         </tr>
                     </thead>
@@ -386,8 +337,8 @@
                     <tbody>
                         @foreach ($documento->abonos as $abono)
                             <tr>
-                                <td>{{ \Carbon\Carbon::parse($abono->fecha_abono)->format('d-m-Y') }}</td>
-                                <td>${{ number_format($abono->monto, 0, ',', '.') }}</td>
+                                <td>{{ $formatoFecha($abono->fecha_abono) }}</td>
+                                <td class="text-end">{{ $formatoMonto($abono->monto) }}</td>
 
                                 <td class="text-center">
                                     <form action="{{ route('abonos.destroy', $abono->id) }}"
@@ -398,9 +349,7 @@
                                         @method('DELETE')
 
                                         @if (Auth::id() != 375)
-                                            <button type="submit" class="btn btn-sm btn-danger">
-                                                Eliminar
-                                            </button>
+                                            <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
                                         @endif
                                     </form>
                                 </td>
@@ -412,20 +361,20 @@
         </div>
     </div>
 
-    {{-- Sección de cruces --}}
+    {{-- Cruces --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold">Cruces registrados</div>
 
         <div class="card-body">
             @if($documento->cruces->isEmpty())
-                <p class="text-muted">Sin cruces registrados.</p>
+                <p class="text-muted mb-0">Sin cruces registrados.</p>
             @else
                 <table class="table table-sm table-striped align-middle">
                     <thead>
                         <tr>
                             <th>Fecha Cruce</th>
-                            <th>Monto</th>
-                            <th>Proveedor</th>
+                            <th class="text-end">Monto</th>
+                            <th>Referencia</th>
                             <th class="text-center" style="width: 150px;">Acciones</th>
                         </tr>
                     </thead>
@@ -433,15 +382,18 @@
                     <tbody>
                         @foreach ($documento->cruces as $cruce)
                             <tr>
-                                <td>{{ \Carbon\Carbon::parse($cruce->fecha_cruce)->format('d-m-Y') }}</td>
-                                <td>${{ number_format($cruce->monto, 0, ',', '.') }}</td>
+                                <td>{{ $formatoFecha($cruce->fecha_cruce) }}</td>
+                                <td class="text-end">{{ $formatoMonto($cruce->monto) }}</td>
 
                                 <td>
                                     @if($cruce->cobranza)
                                         <span class="fw-semibold">{{ $cruce->cobranza->razon_social }}</span><br>
                                         <small class="text-muted">RUT: {{ $cruce->cobranza->rut_cliente }}</small>
+                                    @elseif($cruce->documentoCompra)
+                                        <span class="fw-semibold">CxP Folio {{ $cruce->documentoCompra->folio }}</span><br>
+                                        <small class="text-muted">{{ $cruce->documentoCompra->razon_social ?? 'Documento de compra asociado' }}</small>
                                     @else
-                                        <span class="text-muted">— Sin cliente —</span>
+                                        <span class="text-muted">— Sin referencia —</span>
                                     @endif
                                 </td>
 
@@ -454,9 +406,7 @@
                                         @method('DELETE')
 
                                         @if (Auth::id() != 375)
-                                            <button type="submit" class="btn btn-sm btn-danger">
-                                                Eliminar
-                                            </button>
+                                            <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
                                         @endif
                                     </form>
                                 </td>
@@ -468,7 +418,7 @@
         </div>
     </div>
 
-    {{-- Sección de Factoring --}}
+    {{-- Factoring --}}
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center">
             <span>Factoring registrados</span>
@@ -476,6 +426,7 @@
             @if($documento->factories->isNotEmpty())
                 <span class="badge bg-secondary">
                     {{ $documento->factories->count() }}
+                    {{ $documento->factories->count() === 1 ? 'movimiento' : 'movimientos' }}
                 </span>
             @endif
         </div>
@@ -488,16 +439,16 @@
                     <table class="table table-sm table-striped align-middle mb-0">
                         <thead>
                             <tr>
-                                <th>Fecha Factoring</th>
-                                <th>Nombre Factoring / Banco</th>
-                                <th>RUT Factoring</th>
+                                <th>Fecha</th>
+                                <th>Banco / Factoring</th>
                                 <th>Cesión</th>
                                 <th class="text-end">Monto cedido</th>
-                                <th class="text-end">Saldo líquido</th>
-                                <th class="text-end">Monto no anticipado</th>
-                                <th class="text-end">Diferencia de precio</th>
-                                <th class="text-end">Comisión total</th>
+                                <th class="text-end">Monto anticipado</th>
+                                <th class="text-end">No anticipado</th>
+                                <th class="text-end">Dif. precio</th>
+                                <th class="text-end">Comisión</th>
                                 <th class="text-end">Monto a recibir</th>
+                                <th>Usuario</th>
                                 <th class="text-center" style="width: 150px;">Acciones</th>
                             </tr>
                         </thead>
@@ -505,39 +456,17 @@
                         <tbody>
                             @foreach($documento->factories->sortByDesc('created_at') as $factory)
                                 <tr>
-                                    <td>
-                                        {{ $factory->fecha_factory
-                                            ? \Carbon\Carbon::parse($factory->fecha_factory)->format('d-m-Y')
-                                            : '-' }}
-                                    </td>
-
+                                    <td>{{ $formatoFecha($factory->fecha_factory) }}</td>
                                     <td>{{ $factory->banco?->nombre ?? 'Sin banco' }}</td>
-                                    <td>{{ $factory->rut_factory ?: '-' }}</td>
                                     <td>{{ $factory->cesion ?? '-' }}</td>
 
-                                    <td class="text-end">
-                                        ${{ number_format((int) ($factory->monto ?? 0), 0, ',', '.') }}
-                                    </td>
-
-                                    <td class="text-end">
-                                        ${{ number_format((int) ($factory->saldo_liquido ?? 0), 0, ',', '.') }}
-                                    </td>
-
-                                    <td class="text-end">
-                                        ${{ number_format((int) ($factory->monto_no_anticipado ?? 0), 0, ',', '.') }}
-                                    </td>
-
-                                    <td class="text-end fw-semibold">
-                                        ${{ number_format((int) ($factory->diferencia_precio ?? 0), 0, ',', '.') }}
-                                    </td>
-
-                                    <td class="text-end">
-                                        ${{ number_format((int) ($factory->comision_total ?? 0), 0, ',', '.') }}
-                                    </td>
-
-                                    <td class="text-end">
-                                        ${{ number_format((int) ($factory->monto_a_recibir ?? 0), 0, ',', '.') }}
-                                    </td>
+                                    <td class="text-end">{{ $formatoMonto($factory->monto) }}</td>
+                                    <td class="text-end">{{ $formatoMonto($factory->saldo_liquido) }}</td>
+                                    <td class="text-end">{{ $formatoMonto($factory->monto_no_anticipado) }}</td>
+                                    <td class="text-end fw-semibold">{{ $formatoMonto($factory->diferencia_precio) }}</td>
+                                    <td class="text-end">{{ $formatoMonto($factory->comision_total) }}</td>
+                                    <td class="text-end fw-semibold text-success">{{ $formatoMonto($factory->monto_a_recibir) }}</td>
+                                    <td>{{ $factory->usuario?->name ?? '—' }}</td>
 
                                     <td class="text-center">
                                         <form action="{{ route('factories.destroy', $factory->id) }}"
@@ -548,9 +477,7 @@
                                             @method('DELETE')
 
                                             @if (Auth::id() != 375)
-                                                <button type="submit" class="btn btn-sm btn-danger">
-                                                    Eliminar
-                                                </button>
+                                                <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
                                             @endif
                                         </form>
                                     </td>
@@ -559,6 +486,12 @@
                         </tbody>
                     </table>
                 </div>
+
+                @if($documento->factories->count() > 1)
+                    <p class="small text-muted mt-2 mb-0">
+                        Este documento tiene más de un movimiento de Factoring registrado. Cada fila representa un movimiento real asociado al documento.
+                    </p>
+                @endif
             @endif
         </div>
     </div>
@@ -573,7 +506,7 @@
                     <strong>Este documento referencia a:</strong>
                     Folio {{ $referencias['referencia']->folio }}
                     ({{ $referencias['referencia']->tipoDocumento?->nombre ?? 'Sin tipo' }})
-                    por ${{ number_format($referencias['referencia']->monto_total, 0, ',', '.') }}
+                    por {{ $formatoMonto($referencias['referencia']->monto_total) }}
                 </p>
             @endif
 
@@ -585,19 +518,18 @@
                         <li>
                             {{ (int) $ref->tipo_documento_id === 56 ? 'Nota de débito' : 'Nota de crédito' }}
                             folio {{ $ref->folio }}
-                            por ${{ number_format($ref->monto_total, 0, ',', '.') }}
+                            por {{ $formatoMonto($ref->monto_total) }}
                         </li>
                     @endforeach
                 </ul>
             @endif
 
             @if(!$referencias['referencia'] && $referencias['referenciadoPor']->isEmpty())
-                <p class="text-muted">Sin referencias asociadas.</p>
+                <p class="text-muted mb-0">Sin referencias asociadas.</p>
             @endif
         </div>
     </div>
 
-    {{-- Botón para volver --}}
     <div class="text-center mt-4">
         <a href="{{ session('return_to_listado', url('/cobranzas/documentos')) }}" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> Volver al listado

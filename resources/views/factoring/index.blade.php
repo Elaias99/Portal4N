@@ -4,15 +4,44 @@
 
 @section('content')
 
+@php
+    /*
+    |--------------------------------------------------------------------------
+    | Helpers de presentación
+    |--------------------------------------------------------------------------
+    */
+    $gruposCesiones = collect($cesionesPorMes ?? $operacionesPorMes ?? []);
+
+    $formatoMonto = function ($valor) {
+        return '$' . number_format((int) ($valor ?? 0), 0, ',', '.');
+    };
+
+    $formatoFecha = function ($fecha) {
+        return $fecha ? $fecha->format('d-m-Y') : '—';
+    };
+
+    $mostrarEstado = function ($estado) {
+        if (!$estado) {
+            return '—';
+        }
+
+        return $estado === 'Factory'
+            ? 'Factoring'
+            : $estado;
+    };
+
+    $textoPlural = function ($cantidad, $singular, $plural) {
+        return ((int) $cantidad === 1) ? $singular : $plural;
+    };
+@endphp
+
 <div class="container-fluid cc" style="max-width: 100%;">
 
-    {{-- ENCABEZADO --}}
     <x-finanzas.header
         :back-route="route('cobranzas.documentos')"
-        title="Registros de Factoring"
+        title="Cesiones de Factoring"
     />
 
-    {{-- MENSAJES --}}
     @if(session('success'))
         <div class="alert alert-success shadow-sm mb-3">
             {{ session('success') }}
@@ -25,32 +54,22 @@
         </div>
     @endif
 
-    {{-- FILTROS Y ACCIONES --}}
     <x-finanzas.top-section>
         <x-slot:filters>
             <x-finanzas.filters-card>
-
                 <form method="GET" action="{{ route('factoring.index') }}">
                     <div class="row g-3 align-items-end">
 
-                        {{-- Mes operación --}}
                         <div class="col-md-2">
-                            <label class="form-label small text-muted">
-                                Mes de operación
-                            </label>
-
+                            <label class="form-label small text-muted">Mes de operación</label>
                             <input type="month"
                                    name="mes_operacion"
                                    class="form-control form-control-sm"
                                    value="{{ request('mes_operacion') }}">
                         </div>
 
-                        {{-- Cesión --}}
                         <div class="col-md-2">
-                            <label class="form-label small text-muted">
-                                N° Cesión
-                            </label>
-
+                            <label class="form-label small text-muted">N° Cesión</label>
                             <input type="text"
                                    name="cesion"
                                    class="form-control form-control-sm"
@@ -58,12 +77,8 @@
                                    placeholder="Buscar cesión">
                         </div>
 
-                        {{-- Folio --}}
                         <div class="col-md-1">
-                            <label class="form-label small text-muted">
-                                Folio
-                            </label>
-
+                            <label class="form-label small text-muted">Folio</label>
                             <input type="text"
                                    name="folio"
                                    class="form-control form-control-sm"
@@ -71,12 +86,8 @@
                                    placeholder="N°">
                         </div>
 
-                        {{-- Razón Social --}}
                         <div class="col-md-2">
-                            <label class="form-label small text-muted">
-                                Razón Social
-                            </label>
-
+                            <label class="form-label small text-muted">Razón Social</label>
                             <input type="text"
                                    name="razon_social"
                                    class="form-control form-control-sm"
@@ -84,12 +95,8 @@
                                    placeholder="Buscar cliente">
                         </div>
 
-                        {{-- RUT Cliente --}}
                         <div class="col-md-2">
-                            <label class="form-label small text-muted">
-                                RUT Cliente
-                            </label>
-
+                            <label class="form-label small text-muted">RUT Cliente</label>
                             <input type="text"
                                    name="rut_cliente"
                                    class="form-control form-control-sm"
@@ -97,14 +104,9 @@
                                    placeholder="Buscar RUT">
                         </div>
 
-                        {{-- Empresa --}}
                         <div class="col-md-3">
-                            <label class="form-label small text-muted">
-                                Empresa
-                            </label>
-
-                            <select name="empresa_id"
-                                    class="form-select form-select-sm">
+                            <label class="form-label small text-muted">Empresa</label>
+                            <select name="empresa_id" class="form-select form-select-sm">
                                 <option value="">Todas</option>
 
                                 @foreach($empresas as $empresa)
@@ -116,14 +118,9 @@
                             </select>
                         </div>
 
-                        {{-- Entidad Factoring / Banco --}}
                         <div class="col-md-3">
-                            <label class="form-label small text-muted">
-                                Entidad Factoring / Banco
-                            </label>
-
-                            <select name="banco_id"
-                                    class="form-select form-select-sm">
+                            <label class="form-label small text-muted">Entidad Factoring / Banco</label>
+                            <select name="banco_id" class="form-select form-select-sm">
                                 <option value="">Todas</option>
 
                                 @foreach($bancos as $banco)
@@ -144,420 +141,264 @@
                             Limpiar
                         </a>
 
-                        <button type="submit"
-                                class="btn btn-primary btn-sm">
+                        <button type="submit" class="btn btn-primary btn-sm">
                             <i class="bi bi-search"></i>
                             Buscar
                         </button>
                     </div>
                 </form>
-
             </x-finanzas.filters-card>
         </x-slot:filters>
 
         <x-slot:actions>
             <x-finanzas.mass-actions-card title="Acciones">
-
                 <a href="{{ route('cobranzas.documentos') }}"
                    class="btn btn-outline-secondary btn-sm w-100 d-flex align-items-center justify-content-center gap-2">
                     <i class="bi bi-arrow-left"></i>
                     <span>Volver a Cuentas por Cobrar</span>
                 </a>
-
             </x-finanzas.mass-actions-card>
         </x-slot:actions>
     </x-finanzas.top-section>
 
-    {{-- LISTADO DE OPERACIONES FACTORING --}}
     <div class="card border-0 shadow-sm mt-3">
-
-        <div class="card-header bg-light">
+        <div class="card-header bg-light d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
-                <span class="fw-bold">
-                    Factoring registrados
-                </span>
-
+                <span class="fw-bold">Listado de Cesiones de Factoring</span>
                 <small class="text-muted d-block">
-                    Resumen de operaciones registradas para documentos financieros de Cuentas por Cobrar.
+                    Vista resumida con formato tabular para revisión financiera.
                 </small>
             </div>
         </div>
 
         <div class="card-body p-0">
 
-            @forelse($operacionesPorMes as $grupoMes)
+            @forelse($gruposCesiones as $grupoMes)
+                @php
+                    $cesionesDelMes = collect($grupoMes['cesiones'] ?? []);
+                @endphp
 
-                {{-- SEPARADOR DEL MES --}}
-                <div class="px-3 py-2 bg-light border-bottom border-top d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="bi bi-calendar3 text-muted"></i>
+                <div class="bg-light border-bottom px-3 py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <strong class="text-uppercase">
+                        {{ $grupoMes['mes_etiqueta'] ?? 'Sin fecha de operación' }}
+                    </strong>
 
-                        <span class="fw-bold text-uppercase small">
-                            {{ $grupoMes['mes_etiqueta'] }}
-                        </span>
-                    </div>
-
-                    <span class="small text-muted">
-                        {{ $grupoMes['operaciones']->count() }}
-                        {{ $grupoMes['operaciones']->count() === 1 ? 'operación registrada' : 'operaciones registradas' }}
-                    </span>
+                    <small class="text-muted">
+                        {{ $cesionesDelMes->count() }}
+                        {{ $textoPlural($cesionesDelMes->count(), 'cesión registrada', 'cesiones registradas') }}
+                    </small>
                 </div>
 
-                {{-- OPERACIONES DEL MES --}}
-                @foreach($grupoMes['operaciones'] as $operacion)
+                <x-finanzas.plain-table>
+                    <thead>
+                        <tr>
+                            <th>N° Cesión</th>
+                            <th>Banco / Factoring</th>
+                            <th>Fecha inicial</th>
+                            <th>Último mov.</th>
+                            <th class="text-center">Docs.</th>
+                            <th class="text-end">Monto docto.</th>
+                            <th class="text-end">Monto anticipado</th>
+                            <th class="text-end">Dif. precio</th>
+                            <th class="text-end">Comisión</th>
+                            <th class="text-end">Monto a recibir</th>
+                            <th>Usuario</th>
+                            <th class="text-center">Detalle</th>
+                        </tr>
+                    </thead>
 
-                    @php
-                        $tieneDetalleNuevo = $operacion['documentos']->every(function ($factory) {
-                            return $factory->monto_no_anticipado !== null
-                                && $factory->diferencia_precio !== null;
-                        });
+                    <tbody>
+                        @foreach($cesionesDelMes as $cesionItem)
+                            @php
+                                $collapseId = 'docs-factoring-' . md5($cesionItem['clave_cesion'] ?? (($cesionItem['cesion'] ?? 'sin-cesion') . '-' . ($cesionItem['banco']?->id ?? 'sin-banco')));
 
-                        $tieneResumenNuevo = $tieneDetalleNuevo
-                            && $operacion['comision_total'] !== null
-                            && $operacion['monto_a_recibir'] !== null;
-                    @endphp
+                                /*
+                                |--------------------------------------------------------------------------
+                                | En esta vista se muestra cantidad_documentos, no solo únicos.
+                                | Esto evita que una cesión con movimiento posterior sobre un folio
+                                | parezca tener menos registros de los que realmente tiene.
+                                |--------------------------------------------------------------------------
+                                */
+                                $cantidadDocumentos = (int) ($cesionItem['cantidad_documentos'] ?? 0);
+                            @endphp
 
-                    <div class="{{ !$loop->last ? 'border-bottom' : '' }}">
+                            <tr>
+                                <td class="fw-bold text-nowrap">
+                                    {{ $cesionItem['cesion'] ?? '—' }}
 
-                        {{-- IDENTIFICACIÓN DE LA OPERACIÓN --}}
-                        <div class="px-3 pt-3 pb-2 d-flex flex-wrap justify-content-between align-items-start gap-3">
+                                    @if(($cesionItem['cantidad_movimientos'] ?? 0) > 1)
+                                        <span class="badge bg-light text-dark border ms-1"
+                                              title="Esta cesión tiene movimientos posteriores registrados">
+                                            {{ $cesionItem['cantidad_movimientos'] }} mov.
+                                        </span>
+                                    @endif
+                                </td>
 
-                            <div>
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="fw-bold">
-                                        Cesión N° {{ $operacion['cesion'] ?? '—' }}
-                                    </span>
+                                <td class="text-nowrap">
+                                    {{ $cesionItem['banco']?->nombre ?? 'Sin entidad' }}
+                                </td>
 
-                                    <span class="badge bg-light text-dark border">
-                                        {{ $operacion['cantidad_documentos'] }}
-                                        {{ $operacion['cantidad_documentos'] === 1 ? 'documento' : 'documentos' }}
-                                    </span>
-                                </div>
+                                <td class="text-nowrap">
+                                    {{ $formatoFecha($cesionItem['fecha_inicio'] ?? null) }}
+                                </td>
 
-                                <small class="text-muted d-block mt-1">
-                                    Operación de Factoring registrada en Cuentas por Cobrar.
-                                </small>
-                            </div>
+                                <td class="text-nowrap">
+                                    {{ $formatoFecha($cesionItem['fecha_ultimo_movimiento'] ?? null) }}
+                                </td>
 
-                            <div class="d-flex flex-wrap align-items-center gap-3 small text-muted">
+                                <td class="text-center fw-semibold">
+                                    {{ $cantidadDocumentos }}
+                                </td>
 
-                                <span class="d-inline-flex align-items-center gap-1">
-                                    <i class="bi bi-calendar-event"></i>
-                                    {{ $operacion['fecha_factory']
-                                        ? $operacion['fecha_factory']->format('d-m-Y')
-                                        : 'Sin fecha' }}
-                                </span>
+                                <td class="text-end">
+                                    {{ $formatoMonto($cesionItem['monto_documentos'] ?? 0) }}
+                                </td>
 
-                                <span class="d-inline-flex align-items-center gap-1">
-                                    <i class="bi bi-bank"></i>
-                                    {{ $operacion['banco']?->nombre ?? 'Sin entidad' }}
-                                </span>
+                                <td class="text-end">
+                                    {{ $formatoMonto($cesionItem['monto_anticipado'] ?? 0) }}
+                                </td>
 
-                                <span class="d-inline-flex align-items-center gap-1">
-                                    <i class="bi bi-person"></i>
-                                    {{ $operacion['usuario']?->name ?? 'Sin usuario' }}
-                                </span>
-                            </div>
-                        </div>
+                                <td class="text-end">
+                                    {{ $formatoMonto($cesionItem['diferencia_precio'] ?? 0) }}
+                                </td>
 
-                        {{-- ALERTAS DE TRAZABILIDAD --}}
-                        @if(!$operacion['valores_globales_consistentes'])
-                            <div class="px-3">
-                                <div class="alert alert-warning py-2 px-3 small mb-2">
-                                    Esta operación contiene valores distintos de Comisión Total o
-                                    Monto a Recibir entre sus documentos registrados. Revisa su trazabilidad.
-                                </div>
-                            </div>
-                        @endif
+                                <td class="text-end">
+                                    {{ $formatoMonto($cesionItem['comision_total'] ?? 0) }}
+                                </td>
 
-                        @unless($tieneResumenNuevo)
-                            <div class="px-3">
-                                <div class="alert alert-secondary py-2 px-3 small mb-2">
-                                    Este registro corresponde a una estructura anterior de Factoring y
-                                    no contiene el nuevo desglose completo de la operación.
-                                </div>
-                            </div>
-                        @endunless
+                                <td class="text-end fw-bold text-success">
+                                    {{ $formatoMonto($cesionItem['monto_a_recibir'] ?? 0) }}
+                                </td>
 
-                        {{-- RESUMEN FINANCIERO SIEMPRE VISIBLE --}}
-                        <div class="px-3 pb-2">
-                            <div class="small fw-bold text-muted mb-2">
-                                Resumen de la operación
-                            </div>
+                                <td class="text-nowrap">
+                                    {{ $cesionItem['usuario']?->name ?? '—' }}
+                                </td>
 
-                            <div class="table-responsive border rounded">
-                                <table class="table table-sm align-middle mb-0">
-                                    <thead class="table-light">
-                                        <tr class="small text-muted">
-                                            <th class="text-center text-nowrap">
-                                                Cant. Docto.
-                                            </th>
+                                <td class="text-center">
+                                    <button class="btn btn-outline-primary btn-sm"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#{{ $collapseId }}"
+                                            aria-expanded="false"
+                                            aria-controls="{{ $collapseId }}">
+                                        Ver docs.
+                                        <span class="badge bg-light text-primary border ms-1">
+                                            {{ $cantidadDocumentos }}
+                                        </span>
+                                    </button>
+                                </td>
+                            </tr>
 
-                                            <th class="text-end text-nowrap">
-                                                Monto Docto.
-                                            </th>
+                            <tr class="collapse" id="{{ $collapseId }}">
+                                <td colspan="12" class="bg-light p-2">
+                                    <div class="border rounded bg-white overflow-hidden">
+                                        <div class="px-3 py-2 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                            <strong class="small">
+                                                Documentos asociados a la cesión N° {{ $cesionItem['cesion'] ?? '—' }}
+                                            </strong>
 
-                                            <th class="text-end text-nowrap">
-                                                Monto Anticipado
-                                            </th>
+                                            <small class="text-muted">
+                                                {{ $cantidadDocumentos }}
+                                                {{ $textoPlural($cantidadDocumentos, 'registro', 'registros') }}
+                                            </small>
+                                        </div>
 
-                                            <th class="text-end text-nowrap">
-                                                Diferencia de Precio
-                                            </th>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-hover mb-0 align-middle">
+                                                <thead class="table-light">
+                                                    <tr class="small text-muted">
+                                                        <th>Folio</th>
+                                                        <th>Empresa</th>
+                                                        <th>Tipo documento</th>
+                                                        <th>Cliente</th>
+                                                        <th>RUT Cliente</th>
+                                                        <th class="text-end">Monto cedido</th>
+                                                        <th class="text-end">Monto anticipado</th>
+                                                        <th class="text-end">Dif. precio</th>
+                                                        <th>Estado</th>
+                                                        <th class="text-center">Detalle</th>
+                                                    </tr>
+                                                </thead>
 
-                                            <th class="text-end text-nowrap">
-                                                Monto Líquido
-                                            </th>
+                                                <tbody>
+                                                    @foreach(collect($cesionItem['documentos'] ?? []) as $factory)
+                                                        @php($documento = $factory->documentoFinanciero)
 
-                                            <th class="text-end text-nowrap">
-                                                Precio de Compra
-                                            </th>
+                                                        <tr>
+                                                            <td class="fw-semibold">
+                                                                {{ $documento?->folio ?? '—' }}
+                                                            </td>
 
-                                            <th class="text-end text-nowrap">
-                                                Comisión Total (1)
-                                            </th>
+                                                            <td class="text-nowrap">
+                                                                {{ $documento?->empresa?->Nombre ?? '—' }}
+                                                            </td>
 
-                                            <th class="text-end text-nowrap">
-                                                Monto a Recibir
-                                            </th>
-                                        </tr>
-                                    </thead>
+                                                            <td title="{{ $documento?->tipoDocumento?->nombre }}">
+                                                                {{ \Illuminate\Support\Str::limit($documento?->tipoDocumento?->nombre ?? '—', 22) }}
+                                                            </td>
 
-                                    <tbody>
-                                        <tr>
-                                            <td class="text-center fw-semibold">
-                                                {{ $operacion['cantidad_documentos'] }}
-                                            </td>
+                                                            <td class="text-nowrap">
+                                                                {{ $documento?->razon_social ?? '—' }}
+                                                            </td>
 
-                                            <td class="text-end text-nowrap fw-semibold">
-                                                ${{ number_format((int) $operacion['monto_documentos'], 0, ',', '.') }}
-                                            </td>
+                                                            <td class="text-nowrap">
+                                                                {{ $documento?->rut_cliente ?? '—' }}
+                                                            </td>
 
-                                            <td class="text-end text-nowrap fw-semibold">
-                                                ${{ number_format((int) $operacion['monto_anticipado'], 0, ',', '.') }}
-                                            </td>
+                                                            <td class="text-end">
+                                                                {{ $formatoMonto($factory->monto ?? 0) }}
+                                                            </td>
 
-                                            <td class="text-end text-nowrap fw-semibold">
-                                                @if($tieneDetalleNuevo)
-                                                    ${{ number_format((int) $operacion['diferencia_precio'], 0, ',', '.') }}
-                                                @else
-                                                    —
-                                                @endif
-                                            </td>
+                                                            <td class="text-end">
+                                                                {{ $formatoMonto($factory->saldo_liquido ?? 0) }}
+                                                            </td>
 
-                                            <td class="text-end text-nowrap fw-semibold">
-                                                @if($tieneDetalleNuevo)
-                                                    ${{ number_format((int) $operacion['monto_liquido'], 0, ',', '.') }}
-                                                @else
-                                                    —
-                                                @endif
-                                            </td>
+                                                            <td class="text-end fw-semibold">
+                                                                {{ $formatoMonto($factory->diferencia_precio ?? 0) }}
+                                                            </td>
 
-                                            <td class="text-end text-nowrap fw-semibold">
-                                                @if($tieneDetalleNuevo)
-                                                    ${{ number_format((int) $operacion['precio_compra'], 0, ',', '.') }}
-                                                @else
-                                                    —
-                                                @endif
-                                            </td>
+                                                            <td>
+                                                                {{ $mostrarEstado($documento?->status ?? null) }}
+                                                            </td>
 
-                                            <td class="text-end text-nowrap fw-semibold">
-                                                @if($operacion['comision_total'] !== null)
-                                                    ${{ number_format((int) $operacion['comision_total'], 0, ',', '.') }}
-                                                @else
-                                                    —
-                                                @endif
-                                            </td>
+                                                            <td class="text-center">
+                                                                @if($documento)
+                                                                    <a href="{{ route('documentos.detalles', $documento->id) }}"
+                                                                       class="btn btn-outline-primary btn-sm">
+                                                                        Ver
+                                                                    </a>
+                                                                @else
+                                                                    —
+                                                                @endif
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
 
-                                            <td class="text-end text-nowrap fw-bold text-success">
-                                                @if($operacion['monto_a_recibir'] !== null)
-                                                    ${{ number_format((int) $operacion['monto_a_recibir'], 0, ',', '.') }}
-                                                @else
-                                                    —
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        {{-- DOCUMENTOS ASOCIADOS OCULTOS INICIALMENTE --}}
-                        <details class="px-3 pb-3">
-
-                            <summary class="d-inline-flex align-items-center gap-2 small text-primary"
-                                     style="cursor: pointer; list-style: none;">
-                                <i class="bi bi-chevron-down"></i>
-                                <span>Ver documentos asociados</span>
-                                <span class="badge bg-light text-primary border">
-                                    {{ $operacion['cantidad_documentos'] }}
-                                </span>
-                            </summary>
-
-                            <div class="mt-3 border rounded overflow-hidden">
-
-                                <div class="px-3 py-2 bg-light border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
-                                    <span class="small fw-bold">
-                                        Documentos asociados a la cesión N° {{ $operacion['cesion'] ?? '—' }}
-                                    </span>
-
-                                    <span class="small text-muted">
-                                        {{ $operacion['cantidad_documentos'] }}
-                                        {{ $operacion['cantidad_documentos'] === 1 ? 'registro' : 'registros' }}
-                                    </span>
-                                </div>
-
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-hover align-middle mb-0">
-                                        <thead class="table-light">
-                                            <tr class="small text-muted">
-                                                <th class="text-nowrap">
-                                                    Folio
-                                                </th>
-
-                                                <th class="text-nowrap">
-                                                    Empresa
-                                                </th>
-
-                                                <th class="text-nowrap">
-                                                    Tipo Documento
-                                                </th>
-
-                                                <th class="text-nowrap">
-                                                    Cliente
-                                                </th>
-
-                                                <th class="text-nowrap">
-                                                    RUT Cliente
-                                                </th>
-
-                                                <th class="text-end text-nowrap">
-                                                    Monto
-                                                </th>
-
-                                                <th class="text-end text-nowrap">
-                                                    Monto No Anticipado
-                                                </th>
-
-                                                <th class="text-end text-nowrap">
-                                                    Monto Líquido
-                                                </th>
-
-                                                <th class="text-end text-nowrap">
-                                                    Diferencia de Precio
-                                                </th>
-
-                                                <th class="text-nowrap">
-                                                    Estado manual
-                                                </th>
-
-                                                <th class="text-nowrap">
-                                                    Estado original
-                                                </th>
-
-                                                <th class="text-center text-nowrap">
-                                                    Detalle
-                                                </th>
-                                            </tr>
-                                        </thead>
-
-                                        <tbody>
-                                            @foreach($operacion['documentos'] as $factory)
-                                                @php
-                                                    $documento = $factory->documentoFinanciero;
-                                                @endphp
-
-                                                <tr>
-                                                    <td class="text-nowrap fw-semibold">
-                                                        {{ $documento?->folio ?? '—' }}
-                                                    </td>
-
-                                                    <td class="text-nowrap">
-                                                        {{ $documento?->empresa?->Nombre ?? 'Sin empresa' }}
-                                                    </td>
-
-                                                    <td class="text-nowrap">
-                                                        {{ $documento?->tipoDocumento?->nombre ?? '—' }}
-                                                    </td>
-
-                                                    <td class="text-nowrap">
-                                                        {{ $documento?->razon_social ?? '—' }}
-                                                    </td>
-
-                                                    <td class="text-nowrap">
-                                                        {{ $documento?->rut_cliente ?? '—' }}
-                                                    </td>
-
-                                                    <td class="text-end text-nowrap">
-                                                        ${{ number_format((int) ($factory->monto ?? 0), 0, ',', '.') }}
-                                                    </td>
-
-                                                    <td class="text-end text-nowrap">
-                                                        @if($factory->monto_no_anticipado !== null)
-                                                            ${{ number_format((int) $factory->monto_no_anticipado, 0, ',', '.') }}
-                                                        @else
-                                                            —
-                                                        @endif
-                                                    </td>
-
-                                                    <td class="text-end text-nowrap">
-                                                        @if($factory->saldo_liquido !== null)
-                                                            ${{ number_format((int) $factory->saldo_liquido, 0, ',', '.') }}
-                                                        @else
-                                                            —
-                                                        @endif
-                                                    </td>
-
-                                                    <td class="text-end text-nowrap">
-                                                        @if($factory->diferencia_precio !== null)
-                                                            ${{ number_format((int) $factory->diferencia_precio, 0, ',', '.') }}
-                                                        @else
-                                                            —
-                                                        @endif
-                                                    </td>
-
-                                                    <td class="text-nowrap">
-                                                        {{ $documento?->status ?? '—' }}
-                                                    </td>
-
-                                                    <td class="text-nowrap">
-                                                        {{ $documento?->status_original ?? '—' }}
-                                                    </td>
-
-                                                    <td class="text-center">
-                                                        @if($documento)
-                                                            <a href="{{ route('documentos.detalles', $documento->id) }}"
-                                                               class="btn btn-outline-primary btn-sm">
-                                                                Ver
-                                                            </a>
-                                                        @else
-                                                            —
-                                                        @endif
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </details>
-
-                    </div>
-
-                @endforeach
+                                        @if(($cesionItem['cantidad_movimientos'] ?? 0) > 1)
+                                            <div class="px-3 py-2 border-top small text-muted">
+                                                Esta cesión contiene {{ $cesionItem['cantidad_movimientos'] }} movimientos.
+                                                La fecha “Último mov.” corresponde al registro más reciente asociado a la cesión.
+                                            </div>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </x-finanzas.plain-table>
 
             @empty
-
                 <div class="text-center text-muted py-5">
-                    No existen operaciones de Factoring para los filtros seleccionados.
+                    No existen cesiones de Factoring para los filtros seleccionados.
                 </div>
-
             @endforelse
 
         </div>
     </div>
 
-    {{-- PAGINACIÓN POR OPERACIÓN COMPLETA --}}
     @if($paginadorOperaciones->hasPages())
         <div class="mt-3 d-flex justify-content-center">
             {{ $paginadorOperaciones->links('pagination::bootstrap-4') }}
