@@ -21,11 +21,17 @@ class FactoryController extends Controller
     /**
      * Listado informativo de registros Factoring asociados a documentos CxC.
      *
-     * Presenta la información almacenada agrupada por mes y por operación
-     * Factoring, sin modificar ni recalcular el saldo pendiente de los documentos.
+     * Presenta la información almacenada agrupada por mes y por cesión Factoring,
+     * sin modificar ni recalcular el saldo pendiente de los documentos.
      *
-     * La operación se identifica, con la estructura actualmente disponible, por:
-     * fecha_factory + cesion + banco_id.
+     * La unidad principal de visualización es:
+     * cesion + banco_id.
+     *
+     * Importante:
+     * - No se elimina ninguna estructura existente.
+     * - Se mantienen documentos, movimientos y totales actuales.
+     * - Se agrega una estructura preparada para mostrar documentos únicos con
+     *   todos sus movimientos Factoring reales.
      */
     public function index(Request $request)
     {
@@ -47,9 +53,6 @@ class FactoryController extends Controller
         |--------------------------------------------------------------------------
         | Compatibilidad temporal con filtros anteriores
         |--------------------------------------------------------------------------
-        | La nueva vista usará mes_operacion, pero se mantienen fecha_inicio y
-        | fecha_fin mientras conviva con filtros antiguos.
-        |--------------------------------------------------------------------------
         */
         $fechaInicio = $request->input('fecha_inicio');
         $fechaFin    = $request->input('fecha_fin');
@@ -59,11 +62,6 @@ class FactoryController extends Controller
         /*
         |--------------------------------------------------------------------------
         | Resolver período de operación
-        |--------------------------------------------------------------------------
-        | Importante:
-        | El período se usa después de consolidar cesiones, para que si una cesión
-        | tiene un movimiento en el mes filtrado, se muestre la cesión completa
-        | con todos sus movimientos/documentos relacionados.
         |--------------------------------------------------------------------------
         */
         $periodoInicio = null;
@@ -94,16 +92,13 @@ class FactoryController extends Controller
         |--------------------------------------------------------------------------
         | Consulta base
         |--------------------------------------------------------------------------
-        | Aquí solo se filtra por atributos propios de Factoring que no rompen la
-        | consolidación de la cesión completa.
-        |
-        | No se filtra por fecha aquí, porque eso partiría una misma cesión entre
-        | meses si tuvo una operación inicial y luego un movimiento posterior.
+        | No se filtra por fecha aquí para no partir una cesión con movimientos
+        | posteriores.
         |--------------------------------------------------------------------------
         */
         $query = FactoryRegistro::query()
             ->with([
-                'documentoFinanciero:id,empresa_id,tipo_documento_id,folio,razon_social,rut_cliente,status,status_original',
+                'documentoFinanciero:id,empresa_id,tipo_documento_id,folio,razon_social,rut_cliente,status,status_original,monto_total,saldo_pendiente',
                 'documentoFinanciero.empresa:id,Nombre',
                 'documentoFinanciero.tipoDocumento:id,nombre',
                 'banco:id,nombre',
@@ -124,16 +119,6 @@ class FactoryController extends Controller
         |--------------------------------------------------------------------------
         | Consolidar por Cesión + Banco
         |--------------------------------------------------------------------------
-        | Esta es la unidad principal de la nueva vista.
-        |
-        | Antes:
-        |   fecha_factory + cesion + banco
-        |
-        | Ahora:
-        |   cesion + banco
-        |
-        | Dentro de cada cesión se agrupan los movimientos por fecha_factory.
-        |--------------------------------------------------------------------------
         */
         $cesiones = $registros
             ->groupBy(function ($factory) {
@@ -143,14 +128,21 @@ class FactoryController extends Controller
                 ]);
             })
             ->map(function ($registrosCesion, $claveCesion) {
-                $registrosOrdenados = $registrosCesion
-                    ->sortBy(function ($factory) {
-                        $fecha = $factory->fecha_factory
-                            ? $factory->fecha_factory->format('Y-m-d')
-                            : '0000-00-00';
+                /*
+                |--------------------------------------------------------------------------
+                | Orden común para registros Factoring
+                |--------------------------------------------------------------------------
+                */
+                $ordenarFactory = function ($factory): string {
+                    $fecha = $factory->fecha_factory
+                        ? $factory->fecha_factory->format('Y-m-d')
+                        : '0000-00-00';
 
-                        return $fecha . '-' . str_pad((string) $factory->id, 12, '0', STR_PAD_LEFT);
-                    })
+                    return $fecha . '-' . str_pad((string) $factory->id, 12, '0', STR_PAD_LEFT);
+                };
+
+                $registrosOrdenados = collect($registrosCesion)
+                    ->sortBy($ordenarFactory)
                     ->values();
 
                 $factoryBase = $registrosOrdenados->first();
@@ -158,14 +150,9 @@ class FactoryController extends Controller
 
                 /*
                 |--------------------------------------------------------------------------
-                | Movimientos internos de la cesión
+                | Movimientos internos de la cesión por fecha
                 |--------------------------------------------------------------------------
-                | Cada movimiento corresponde a una fecha de operación dentro de la
-                | misma cesión. Ejemplo:
-                |
-                | Cesión 665162
-                |   - 02-04-2026: operación inicial
-                |   - 20-05-2026: movimiento posterior / liquidación
+                | Se conserva la estructura existente.
                 |--------------------------------------------------------------------------
                 */
                 $movimientos = $registrosOrdenados
@@ -175,7 +162,7 @@ class FactoryController extends Controller
                             : 'sin-fecha';
                     })
                     ->map(function ($documentosMovimiento, $fechaClave) {
-                        $documentosMovimiento = $documentosMovimiento
+                        $documentosMovimiento = collect($documentosMovimiento)
                             ->sortBy(function ($factory) {
                                 $folio = (string) ($factory->documentoFinanciero?->folio ?? '');
 
@@ -184,43 +171,27 @@ class FactoryController extends Controller
                             ->values();
 
                         $factoryMovimientoBase = $documentosMovimiento->first();
-                        $fechaOperacion = $factoryMovimientoBase->fecha_factory;
+                        $fechaOperacion = $factoryMovimientoBase?->fecha_factory;
 
-                        $montoDocumentos = (int) $documentosMovimiento->sum(function ($factory) {
+                        $montoDocumentosMovimiento = (int) $documentosMovimiento->sum(function ($factory) {
                             return (int) ($factory->monto ?? 0);
                         });
 
-                        $montoAnticipado = (int) $documentosMovimiento->sum(function ($factory) {
+                        $montoAnticipadoMovimiento = (int) $documentosMovimiento->sum(function ($factory) {
                             return (int) ($factory->saldo_liquido ?? 0);
                         });
 
-                        $montoNoAnticipado = (int) $documentosMovimiento->sum(function ($factory) {
+                        $montoNoAnticipadoMovimiento = (int) $documentosMovimiento->sum(function ($factory) {
                             return (int) ($factory->monto_no_anticipado ?? 0);
                         });
 
-                        $diferenciaPrecio = (int) $documentosMovimiento->sum(function ($factory) {
+                        $diferenciaPrecioMovimiento = (int) $documentosMovimiento->sum(function ($factory) {
                             return (int) ($factory->diferencia_precio ?? 0);
                         });
 
-                        /*
-                        |--------------------------------------------------------------------------
-                        | Resumen financiero del movimiento
-                        |--------------------------------------------------------------------------
-                        | Estos valores son solo de presentación. No recalculan ni alteran
-                        | saldo_pendiente; muestran lo ya persistido en factories.
-                        |--------------------------------------------------------------------------
-                        */
-                        $montoLiquido = $montoAnticipado + $diferenciaPrecio;
-                        $precioCompra = $montoLiquido;
+                        $montoLiquidoMovimiento = $montoAnticipadoMovimiento + $diferenciaPrecioMovimiento;
+                        $precioCompraMovimiento = $montoLiquidoMovimiento;
 
-                        /*
-                        |--------------------------------------------------------------------------
-                        | Valores globales por movimiento
-                        |--------------------------------------------------------------------------
-                        | En cargas masivas, comision_total y monto_a_recibir se guardan
-                        | repetidos en cada fila del mismo movimiento. Se toman una sola vez.
-                        |--------------------------------------------------------------------------
-                        */
                         $comisionesRegistradas = $documentosMovimiento
                             ->pluck('comision_total')
                             ->filter(fn ($valor) => $valor !== null)
@@ -240,8 +211,8 @@ class FactoryController extends Controller
                                 ? $fechaOperacion->format('Y-m-d')
                                 : '0000-00-00',
 
-                            'banco' => $factoryMovimientoBase->banco,
-                            'usuario' => $factoryMovimientoBase->usuario,
+                            'banco' => $factoryMovimientoBase?->banco,
+                            'usuario' => $factoryMovimientoBase?->usuario,
 
                             'cantidad_documentos' => $documentosMovimiento->count(),
                             'cantidad_documentos_unicos' => $documentosMovimiento
@@ -249,12 +220,12 @@ class FactoryController extends Controller
                                 ->unique()
                                 ->count(),
 
-                            'monto_documentos' => $montoDocumentos,
-                            'monto_anticipado' => $montoAnticipado,
-                            'monto_no_anticipado' => $montoNoAnticipado,
-                            'diferencia_precio' => $diferenciaPrecio,
-                            'monto_liquido' => $montoLiquido,
-                            'precio_compra' => $precioCompra,
+                            'monto_documentos' => $montoDocumentosMovimiento,
+                            'monto_anticipado' => $montoAnticipadoMovimiento,
+                            'monto_no_anticipado' => $montoNoAnticipadoMovimiento,
+                            'diferencia_precio' => $diferenciaPrecioMovimiento,
+                            'monto_liquido' => $montoLiquidoMovimiento,
+                            'precio_compra' => $precioCompraMovimiento,
 
                             'comision_total' => $comisionesRegistradas->first(),
                             'monto_a_recibir' => $montosARecibirRegistrados->first(),
@@ -267,6 +238,132 @@ class FactoryController extends Controller
                         ];
                     })
                     ->sortBy('fecha_orden')
+                    ->values();
+
+                /*
+                |--------------------------------------------------------------------------
+                | Documentos únicos de la cesión con movimientos reales
+                |--------------------------------------------------------------------------
+                | Esta es la estructura nueva importante.
+                |
+                | Un documento aparece una sola vez, pero conserva todos sus registros
+                | Factory en "movimientos". Así el folio 1356 puede mostrar sus 2
+                | movimientos sin duplicar el documento ni ocultar el segundo.
+                |--------------------------------------------------------------------------
+                */
+                $documentosDetalle = $registrosOrdenados
+                    ->groupBy(function ($factory) {
+                        return $factory->documento_financiero_id
+                            ? (string) $factory->documento_financiero_id
+                            : 'factory-sin-documento-' . $factory->id;
+                    })
+                    ->map(function ($registrosDocumento) use ($ordenarFactory) {
+                        $registrosDocumento = collect($registrosDocumento)
+                            ->sortBy($ordenarFactory)
+                            ->values();
+
+                        $factoryDocumentoBase = $registrosDocumento->first();
+                        $factoryDocumentoUltimo = $registrosDocumento->last();
+
+                        $documento = $factoryDocumentoUltimo?->documentoFinanciero
+                            ?? $factoryDocumentoBase?->documentoFinanciero;
+
+                        $movimientosDocumento = $registrosDocumento
+                            ->map(function ($factory, $index) {
+                                return [
+                                    'numero_movimiento' => $index + 1,
+                                    'factory_id' => $factory->id,
+                                    'fecha_factory' => $factory->fecha_factory,
+                                    'banco' => $factory->banco,
+                                    'usuario' => $factory->usuario,
+
+                                    /*
+                                    |--------------------------------------------------------------------------
+                                    | Valores reales del movimiento
+                                    |--------------------------------------------------------------------------
+                                    */
+                                    'monto_cedido' => (int) ($factory->monto ?? 0),
+                                    'monto_anticipado' => (int) ($factory->saldo_liquido ?? 0),
+                                    'monto_no_anticipado' => (int) ($factory->monto_no_anticipado ?? 0),
+                                    'diferencia_precio' => (int) ($factory->diferencia_precio ?? 0),
+                                    'comision_total' => (int) ($factory->comision_total ?? 0),
+                                    'monto_a_recibir' => (int) ($factory->monto_a_recibir ?? 0),
+
+                                    /*
+                                    |--------------------------------------------------------------------------
+                                    | Referencia original completa
+                                    |--------------------------------------------------------------------------
+                                    */
+                                    'registro' => $factory,
+                                ];
+                            })
+                            ->values();
+
+                        return [
+                            'documento_financiero_id' => $factoryDocumentoBase?->documento_financiero_id,
+                            'documento' => $documento,
+
+                            /*
+                            |--------------------------------------------------------------------------
+                            | Compatibilidad con lo que ya existía
+                            |--------------------------------------------------------------------------
+                            */
+                            'factory_base' => $factoryDocumentoBase,
+                            'factory_ultimo' => $factoryDocumentoUltimo,
+                            'factory' => $factoryDocumentoUltimo ?? $factoryDocumentoBase,
+
+                            'cantidad_movimientos' => $registrosDocumento->count(),
+                            'cantidad_movimientos_documento' => $registrosDocumento->count(),
+
+                            /*
+                            |--------------------------------------------------------------------------
+                            | Valores base del comprobante del documento
+                            |--------------------------------------------------------------------------
+                            | Se mantienen para que no se duplique el monto original del folio.
+                            |--------------------------------------------------------------------------
+                            */
+                            'monto_documento' => (int) ($factoryDocumentoBase?->monto ?? 0),
+                            'monto_original' => (int) ($factoryDocumentoBase?->monto ?? 0),
+                            'monto_no_anticipado_base' => (int) ($factoryDocumentoBase?->monto_no_anticipado ?? 0),
+                            'monto_anticipado_base' => (int) ($factoryDocumentoBase?->saldo_liquido ?? 0),
+                            'diferencia_precio_base' => (int) ($factoryDocumentoBase?->diferencia_precio ?? 0),
+
+                            /*
+                            |--------------------------------------------------------------------------
+                            | Último movimiento del documento
+                            |--------------------------------------------------------------------------
+                            */
+                            'ultimo_monto_cedido' => (int) ($factoryDocumentoUltimo?->monto ?? 0),
+                            'ultimo_monto_anticipado' => (int) ($factoryDocumentoUltimo?->saldo_liquido ?? 0),
+                            'ultimo_monto_no_anticipado' => (int) ($factoryDocumentoUltimo?->monto_no_anticipado ?? 0),
+                            'ultima_diferencia_precio' => (int) ($factoryDocumentoUltimo?->diferencia_precio ?? 0),
+
+                            /*
+                            |--------------------------------------------------------------------------
+                            | Totales acumulados de movimientos del documento
+                            |--------------------------------------------------------------------------
+                            | No sustituyen al monto original; quedan disponibles solo para
+                            | mostrar trazabilidad si la vista lo necesita.
+                            |--------------------------------------------------------------------------
+                            */
+                            'total_monto_cedido_movimientos' => (int) $movimientosDocumento->sum('monto_cedido'),
+                            'total_monto_anticipado_movimientos' => (int) $movimientosDocumento->sum('monto_anticipado'),
+                            'total_monto_no_anticipado_movimientos' => (int) $movimientosDocumento->sum('monto_no_anticipado'),
+                            'total_diferencia_precio_movimientos' => (int) $movimientosDocumento->sum('diferencia_precio'),
+
+                            /*
+                            |--------------------------------------------------------------------------
+                            | Movimientos reales del documento dentro de la cesión
+                            |--------------------------------------------------------------------------
+                            */
+                            'movimientos' => $movimientosDocumento,
+                        ];
+                    })
+                    ->sortBy(function ($item) {
+                        $folio = (string) ($item['documento']?->folio ?? '');
+
+                        return str_pad($folio, 20, '0', STR_PAD_LEFT);
+                    })
                     ->values();
 
                 $fechaInicioCesion = $registrosOrdenados->first()?->fecha_factory;
@@ -287,31 +384,48 @@ class FactoryController extends Controller
 
                 /*
                 |--------------------------------------------------------------------------
-                | Totales consolidados de la cesión
+                | Totales visibles tipo comprobante
                 |--------------------------------------------------------------------------
-                | Se suman los movimientos internos. Esto permite que una cesión con
-                | operación inicial y liquidación posterior muestre el total consolidado.
+                | Se calculan desde documentos únicos, tomando el registro base de cada
+                | documento. Así no se suma dos veces el mismo folio.
                 |--------------------------------------------------------------------------
                 */
-                $montoDocumentos = (int) $movimientos->sum('monto_documentos');
-                $montoAnticipado = (int) $movimientos->sum('monto_anticipado');
-                $montoNoAnticipado = (int) $movimientos->sum('monto_no_anticipado');
-                $diferenciaPrecio = (int) $movimientos->sum('diferencia_precio');
-                $montoLiquido = (int) $movimientos->sum('monto_liquido');
-                $precioCompra = (int) $movimientos->sum('precio_compra');
+                $montoDocumentos = (int) $documentosDetalle->sum('monto_documento');
+                $montoAnticipado = (int) $documentosDetalle->sum('monto_anticipado_base');
+                $montoNoAnticipado = (int) $documentosDetalle->sum('monto_no_anticipado_base');
+                $diferenciaPrecio = (int) $documentosDetalle->sum('diferencia_precio_base');
+
+                $montoLiquido = $montoAnticipado + $diferenciaPrecio;
+                $precioCompra = $montoLiquido;
 
                 /*
                 |--------------------------------------------------------------------------
-                | Comisión y monto a recibir consolidados
+                | Comisión y monto a recibir visibles
                 |--------------------------------------------------------------------------
-                | Se suman una vez por movimiento, no por documento.
+                | Se mantiene la lógica existente: se toman desde el primer movimiento
+                | de la cesión. No se elimina ningún total de trazabilidad.
                 |--------------------------------------------------------------------------
                 */
-                $comisionTotal = (int) $movimientos->sum(function ($movimiento) {
+                $movimientoBaseCesion = $movimientos->first();
+
+                $comisionTotal = (int) ($movimientoBaseCesion['comision_total'] ?? 0);
+                $montoARecibir = (int) ($movimientoBaseCesion['monto_a_recibir'] ?? 0);
+
+                /*
+                |--------------------------------------------------------------------------
+                | Totales de trazabilidad de todos los movimientos
+                |--------------------------------------------------------------------------
+                */
+                $montoDocumentosMovimientos = (int) $movimientos->sum('monto_documentos');
+                $montoAnticipadoMovimientos = (int) $movimientos->sum('monto_anticipado');
+                $montoNoAnticipadoMovimientos = (int) $movimientos->sum('monto_no_anticipado');
+                $diferenciaPrecioMovimientos = (int) $movimientos->sum('diferencia_precio');
+
+                $comisionTotalMovimientos = (int) $movimientos->sum(function ($movimiento) {
                     return (int) ($movimiento['comision_total'] ?? 0);
                 });
 
-                $montoARecibir = (int) $movimientos->sum(function ($movimiento) {
+                $montoARecibirMovimientos = (int) $movimientos->sum(function ($movimiento) {
                     return (int) ($movimiento['monto_a_recibir'] ?? 0);
                 });
 
@@ -320,17 +434,15 @@ class FactoryController extends Controller
                     'mes_clave' => $mesClave,
                     'mes_etiqueta' => $mesEtiqueta,
 
-                    'cesion' => $factoryBase->cesion,
-                    'banco' => $factoryBase->banco,
+                    'cesion' => $factoryBase?->cesion,
+                    'banco' => $factoryBase?->banco,
 
                     /*
                     |--------------------------------------------------------------------------
                     | Usuario informativo
                     |--------------------------------------------------------------------------
-                    | Se muestra el usuario del último movimiento de la cesión.
-                    |--------------------------------------------------------------------------
                     */
-                    'usuario' => $factoryUltimo->usuario,
+                    'usuario' => $factoryUltimo?->usuario,
 
                     'fecha_inicio' => $fechaInicioCesion,
                     'fecha_ultimo_movimiento' => $fechaUltimoMovimiento,
@@ -339,19 +451,17 @@ class FactoryController extends Controller
 
                     /*
                     |--------------------------------------------------------------------------
-                    | Cantidad de documentos
-                    |--------------------------------------------------------------------------
-                    | cantidad_documentos cuenta registros/movimientos de documento.
-                    | cantidad_documentos_unicos queda disponible si la vista quiere
-                    | diferenciar documentos únicos de movimientos posteriores.
+                    | Cantidades
                     |--------------------------------------------------------------------------
                     */
                     'cantidad_documentos' => $registrosOrdenados->count(),
-                    'cantidad_documentos_unicos' => $registrosOrdenados
-                        ->pluck('documento_financiero_id')
-                        ->unique()
-                        ->count(),
+                    'cantidad_documentos_unicos' => $documentosDetalle->count(),
 
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Totales visibles tipo comprobante
+                    |--------------------------------------------------------------------------
+                    */
                     'monto_documentos' => $montoDocumentos,
                     'monto_anticipado' => $montoAnticipado,
                     'monto_no_anticipado' => $montoNoAnticipado,
@@ -361,20 +471,41 @@ class FactoryController extends Controller
                     'comision_total' => $comisionTotal,
                     'monto_a_recibir' => $montoARecibir,
 
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Totales de todos los movimientos, solo trazabilidad
+                    |--------------------------------------------------------------------------
+                    */
+                    'monto_documentos_movimientos' => $montoDocumentosMovimientos,
+                    'monto_anticipado_movimientos' => $montoAnticipadoMovimientos,
+                    'monto_no_anticipado_movimientos' => $montoNoAnticipadoMovimientos,
+                    'diferencia_precio_movimientos' => $diferenciaPrecioMovimientos,
+                    'comision_total_movimientos' => $comisionTotalMovimientos,
+                    'monto_a_recibir_movimientos' => $montoARecibirMovimientos,
+
                     'valores_globales_consistentes' => $movimientos
                         ->every(fn ($movimiento) => $movimiento['valores_globales_consistentes']),
 
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Movimientos reales por fecha
+                    |--------------------------------------------------------------------------
+                    */
                     'movimientos' => $movimientos,
 
                     /*
                     |--------------------------------------------------------------------------
-                    | Documentos de la cesión
-                    |--------------------------------------------------------------------------
-                    | Incluye todos los registros Factory de la cesión, incluso si un
-                    | mismo documento aparece en un movimiento posterior.
+                    | Registros Factory originales para filtros y compatibilidad
                     |--------------------------------------------------------------------------
                     */
                     'documentos' => $registrosOrdenados,
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Documentos únicos preparados para la vista nueva
+                    |--------------------------------------------------------------------------
+                    */
+                    'documentos_detalle' => $documentosDetalle,
                 ];
             })
             ->values();
@@ -382,9 +513,6 @@ class FactoryController extends Controller
         /*
         |--------------------------------------------------------------------------
         | Filtro por período de operación
-        |--------------------------------------------------------------------------
-        | Se conserva la cesión completa si al menos uno de sus movimientos cae
-        | dentro del período seleccionado.
         |--------------------------------------------------------------------------
         */
         if ($periodoInicio || $periodoFin) {
@@ -419,9 +547,6 @@ class FactoryController extends Controller
         /*
         |--------------------------------------------------------------------------
         | Filtros asociados a documentos
-        |--------------------------------------------------------------------------
-        | Si un documento coincide, se conserva la cesión completa para que el
-        | resumen mantenga todos sus movimientos e importes relacionados.
         |--------------------------------------------------------------------------
         */
         $cesiones = $cesiones
@@ -500,8 +625,6 @@ class FactoryController extends Controller
         |--------------------------------------------------------------------------
         | Paginar cesiones completas
         |--------------------------------------------------------------------------
-        | Cada item del paginador es una cesión completa, no una fila Factory.
-        |--------------------------------------------------------------------------
         */
         $paginaActual = \Illuminate\Pagination\Paginator::resolveCurrentPage('page');
 
@@ -525,8 +648,6 @@ class FactoryController extends Controller
         |--------------------------------------------------------------------------
         | Agrupación visual por mes dentro de la página actual
         |--------------------------------------------------------------------------
-        | La cesión se ubica visualmente en el mes de su último movimiento.
-        |--------------------------------------------------------------------------
         */
         $cesionesPorMes = $cesionesPagina
             ->groupBy('mes_clave')
@@ -542,9 +663,6 @@ class FactoryController extends Controller
         /*
         |--------------------------------------------------------------------------
         | Compatibilidad temporal
-        |--------------------------------------------------------------------------
-        | Mientras ajustamos la vista, dejamos también operacionesPorMes apuntando
-        | a la nueva estructura.
         |--------------------------------------------------------------------------
         */
         $operacionesPorMes = $cesionesPorMes;
@@ -563,7 +681,6 @@ class FactoryController extends Controller
             'bancos'
         ));
     }
-
 
 
     /**

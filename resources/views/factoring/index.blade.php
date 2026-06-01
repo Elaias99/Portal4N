@@ -4,6 +4,7 @@
 
 @section('content')
 
+
 @php
     /*
     |--------------------------------------------------------------------------
@@ -16,8 +17,28 @@
         return '$' . number_format((int) ($valor ?? 0), 0, ',', '.');
     };
 
-    $formatoFecha = function ($fecha) {
-        return $fecha ? $fecha->format('d-m-Y') : '—';
+    $normalizarFecha = function ($fecha) {
+        if (!$fecha) {
+            return null;
+        }
+
+        if ($fecha instanceof \Carbon\CarbonInterface) {
+            return $fecha;
+        }
+
+        try {
+            return \Carbon\Carbon::parse($fecha);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    };
+
+    $formatoFecha = function ($fecha) use ($normalizarFecha) {
+        $fechaNormalizada = $normalizarFecha($fecha);
+
+        return $fechaNormalizada
+            ? $fechaNormalizada->format('d-m-Y')
+            : '—';
     };
 
     $mostrarEstado = function ($estado) {
@@ -32,6 +53,123 @@
 
     $textoPlural = function ($cantidad, $singular, $plural) {
         return ((int) $cantidad === 1) ? $singular : $plural;
+    };
+
+    /*
+    |--------------------------------------------------------------------------
+    | Movimiento base / comprobante de la cesión
+    |--------------------------------------------------------------------------
+    | Para efectos de presentación financiera, la fila principal se mantiene como
+    | resumen del comprobante base de la cesión. Los movimientos posteriores se
+    | muestran dentro del detalle del documento correspondiente.
+    |--------------------------------------------------------------------------
+    */
+    $obtenerMovimientoComprobante = function ($cesionItem) {
+        $movimientos = collect($cesionItem['movimientos'] ?? []);
+
+        if ($movimientos->isEmpty()) {
+            return null;
+        }
+
+        return $movimientos
+            ->sortBy(function ($movimiento) {
+                return $movimiento['fecha_orden'] ?? '0000-00-00';
+            })
+            ->first();
+    };
+
+    /*
+    |--------------------------------------------------------------------------
+    | Consolidar documentos para compatibilidad
+    |--------------------------------------------------------------------------
+    | Si el controlador ya envía documentos_detalle, la vista usará esa estructura.
+    | Este helper queda como respaldo para estructuras antiguas basadas en
+    | documentos/registros Factory.
+    |--------------------------------------------------------------------------
+    */
+    $consolidarDocumentosCesion = function ($documentos) use ($normalizarFecha) {
+        return collect($documentos ?? [])
+            ->groupBy(function ($factory) {
+                return $factory->documento_financiero_id
+                    ?: 'factory-sin-documento-' . $factory->id;
+            })
+            ->map(function ($registrosDocumento) use ($normalizarFecha) {
+                $registrosOrdenados = collect($registrosDocumento)
+                    ->sortBy(function ($factory) use ($normalizarFecha) {
+                        $fecha = $normalizarFecha($factory->fecha_factory ?? null);
+
+                        $fechaOrden = $fecha
+                            ? $fecha->format('Y-m-d')
+                            : '0000-00-00';
+
+                        return $fechaOrden . '-' . str_pad((string) $factory->id, 12, '0', STR_PAD_LEFT);
+                    })
+                    ->values();
+
+                $factoryComprobante = $registrosOrdenados->first();
+                $factoryUltimo = $registrosOrdenados->last();
+
+                $documento = $factoryUltimo?->documentoFinanciero
+                    ?? $factoryComprobante?->documentoFinanciero;
+
+                $movimientosDocumento = $registrosOrdenados
+                    ->map(function ($factory, $index) {
+                        return [
+                            'numero_movimiento' => $index + 1,
+                            'factory_id' => $factory->id,
+                            'fecha_factory' => $factory->fecha_factory,
+                            'monto_cedido' => (int) ($factory->monto ?? 0),
+                            'monto_anticipado' => (int) ($factory->saldo_liquido ?? 0),
+                            'monto_no_anticipado' => (int) ($factory->monto_no_anticipado ?? 0),
+                            'diferencia_precio' => (int) ($factory->diferencia_precio ?? 0),
+                            'comision_total' => (int) ($factory->comision_total ?? 0),
+                            'monto_a_recibir' => (int) ($factory->monto_a_recibir ?? 0),
+                            'registro' => $factory,
+                        ];
+                    })
+                    ->values();
+
+                /*
+                |--------------------------------------------------------------------------
+                | Valores base del documento
+                |--------------------------------------------------------------------------
+                | No se suman los movimientos posteriores al monto original. Los
+                | movimientos posteriores quedan visibles en el desglose interno.
+                |--------------------------------------------------------------------------
+                */
+                return [
+                    'factory' => $factoryUltimo ?? $factoryComprobante,
+                    'factory_base' => $factoryComprobante,
+                    'factory_ultimo' => $factoryUltimo,
+                    'documento' => $documento,
+                    'registros' => $registrosOrdenados,
+
+                    'cantidad_movimientos' => $registrosOrdenados->count(),
+                    'cantidad_movimientos_documento' => $registrosOrdenados->count(),
+
+                    'monto_documento' => (int) ($factoryComprobante?->monto ?? 0),
+                    'monto_original' => (int) ($factoryComprobante?->monto ?? 0),
+                    'monto_no_anticipado_base' => (int) ($factoryComprobante?->monto_no_anticipado ?? 0),
+                    'monto_no_anticipado' => (int) ($factoryComprobante?->monto_no_anticipado ?? 0),
+                    'monto_anticipado_base' => (int) ($factoryComprobante?->saldo_liquido ?? 0),
+                    'monto_anticipado' => (int) ($factoryComprobante?->saldo_liquido ?? 0),
+                    'diferencia_precio_base' => (int) ($factoryComprobante?->diferencia_precio ?? 0),
+                    'diferencia_precio' => (int) ($factoryComprobante?->diferencia_precio ?? 0),
+
+                    'ultimo_monto_cedido' => (int) ($factoryUltimo?->monto ?? 0),
+                    'ultimo_monto_anticipado' => (int) ($factoryUltimo?->saldo_liquido ?? 0),
+                    'ultimo_monto_no_anticipado' => (int) ($factoryUltimo?->monto_no_anticipado ?? 0),
+                    'ultima_diferencia_precio' => (int) ($factoryUltimo?->diferencia_precio ?? 0),
+
+                    'movimientos' => $movimientosDocumento,
+                ];
+            })
+            ->sortBy(function ($item) {
+                $folio = (string) ($item['documento']?->folio ?? '');
+
+                return str_pad($folio, 20, '0', STR_PAD_LEFT);
+            })
+            ->values();
     };
 @endphp
 
@@ -162,7 +300,7 @@
     </x-finanzas.top-section>
 
     <div class="card border-0 shadow-sm mt-3">
-        <div class="card-header bg-light d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
                 <span class="fw-bold">Listado de Cesiones de Factoring</span>
                 <small class="text-muted d-block">
@@ -178,7 +316,7 @@
                     $cesionesDelMes = collect($grupoMes['cesiones'] ?? []);
                 @endphp
 
-                <div class="bg-light border-bottom px-3 py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div class="factoring-month-header px-3 py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <strong class="text-uppercase">
                         {{ $grupoMes['mes_etiqueta'] ?? 'Sin fecha de operación' }}
                     </strong>
@@ -210,26 +348,94 @@
                     <tbody>
                         @foreach($cesionesDelMes as $cesionItem)
                             @php
-                                $collapseId = 'docs-factoring-' . md5($cesionItem['clave_cesion'] ?? (($cesionItem['cesion'] ?? 'sin-cesion') . '-' . ($cesionItem['banco']?->id ?? 'sin-banco')));
+                                $collapseId = 'docs-factoring-' . md5(
+                                    $cesionItem['clave_cesion']
+                                        ?? (($cesionItem['cesion'] ?? 'sin-cesion') . '-' . ($cesionItem['banco']?->id ?? 'sin-banco'))
+                                );
+
+                                $movimientosCesion = collect($cesionItem['movimientos'] ?? []);
+                                $movimientoComprobante = $obtenerMovimientoComprobante($cesionItem);
 
                                 /*
                                 |--------------------------------------------------------------------------
-                                | En esta vista se muestra cantidad_documentos, no solo únicos.
-                                | Esto evita que una cesión con movimiento posterior sobre un folio
-                                | parezca tener menos registros de los que realmente tiene.
+                                | Resumen visible de la cesión
+                                |--------------------------------------------------------------------------
+                                | Se usa la estructura preparada por el controlador. Si existe
+                                | movimiento base, se mantiene como respaldo visual.
                                 |--------------------------------------------------------------------------
                                 */
-                                $cantidadDocumentos = (int) ($cesionItem['cantidad_documentos'] ?? 0);
+                                $montoDocumentosResumen = (int) (
+                                    $cesionItem['monto_documentos']
+                                        ?? $movimientoComprobante['monto_documentos']
+                                        ?? 0
+                                );
+
+                                $montoAnticipadoResumen = (int) (
+                                    $cesionItem['monto_anticipado']
+                                        ?? $movimientoComprobante['monto_anticipado']
+                                        ?? 0
+                                );
+
+                                $diferenciaPrecioResumen = (int) (
+                                    $cesionItem['diferencia_precio']
+                                        ?? $movimientoComprobante['diferencia_precio']
+                                        ?? 0
+                                );
+
+                                $comisionTotalResumen = (int) (
+                                    $cesionItem['comision_total']
+                                        ?? $movimientoComprobante['comision_total']
+                                        ?? 0
+                                );
+
+                                $montoARecibirResumen = (int) (
+                                    $cesionItem['monto_a_recibir']
+                                        ?? $movimientoComprobante['monto_a_recibir']
+                                        ?? 0
+                                );
+
+                                $fechaInicioResumen = $cesionItem['fecha_inicio']
+                                    ?? $movimientoComprobante['fecha_factory']
+                                    ?? null;
+
+                                /*
+                                |--------------------------------------------------------------------------
+                                | Detalle visual por documento único
+                                |--------------------------------------------------------------------------
+                                | La prioridad es documentos_detalle porque allí vienen los
+                                | movimientos reales por documento preparados desde el controller.
+                                |--------------------------------------------------------------------------
+                                */
+                                $documentosDetalle = collect($cesionItem['documentos_detalle'] ?? []);
+
+                                if ($documentosDetalle->isEmpty()) {
+                                    $documentosDetalle = $consolidarDocumentosCesion($cesionItem['documentos'] ?? []);
+                                }
+
+                                $cantidadDocumentos = (int) (
+                                    $cesionItem['cantidad_documentos_unicos']
+                                        ?? $documentosDetalle->count()
+                                );
+
+                                $cantidadRegistrosFactory = (int) (
+                                    $cesionItem['cantidad_documentos']
+                                        ?? collect($cesionItem['documentos'] ?? [])->count()
+                                );
+
+                                $cantidadMovimientosCesion = (int) (
+                                    $cesionItem['cantidad_movimientos']
+                                        ?? $movimientosCesion->count()
+                                );
                             @endphp
 
-                            <tr>
+                            <tr class="factoring-row-main">
                                 <td class="fw-bold text-nowrap">
                                     {{ $cesionItem['cesion'] ?? '—' }}
 
-                                    @if(($cesionItem['cantidad_movimientos'] ?? 0) > 1)
-                                        <span class="badge bg-light text-dark border ms-1"
+                                    @if($cantidadMovimientosCesion > 1)
+                                        <span class="badge badge-movimientos ms-1"
                                               title="Esta cesión tiene movimientos posteriores registrados">
-                                            {{ $cesionItem['cantidad_movimientos'] }} mov.
+                                            {{ $cantidadMovimientosCesion }} mov.
                                         </span>
                                     @endif
                                 </td>
@@ -239,7 +445,7 @@
                                 </td>
 
                                 <td class="text-nowrap">
-                                    {{ $formatoFecha($cesionItem['fecha_inicio'] ?? null) }}
+                                    {{ $formatoFecha($fechaInicioResumen) }}
                                 </td>
 
                                 <td class="text-nowrap">
@@ -251,23 +457,23 @@
                                 </td>
 
                                 <td class="text-end">
-                                    {{ $formatoMonto($cesionItem['monto_documentos'] ?? 0) }}
+                                    {{ $formatoMonto($montoDocumentosResumen) }}
                                 </td>
 
                                 <td class="text-end">
-                                    {{ $formatoMonto($cesionItem['monto_anticipado'] ?? 0) }}
+                                    {{ $formatoMonto($montoAnticipadoResumen) }}
                                 </td>
 
                                 <td class="text-end">
-                                    {{ $formatoMonto($cesionItem['diferencia_precio'] ?? 0) }}
+                                    {{ $formatoMonto($diferenciaPrecioResumen) }}
                                 </td>
 
                                 <td class="text-end">
-                                    {{ $formatoMonto($cesionItem['comision_total'] ?? 0) }}
+                                    {{ $formatoMonto($comisionTotalResumen) }}
                                 </td>
 
                                 <td class="text-end fw-bold text-success">
-                                    {{ $formatoMonto($cesionItem['monto_a_recibir'] ?? 0) }}
+                                    {{ $formatoMonto($montoARecibirResumen) }}
                                 </td>
 
                                 <td class="text-nowrap">
@@ -289,9 +495,9 @@
                                 </td>
                             </tr>
 
-                            <tr class="collapse" id="{{ $collapseId }}">
-                                <td colspan="12" class="bg-light p-2">
-                                    <div class="border rounded bg-white overflow-hidden">
+                            <tr class="collapse factoring-row-open" id="{{ $collapseId }}">
+                                <td colspan="12" class="p-2">
+                                    <div class="factoring-detail-box overflow-hidden">
                                         <div class="px-3 py-2 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
                                             <strong class="small">
                                                 Documentos asociados a la cesión N° {{ $cesionItem['cesion'] ?? '—' }}
@@ -299,7 +505,8 @@
 
                                             <small class="text-muted">
                                                 {{ $cantidadDocumentos }}
-                                                {{ $textoPlural($cantidadDocumentos, 'registro', 'registros') }}
+                                                {{ $textoPlural($cantidadDocumentos, 'documento', 'documentos') }}
+                                                únicos
                                             </small>
                                         </div>
 
@@ -312,7 +519,8 @@
                                                         <th>Tipo documento</th>
                                                         <th>Cliente</th>
                                                         <th>RUT Cliente</th>
-                                                        <th class="text-end">Monto cedido</th>
+                                                        <th class="text-end">Monto original</th>
+                                                        <th class="text-end">No anticipado</th>
                                                         <th class="text-end">Monto anticipado</th>
                                                         <th class="text-end">Dif. precio</th>
                                                         <th>Estado</th>
@@ -321,12 +529,87 @@
                                                 </thead>
 
                                                 <tbody>
-                                                    @foreach(collect($cesionItem['documentos'] ?? []) as $factory)
-                                                        @php($documento = $factory->documentoFinanciero)
+                                                    @foreach($documentosDetalle as $detalleDocumento)
+
+
+
+                                                        @php
+                                                            $factory = $detalleDocumento['factory']
+                                                                ?? $detalleDocumento['factory_ultimo']
+                                                                ?? $detalleDocumento['factory_base']
+                                                                ?? null;
+
+                                                            $documento = $detalleDocumento['documento'] ?? null;
+
+                                                            $movimientosDocumento = collect($detalleDocumento['movimientos'] ?? []);
+
+                                                            $cantidadMovimientosDocumento = (int) (
+                                                                $detalleDocumento['cantidad_movimientos_documento']
+                                                                    ?? $detalleDocumento['cantidad_movimientos']
+                                                                    ?? $movimientosDocumento->count()
+                                                            );
+
+                                                            /*
+                                                            |--------------------------------------------------------------------------
+                                                            | Monto original
+                                                            |--------------------------------------------------------------------------
+                                                            | El monto original NO se acumula. El documento existe una sola vez.
+                                                            |--------------------------------------------------------------------------
+                                                            */
+                                                            $montoOriginalDocumento = (int) (
+                                                                $detalleDocumento['monto_documento']
+                                                                    ?? $detalleDocumento['monto_original']
+                                                                    ?? 0
+                                                            );
+
+                                                            /*
+                                                            |--------------------------------------------------------------------------
+                                                            | Valores acumulados por movimientos del mismo documento
+                                                            |--------------------------------------------------------------------------
+                                                            | Estos sí se suman, porque corresponden a movimientos Factoring reales
+                                                            | aplicados sobre el mismo folio.
+                                                            |--------------------------------------------------------------------------
+                                                            */
+                                                            $montoNoAnticipadoDocumento = (int) (
+                                                                $detalleDocumento['total_monto_no_anticipado_movimientos']
+                                                                    ?? (
+                                                                        $movimientosDocumento->isNotEmpty()
+                                                                            ? $movimientosDocumento->sum(fn ($movimiento) => (int) ($movimiento['monto_no_anticipado'] ?? 0))
+                                                                            : ($detalleDocumento['monto_no_anticipado_base'] ?? $detalleDocumento['monto_no_anticipado'] ?? 0)
+                                                                    )
+                                                            );
+
+                                                            $montoAnticipadoDocumento = (int) (
+                                                                $detalleDocumento['total_monto_anticipado_movimientos']
+                                                                    ?? (
+                                                                        $movimientosDocumento->isNotEmpty()
+                                                                            ? $movimientosDocumento->sum(fn ($movimiento) => (int) ($movimiento['monto_anticipado'] ?? 0))
+                                                                            : ($detalleDocumento['monto_anticipado_base'] ?? $detalleDocumento['monto_anticipado'] ?? 0)
+                                                                    )
+                                                            );
+
+                                                            $diferenciaPrecioDocumento = (int) (
+                                                                $detalleDocumento['total_diferencia_precio_movimientos']
+                                                                    ?? (
+                                                                        $movimientosDocumento->isNotEmpty()
+                                                                            ? $movimientosDocumento->sum(fn ($movimiento) => (int) ($movimiento['diferencia_precio'] ?? 0))
+                                                                            : ($detalleDocumento['diferencia_precio_base'] ?? $detalleDocumento['diferencia_precio'] ?? 0)
+                                                                    )
+                                                            );
+                                                        @endphp
+
+
 
                                                         <tr>
                                                             <td class="fw-semibold">
                                                                 {{ $documento?->folio ?? '—' }}
+
+                                                                @if($cantidadMovimientosDocumento > 1)
+                                                                    <span class="badge badge-movimientos ms-1"
+                                                                          title="Este documento tiene más de un registro Factoring dentro de la cesión. El desglose de movimientos se muestra debajo.">
+                                                                        {{ $cantidadMovimientosDocumento }} mov.
+                                                                    </span>
+                                                                @endif
                                                             </td>
 
                                                             <td class="text-nowrap">
@@ -346,15 +629,19 @@
                                                             </td>
 
                                                             <td class="text-end">
-                                                                {{ $formatoMonto($factory->monto ?? 0) }}
+                                                                {{ $formatoMonto($montoOriginalDocumento) }}
                                                             </td>
 
                                                             <td class="text-end">
-                                                                {{ $formatoMonto($factory->saldo_liquido ?? 0) }}
+                                                                {{ $formatoMonto($montoNoAnticipadoDocumento) }}
+                                                            </td>
+
+                                                            <td class="text-end">
+                                                                {{ $formatoMonto($montoAnticipadoDocumento) }}
                                                             </td>
 
                                                             <td class="text-end fw-semibold">
-                                                                {{ $formatoMonto($factory->diferencia_precio ?? 0) }}
+                                                                {{ $formatoMonto($diferenciaPrecioDocumento) }}
                                                             </td>
 
                                                             <td>
@@ -372,17 +659,22 @@
                                                                 @endif
                                                             </td>
                                                         </tr>
+
                                                     @endforeach
                                                 </tbody>
                                             </table>
                                         </div>
 
-                                        @if(($cesionItem['cantidad_movimientos'] ?? 0) > 1)
-                                            <div class="px-3 py-2 border-top small text-muted">
-                                                Esta cesión contiene {{ $cesionItem['cantidad_movimientos'] }} movimientos.
-                                                La fecha “Último mov.” corresponde al registro más reciente asociado a la cesión.
-                                            </div>
-                                        @endif
+                                        <div class="px-3 py-2 border-top small text-muted">
+                                            Esta cesión contiene
+                                            <strong>{{ $cantidadMovimientosCesion }}</strong>
+                                            {{ $textoPlural($cantidadMovimientosCesion, 'movimiento general', 'movimientos generales') }}
+                                            y
+                                            <strong>{{ $cantidadRegistrosFactory }}</strong>
+                                            {{ $textoPlural($cantidadRegistrosFactory, 'registro Factoring', 'registros Factoring') }}.
+                                            Los documentos se muestran una sola vez; si un documento tiene movimientos posteriores, el detalle de esos movimientos se muestra bajo su fila.
+                                            La fecha “Último mov.” corresponde al registro más reciente asociado a la cesión.
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
