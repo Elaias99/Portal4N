@@ -341,7 +341,6 @@
                             <th class="text-end">Comisión</th>
                             <th class="text-end">Monto a recibir</th>
                             <th>Usuario</th>
-                            <th class="text-center">Detalle</th>
                         </tr>
                     </thead>
 
@@ -429,15 +428,20 @@
                             @endphp
 
                             <tr class="factoring-row-main">
-                                <td class="fw-bold text-nowrap">
-                                    {{ $cesionItem['cesion'] ?? '—' }}
 
-                                    @if($cantidadMovimientosCesion > 1)
-                                        <span class="badge badge-movimientos ms-1"
-                                              title="Esta cesión tiene movimientos posteriores registrados">
-                                            {{ $cantidadMovimientosCesion }} mov.
-                                        </span>
-                                    @endif
+
+                                <td class="fw-bold text-nowrap">
+                                    <button
+                                        type="button"
+                                        class="btn btn-link btn-sm p-0 fw-bold text-decoration-none"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#{{ $collapseId }}"
+                                        aria-expanded="false"
+                                        aria-controls="{{ $collapseId }}"
+                                        title="Ver documentos de la cesión"
+                                    >
+                                        {{ $cesionItem['cesion'] ?? '—' }}
+                                    </button>
                                 </td>
 
                                 <td class="text-nowrap">
@@ -480,7 +484,7 @@
                                     {{ $cesionItem['usuario']?->name ?? '—' }}
                                 </td>
 
-                                <td class="text-center">
+                                {{-- <td class="text-center">
                                     <button class="btn btn-outline-primary btn-sm"
                                             type="button"
                                             data-bs-toggle="collapse"
@@ -492,11 +496,11 @@
                                             {{ $cantidadDocumentos }}
                                         </span>
                                     </button>
-                                </td>
+                                </td> --}}
                             </tr>
 
                             <tr class="collapse factoring-row-open" id="{{ $collapseId }}">
-                                <td colspan="12" class="p-2">
+                                <td colspan="11" class="p-2">
                                     <div class="factoring-detail-box overflow-hidden">
                                         <div class="px-3 py-2 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
                                             <strong class="small">
@@ -509,6 +513,9 @@
                                                 únicos
                                             </small>
                                         </div>
+
+
+
 
                                         <div class="table-responsive">
                                             <table class="table table-sm table-hover mb-0 align-middle">
@@ -524,15 +531,11 @@
                                                         <th class="text-end">Monto anticipado</th>
                                                         <th class="text-end">Dif. precio</th>
                                                         <th>Estado</th>
-                                                        <th class="text-center">Detalle</th>
                                                     </tr>
                                                 </thead>
 
                                                 <tbody>
                                                     @foreach($documentosDetalle as $detalleDocumento)
-
-
-
                                                         @php
                                                             $factory = $detalleDocumento['factory']
                                                                 ?? $detalleDocumento['factory_ultimo']
@@ -598,15 +601,21 @@
                                                             );
                                                         @endphp
 
-
-
                                                         <tr>
                                                             <td class="fw-semibold">
-                                                                {{ $documento?->folio ?? '—' }}
+                                                                @if($documento)
+                                                                    <a href="{{ route('documentos.detalles', $documento->id) }}"
+                                                                    class="text-decoration-none fw-semibold"
+                                                                    title="Ver detalle del documento">
+                                                                        {{ $documento->folio ?? '—' }}
+                                                                    </a>
+                                                                @else
+                                                                    —
+                                                                @endif
 
                                                                 @if($cantidadMovimientosDocumento > 1)
-                                                                    <span class="badge badge-movimientos ms-1"
-                                                                          title="Este documento tiene más de un registro Factoring dentro de la cesión. El desglose de movimientos se muestra debajo.">
+                                                                    <span
+                                                                        title="Este documento tiene más de un registro Factoring dentro de la cesión. El desglose de movimientos se muestra debajo.">
                                                                         {{ $cantidadMovimientosDocumento }} mov.
                                                                     </span>
                                                                 @endif
@@ -647,23 +656,15 @@
                                                             <td>
                                                                 {{ $mostrarEstado($documento?->status ?? null) }}
                                                             </td>
-
-                                                            <td class="text-center">
-                                                                @if($documento)
-                                                                    <a href="{{ route('documentos.detalles', $documento->id) }}"
-                                                                       class="btn btn-outline-primary btn-sm">
-                                                                        Ver
-                                                                    </a>
-                                                                @else
-                                                                    —
-                                                                @endif
-                                                            </td>
                                                         </tr>
-
                                                     @endforeach
                                                 </tbody>
                                             </table>
                                         </div>
+
+
+
+
 
                                         <div class="px-3 py-2 border-top small text-muted">
                                             Esta cesión contiene

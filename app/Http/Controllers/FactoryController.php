@@ -691,18 +691,47 @@ class FactoryController extends Controller
      */
     public function store(Request $request, DocumentoFinanciero $documento)
     {
-        try {
-            $validated = $request->validate([
+        /*
+        |--------------------------------------------------------------------------
+        | Validación dinámica
+        |--------------------------------------------------------------------------
+        | Primer Factoring:
+        |   Se mantiene el formulario completo actual.
+        |
+        | Segundo o posterior Factoring:
+        |   Solo se solicita fecha, monto a descontar y se muestra saldo resultante.
+        |--------------------------------------------------------------------------
+        */
+        $tieneFactoryPrevioAntesDeValidar = $documento->factories()->exists();
+
+        $rules = [
+            'fecha_factory' => 'required|date',
+        ];
+
+        $messages = [
+            'fecha_factory.required' => 'Debe ingresar la fecha de operación Factoring.',
+            'fecha_factory.date' => 'La fecha de operación Factoring no es válida.',
+        ];
+
+        if ($tieneFactoryPrevioAntesDeValidar) {
+            $rules['monto_descuento'] = 'required|integer|min:1';
+
+            $messages['monto_descuento.required'] = 'Debe ingresar el monto a descontar.';
+            $messages['monto_descuento.integer'] = 'El monto a descontar debe ser un número entero.';
+            $messages['monto_descuento.min'] = 'El monto a descontar debe ser mayor a cero.';
+        } else {
+            $rules = array_merge($rules, [
                 'banco_id' => 'required|string|max:255',
                 'banco_otro' => 'nullable|required_if:banco_id,__otro__|string|max:255',
 
                 'cesion' => 'required|string|max:100',
-                'fecha_factory' => 'required|date',
                 'comision_total' => 'required|integer|min:0',
 
                 'saldo_liquido' => 'required|integer|min:0',
                 'monto_no_anticipado' => 'required|integer|min:0',
-            ], [
+            ]);
+
+            $messages = array_merge($messages, [
                 'banco_id.required' => 'Debe seleccionar el banco o entidad Factoring.',
 
                 'banco_otro.required_if' => 'Debe ingresar el nombre del banco o entidad Factoring.',
@@ -710,9 +739,6 @@ class FactoryController extends Controller
 
                 'cesion.required' => 'Debe ingresar la cesión del Factoring.',
                 'cesion.max' => 'La cesión del Factoring no puede superar los 100 caracteres.',
-
-                'fecha_factory.required' => 'Debe ingresar la fecha de operación Factoring.',
-                'fecha_factory.date' => 'La fecha de operación Factoring no es válida.',
 
                 'comision_total.required' => 'Debe ingresar la comisión total de la operación.',
                 'comision_total.integer' => 'La comisión total debe ser un número entero.',
@@ -726,6 +752,11 @@ class FactoryController extends Controller
                 'monto_no_anticipado.integer' => 'El monto no anticipado debe ser un número entero.',
                 'monto_no_anticipado.min' => 'El monto no anticipado no puede ser negativo.',
             ]);
+        }
+
+        $validated = $request->validate($rules, $messages);
+
+        try {
             DB::transaction(function () use ($validated, $documento) {
                 /*
                 |--------------------------------------------------------------------------
@@ -742,16 +773,12 @@ class FactoryController extends Controller
                 $saldoPendienteActual = (int) $documentoBloqueado->saldo_pendiente;
 
                 if ((int) $documentoBloqueado->tipo_documento_id === 61) {
-
-
                     throw ValidationException::withMessages([
                         'factory' => 'No se puede registrar Factoring sobre una nota de crédito.',
                     ]);
                 }
 
                 if ((int) $documentoBloqueado->tipo_documento_id === 56) {
-
-
                     throw ValidationException::withMessages([
                         'factory' => 'No se puede registrar Factoring sobre una nota de débito.',
                     ]);
@@ -785,59 +812,140 @@ class FactoryController extends Controller
                 $saldoAnterior = $saldoPendienteActual;
                 $monto = $saldoAnterior;
 
-                $saldoLiquido = (int) $validated['saldo_liquido'];
-                $montoNoAnticipado = (int) $validated['monto_no_anticipado'];
-                $comisionTotal = (int) $validated['comision_total'];
-
                 if ($monto <= 0) {
-
                     throw ValidationException::withMessages([
                         'factory' => 'No se puede registrar Factoring porque el documento no tiene saldo pendiente.',
                     ]);
                 }
 
-                if (($saldoLiquido + $montoNoAnticipado) > $monto) {
-
-                    throw ValidationException::withMessages([
-                        'saldo_liquido' => 'La suma del Monto Líquido y el Monto No Anticipado no puede ser mayor al monto pendiente actual del documento.',
-                    ]);
-                }
-
-                /*
-                |--------------------------------------------------------------------------
-                | Diferencia de Precio
-                |--------------------------------------------------------------------------
-                */
-                $diferenciaPrecio = $monto
-                    - $saldoLiquido
-                    - $montoNoAnticipado;
-
-                $montoAnticipado = $saldoLiquido;
-
-                $montoLiquido = $montoAnticipado
-                    + $diferenciaPrecio;
-
-                $precioCompra = $montoLiquido;
-
-                $montoARecibir = $montoLiquido
-                    - $comisionTotal
-                    - $diferenciaPrecio;
-
-                if ($montoARecibir < 0) {
-
-                    throw ValidationException::withMessages([
-                        'comision_total' => 'La comisión total genera un monto a recibir negativo para la operación.',
-                    ]);
-                }
-
-                $bancoSeleccionado = $this->resolverBancoFactoryMasivo(
-                    bancoId: $validated['banco_id'],
-                    bancoOtro: $validated['banco_otro'] ?? null,
-                );
-
                 $estadoAnterior = $documentoBloqueado->status;
                 $statusOriginalAnterior = $documentoBloqueado->status_original;
                 $cantidadFactoriesAnteriores = $factoriesExistentes;
+
+                /*
+                |--------------------------------------------------------------------------
+                | Segundo o posterior Factoring
+                |--------------------------------------------------------------------------
+                | No se piden banco, cesión, comisión ni monto no anticipado.
+                | Se heredan banco y cesión desde el último Factoring existente.
+                |
+                | Regla:
+                |   monto              = saldo pendiente vigente
+                |   saldo_liquido      = monto a descontar
+                |   monto_no_anticipado = 0
+                |   diferencia_precio  = saldo vigente - monto a descontar
+                |   comision_total     = 0
+                |   monto_a_recibir    = monto a descontar
+                |--------------------------------------------------------------------------
+                */
+                if ($factoriesExistentes > 0) {
+                    if (!array_key_exists('monto_descuento', $validated)) {
+                        throw ValidationException::withMessages([
+                            'monto_descuento' => 'Debe ingresar el monto a descontar.',
+                        ]);
+                    }
+
+                    $factoryReferencia = FactoryRegistro::with('banco')
+                        ->where('documento_financiero_id', $documentoBloqueado->id)
+                        ->orderByDesc('created_at')
+                        ->orderByDesc('id')
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (!$factoryReferencia) {
+                        throw ValidationException::withMessages([
+                            'factory' => 'No se encontró una operación Factoring anterior para usar como referencia.',
+                        ]);
+                    }
+
+                    $bancoSeleccionado = $factoryReferencia->banco;
+
+                    if (!$bancoSeleccionado) {
+                        throw ValidationException::withMessages([
+                            'factory' => 'No se encontró el banco o entidad Factoring de la operación anterior.',
+                        ]);
+                    }
+
+                    $montoDescuento = (int) $validated['monto_descuento'];
+
+                    if ($montoDescuento > $monto) {
+                        throw ValidationException::withMessages([
+                            'monto_descuento' => 'El monto a descontar no puede ser mayor al saldo pendiente actual del documento.',
+                        ]);
+                    }
+
+                    $saldoLiquido = $montoDescuento;
+                    $montoNoAnticipado = 0;
+                    $diferenciaPrecio = max($monto - $montoDescuento, 0);
+
+                    $montoAnticipado = $saldoLiquido;
+
+                    $montoLiquido = $montoAnticipado
+                        + $diferenciaPrecio;
+
+                    $precioCompra = $montoLiquido;
+
+                    $comisionTotal = 0;
+                    $montoARecibir = $montoDescuento;
+
+                    $cesion = trim((string) ($factoryReferencia->cesion ?? ''));
+
+                    $tipoMovimiento = 'Registro de Factoring';
+                    $descripcionMovimiento = "El documento folio {$documentoBloqueado->folio} registró un nuevo movimiento Factoring. Saldo anterior: {$monto}. Monto descontado: {$montoDescuento}. Saldo resultante: {$diferenciaPrecio}.";
+                } else {
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Primer Factoring
+                    |--------------------------------------------------------------------------
+                    | Se conserva la lógica completa existente.
+                    |--------------------------------------------------------------------------
+                    */
+                    $saldoLiquido = (int) $validated['saldo_liquido'];
+                    $montoNoAnticipado = (int) $validated['monto_no_anticipado'];
+                    $comisionTotal = (int) $validated['comision_total'];
+
+                    if (($saldoLiquido + $montoNoAnticipado) > $monto) {
+                        throw ValidationException::withMessages([
+                            'saldo_liquido' => 'La suma del Monto Líquido y el Monto No Anticipado no puede ser mayor al monto pendiente actual del documento.',
+                        ]);
+                    }
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Diferencia de Precio
+                    |--------------------------------------------------------------------------
+                    */
+                    $diferenciaPrecio = $monto
+                        - $saldoLiquido
+                        - $montoNoAnticipado;
+
+                    $montoAnticipado = $saldoLiquido;
+
+                    $montoLiquido = $montoAnticipado
+                        + $diferenciaPrecio;
+
+                    $precioCompra = $montoLiquido;
+
+                    $montoARecibir = $montoLiquido
+                        - $comisionTotal
+                        - $diferenciaPrecio;
+
+                    if ($montoARecibir < 0) {
+                        throw ValidationException::withMessages([
+                            'comision_total' => 'La comisión total genera un monto a recibir negativo para la operación.',
+                        ]);
+                    }
+
+                    $bancoSeleccionado = $this->resolverBancoFactoryMasivo(
+                        bancoId: $validated['banco_id'],
+                        bancoOtro: $validated['banco_otro'] ?? null,
+                    );
+
+                    $cesion = trim($validated['cesion']);
+
+                    $tipoMovimiento = 'Registro de Factoring';
+                    $descripcionMovimiento = "El documento folio {$documentoBloqueado->folio} fue marcado como Factoring. Monto: {$monto}. Monto líquido: {$saldoLiquido}. Monto no anticipado: {$montoNoAnticipado}. Diferencia de precio: {$diferenciaPrecio}. Comisión total: {$comisionTotal}. Monto a recibir: {$montoARecibir}.";
+                }
 
                 $factory = FactoryRegistro::create([
                     'documento_financiero_id' => $documentoBloqueado->id,
@@ -852,7 +960,7 @@ class FactoryController extends Controller
                     */
                     'rut_factory' => '',
 
-                    'cesion' => trim($validated['cesion']),
+                    'cesion' => $cesion,
                     'fecha_factory' => $validated['fecha_factory'],
 
                     'monto' => $monto,
@@ -881,8 +989,8 @@ class FactoryController extends Controller
                 MovimientoDocumento::create([
                     'documento_financiero_id' => $documentoBloqueado->id,
                     'user_id' => Auth::id(),
-                    'tipo_movimiento' => 'Registro de Factoring',
-                    'descripcion' => "El documento folio {$documentoBloqueado->folio} fue marcado como Factoring. Monto: {$monto}. Monto líquido: {$saldoLiquido}. Monto no anticipado: {$montoNoAnticipado}. Diferencia de precio: {$diferenciaPrecio}. Comisión total: {$comisionTotal}. Monto a recibir: {$montoARecibir}.",
+                    'tipo_movimiento' => $tipoMovimiento,
+                    'descripcion' => $descripcionMovimiento,
                     'datos_anteriores' => [
                         'estado' => $estadoAnterior,
                         'status_original' => $statusOriginalAnterior,
@@ -911,15 +1019,10 @@ class FactoryController extends Controller
                         'saldo_actual' => $saldoActual,
                     ],
                 ]);
-
             });
-
-
         } catch (ValidationException $e) {
             throw $e;
         } catch (\Throwable $e) {
-
-
             report($e);
 
             return back()
@@ -936,7 +1039,7 @@ class FactoryController extends Controller
     }
 
     /**
-     * Eliminar un registro Factoring y restaurar saldo/estado según movimientos restantes.
+     * Eliminar un registro Factoring y restaurar saldo/estado d movimientos restantes.
      *
      * Puede eliminarse cualquiera de los registros Factoring asociados al documento.
      * El saldo se recalcula utilizando únicamente los movimientos que continúan

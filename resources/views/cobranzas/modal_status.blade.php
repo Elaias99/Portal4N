@@ -258,14 +258,15 @@
                 <form action="{{ route('documentos.factory.store', $doc->id) }}"
                       method="POST"
                       id="form-factory-{{ $doc->id }}"
-                      class="js-form-factory-individual"
+                      class="js-form-factory-individual {{ $cantidadFactoriesRegistrados > 0 ? 'js-form-factory-recurrente' : '' }}"
                       data-documento-id="{{ $doc->id }}"
                       data-monto="{{ (int) $doc->saldo_pendiente }}"
-                      data-tiene-factory="0"
+                      data-tiene-factory="{{ $cantidadFactoriesRegistrados > 0 ? '1' : '0' }}"
                       style="display: {{ $doc->status == 'Factory' ? 'block' : 'none' }};">
                     @csrf
 
                     @if($cantidadFactoriesRegistrados > 0)
+
                         <div class="alert alert-info py-2 px-3 small mb-3">
                             Este documento ya registra
                             <strong>
@@ -293,240 +294,324 @@
                                 Para consultar o eliminar operaciones anteriores, ingresa al detalle del documento.
                             </div>
                         </div>
-                    @endif
 
-                    {{-- MONTO DEL DOCUMENTO / SALDO CEDIDO --}}
-                    <div class="form-group mb-3">
-                        <label class="form-label small text-muted">
-                            Monto documento / saldo cedido
-                        </label>
-
-                        <input type="text"
-                               class="form-control form-control-sm"
-                               value="${{ number_format((int) $doc->saldo_pendiente, 0, ',', '.') }}"
-                               readonly>
-                    </div>
-
-                    {{-- BANCO / ENTIDAD FACTORING --}}
-                    <div class="form-group mb-3">
-                        <label for="banco-factory-{{ $doc->id }}"
-                               class="form-label small text-muted">
-                            Entidad Factoring / Banco
-                        </label>
-
-                        <select name="banco_id"
-                                id="banco-factory-{{ $doc->id }}"
-                                class="form-select form-select-sm @error('banco_id') is-invalid @enderror"
-                                onchange="toggleBancoFactoryOtro({{ $doc->id }})"
-                                required>
-                            <option value="">
-                                Seleccione entidad / banco
-                            </option>
-
-                            @foreach(($bancos ?? collect()) as $banco)
-                                <option value="{{ $banco->id }}"
-                                    {{ (string) old('banco_id') === (string) $banco->id ? 'selected' : '' }}>
-                                    {{ $banco->nombre }}
-                                </option>
-                            @endforeach
-
-                            <option value="__otro__"
-                                {{ old('banco_id') === '__otro__' ? 'selected' : '' }}>
-                                Otra entidad
-                            </option>
-                        </select>
-
-                        @error('banco_id')
-                            <span class="invalid-feedback d-block text-danger">
-                                <strong>{{ $message }}</strong>
-                            </span>
-                        @enderror
-
-                        <div id="banco-factory-otro-wrapper-{{ $doc->id }}"
-                             class="mt-2"
-                             style="display: {{ old('banco_id') === '__otro__' ? 'block' : 'none' }};">
-
-                            <label for="banco-factory-otro-{{ $doc->id }}"
-                                   class="form-label small text-muted">
-                                Nueva entidad Factoring / Banco
+                        {{-- SALDO PENDIENTE ACTUAL --}}
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">
+                                Saldo pendiente actual
                             </label>
 
                             <input type="text"
-                                   name="banco_otro"
-                                   id="banco-factory-otro-{{ $doc->id }}"
-                                   class="form-control form-control-sm @error('banco_otro') is-invalid @enderror"
-                                   value="{{ old('banco_otro') }}"
-                                   placeholder="Ingrese nueva entidad / banco"
-                                   {{ old('banco_id') === '__otro__' ? 'required' : '' }}>
+                                   class="form-control form-control-sm"
+                                   value="${{ number_format((int) $doc->saldo_pendiente, 0, ',', '.') }}"
+                                   readonly>
+                        </div>
 
-                            @error('banco_otro')
+                        {{-- FECHA DEL NUEVO MOVIMIENTO --}}
+                        <div class="form-group mb-3">
+                            <label for="fecha-factory-{{ $doc->id }}"
+                                   class="form-label small text-muted">
+                                Fecha del movimiento
+                            </label>
+
+                            <input type="date"
+                                   name="fecha_factory"
+                                   id="fecha-factory-{{ $doc->id }}"
+                                   class="form-control form-control-sm @error('fecha_factory') is-invalid @enderror"
+                                   value="{{ old('fecha_factory', now()->format('Y-m-d')) }}"
+                                   required>
+
+                            @error('fecha_factory')
                                 <span class="invalid-feedback d-block text-danger">
                                     <strong>{{ $message }}</strong>
                                 </span>
                             @enderror
                         </div>
-                    </div>
 
-                    {{-- CESIÓN --}}
-                    <div class="form-group mb-3">
-                        <label for="cesion-factory-{{ $doc->id }}"
-                               class="form-label small text-muted">
-                            N° Cesión
-                        </label>
+                        {{-- MONTO A DESCONTAR --}}
+                        <div class="form-group mb-3">
+                            <label for="monto-descuento-factory-{{ $doc->id }}"
+                                   class="form-label small text-muted">
+                                Monto a descontar
+                            </label>
 
-                        <input type="text"
-                               name="cesion"
-                               id="cesion-factory-{{ $doc->id }}"
-                               class="form-control form-control-sm @error('cesion') is-invalid @enderror"
-                               value="{{ old('cesion') }}"
-                               placeholder="Ej: 665162"
-                               required>
+                            <input type="number"
+                                   name="monto_descuento"
+                                   id="monto-descuento-factory-{{ $doc->id }}"
+                                   class="form-control form-control-sm js-factory-recurrente-monto-descuento @error('monto_descuento') is-invalid @enderror"
+                                   data-documento-id="{{ $doc->id }}"
+                                   value="{{ old('monto_descuento') }}"
+                                   min="1"
+                                   max="{{ (int) $doc->saldo_pendiente }}"
+                                   step="1"
+                                   placeholder="Ej: {{ (int) $doc->saldo_pendiente }}"
+                                   required>
 
-                        @error('cesion')
-                            <span class="invalid-feedback d-block text-danger">
-                                <strong>{{ $message }}</strong>
-                            </span>
-                        @enderror
-                    </div>
+                            @error('monto_descuento')
+                                <span class="invalid-feedback d-block text-danger">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
 
-                    {{-- FECHA OPERACIÓN --}}
-                    <div class="form-group mb-3">
-                        <label for="fecha-factory-{{ $doc->id }}"
-                               class="form-label small text-muted">
-                            Fecha operación
-                        </label>
+                        {{-- SALDO QUE QUEDARÁ --}}
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">
+                                Saldo que quedará
+                            </label>
 
-                        <input type="date"
-                               name="fecha_factory"
-                               id="fecha-factory-{{ $doc->id }}"
-                               class="form-control form-control-sm @error('fecha_factory') is-invalid @enderror"
-                               value="{{ old('fecha_factory', now()->format('Y-m-d')) }}"
-                               required>
+                            <input type="text"
+                                   id="saldo-despues-factory-preview-{{ $doc->id }}"
+                                   class="form-control form-control-sm js-factory-recurrente-saldo-despues"
+                                   value="—"
+                                   readonly>
 
-                        @error('fecha_factory')
-                            <span class="invalid-feedback d-block text-danger">
-                                <strong>{{ $message }}</strong>
-                            </span>
-                        @enderror
-                    </div>
+                            <small class="text-muted">
+                                Saldo pendiente actual - Monto a descontar.
+                            </small>
+                        </div>
 
-                    {{-- MONTO LÍQUIDO --}}
-                    <div class="form-group mb-3">
-                        <label for="saldo-liquido-factory-{{ $doc->id }}"
-                               class="form-label small text-muted">
-                            Monto Líquido
-                        </label>
+                        <div class="alert alert-info py-2 px-3 small mb-0">
+                            Este movimiento descontará el monto ingresado sobre el saldo pendiente vigente.
+                            El saldo que quedará seguirá como pendiente del documento.
+                        </div>
 
-                        <input type="number"
-                               name="saldo_liquido"
-                               id="saldo-liquido-factory-{{ $doc->id }}"
-                               class="form-control form-control-sm js-factory-individual-saldo-liquido @error('saldo_liquido') is-invalid @enderror"
-                               data-documento-id="{{ $doc->id }}"
-                               value="{{ old('saldo_liquido') }}"
-                               min="0"
-                               max="{{ (int) $doc->saldo_pendiente }}"
-                               step="1"
-                               placeholder="Ej: {{ (int) $doc->saldo_pendiente }}"
-                               required>
+                    @else
 
-                        @error('saldo_liquido')
-                            <span class="invalid-feedback d-block text-danger">
-                                <strong>{{ $message }}</strong>
-                            </span>
-                        @enderror
-                    </div>
+                        {{-- MONTO DEL DOCUMENTO / SALDO CEDIDO --}}
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">
+                                Monto documento / saldo cedido
+                            </label>
 
-                    {{-- MONTO NO ANTICIPADO --}}
-                    <div class="form-group mb-3">
-                        <label for="monto-no-anticipado-factory-{{ $doc->id }}"
-                               class="form-label small text-muted">
-                            Monto No Anticipado
-                        </label>
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   value="${{ number_format((int) $doc->saldo_pendiente, 0, ',', '.') }}"
+                                   readonly>
+                        </div>
 
-                        <input type="number"
-                               name="monto_no_anticipado"
-                               id="monto-no-anticipado-factory-{{ $doc->id }}"
-                               class="form-control form-control-sm js-factory-individual-monto-no-anticipado @error('monto_no_anticipado') is-invalid @enderror"
-                               data-documento-id="{{ $doc->id }}"
-                               value="{{ old('monto_no_anticipado') }}"
-                               min="0"
-                               max="{{ (int) $doc->saldo_pendiente }}"
-                               step="1"
-                               placeholder="Ej: 0"
-                               required>
+                        {{-- BANCO / ENTIDAD FACTORING --}}
+                        <div class="form-group mb-3">
+                            <label for="banco-factory-{{ $doc->id }}"
+                                   class="form-label small text-muted">
+                                Entidad Factoring / Banco
+                            </label>
 
-                        @error('monto_no_anticipado')
-                            <span class="invalid-feedback d-block text-danger">
-                                <strong>{{ $message }}</strong>
-                            </span>
-                        @enderror
-                    </div>
+                            <select name="banco_id"
+                                    id="banco-factory-{{ $doc->id }}"
+                                    class="form-select form-select-sm @error('banco_id') is-invalid @enderror"
+                                    onchange="toggleBancoFactoryOtro({{ $doc->id }})"
+                                    required>
+                                <option value="">
+                                    Seleccione entidad / banco
+                                </option>
 
-                    {{-- DIFERENCIA DE PRECIO CALCULADA --}}
-                    <div class="form-group mb-3">
-                        <label class="form-label small text-muted">
-                            Diferencia de Precio
-                        </label>
+                                @foreach(($bancos ?? collect()) as $banco)
+                                    <option value="{{ $banco->id }}"
+                                        {{ (string) old('banco_id') === (string) $banco->id ? 'selected' : '' }}>
+                                        {{ $banco->nombre }}
+                                    </option>
+                                @endforeach
 
-                        <input type="text"
-                               id="diferencia-precio-factory-preview-{{ $doc->id }}"
-                               class="form-control form-control-sm js-factory-individual-diferencia-precio"
-                               value="—"
-                               readonly>
+                                <option value="__otro__"
+                                    {{ old('banco_id') === '__otro__' ? 'selected' : '' }}>
+                                    Otra entidad
+                                </option>
+                            </select>
 
-                        <small class="text-muted">
-                            Monto documento - Monto Líquido - Monto No Anticipado.
-                        </small>
-                    </div>
+                            @error('banco_id')
+                                <span class="invalid-feedback d-block text-danger">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
 
-                    {{-- COMISIÓN TOTAL --}}
-                    <div class="form-group mb-3">
-                        <label for="comision-total-factory-{{ $doc->id }}"
-                               class="form-label small text-muted">
-                            Comisión Total (1)
-                        </label>
+                            <div id="banco-factory-otro-wrapper-{{ $doc->id }}"
+                                 class="mt-2"
+                                 style="display: {{ old('banco_id') === '__otro__' ? 'block' : 'none' }};">
 
-                        <input type="number"
-                               name="comision_total"
-                               id="comision-total-factory-{{ $doc->id }}"
-                               class="form-control form-control-sm js-factory-individual-comision-total @error('comision_total') is-invalid @enderror"
-                               data-documento-id="{{ $doc->id }}"
-                               value="{{ old('comision_total') }}"
-                               min="0"
-                               step="1"
-                               placeholder="Ej: 71118"
-                               required>
+                                <label for="banco-factory-otro-{{ $doc->id }}"
+                                       class="form-label small text-muted">
+                                    Nueva entidad Factoring / Banco
+                                </label>
 
-                        @error('comision_total')
-                            <span class="invalid-feedback d-block text-danger">
-                                <strong>{{ $message }}</strong>
-                            </span>
-                        @enderror
-                    </div>
+                                <input type="text"
+                                       name="banco_otro"
+                                       id="banco-factory-otro-{{ $doc->id }}"
+                                       class="form-control form-control-sm @error('banco_otro') is-invalid @enderror"
+                                       value="{{ old('banco_otro') }}"
+                                       placeholder="Ingrese nueva entidad / banco"
+                                       {{ old('banco_id') === '__otro__' ? 'required' : '' }}>
 
-                    {{-- MONTO A RECIBIR CALCULADO --}}
-                    <div class="form-group mb-3">
-                        <label class="form-label small text-muted">
-                            Monto a Recibir
-                        </label>
+                                @error('banco_otro')
+                                    <span class="invalid-feedback d-block text-danger">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                                @enderror
+                            </div>
+                        </div>
 
-                        <input type="text"
-                               id="monto-a-recibir-factory-preview-{{ $doc->id }}"
-                               class="form-control form-control-sm js-factory-individual-monto-a-recibir"
-                               value="—"
-                               readonly>
+                        {{-- CESIÓN --}}
+                        <div class="form-group mb-3">
+                            <label for="cesion-factory-{{ $doc->id }}"
+                                   class="form-label small text-muted">
+                                N° Cesión
+                            </label>
 
-                        <small class="text-muted">
-                            Monto Líquido de la operación - Comisión Total - Diferencia de Precio.
-                        </small>
-                    </div>
+                            <input type="text"
+                                   name="cesion"
+                                   id="cesion-factory-{{ $doc->id }}"
+                                   class="form-control form-control-sm @error('cesion') is-invalid @enderror"
+                                   value="{{ old('cesion') }}"
+                                   placeholder="Ej: 665162"
+                                   required>
 
-                    <div class="alert alert-info py-2 px-3 small mb-0">
-                        Al registrar Factoring, la
-                        <strong>Diferencia de Precio</strong> quedará como saldo pendiente
-                        vigente del documento. El <strong>Monto a Recibir</strong> se almacenará
-                        como parte de esta operación.
-                    </div>
+                            @error('cesion')
+                                <span class="invalid-feedback d-block text-danger">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+
+                        {{-- FECHA OPERACIÓN --}}
+                        <div class="form-group mb-3">
+                            <label for="fecha-factory-{{ $doc->id }}"
+                                   class="form-label small text-muted">
+                                Fecha operación
+                            </label>
+
+                            <input type="date"
+                                   name="fecha_factory"
+                                   id="fecha-factory-{{ $doc->id }}"
+                                   class="form-control form-control-sm @error('fecha_factory') is-invalid @enderror"
+                                   value="{{ old('fecha_factory', now()->format('Y-m-d')) }}"
+                                   required>
+
+                            @error('fecha_factory')
+                                <span class="invalid-feedback d-block text-danger">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+
+                        {{-- MONTO LÍQUIDO --}}
+                        <div class="form-group mb-3">
+                            <label for="saldo-liquido-factory-{{ $doc->id }}"
+                                   class="form-label small text-muted">
+                                Monto Líquido
+                            </label>
+
+                            <input type="number"
+                                   name="saldo_liquido"
+                                   id="saldo-liquido-factory-{{ $doc->id }}"
+                                   class="form-control form-control-sm js-factory-individual-saldo-liquido @error('saldo_liquido') is-invalid @enderror"
+                                   data-documento-id="{{ $doc->id }}"
+                                   value="{{ old('saldo_liquido') }}"
+                                   min="0"
+                                   max="{{ (int) $doc->saldo_pendiente }}"
+                                   step="1"
+                                   placeholder="Ej: {{ (int) $doc->saldo_pendiente }}"
+                                   required>
+
+                            @error('saldo_liquido')
+                                <span class="invalid-feedback d-block text-danger">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+
+                        {{-- MONTO NO ANTICIPADO --}}
+                        <div class="form-group mb-3">
+                            <label for="monto-no-anticipado-factory-{{ $doc->id }}"
+                                   class="form-label small text-muted">
+                                Monto No Anticipado
+                            </label>
+
+                            <input type="number"
+                                   name="monto_no_anticipado"
+                                   id="monto-no-anticipado-factory-{{ $doc->id }}"
+                                   class="form-control form-control-sm js-factory-individual-monto-no-anticipado @error('monto_no_anticipado') is-invalid @enderror"
+                                   data-documento-id="{{ $doc->id }}"
+                                   value="{{ old('monto_no_anticipado') }}"
+                                   min="0"
+                                   max="{{ (int) $doc->saldo_pendiente }}"
+                                   step="1"
+                                   placeholder="Ej: 0"
+                                   required>
+
+                            @error('monto_no_anticipado')
+                                <span class="invalid-feedback d-block text-danger">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+
+                        {{-- DIFERENCIA DE PRECIO CALCULADA --}}
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">
+                                Diferencia de Precio
+                            </label>
+
+                            <input type="text"
+                                   id="diferencia-precio-factory-preview-{{ $doc->id }}"
+                                   class="form-control form-control-sm js-factory-individual-diferencia-precio"
+                                   value="—"
+                                   readonly>
+
+                            <small class="text-muted">
+                                Monto documento - Monto Líquido - Monto No Anticipado.
+                            </small>
+                        </div>
+
+                        {{-- COMISIÓN TOTAL --}}
+                        <div class="form-group mb-3">
+                            <label for="comision-total-factory-{{ $doc->id }}"
+                                   class="form-label small text-muted">
+                                Comisión Total (1)
+                            </label>
+
+                            <input type="number"
+                                   name="comision_total"
+                                   id="comision-total-factory-{{ $doc->id }}"
+                                   class="form-control form-control-sm js-factory-individual-comision-total @error('comision_total') is-invalid @enderror"
+                                   data-documento-id="{{ $doc->id }}"
+                                   value="{{ old('comision_total') }}"
+                                   min="0"
+                                   step="1"
+                                   placeholder="Ej: 71118"
+                                   required>
+
+                            @error('comision_total')
+                                <span class="invalid-feedback d-block text-danger">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+
+                        {{-- MONTO A RECIBIR CALCULADO --}}
+                        <div class="form-group mb-3">
+                            <label class="form-label small text-muted">
+                                Monto a Recibir
+                            </label>
+
+                            <input type="text"
+                                   id="monto-a-recibir-factory-preview-{{ $doc->id }}"
+                                   class="form-control form-control-sm js-factory-individual-monto-a-recibir"
+                                   value="—"
+                                   readonly>
+
+                            <small class="text-muted">
+                                Monto Líquido de la operación - Comisión Total - Diferencia de Precio.
+                            </small>
+                        </div>
+
+                        <div class="alert alert-info py-2 px-3 small mb-0">
+                            Al registrar Factoring, la
+                            <strong>Diferencia de Precio</strong> quedará como saldo pendiente
+                            vigente del documento. El <strong>Monto a Recibir</strong> se almacenará
+                            como parte de esta operación.
+                        </div>
+
+                    @endif
                 </form>
             </div>
 

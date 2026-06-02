@@ -250,6 +250,118 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+    // =====================================================
+    // FACTORING RECURRENTE CxC - SEGUNDO O POSTERIOR MOVIMIENTO
+    // =====================================================
+    const formulariosFactoryRecurrente = document.querySelectorAll(
+        '.js-form-factory-individual[data-tiene-factory="1"]'
+    );
+
+    /**
+     * Calcular vista previa de Factoring recurrente.
+     *
+     * Regla vigente para segundo o posterior movimiento:
+     *
+     * Saldo que quedará =
+     *     Saldo pendiente actual - Monto a descontar
+     */
+    function actualizarCalculoFactoryRecurrente(formulario) {
+        if (!formulario || formulario.dataset.tieneFactory !== '1') {
+            return null;
+        }
+
+        const saldoActual = Number(formulario.dataset.monto || 0);
+
+        const inputMontoDescuento = formulario.querySelector(
+            '.js-factory-recurrente-monto-descuento'
+        );
+
+        const outputSaldoDespues = formulario.querySelector(
+            '.js-factory-recurrente-saldo-despues'
+        );
+
+        if (!inputMontoDescuento || !outputSaldoDespues) {
+            return null;
+        }
+
+        inputMontoDescuento.setCustomValidity('');
+
+        const montoDescuento = obtenerNumeroInput(inputMontoDescuento);
+
+        if (montoDescuento === null) {
+            outputSaldoDespues.value = '—';
+
+            return {
+                completo: false,
+                valido: true,
+                saldoActual: saldoActual,
+                montoDescuento: null,
+                saldoDespues: null,
+            };
+        }
+
+        const saldoDespues = saldoActual - montoDescuento;
+
+        outputSaldoDespues.value = formatCLP(saldoDespues);
+
+        if (saldoDespues < 0) {
+            inputMontoDescuento.setCustomValidity(
+                'El monto a descontar no puede ser mayor al saldo pendiente actual del documento.'
+            );
+
+            return {
+                completo: true,
+                valido: false,
+                saldoActual: saldoActual,
+                montoDescuento: montoDescuento,
+                saldoDespues: saldoDespues,
+            };
+        }
+
+        return {
+            completo: true,
+            valido: true,
+            saldoActual: saldoActual,
+            montoDescuento: montoDescuento,
+            saldoDespues: saldoDespues,
+        };
+    }
+
+    function validarFactoryRecurrente(formulario) {
+        const calculo = actualizarCalculoFactoryRecurrente(formulario);
+
+        if (!calculo) {
+            return true;
+        }
+
+        if (typeof formulario.reportValidity === 'function' && !formulario.reportValidity()) {
+            return false;
+        }
+
+        return calculo.valido !== false;
+    }
+
+    formulariosFactoryRecurrente.forEach(formulario => {
+        actualizarCalculoFactoryRecurrente(formulario);
+
+        formulario.addEventListener('input', function (event) {
+            const campoCalculo = event.target.closest(
+                '.js-factory-recurrente-monto-descuento'
+            );
+
+            if (!campoCalculo) {
+                return;
+            }
+
+            actualizarCalculoFactoryRecurrente(this);
+        });
+
+        formulario.addEventListener('submit', function (event) {
+            if (!validarFactoryRecurrente(this)) {
+                event.preventDefault();
+            }
+        });
+    });
 
     // =====================================================
     // FACTORING MASIVO CxC - SELECCIÓN DE DOCUMENTOS
