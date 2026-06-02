@@ -16,22 +16,44 @@
 
 <div class="container mt-4" style="max-width: 1100px;">
 
+
+
+
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="fw-bold text-primary mb-0">
             Detalles del Documento Financiero
         </h2>
 
-        @if($documento->tipo_documento_id != 61 && Auth::id() != 375)
-            <button type="button"
-                    class="btn btn-outline-secondary"
-                    data-toggle="modal"
-                    data-target="#modalStatus-{{ $documento->id }}">
-                Editar
-            </button>
+        @php
+            $tieneOperacionFactoryCerrada = $documento->factories
+                ->contains(fn ($factory) => $factory->estado_operacion === 'Cerrada');
+        @endphp
 
-            @include('cobranzas.modal_status', ['doc' => $documento])
+        @if($documento->tipo_documento_id != 61 && Auth::id() != 375)
+            @if($tieneOperacionFactoryCerrada)
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        disabled
+                        title="No se puede editar porque la operación Factoring está cerrada.">
+                    Editar
+                </button>
+            @else
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        data-toggle="modal"
+                        data-target="#modalStatus-{{ $documento->id }}">
+                    Editar
+                </button>
+
+                @include('cobranzas.modal_status', ['doc' => $documento])
+            @endif
         @endif
     </div>
+
+
+
+
 
     {{-- Información general --}}
     <div class="card mb-4 shadow-sm">

@@ -30,6 +30,8 @@ class Factory extends Model
         'comision_total',
         'monto_a_recibir',
 
+        'estado_operacion',
+
 
 
 

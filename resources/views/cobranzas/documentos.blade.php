@@ -434,7 +434,11 @@
 
 
                     @php
+                        $tieneOperacionFactoryCerrada = $doc->factories
+                            ->contains(fn ($factory) => $factory->estado_operacion === 'Cerrada');
+
                         $puedeFactoryMasivo =
+                            !$tieneOperacionFactoryCerrada &&
                             (int) $doc->tipo_documento_id !== 61 &&
                             (int) $doc->tipo_documento_id !== 56 &&
                             (int) $doc->saldo_pendiente > 0 &&

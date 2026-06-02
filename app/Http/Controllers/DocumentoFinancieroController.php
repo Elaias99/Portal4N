@@ -70,7 +70,7 @@ class DocumentoFinancieroController extends Controller
             | interno y la carga limitada por columnas produce ambigüedad SQL.
             |--------------------------------------------------------------------------
             */
-            'factories:id,documento_financiero_id,banco_id,rut_factory,cesion,fecha_factory,monto,saldo_liquido,monto_no_anticipado,diferencia_precio,comision_total,monto_a_recibir,user_id,created_at',
+            'factories:id,documento_financiero_id,banco_id,rut_factory,cesion,fecha_factory,monto,saldo_liquido,monto_no_anticipado,diferencia_precio,comision_total,monto_a_recibir,estado_operacion,user_id,created_at',
             'factories.banco:id,nombre',
 
             'referencia:id,folio,tipo_documento_id',

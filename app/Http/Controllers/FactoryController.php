@@ -332,11 +332,20 @@ class FactoryController extends Controller
                             |--------------------------------------------------------------------------
                             | Último movimiento del documento
                             |--------------------------------------------------------------------------
+                            | Saldo después final:
+                            |   corresponde al saldo que queda después del último movimiento Factoring
+                            |   del documento dentro de esta cesión.
+                            |
+                            | Importante:
+                            |   Si el documento tiene más de un movimiento, NO se suman todos los saldos
+                            |   después. Solo se considera el resultado final del último movimiento.
+                            |--------------------------------------------------------------------------
                             */
                             'ultimo_monto_cedido' => (int) ($factoryDocumentoUltimo?->monto ?? 0),
                             'ultimo_monto_anticipado' => (int) ($factoryDocumentoUltimo?->saldo_liquido ?? 0),
                             'ultimo_monto_no_anticipado' => (int) ($factoryDocumentoUltimo?->monto_no_anticipado ?? 0),
                             'ultima_diferencia_precio' => (int) ($factoryDocumentoUltimo?->diferencia_precio ?? 0),
+                            'saldo_despues_final' => (int) ($factoryDocumentoUltimo?->diferencia_precio ?? 0),
 
                             /*
                             |--------------------------------------------------------------------------
@@ -394,6 +403,28 @@ class FactoryController extends Controller
                 $montoAnticipado = (int) $documentosDetalle->sum('monto_anticipado_base');
                 $montoNoAnticipado = (int) $documentosDetalle->sum('monto_no_anticipado_base');
                 $diferenciaPrecio = (int) $documentosDetalle->sum('diferencia_precio_base');
+
+                /*
+                |--------------------------------------------------------------------------
+                | Saldo después consolidado de la cesión
+                |--------------------------------------------------------------------------
+                | Se calcula por documento único.
+                |
+                | Si un documento tiene más de un movimiento Factoring, solo se considera
+                | el saldo resultante del último movimiento del documento.
+                |
+                | Ejemplo:
+                |   Folio 1356:
+                |       Mov. 1 deja 65.544
+                |       Mov. 2 deja 33.576
+                |       Se considera 33.576
+                |
+                |   Folio 1362:
+                |       Mov. 1 deja 1.509.747
+                |       Se considera 1.509.747
+                |--------------------------------------------------------------------------
+                */
+                $saldoDespues = (int) $documentosDetalle->sum('saldo_despues_final');
 
                 $montoLiquido = $montoAnticipado + $diferenciaPrecio;
                 $precioCompra = $montoLiquido;
@@ -466,6 +497,18 @@ class FactoryController extends Controller
                     'monto_anticipado' => $montoAnticipado,
                     'monto_no_anticipado' => $montoNoAnticipado,
                     'diferencia_precio' => $diferenciaPrecio,
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Saldo después
+                    |--------------------------------------------------------------------------
+                    | Saldo final consolidado de los documentos únicos de la cesión.
+                    | No es suma de todos los movimientos; es suma del último saldo después
+                    | de cada documento.
+                    |--------------------------------------------------------------------------
+                    */
+                    'saldo_despues' => $saldoDespues,
+
                     'monto_liquido' => $montoLiquido,
                     'precio_compra' => $precioCompra,
                     'comision_total' => $comisionTotal,
@@ -686,8 +729,9 @@ class FactoryController extends Controller
     /**
      * Registrar estado Factoring para un documento financiero CxC.
      *
-     * Un documento puede acumular más de un registro Factoring, siempre que
-     * continúe teniendo saldo pendiente y no exista un movimiento de cierre.
+     * Un documento puede registrar un primer Factoring como operación vigente.
+     * Al registrar un segundo movimiento Factoring, se cierra la operación
+     * completa del documento.
      */
     public function store(Request $request, DocumentoFinanciero $documento)
     {
@@ -698,7 +742,7 @@ class FactoryController extends Controller
         | Primer Factoring:
         |   Se mantiene el formulario completo actual.
         |
-        | Segundo o posterior Factoring:
+        | Segundo Factoring:
         |   Solo se solicita fecha, monto a descontar y se muestra saldo resultante.
         |--------------------------------------------------------------------------
         */
@@ -767,7 +811,16 @@ class FactoryController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                $factoriesExistentes = $documentoBloqueado->factories()->count();
+                $factoriesBloqueados = FactoryRegistro::where('documento_financiero_id', $documentoBloqueado->id)
+                    ->orderBy('created_at')
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get();
+
+                $factoriesExistentes = $factoriesBloqueados->count();
+                $operacionFactoryCerrada = $factoriesBloqueados
+                    ->contains(fn ($factory) => $factory->estado_operacion === 'Cerrada');
+
                 $tienePago = $documentoBloqueado->pagos()->exists();
                 $tieneProntoPago = $documentoBloqueado->prontoPagos()->exists();
                 $saldoPendienteActual = (int) $documentoBloqueado->saldo_pendiente;
@@ -786,10 +839,24 @@ class FactoryController extends Controller
 
                 /*
                 |--------------------------------------------------------------------------
+                | Operación Factoring cerrada
+                |--------------------------------------------------------------------------
+                | Si la operación ya fue cerrada, no se permiten nuevos movimientos
+                | Factoring sobre este documento.
+                |--------------------------------------------------------------------------
+                */
+                if ($operacionFactoryCerrada || $factoriesExistentes >= 2) {
+                    throw ValidationException::withMessages([
+                        'factory' => 'No se puede registrar otro Factoring porque la operación ya se encuentra cerrada.',
+                    ]);
+                }
+
+                /*
+                |--------------------------------------------------------------------------
                 | Movimientos de cierre
                 |--------------------------------------------------------------------------
-                | Factoring puede repetirse mientras exista saldo. Pago y Pronto pago
-                | continúan cerrando el documento e impiden nuevos registros.
+                | Pago y Pronto pago continúan cerrando el documento e impiden nuevos
+                | registros Factoring.
                 |--------------------------------------------------------------------------
                 */
                 if ($tienePago) {
@@ -821,21 +888,18 @@ class FactoryController extends Controller
                 $estadoAnterior = $documentoBloqueado->status;
                 $statusOriginalAnterior = $documentoBloqueado->status_original;
                 $cantidadFactoriesAnteriores = $factoriesExistentes;
+                $estadosOperacionAnteriores = $factoriesBloqueados
+                    ->mapWithKeys(fn ($factory) => [$factory->id => $factory->estado_operacion])
+                    ->toArray();
 
                 /*
                 |--------------------------------------------------------------------------
-                | Segundo o posterior Factoring
+                | Segundo Factoring
                 |--------------------------------------------------------------------------
                 | No se piden banco, cesión, comisión ni monto no anticipado.
                 | Se heredan banco y cesión desde el último Factoring existente.
                 |
-                | Regla:
-                |   monto              = saldo pendiente vigente
-                |   saldo_liquido      = monto a descontar
-                |   monto_no_anticipado = 0
-                |   diferencia_precio  = saldo vigente - monto a descontar
-                |   comision_total     = 0
-                |   monto_a_recibir    = monto a descontar
+                | Al registrar este segundo movimiento, la operación completa queda Cerrada.
                 |--------------------------------------------------------------------------
                 */
                 if ($factoriesExistentes > 0) {
@@ -845,12 +909,11 @@ class FactoryController extends Controller
                         ]);
                     }
 
-                    $factoryReferencia = FactoryRegistro::with('banco')
-                        ->where('documento_financiero_id', $documentoBloqueado->id)
-                        ->orderByDesc('created_at')
-                        ->orderByDesc('id')
-                        ->lockForUpdate()
+                    $factoryReferencia = $factoriesBloqueados
+                        ->sortByDesc(fn ($factory) => ($factory->created_at?->format('Y-m-d H:i:s') ?? '') . '-' . str_pad((string) $factory->id, 12, '0', STR_PAD_LEFT))
                         ->first();
+
+                    $factoryReferencia?->loadMissing('banco');
 
                     if (!$factoryReferencia) {
                         throw ValidationException::withMessages([
@@ -890,14 +953,17 @@ class FactoryController extends Controller
 
                     $cesion = trim((string) ($factoryReferencia->cesion ?? ''));
 
+                    $estadoOperacionNuevoFactory = 'Cerrada';
+
                     $tipoMovimiento = 'Registro de Factoring';
-                    $descripcionMovimiento = "El documento folio {$documentoBloqueado->folio} registró un nuevo movimiento Factoring. Saldo anterior: {$monto}. Monto descontado: {$montoDescuento}. Saldo resultante: {$diferenciaPrecio}.";
+                    $descripcionMovimiento = "El documento folio {$documentoBloqueado->folio} registró un nuevo movimiento Factoring. Saldo anterior: {$monto}. Monto descontado: {$montoDescuento}. Saldo resultante: {$diferenciaPrecio}. La operación Factoring quedó cerrada.";
                 } else {
                     /*
                     |--------------------------------------------------------------------------
                     | Primer Factoring
                     |--------------------------------------------------------------------------
                     | Se conserva la lógica completa existente.
+                    | La operación queda Vigente.
                     |--------------------------------------------------------------------------
                     */
                     $saldoLiquido = (int) $validated['saldo_liquido'];
@@ -943,8 +1009,10 @@ class FactoryController extends Controller
 
                     $cesion = trim($validated['cesion']);
 
+                    $estadoOperacionNuevoFactory = 'Vigente';
+
                     $tipoMovimiento = 'Registro de Factoring';
-                    $descripcionMovimiento = "El documento folio {$documentoBloqueado->folio} fue marcado como Factoring. Monto: {$monto}. Monto líquido: {$saldoLiquido}. Monto no anticipado: {$montoNoAnticipado}. Diferencia de precio: {$diferenciaPrecio}. Comisión total: {$comisionTotal}. Monto a recibir: {$montoARecibir}.";
+                    $descripcionMovimiento = "El documento folio {$documentoBloqueado->folio} fue marcado como Factoring. Monto: {$monto}. Monto líquido: {$saldoLiquido}. Monto no anticipado: {$montoNoAnticipado}. Diferencia de precio: {$diferenciaPrecio}. Comisión total: {$comisionTotal}. Monto a recibir: {$montoARecibir}. La operación Factoring quedó vigente.";
                 }
 
                 $factory = FactoryRegistro::create([
@@ -971,8 +1039,27 @@ class FactoryController extends Controller
                     'comision_total' => $comisionTotal,
                     'monto_a_recibir' => $montoARecibir,
 
+                    'estado_operacion' => $estadoOperacionNuevoFactory,
+
                     'user_id' => Auth::id(),
                 ]);
+
+                /*
+                |--------------------------------------------------------------------------
+                | Cierre de operación completa
+                |--------------------------------------------------------------------------
+                | Si este es el segundo movimiento, todos los registros Factoring
+                | asociados al documento quedan Cerrada.
+                |--------------------------------------------------------------------------
+                */
+                if ($factoriesExistentes > 0) {
+                    FactoryRegistro::where('documento_financiero_id', $documentoBloqueado->id)
+                        ->update([
+                            'estado_operacion' => 'Cerrada',
+                        ]);
+
+                    $factory->refresh();
+                }
 
                 /*
                 |--------------------------------------------------------------------------
@@ -986,6 +1073,10 @@ class FactoryController extends Controller
                     'fecha_estado_manual' => now(),
                 ]);
 
+                $estadosOperacionNuevos = FactoryRegistro::where('documento_financiero_id', $documentoBloqueado->id)
+                    ->pluck('estado_operacion', 'id')
+                    ->toArray();
+
                 MovimientoDocumento::create([
                     'documento_financiero_id' => $documentoBloqueado->id,
                     'user_id' => Auth::id(),
@@ -996,6 +1087,7 @@ class FactoryController extends Controller
                         'status_original' => $statusOriginalAnterior,
                         'saldo_anterior' => $saldoAnterior,
                         'cantidad_factoring_anteriores' => $cantidadFactoriesAnteriores,
+                        'estados_operacion_anteriores' => $estadosOperacionAnteriores,
                     ],
                     'datos_nuevos' => [
                         'factory_id' => $factory->id,
@@ -1013,6 +1105,9 @@ class FactoryController extends Controller
                         'precio_compra' => $precioCompra,
                         'comision_total' => $factory->comision_total,
                         'monto_a_recibir' => $factory->monto_a_recibir,
+
+                        'estado_operacion' => $factory->estado_operacion,
+                        'estados_operacion_actuales' => $estadosOperacionNuevos,
 
                         'cantidad_factoring_actual' => $cantidadFactoriesAnteriores + 1,
                         'nuevo_estado' => 'Factory',
@@ -1039,7 +1134,7 @@ class FactoryController extends Controller
     }
 
     /**
-     * Eliminar un registro Factoring y restaurar saldo/estado d movimientos restantes.
+     * Eliminar un registro Factoring y restaurar saldo/estado de movimientos restantes.
      *
      * Puede eliminarse cualquiera de los registros Factoring asociados al documento.
      * El saldo se recalcula utilizando únicamente los movimientos que continúan
@@ -1076,6 +1171,11 @@ class FactoryController extends Controller
                     ]);
                 }
 
+                $estadosOperacionAntes = FactoryRegistro::where('documento_financiero_id', $documento->id)
+                    ->lockForUpdate()
+                    ->pluck('estado_operacion', 'id')
+                    ->toArray();
+
                 $datosAnteriores = [
                     'factory_id' => $factoryEliminar->id,
                     'documento_financiero_id' => $factoryEliminar->documento_financiero_id,
@@ -1090,6 +1190,7 @@ class FactoryController extends Controller
                     'diferencia_precio' => $factoryEliminar->diferencia_precio,
                     'comision_total' => $factoryEliminar->comision_total,
                     'monto_a_recibir' => $factoryEliminar->monto_a_recibir,
+                    'estado_operacion' => $factoryEliminar->estado_operacion,
                 ];
 
                 $estadoAnterior = $documento->status;
@@ -1103,6 +1204,39 @@ class FactoryController extends Controller
                 |--------------------------------------------------------------------------
                 */
                 $factoryEliminar->delete();
+
+                /*
+                |--------------------------------------------------------------------------
+                | Recalcular estado de operación de Factorings restantes
+                |--------------------------------------------------------------------------
+                | 0 registros restantes:
+                |   no se actualiza nada.
+                |
+                | 1 registro restante:
+                |   vuelve a Vigente.
+                |
+                | 2 o más registros restantes:
+                |   permanecen Cerrada.
+                |--------------------------------------------------------------------------
+                */
+                $factoriesRestantes = FactoryRegistro::where('documento_financiero_id', $documento->id)
+                    ->orderBy('created_at')
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get();
+
+                if ($factoriesRestantes->count() === 1) {
+                    $factoriesRestantes->first()->update([
+                        'estado_operacion' => 'Vigente',
+                    ]);
+                }
+
+                if ($factoriesRestantes->count() >= 2) {
+                    FactoryRegistro::where('documento_financiero_id', $documento->id)
+                        ->update([
+                            'estado_operacion' => 'Cerrada',
+                        ]);
+                }
 
                 /*
                 |--------------------------------------------------------------------------
@@ -1134,6 +1268,10 @@ class FactoryController extends Controller
                 $nuevoEstadoVisible = $documento->estado_visible;
                 $cantidadFactoriesRestantes = $documento->factories()->count();
 
+                $estadosOperacionDespues = FactoryRegistro::where('documento_financiero_id', $documento->id)
+                    ->pluck('estado_operacion', 'id')
+                    ->toArray();
+
                 MovimientoDocumento::create([
                     'documento_financiero_id' => $documento->id,
                     'user_id' => Auth::id(),
@@ -1144,12 +1282,14 @@ class FactoryController extends Controller
                         'status_original_anterior' => $statusOriginalAnterior,
                         'saldo_anterior' => $saldoAnterior,
                         'cantidad_factoring_antes' => $cantidadFactoriesAntes,
+                        'estados_operacion_antes' => $estadosOperacionAntes,
                     ]),
                     'datos_nuevos' => [
                         'nuevo_estado_manual' => $nuevoEstadoManual,
                         'nuevo_status_original' => $nuevoStatusOriginal,
                         'nuevo_estado_visible' => $nuevoEstadoVisible,
                         'cantidad_factoring_restantes' => $cantidadFactoriesRestantes,
+                        'estados_operacion_despues' => $estadosOperacionDespues,
                         'saldo_actual' => $saldoActual,
                     ],
                 ]);

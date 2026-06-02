@@ -338,13 +338,17 @@
                             <th class="text-end">Monto docto.</th>
                             <th class="text-end">Monto anticipado</th>
                             <th class="text-end">Dif. precio</th>
+                            <th class="text-end">Saldo después</th>
                             <th class="text-end">Comisión</th>
                             <th class="text-end">Monto a recibir</th>
-                            <th>Usuario</th>
+                            <th class="text-center">Estado</th>
                         </tr>
                     </thead>
 
                     <tbody>
+
+
+
                         @foreach($cesionesDelMes as $cesionItem)
                             @php
                                 $collapseId = 'docs-factoring-' . md5(
@@ -381,6 +385,11 @@
                                         ?? 0
                                 );
 
+                                $saldoDespuesResumen = (int) (
+                                    $cesionItem['saldo_despues']
+                                        ?? 0
+                                );
+
                                 $comisionTotalResumen = (int) (
                                     $cesionItem['comision_total']
                                         ?? $movimientoComprobante['comision_total']
@@ -406,6 +415,22 @@
                                 |--------------------------------------------------------------------------
                                 */
                                 $documentosDetalle = collect($cesionItem['documentos_detalle'] ?? []);
+
+                                $registrosFactoryCesion = collect($cesionItem['documentos'] ?? []);
+
+                                $hayOperacionVigente = $registrosFactoryCesion
+                                    ->contains(fn ($factory) => ($factory->estado_operacion ?? null) === 'Vigente');
+
+                                $hayOperacionCerrada = $registrosFactoryCesion
+                                    ->contains(fn ($factory) => ($factory->estado_operacion ?? null) === 'Cerrada');
+
+                                $estadoOperacionCesion = $hayOperacionVigente
+                                    ? 'Vigente'
+                                    : ($hayOperacionCerrada ? 'Cerrada' : null);
+
+                                $colorEstadoOperacionCesion = $estadoOperacionCesion === 'Cerrada'
+                                    ? 'bg-danger'
+                                    : 'bg-success';
 
                                 if ($documentosDetalle->isEmpty()) {
                                     $documentosDetalle = $consolidarDocumentosCesion($cesionItem['documentos'] ?? []);
@@ -468,39 +493,46 @@
                                     {{ $formatoMonto($montoAnticipadoResumen) }}
                                 </td>
 
+
+
+
+
                                 <td class="text-end">
                                     {{ $formatoMonto($diferenciaPrecioResumen) }}
+                                </td>
+
+                                <td class="text-end fw-bold text-danger">
+                                    {{ $formatoMonto($saldoDespuesResumen) }}
                                 </td>
 
                                 <td class="text-end">
                                     {{ $formatoMonto($comisionTotalResumen) }}
                                 </td>
 
+
+
+
+
                                 <td class="text-end fw-bold text-success">
                                     {{ $formatoMonto($montoARecibirResumen) }}
                                 </td>
 
-                                <td class="text-nowrap">
-                                    {{ $cesionItem['usuario']?->name ?? '—' }}
+                                <td class="text-center">
+                                    @if($estadoOperacionCesion)
+                                        <span class="badge {{ $colorEstadoOperacionCesion }}">
+                                            {{ $estadoOperacionCesion }}
+                                        </span>
+                                    @else
+                                        <span class="badge bg-secondary">
+                                            —
+                                        </span>
+                                    @endif
                                 </td>
 
-                                {{-- <td class="text-center">
-                                    <button class="btn btn-outline-primary btn-sm"
-                                            type="button"
-                                            data-bs-toggle="collapse"
-                                            data-bs-target="#{{ $collapseId }}"
-                                            aria-expanded="false"
-                                            aria-controls="{{ $collapseId }}">
-                                        Ver docs.
-                                        <span class="badge bg-light text-primary border ms-1">
-                                            {{ $cantidadDocumentos }}
-                                        </span>
-                                    </button>
-                                </td> --}}
                             </tr>
 
                             <tr class="collapse factoring-row-open" id="{{ $collapseId }}">
-                                <td colspan="11" class="p-2">
+                                <td colspan="12" class="p-2">
                                     <div class="factoring-detail-box overflow-hidden">
                                         <div class="px-3 py-2 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
                                             <strong class="small">
@@ -654,7 +686,23 @@
                                                             </td>
 
                                                             <td>
-                                                                {{ $mostrarEstado($documento?->status ?? null) }}
+                                                                @php
+                                                                    $estadoOperacion = $factory?->estado_operacion ?? null;
+
+                                                                    $colorEstadoOperacion = $estadoOperacion === 'Cerrada'
+                                                                        ? 'bg-danger'
+                                                                        : 'bg-success';
+                                                                @endphp
+
+                                                                @if($estadoOperacion)
+                                                                    <span class="badge {{ $colorEstadoOperacion }}">
+                                                                        {{ $estadoOperacion }}
+                                                                    </span>
+                                                                @else
+                                                                    <span class="badge bg-secondary">
+                                                                        {{ $mostrarEstado($documento?->status ?? null) }}
+                                                                    </span>
+                                                                @endif
                                                             </td>
                                                         </tr>
                                                     @endforeach
