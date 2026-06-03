@@ -560,6 +560,12 @@
 
 </div>
 
+
+
+<script type="application/json" id="cesiones-factoring-json">
+    @json($cesionesFactoringExistentes ?? [])
+</script>
+
 @vite('resources/js/cobranzas_documentos.js')
 
 @endsection

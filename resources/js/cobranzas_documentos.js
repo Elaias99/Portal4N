@@ -49,6 +49,73 @@ document.addEventListener('DOMContentLoaded', () => {
         return Number.isFinite(valor) ? valor : null;
     }
 
+
+
+
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cesiones Factoring existentes
+    |--------------------------------------------------------------------------
+    | Este JSON debe venir desde la vista.
+    | Se usa tanto para Factoring masivo como para Factoring individual.
+    |--------------------------------------------------------------------------
+    */
+    const cesionesFactoringExistentes = (() => {
+        const script = document.getElementById('cesiones-factoring-json');
+
+        if (!script) {
+            return [];
+        }
+
+        try {
+            return JSON.parse(script.textContent || '[]');
+        } catch (error) {
+            return [];
+        }
+    })();
+
+    function normalizarCesionFactoring(value) {
+        return String(value ?? '')
+            .trim()
+            .toLowerCase();
+    }
+
+    function obtenerCesionFactoringExistente(value) {
+        const cesionBuscada = normalizarCesionFactoring(value);
+
+        if (!cesionBuscada) {
+            return null;
+        }
+
+        return cesionesFactoringExistentes.find(cesion => {
+            return normalizarCesionFactoring(cesion.cesion) === cesionBuscada;
+        }) || null;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     // =====================================================
     // FACTORING MANUAL CxC - MODAL DE ESTADO
     // =====================================================
@@ -117,6 +184,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const montoNoAnticipado = obtenerNumeroInput(inputMontoNoAnticipado);
         const comisionTotal = obtenerNumeroInput(inputComisionTotal);
 
+        const montoARecibirCesionExistente = formulario.dataset.montoARecibirCesion !== undefined &&
+            formulario.dataset.montoARecibirCesion !== ''
+                ? Number(formulario.dataset.montoARecibirCesion)
+                : null;
+
         if (saldoLiquido === null || montoNoAnticipado === null) {
             outputDiferenciaPrecio.value = '—';
             outputMontoARecibir.value = '—';
@@ -175,6 +247,24 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
 
+        if (
+            formulario.dataset.cesionExistente === '1' &&
+            Number.isFinite(montoARecibirCesionExistente)
+        ) {
+            outputMontoARecibir.value = formatCLP(montoARecibirCesionExistente);
+
+            return {
+                completo: true,
+                valido: true,
+                monto: monto,
+                saldoLiquido: saldoLiquido,
+                montoNoAnticipado: montoNoAnticipado,
+                comisionTotal: comisionTotal,
+                diferenciaPrecio: diferenciaPrecio,
+                montoARecibir: montoARecibirCesionExistente,
+            };
+        }
+
         const montoLiquidoOperacion = saldoLiquido
             + diferenciaPrecio;
 
@@ -213,7 +303,164 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    function liberarDatosCesionFactoringIndividual(formulario) {
+        if (!formulario) {
+            return;
+        }
+
+        const selectBanco = formulario.querySelector('.js-factory-individual-banco');
+        const wrapperBancoOtro = formulario.querySelector('.js-factory-individual-banco-otro-wrapper');
+        const inputBancoOtro = formulario.querySelector('.js-factory-individual-banco-otro');
+        const inputFecha = formulario.querySelector('.js-factory-individual-fecha');
+        const inputComisionTotal = formulario.querySelector('.js-factory-individual-comision-total');
+        const alertaCesion = formulario.querySelector('.js-factory-individual-cesion-existente-alert');
+        const detalleCesion = formulario.querySelector('.js-factory-individual-cesion-existente-detalle');
+
+        formulario.dataset.cesionExistente = '0';
+        formulario.dataset.montoARecibirCesion = '';
+
+        if (selectBanco) {
+            if (selectBanco.dataset.bloqueadoPorCesion === '1') {
+                selectBanco.value = selectBanco.dataset.valorOriginal ?? '';
+            }
+
+            selectBanco.dataset.bloqueadoPorCesion = '0';
+            selectBanco.style.pointerEvents = '';
+            selectBanco.removeAttribute('aria-disabled');
+            selectBanco.tabIndex = 0;
+        }
+
+        if (inputFecha) {
+            if (inputFecha.dataset.bloqueadoPorCesion === '1') {
+                inputFecha.value = inputFecha.dataset.valorOriginal ?? inputFecha.value;
+            }
+
+            inputFecha.dataset.bloqueadoPorCesion = '0';
+            inputFecha.readOnly = false;
+        }
+
+        if (inputComisionTotal) {
+            if (inputComisionTotal.dataset.bloqueadoPorCesion === '1') {
+                inputComisionTotal.value = inputComisionTotal.dataset.valorOriginal ?? '';
+            }
+
+            inputComisionTotal.dataset.bloqueadoPorCesion = '0';
+            inputComisionTotal.readOnly = false;
+        }
+
+        if (inputBancoOtro) {
+            inputBancoOtro.required = selectBanco?.value === '__otro__';
+        }
+
+        if (wrapperBancoOtro) {
+            wrapperBancoOtro.style.display = selectBanco?.value === '__otro__'
+                ? 'block'
+                : 'none';
+        }
+
+        if (alertaCesion) {
+            alertaCesion.style.display = 'none';
+        }
+
+        if (detalleCesion) {
+            detalleCesion.textContent = '';
+        }
+
+        actualizarCalculoFactoryIndividual(formulario);
+    }
+
+    function aplicarCesionFactoringExistenteIndividual(formulario) {
+        if (!formulario || formulario.dataset.tieneFactory === '1') {
+            return null;
+        }
+
+        const inputCesion = formulario.querySelector('.js-factory-individual-cesion');
+
+        if (!inputCesion) {
+            return null;
+        }
+
+        const cesionExistente = obtenerCesionFactoringExistente(inputCesion.value);
+
+        if (!cesionExistente) {
+            liberarDatosCesionFactoringIndividual(formulario);
+            return null;
+        }
+
+        const selectBanco = formulario.querySelector('.js-factory-individual-banco');
+        const wrapperBancoOtro = formulario.querySelector('.js-factory-individual-banco-otro-wrapper');
+        const inputBancoOtro = formulario.querySelector('.js-factory-individual-banco-otro');
+        const inputFecha = formulario.querySelector('.js-factory-individual-fecha');
+        const inputComisionTotal = formulario.querySelector('.js-factory-individual-comision-total');
+        const alertaCesion = formulario.querySelector('.js-factory-individual-cesion-existente-alert');
+        const detalleCesion = formulario.querySelector('.js-factory-individual-cesion-existente-detalle');
+
+        formulario.dataset.cesionExistente = '1';
+        formulario.dataset.montoARecibirCesion = Number(cesionExistente.monto_a_recibir || 0);
+
+        if (selectBanco && cesionExistente.banco_id) {
+            if (selectBanco.dataset.bloqueadoPorCesion !== '1') {
+                selectBanco.dataset.valorOriginal = selectBanco.value;
+            }
+
+            selectBanco.value = String(cesionExistente.banco_id);
+            selectBanco.dataset.bloqueadoPorCesion = '1';
+            selectBanco.style.pointerEvents = 'none';
+            selectBanco.setAttribute('aria-disabled', 'true');
+            selectBanco.tabIndex = -1;
+        }
+
+        if (inputFecha && cesionExistente.fecha_operacion) {
+            if (inputFecha.dataset.bloqueadoPorCesion !== '1') {
+                inputFecha.dataset.valorOriginal = inputFecha.value;
+            }
+
+            inputFecha.value = cesionExistente.fecha_operacion;
+            inputFecha.dataset.bloqueadoPorCesion = '1';
+            inputFecha.readOnly = true;
+        }
+
+        if (inputComisionTotal) {
+            if (inputComisionTotal.dataset.bloqueadoPorCesion !== '1') {
+                inputComisionTotal.dataset.valorOriginal = inputComisionTotal.value;
+            }
+
+            inputComisionTotal.value = Number(cesionExistente.comision_total || 0);
+            inputComisionTotal.dataset.bloqueadoPorCesion = '1';
+            inputComisionTotal.readOnly = true;
+        }
+
+        if (inputBancoOtro) {
+            inputBancoOtro.value = '';
+            inputBancoOtro.required = false;
+        }
+
+        if (wrapperBancoOtro) {
+            wrapperBancoOtro.style.display = 'none';
+        }
+
+        if (alertaCesion) {
+            alertaCesion.style.display = 'block';
+        }
+
+        if (detalleCesion) {
+            const bancoTexto = selectBanco?.selectedOptions?.[0]?.textContent?.trim() || 'Banco registrado';
+
+            detalleCesion.textContent =
+                bancoTexto +
+                ' · Fecha: ' + (cesionExistente.fecha_operacion || '—') +
+                ' · Comisión: ' + formatCLP(cesionExistente.comision_total || 0) +
+                ' · Monto a recibir: ' + formatCLP(cesionExistente.monto_a_recibir || 0);
+        }
+
+        actualizarCalculoFactoryIndividual(formulario);
+
+        return cesionExistente;
+    }
+
     function validarFactoryIndividual(formulario) {
+        aplicarCesionFactoringExistenteIndividual(formulario);
+
         const calculo = actualizarCalculoFactoryIndividual(formulario);
 
         if (!calculo) {
@@ -228,9 +475,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     formulariosFactoryIndividual.forEach(formulario => {
+        aplicarCesionFactoringExistenteIndividual(formulario);
         actualizarCalculoFactoryIndividual(formulario);
 
         formulario.addEventListener('input', function (event) {
+            const campoCesion = event.target.closest('.js-factory-individual-cesion');
+
+            if (campoCesion) {
+                aplicarCesionFactoringExistenteIndividual(this);
+                return;
+            }
+
             const campoCalculo = event.target.closest(
                 '.js-factory-individual-saldo-liquido, ' +
                 '.js-factory-individual-monto-no-anticipado, ' +
@@ -245,6 +500,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         formulario.addEventListener('submit', function (event) {
+            aplicarCesionFactoringExistenteIndividual(this);
+
             if (!validarFactoryIndividual(this)) {
                 event.preventDefault();
             }
@@ -400,6 +657,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputGlobalBancoOtro = document.getElementById('factory-masivo-global-banco-otro');
     const inputGlobalFechaFactory = document.getElementById('factory-masivo-global-fecha');
     const inputGlobalComisionTotal = document.getElementById('factory-masivo-global-comision-total');
+
+
+
 
     function getSeleccionFactory() {
         try {
@@ -872,6 +1132,9 @@ document.addEventListener('DOMContentLoaded', () => {
         actualizarTotalesFactoryMasivo();
     }
 
+
+
+
     function toggleBancoOtroFactoryMasivoGlobal() {
         if (!selectGlobalBanco || !wrapperGlobalBancoOtro || !inputGlobalBancoOtro) {
             return;
@@ -887,6 +1150,85 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+
+
+    function liberarDatosCesionFactoringMasivo() {
+        if (selectGlobalBanco) {
+            selectGlobalBanco.dataset.bloqueadoPorCesion = '0';
+            selectGlobalBanco.style.pointerEvents = '';
+            selectGlobalBanco.removeAttribute('aria-disabled');
+            selectGlobalBanco.tabIndex = 0;
+        }
+
+        if (inputGlobalFechaFactory) {
+            inputGlobalFechaFactory.readOnly = false;
+        }
+
+        if (inputGlobalComisionTotal) {
+            inputGlobalComisionTotal.readOnly = false;
+        }
+    }
+
+    function aplicarCesionFactoringExistenteMasivo() {
+        if (!inputGlobalCesion) {
+            return null;
+        }
+
+        const cesionExistente = obtenerCesionFactoringExistente(
+            inputGlobalCesion.value
+        );
+
+        if (!cesionExistente) {
+            liberarDatosCesionFactoringMasivo();
+            return null;
+        }
+
+        if (selectGlobalBanco && cesionExistente.banco_id) {
+            selectGlobalBanco.value = String(cesionExistente.banco_id);
+            selectGlobalBanco.dataset.bloqueadoPorCesion = '1';
+
+            /*
+            |--------------------------------------------------------------------------
+            | No usar disabled
+            |--------------------------------------------------------------------------
+            | Si se deshabilita el select, el banco no viaja en el submit.
+            | Por eso solo se bloquea la interacción visual.
+            |--------------------------------------------------------------------------
+            */
+            selectGlobalBanco.style.pointerEvents = 'none';
+            selectGlobalBanco.setAttribute('aria-disabled', 'true');
+            selectGlobalBanco.tabIndex = -1;
+        }
+
+        if (inputGlobalFechaFactory && cesionExistente.fecha_operacion) {
+            inputGlobalFechaFactory.value = cesionExistente.fecha_operacion;
+            inputGlobalFechaFactory.readOnly = true;
+        }
+
+        if (inputGlobalComisionTotal) {
+            inputGlobalComisionTotal.value = Number(
+                cesionExistente.comision_total || 0
+            );
+
+            inputGlobalComisionTotal.readOnly = true;
+        }
+
+        if (inputGlobalBancoOtro) {
+            inputGlobalBancoOtro.value = '';
+            inputGlobalBancoOtro.required = false;
+        }
+
+        toggleBancoOtroFactoryMasivoGlobal();
+        actualizarTotalesFactoryMasivo();
+
+        return cesionExistente;
+    }
+
+
+
+
+    
+
     function validarDatosGeneralesFactoryMasivo() {
         if (
             !inputGlobalCesion ||
@@ -897,7 +1239,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return false;
         }
 
+        aplicarCesionFactoringExistenteMasivo();
+
         toggleBancoOtroFactoryMasivoGlobal();
+
+
+
+
+
 
         if (!inputGlobalCesion.value.trim()) {
             inputGlobalCesion.reportValidity();
@@ -944,6 +1293,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return true;
     }
+
+
+
+
+
+
+
+
+
+    
+
+
 
     function validarFilasFactoryMasivo() {
         const foliosInvalidos = [];
@@ -1038,14 +1399,25 @@ document.addEventListener('DOMContentLoaded', () => {
         actualizarCheckAllFactory();
     });
 
+
+
+
+
     // Renderizar modal masivo al abrir
     btnFactoryMasivo?.addEventListener('click', function () {
         renderFactoryMasivoModal();
+        aplicarCesionFactoringExistenteMasivo();
     });
 
     modalFactory?.addEventListener('show.bs.modal', function () {
         renderFactoryMasivoModal();
+        aplicarCesionFactoringExistenteMasivo();
     });
+
+
+
+
+
 
     // Quitar documento desde el modal masivo
     document.addEventListener('click', function (event) {
@@ -1079,14 +1451,33 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+
+
+        // Recalcular Monto a Recibir masivo al modificar Comisión Total global
+        // Detectar cesión existente y reutilizar sus datos generales
+        if (event.target === inputGlobalCesion) {
+            aplicarCesionFactoringExistenteMasivo();
+            return;
+        }
+
         // Recalcular Monto a Recibir masivo al modificar Comisión Total global
         if (event.target === inputGlobalComisionTotal) {
             actualizarTotalesFactoryMasivo();
         }
+
+
+
+
+
     });
 
     // Mostrar input "Otra entidad" en los campos generales masivos
     selectGlobalBanco?.addEventListener('change', function () {
+        if (this.dataset.bloqueadoPorCesion === '1') {
+            aplicarCesionFactoringExistenteMasivo();
+            return;
+        }
+
         toggleBancoOtroFactoryMasivoGlobal();
     });
 

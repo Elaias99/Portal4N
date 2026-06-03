@@ -602,6 +602,10 @@
 @include('cobranzas.modal_factory_masivo')
 @include('cobranzas.partials.modal_ExportarVenta')
 
+<script type="application/json" id="cesiones-factoring-json">
+    @json($cesionesFactoringExistentes ?? [])
+</script>
+
 @vite('resources/js/cobranzas_documentos.js')
 
 @endsection

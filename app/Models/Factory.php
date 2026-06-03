@@ -14,10 +14,14 @@ class Factory extends Model
     protected $fillable = [
         'documento_financiero_id',
         'banco_id',
+        'user_id',
+        'cesion_factoring_id',
+
+
         'rut_factory',
         'fecha_factory',
         'monto',
-        'user_id',
+        
 
 
         'cesion',
@@ -69,4 +73,13 @@ class Factory extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    public function cesionFactory()
+    {
+        return $this->belongsTo(CesionFactory::class, 'cesion_factoring_id');
+    }
+
+
+
+
 }

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\DocumentoFinanciero;
 use App\Models\Empresa;
 use App\Models\TipoDocumento;
+use App\Models\CesionFactory;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\MovimientoDocumento;
 use App\Exports\DocumentosExport;
@@ -70,7 +71,7 @@ class DocumentoFinancieroController extends Controller
             | interno y la carga limitada por columnas produce ambigüedad SQL.
             |--------------------------------------------------------------------------
             */
-            'factories:id,documento_financiero_id,banco_id,rut_factory,cesion,fecha_factory,monto,saldo_liquido,monto_no_anticipado,diferencia_precio,comision_total,monto_a_recibir,estado_operacion,user_id,created_at',
+            'factories:id,documento_financiero_id,cesion_factoring_id,banco_id,rut_factory,cesion,fecha_factory,monto,saldo_liquido,monto_no_anticipado,diferencia_precio,comision_total,monto_a_recibir,estado_operacion,user_id,created_at',
             'factories.banco:id,nombre',
 
             'referencia:id,folio,tipo_documento_id',
@@ -118,6 +119,32 @@ class DocumentoFinancieroController extends Controller
         $cobranzas = Cobranza::orderBy('razon_social')->get(['id', 'razon_social', 'rut_cliente']);
         $bancos = \App\Models\Banco::orderBy('nombre')->get(['id', 'nombre']);
 
+        $cesionesFactoringExistentes = CesionFactory::query()
+            ->where('estado_operacion', 'Vigente')
+            ->orderByDesc('created_at')
+            ->get([
+                'id',
+                'cesion',
+                'banco_id',
+                'fecha_operacion',
+                'comision_total',
+                'monto_a_recibir',
+                'estado_operacion',
+            ])
+            ->map(function ($cesionFactory) {
+                return [
+                    'id' => $cesionFactory->id,
+                    'cesion' => $cesionFactory->cesion,
+                    'banco_id' => $cesionFactory->banco_id,
+                    'fecha_operacion' => optional($cesionFactory->fecha_operacion)->format('Y-m-d') 
+                        ?? $cesionFactory->fecha_operacion,
+                    'comision_total' => (int) $cesionFactory->comision_total,
+                    'monto_a_recibir' => (int) ($cesionFactory->monto_a_recibir ?? 0),
+                    'estado_operacion' => $cesionFactory->estado_operacion,
+                ];
+            })
+            ->values();
+
         return view('cobranzas.documentos', compact(
             'documentosOriginal',
             'totalAlDia',
@@ -130,6 +157,7 @@ class DocumentoFinancieroController extends Controller
             'proveedores',
             'cobranzas',
             'bancos',
+            'cesionesFactoringExistentes',
             'sortBy',
             'sortOrder'
         ));
@@ -712,6 +740,7 @@ class DocumentoFinancieroController extends Controller
 
             'factories.banco',
             'factories.usuario',
+            'factories.cesionFactory',
 
             'referencia',
             'referenciados',
@@ -744,6 +773,41 @@ class DocumentoFinancieroController extends Controller
         // Bancos disponibles para nuevas operaciones Factoring
         $bancos = \App\Models\Banco::orderBy('nombre')
             ->get(['id', 'nombre']);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Cesiones Factoring vigentes
+        |--------------------------------------------------------------------------
+        | Se envían también al detalle porque desde esta vista se abre el mismo
+        | modal de cambio de estado / Factoring individual.
+        |--------------------------------------------------------------------------
+        */
+        $cesionesFactoringExistentes = CesionFactory::query()
+            ->where('estado_operacion', 'Vigente')
+            ->orderByDesc('created_at')
+            ->get([
+                'id',
+                'cesion',
+                'banco_id',
+                'fecha_operacion',
+                'comision_total',
+                'monto_a_recibir',
+                'estado_operacion',
+            ])
+            ->map(function ($cesionFactory) {
+                return [
+                    'id' => $cesionFactory->id,
+                    'cesion' => $cesionFactory->cesion,
+                    'banco_id' => $cesionFactory->banco_id,
+                    'fecha_operacion' => $cesionFactory->fecha_operacion
+                        ? \Carbon\Carbon::parse($cesionFactory->fecha_operacion)->format('Y-m-d')
+                        : null,
+                    'comision_total' => (int) $cesionFactory->comision_total,
+                    'monto_a_recibir' => (int) ($cesionFactory->monto_a_recibir ?? 0),
+                    'estado_operacion' => $cesionFactory->estado_operacion,
+                ];
+            })
+            ->values();
 
         /*
         |--------------------------------------------------------------------------
@@ -829,6 +893,7 @@ class DocumentoFinancieroController extends Controller
             'proveedores',
             'cobranzas',
             'bancos',
+            'cesionesFactoringExistentes',
             'movimientosGestion'
         ));
     }

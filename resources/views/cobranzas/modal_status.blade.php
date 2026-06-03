@@ -399,9 +399,12 @@
 
                             <select name="banco_id"
                                     id="banco-factory-{{ $doc->id }}"
-                                    class="form-select form-select-sm @error('banco_id') is-invalid @enderror"
+                                    class="form-select form-select-sm js-factory-individual-banco @error('banco_id') is-invalid @enderror"
                                     onchange="toggleBancoFactoryOtro({{ $doc->id }})"
                                     required>
+
+
+
                                 <option value="">
                                     Seleccione entidad / banco
                                 </option>
@@ -426,8 +429,8 @@
                             @enderror
 
                             <div id="banco-factory-otro-wrapper-{{ $doc->id }}"
-                                 class="mt-2"
-                                 style="display: {{ old('banco_id') === '__otro__' ? 'block' : 'none' }};">
+                                class="mt-2 js-factory-individual-banco-otro-wrapper"
+                                style="display: {{ old('banco_id') === '__otro__' ? 'block' : 'none' }};">
 
                                 <label for="banco-factory-otro-{{ $doc->id }}"
                                        class="form-label small text-muted">
@@ -435,12 +438,12 @@
                                 </label>
 
                                 <input type="text"
-                                       name="banco_otro"
-                                       id="banco-factory-otro-{{ $doc->id }}"
-                                       class="form-control form-control-sm @error('banco_otro') is-invalid @enderror"
-                                       value="{{ old('banco_otro') }}"
-                                       placeholder="Ingrese nueva entidad / banco"
-                                       {{ old('banco_id') === '__otro__' ? 'required' : '' }}>
+                                    name="banco_otro"
+                                    id="banco-factory-otro-{{ $doc->id }}"
+                                    class="form-control form-control-sm js-factory-individual-banco-otro @error('banco_otro') is-invalid @enderror"
+                                    value="{{ old('banco_otro') }}"
+                                    placeholder="Ingrese nueva entidad / banco"
+                                    {{ old('banco_id') === '__otro__' ? 'required' : '' }}>
 
                                 @error('banco_otro')
                                     <span class="invalid-feedback d-block text-danger">
@@ -458,18 +461,32 @@
                             </label>
 
                             <input type="text"
-                                   name="cesion"
-                                   id="cesion-factory-{{ $doc->id }}"
-                                   class="form-control form-control-sm @error('cesion') is-invalid @enderror"
-                                   value="{{ old('cesion') }}"
-                                   placeholder="Ej: 665162"
-                                   required>
+                                name="cesion"
+                                id="cesion-factory-{{ $doc->id }}"
+                                class="form-control form-control-sm js-factory-individual-cesion @error('cesion') is-invalid @enderror"
+                                value="{{ old('cesion') }}"
+                                placeholder="Ej: 665162"
+                                required>
 
                             @error('cesion')
                                 <span class="invalid-feedback d-block text-danger">
                                     <strong>{{ $message }}</strong>
                                 </span>
                             @enderror
+
+
+                            <div class="alert alert-info py-2 px-3 small mt-2 mb-0 js-factory-individual-cesion-existente-alert"
+                                style="display: none;">
+                                Cesión existente detectada.
+                                Se reutilizarán los datos generales registrados para esta cesión:
+                                banco, fecha operación, comisión total y monto a recibir.
+
+                                <div class="mt-1 fw-semibold js-factory-individual-cesion-existente-detalle"></div>
+                            </div>
+
+
+
+
                         </div>
 
                         {{-- FECHA OPERACIÓN --}}
@@ -480,11 +497,11 @@
                             </label>
 
                             <input type="date"
-                                   name="fecha_factory"
-                                   id="fecha-factory-{{ $doc->id }}"
-                                   class="form-control form-control-sm @error('fecha_factory') is-invalid @enderror"
-                                   value="{{ old('fecha_factory', now()->format('Y-m-d')) }}"
-                                   required>
+                                name="fecha_factory"
+                                id="fecha-factory-{{ $doc->id }}"
+                                class="form-control form-control-sm js-factory-individual-fecha @error('fecha_factory') is-invalid @enderror"
+                                value="{{ old('fecha_factory', now()->format('Y-m-d')) }}"
+                                required>
 
                             @error('fecha_factory')
                                 <span class="invalid-feedback d-block text-danger">

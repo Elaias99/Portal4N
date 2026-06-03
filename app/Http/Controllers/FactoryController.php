@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\Banco;
 use Illuminate\Support\Facades\Log;
+use App\Services\Ventas\Factoring\CesionFactoryService;
 use Illuminate\Validation\ValidationException;
 
 class FactoryController extends Controller
@@ -802,6 +803,9 @@ class FactoryController extends Controller
 
         try {
             DB::transaction(function () use ($validated, $documento) {
+                /** @var CesionFactoryService $cesionFactoryService */
+                $cesionFactoryService = app(CesionFactoryService::class);
+
                 /*
                 |--------------------------------------------------------------------------
                 | Bloquear documento y trabajar con su saldo vigente
@@ -841,9 +845,6 @@ class FactoryController extends Controller
                 |--------------------------------------------------------------------------
                 | Operación Factoring cerrada
                 |--------------------------------------------------------------------------
-                | Si la operación ya fue cerrada, no se permiten nuevos movimientos
-                | Factoring sobre este documento.
-                |--------------------------------------------------------------------------
                 */
                 if ($operacionFactoryCerrada || $factoriesExistentes >= 2) {
                     throw ValidationException::withMessages([
@@ -854,9 +855,6 @@ class FactoryController extends Controller
                 /*
                 |--------------------------------------------------------------------------
                 | Movimientos de cierre
-                |--------------------------------------------------------------------------
-                | Pago y Pronto pago continúan cerrando el documento e impiden nuevos
-                | registros Factoring.
                 |--------------------------------------------------------------------------
                 */
                 if ($tienePago) {
@@ -888,6 +886,7 @@ class FactoryController extends Controller
                 $estadoAnterior = $documentoBloqueado->status;
                 $statusOriginalAnterior = $documentoBloqueado->status_original;
                 $cantidadFactoriesAnteriores = $factoriesExistentes;
+
                 $estadosOperacionAnteriores = $factoriesBloqueados
                     ->mapWithKeys(fn ($factory) => [$factory->id => $factory->estado_operacion])
                     ->toArray();
@@ -897,9 +896,7 @@ class FactoryController extends Controller
                 | Segundo Factoring
                 |--------------------------------------------------------------------------
                 | No se piden banco, cesión, comisión ni monto no anticipado.
-                | Se heredan banco y cesión desde el último Factoring existente.
-                |
-                | Al registrar este segundo movimiento, la operación completa queda Cerrada.
+                | Se heredan banco, cesión y cabecera desde el último Factoring existente.
                 |--------------------------------------------------------------------------
                 */
                 if ($factoriesExistentes > 0) {
@@ -913,7 +910,10 @@ class FactoryController extends Controller
                         ->sortByDesc(fn ($factory) => ($factory->created_at?->format('Y-m-d H:i:s') ?? '') . '-' . str_pad((string) $factory->id, 12, '0', STR_PAD_LEFT))
                         ->first();
 
-                    $factoryReferencia?->loadMissing('banco');
+                    $factoryReferencia?->loadMissing([
+                        'banco',
+                        'cesionFactory',
+                    ]);
 
                     if (!$factoryReferencia) {
                         throw ValidationException::withMessages([
@@ -952,6 +952,34 @@ class FactoryController extends Controller
                     $montoARecibir = $montoDescuento;
 
                     $cesion = trim((string) ($factoryReferencia->cesion ?? ''));
+                    $fechaFactory = $validated['fecha_factory'];
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Resolver cabecera de cesión para segundo movimiento
+                    |--------------------------------------------------------------------------
+                    | Si el Factoring anterior es legado y no tiene cesion_factoring_id,
+                    | se crea o recupera la cabecera y se asocia.
+                    |--------------------------------------------------------------------------
+                    */
+                    $cesionFactory = $factoryReferencia->cesionFactory;
+
+                    if (!$cesionFactory) {
+                        $cesionFactory = $cesionFactoryService->resolverOCrear([
+                            'cesion' => $cesion,
+                            'banco_id' => $bancoSeleccionado->id,
+                            'fecha_operacion' => $factoryReferencia->fecha_factory,
+                            'comision_total' => (int) ($factoryReferencia->comision_total ?? 0),
+                            'monto_a_recibir' => (int) ($factoryReferencia->monto_a_recibir ?? 0),
+                            'estado_operacion' => 'Vigente',
+                            'user_id' => Auth::id(),
+                        ]);
+
+                        $cesionFactoryService->asociarFactory(
+                            factory: $factoryReferencia,
+                            cesionFactory: $cesionFactory
+                        );
+                    }
 
                     $estadoOperacionNuevoFactory = 'Cerrada';
 
@@ -1009,6 +1037,38 @@ class FactoryController extends Controller
 
                     $cesion = trim($validated['cesion']);
 
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Resolver o crear cabecera de cesión
+                    |--------------------------------------------------------------------------
+                    | Si la cesión ya existe para el mismo banco, se reutilizan sus datos
+                    | generales.
+                    |--------------------------------------------------------------------------
+                    */
+                    $cesionFactory = $cesionFactoryService->resolverOCrear([
+                        'cesion' => $cesion,
+                        'banco_id' => $bancoSeleccionado->id,
+                        'fecha_operacion' => $validated['fecha_factory'],
+                        'comision_total' => $comisionTotal,
+                        'monto_a_recibir' => $montoARecibir,
+                        'estado_operacion' => 'Vigente',
+                        'user_id' => Auth::id(),
+                    ]);
+
+                    if ($cesionFactory->estado_operacion === 'Cerrada') {
+                        throw ValidationException::withMessages([
+                            'factory' => 'No se puede asociar el documento porque la cesión Factoring seleccionada está cerrada.',
+                        ]);
+                    }
+
+                    $cesionFactory->loadMissing('banco');
+
+                    $bancoSeleccionado = $cesionFactory->banco ?? $bancoSeleccionado;
+                    $cesion = $cesionFactory->cesion;
+                    $fechaFactory = $cesionFactory->fecha_operacion ?? $validated['fecha_factory'];
+                    $comisionTotal = (int) ($cesionFactory->comision_total ?? $comisionTotal);
+                    $montoARecibir = (int) ($cesionFactory->monto_a_recibir ?? $montoARecibir);
+
                     $estadoOperacionNuevoFactory = 'Vigente';
 
                     $tipoMovimiento = 'Registro de Factoring';
@@ -1017,6 +1077,7 @@ class FactoryController extends Controller
 
                 $factory = FactoryRegistro::create([
                     'documento_financiero_id' => $documentoBloqueado->id,
+                    'cesion_factoring_id' => $cesionFactory->id,
                     'banco_id' => $bancoSeleccionado->id,
 
                     /*
@@ -1029,7 +1090,7 @@ class FactoryController extends Controller
                     'rut_factory' => '',
 
                     'cesion' => $cesion,
-                    'fecha_factory' => $validated['fecha_factory'],
+                    'fecha_factory' => $fechaFactory,
 
                     'monto' => $monto,
                     'saldo_liquido' => $saldoLiquido,
@@ -1043,6 +1104,11 @@ class FactoryController extends Controller
 
                     'user_id' => Auth::id(),
                 ]);
+
+                $factory = $cesionFactoryService->asociarFactory(
+                    factory: $factory,
+                    cesionFactory: $cesionFactory
+                );
 
                 /*
                 |--------------------------------------------------------------------------
@@ -1060,6 +1126,16 @@ class FactoryController extends Controller
 
                     $factory->refresh();
                 }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Sincronizar estado general de la cabecera de cesión
+                |--------------------------------------------------------------------------
+                | Si al menos un documento asociado sigue Vigente, la cesión queda Vigente.
+                | Si todos sus Factoring están Cerrada, la cesión queda Cerrada.
+                |--------------------------------------------------------------------------
+                */
+                $cesionFactory = $cesionFactoryService->sincronizarEstadoOperacion($cesionFactory);
 
                 /*
                 |--------------------------------------------------------------------------
@@ -1091,6 +1167,7 @@ class FactoryController extends Controller
                     ],
                     'datos_nuevos' => [
                         'factory_id' => $factory->id,
+                        'cesion_factoring_id' => $factory->cesion_factoring_id,
                         'banco_id' => $factory->banco_id,
                         'banco' => $bancoSeleccionado->nombre,
                         'cesion' => $factory->cesion,
@@ -1107,6 +1184,7 @@ class FactoryController extends Controller
                         'monto_a_recibir' => $factory->monto_a_recibir,
 
                         'estado_operacion' => $factory->estado_operacion,
+                        'estado_operacion_cesion' => $cesionFactory->estado_operacion,
                         'estados_operacion_actuales' => $estadosOperacionNuevos,
 
                         'cantidad_factoring_actual' => $cantidadFactoriesAnteriores + 1,
@@ -1132,6 +1210,10 @@ class FactoryController extends Controller
             'Factoring registrado correctamente. El saldo pendiente del documento fue actualizado según la diferencia de precio.'
         );
     }
+
+
+
+
 
     /**
      * Eliminar un registro Factoring y restaurar saldo/estado de movimientos restantes.
@@ -1376,13 +1458,14 @@ class FactoryController extends Controller
         |--------------------------------------------------------------------------
         | Validación previa para entregar errores agrupados antes de guardar
         |--------------------------------------------------------------------------
-        | No se rechazan documentos con Factoring anterior. Solo se excluyen
-        | documentos cerrados, sin saldo o de tipo NC / ND.
+        | No se rechazan documentos con Factoring anterior vigente.
+        | Sí se excluyen documentos cerrados, sin saldo o de tipo NC / ND.
         |--------------------------------------------------------------------------
         */
         $documentos = DocumentoFinanciero::with([
                 'pagos',
                 'prontoPagos',
+                'factories:id,documento_financiero_id,estado_operacion',
             ])
             ->whereIn('id', $documentoIds)
             ->get()
@@ -1432,6 +1515,13 @@ class FactoryController extends Controller
                 $errores[] = "{$identificador}: ya tiene un pronto pago registrado.";
             }
 
+            $tieneOperacionFactoryCerrada = $documento->factories
+                ->contains(fn ($factory) => $factory->estado_operacion === 'Cerrada');
+
+            if ($tieneOperacionFactoryCerrada || $documento->factories->count() >= 2) {
+                $errores[] = "{$identificador}: la operación Factoring ya se encuentra cerrada.";
+            }
+
             if (!$data) {
                 $errores[] = "{$identificador}: no tiene datos Factoring enviados.";
                 continue;
@@ -1454,6 +1544,9 @@ class FactoryController extends Controller
 
         try {
             DB::transaction(function () use ($documentoIds, $items, $validated) {
+                /** @var CesionFactoryService $cesionFactoryService */
+                $cesionFactoryService = app(CesionFactoryService::class);
+
                 $banco = $this->resolverBancoFactoryMasivo(
                     bancoId: $validated['banco_id'],
                     bancoOtro: $validated['banco_otro'] ?? null,
@@ -1467,8 +1560,9 @@ class FactoryController extends Controller
                 |--------------------------------------------------------------------------
                 | Primera pasada: bloquear y calcular la operación completa
                 |--------------------------------------------------------------------------
-                | Cada documento toma como monto cedido su saldo pendiente vigente,
-                | incluso cuando ya tenga uno o más Factorings anteriores.
+                | Cada documento toma como monto cedido su saldo pendiente vigente.
+                | Si el documento ya tiene un Factoring vigente, este nuevo registro
+                | cerrará la operación completa de ese documento.
                 |--------------------------------------------------------------------------
                 */
                 $calculosPorDocumento = collect();
@@ -1481,11 +1575,24 @@ class FactoryController extends Controller
                         ->lockForUpdate()
                         ->firstOrFail();
 
+                    $factoriesDocumento = FactoryRegistro::where('documento_financiero_id', $documento->id)
+                        ->orderBy('created_at')
+                        ->orderBy('id')
+                        ->lockForUpdate()
+                        ->get();
+
+                    $factoriesExistentes = $factoriesDocumento->count();
+
+                    $tieneOperacionFactoryCerrada = $factoriesDocumento
+                        ->contains(fn ($factory) => $factory->estado_operacion === 'Cerrada');
+
                     if (
                         in_array((int) $documento->tipo_documento_id, [61, 56], true) ||
                         (int) $documento->saldo_pendiente <= 0 ||
                         $documento->pagos()->exists() ||
-                        $documento->prontoPagos()->exists()
+                        $documento->prontoPagos()->exists() ||
+                        $tieneOperacionFactoryCerrada ||
+                        $factoriesExistentes >= 2
                     ) {
                         throw ValidationException::withMessages([
                             'factory_masivo' => "El documento folio {$documento->folio} ya no cumple las condiciones para registrar Factoring.",
@@ -1517,9 +1624,31 @@ class FactoryController extends Controller
                         'saldo_liquido' => $saldoLiquido,
                         'monto_no_anticipado' => $montoNoAnticipado,
                         'diferencia_precio' => $diferenciaPrecio,
+
                         'estado_anterior' => $documento->status,
                         'status_original_anterior' => $documento->status_original,
-                        'cantidad_factoring_anteriores' => $documento->factories()->count(),
+
+                        'cantidad_factoring_anteriores' => $factoriesExistentes,
+                        'estados_operacion_anteriores' => $factoriesDocumento
+                            ->pluck('estado_operacion', 'id')
+                            ->toArray(),
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | Estado del nuevo movimiento Factoring
+                        |--------------------------------------------------------------------------
+                        | Sin Factoring previo:
+                        |   nuevo registro queda Vigente.
+                        |
+                        | Con un Factoring previo:
+                        |   este nuevo registro cierra la operación completa del documento.
+                        |--------------------------------------------------------------------------
+                        */
+                        'estado_operacion_factory' => $factoriesExistentes > 0
+                            ? 'Cerrada'
+                            : 'Vigente',
+
+                        'cerrar_operacion_documento' => $factoriesExistentes > 0,
                     ]);
                 }
 
@@ -1543,7 +1672,38 @@ class FactoryController extends Controller
 
                 /*
                 |--------------------------------------------------------------------------
-                | Segunda pasada: crear registros, recalcular saldo y auditar
+                | Cabecera de cesión Factoring
+                |--------------------------------------------------------------------------
+                | A partir de ahora la cesión queda formalizada en cesiones_factoring.
+                | Si ya existe para la misma cesión + banco, se reutiliza.
+                |--------------------------------------------------------------------------
+                */
+                $cesionFactory = $cesionFactoryService->resolverOCrear([
+                    'cesion' => $cesion,
+                    'banco_id' => $banco->id,
+                    'fecha_operacion' => $fechaFactory,
+                    'comision_total' => $comisionTotal,
+                    'monto_a_recibir' => $montoARecibir,
+                    'estado_operacion' => 'Vigente',
+                    'user_id' => Auth::id(),
+                ]);
+
+                $cesionFactory->loadMissing('banco');
+
+                /*
+                |--------------------------------------------------------------------------
+                | Si la cabecera ya existía, se respetan sus datos generales.
+                |--------------------------------------------------------------------------
+                */
+                $banco = $cesionFactory->banco ?? $banco;
+                $cesion = $cesionFactory->cesion;
+                $fechaFactory = $cesionFactory->fecha_operacion;
+                $comisionTotal = (int) ($cesionFactory->comision_total ?? $comisionTotal);
+                $montoARecibir = (int) ($cesionFactory->monto_a_recibir ?? $montoARecibir);
+
+                /*
+                |--------------------------------------------------------------------------
+                | Segunda pasada: crear registros, asociar cesión, recalcular saldo y auditar
                 |--------------------------------------------------------------------------
                 */
                 foreach ($calculosPorDocumento as $calculo) {
@@ -1552,6 +1712,7 @@ class FactoryController extends Controller
 
                     $factory = FactoryRegistro::create([
                         'documento_financiero_id' => $documento->id,
+                        'cesion_factoring_id' => $cesionFactory->id,
                         'banco_id' => $banco->id,
 
                         /*
@@ -1569,8 +1730,31 @@ class FactoryController extends Controller
                         'diferencia_precio' => $calculo['diferencia_precio'],
                         'comision_total' => $comisionTotal,
                         'monto_a_recibir' => $montoARecibir,
+                        'estado_operacion' => $calculo['estado_operacion_factory'],
                         'user_id' => Auth::id(),
                     ]);
+
+                    $factory = $cesionFactoryService->asociarFactory(
+                        factory: $factory,
+                        cesionFactory: $cesionFactory
+                    );
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Cerrar operación completa del documento
+                    |--------------------------------------------------------------------------
+                    | Si este documento ya tenía un Factoring previo, este nuevo registro
+                    | actúa como segundo movimiento y deja todos sus Factoring Cerrada.
+                    |--------------------------------------------------------------------------
+                    */
+                    if ($calculo['cerrar_operacion_documento']) {
+                        FactoryRegistro::where('documento_financiero_id', $documento->id)
+                            ->update([
+                                'estado_operacion' => 'Cerrada',
+                            ]);
+
+                        $factory->refresh();
+                    }
 
                     /*
                     |--------------------------------------------------------------------------
@@ -1584,6 +1768,10 @@ class FactoryController extends Controller
                         'fecha_estado_manual' => now(),
                     ]);
 
+                    $estadosOperacionActuales = FactoryRegistro::where('documento_financiero_id', $documento->id)
+                        ->pluck('estado_operacion', 'id')
+                        ->toArray();
+
                     MovimientoDocumento::create([
                         'documento_financiero_id' => $documento->id,
                         'user_id' => Auth::id(),
@@ -1594,9 +1782,11 @@ class FactoryController extends Controller
                             'status_original' => $calculo['status_original_anterior'],
                             'saldo_anterior' => $calculo['monto'],
                             'cantidad_factoring_anteriores' => $calculo['cantidad_factoring_anteriores'],
+                            'estados_operacion_anteriores' => $calculo['estados_operacion_anteriores'],
                         ],
                         'datos_nuevos' => [
                             'factory_id' => $factory->id,
+                            'cesion_factoring_id' => $factory->cesion_factoring_id,
                             'banco_id' => $factory->banco_id,
                             'banco' => $banco->nombre,
                             'cesion' => $factory->cesion,
@@ -1610,12 +1800,22 @@ class FactoryController extends Controller
                             'comision_total' => $factory->comision_total,
                             'monto_a_recibir' => $factory->monto_a_recibir,
 
+                            'estado_operacion' => $factory->estado_operacion,
+                            'estados_operacion_actuales' => $estadosOperacionActuales,
+
                             'cantidad_factoring_actual' => $calculo['cantidad_factoring_anteriores'] + 1,
                             'nuevo_estado' => 'Factory',
                             'saldo_actual' => $saldoActual,
                         ],
                     ]);
                 }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Sincronizar estado general de la cabecera de cesión
+                |--------------------------------------------------------------------------
+                */
+                $cesionFactoryService->sincronizarEstadoOperacion($cesionFactory);
             });
         } catch (ValidationException $e) {
             throw $e;
