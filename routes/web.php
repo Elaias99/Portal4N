@@ -42,6 +42,7 @@ use App\Http\Controllers\HonorarioResumenAnualController;
 use App\Http\Controllers\HonorarioMensualRecController;
 use App\Http\Controllers\TrackingReportController;
 use App\Http\Controllers\PublicTrackingController;
+use App\Http\Controllers\SuscripcionLiquidacionDetalleController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -1068,3 +1069,36 @@ Route::get('/tracking/{tracking}', [PublicTrackingController::class, 'show'])
     ->where('tracking', '[A-Za-z0-9\-]+')
     ->name('tracking.public.show');
 
+
+
+Route::prefix('suscripciones')->name('suscripciones.')->group(function () {
+    Route::get('/liquidacion-detalles', [SuscripcionLiquidacionDetalleController::class, 'index'])
+        ->name('liquidacion-detalles.index');
+
+    Route::get('/liquidacion-detalles/create', [SuscripcionLiquidacionDetalleController::class, 'create'])
+        ->name('liquidacion-detalles.create');
+
+    Route::post('/liquidacion-detalles', [SuscripcionLiquidacionDetalleController::class, 'store'])
+        ->name('liquidacion-detalles.store');
+
+    Route::post('/liquidacion-detalles/generar-mes', [SuscripcionLiquidacionDetalleController::class, 'generarMes'])
+        ->name('liquidacion-detalles.generar-mes');
+
+    Route::get('/liquidacion-detalles/{detalle}/edit', [SuscripcionLiquidacionDetalleController::class, 'edit'])
+        ->name('liquidacion-detalles.edit');
+
+    Route::put('/liquidacion-detalles/{detalle}', [SuscripcionLiquidacionDetalleController::class, 'update'])
+        ->name('liquidacion-detalles.update');
+
+
+});
+
+
+// Route::get('/liquidacion-detalles', [SuscripcionLiquidacionDetalleController::class, 'index'])
+//     ->name('liquidacion-detalles.index');
+
+// Route::get('/liquidacion-detalles/create', [SuscripcionLiquidacionDetalleController::class, 'create'])
+//     ->name('liquidacion-detalles.create');    
+
+// Route::post('/liquidacion-detalles', [SuscripcionLiquidacionDetalleController::class, 'store'])
+//     ->name('liquidacion-detalles.store');

@@ -40,6 +40,11 @@ class CobranzaCompra extends Model
         return $this->hasMany(HonorarioMensualRec::class, 'cobranza_compra_id');
     }
 
+    public function suscripcionProveedores()
+    {
+        return $this->hasMany(SuscripcionProveedor::class, 'cobranza_compra_id');
+    }
+
     // Evento automático: si cambian los créditos, recalcula vencimientos
     protected static function booted()
     {
