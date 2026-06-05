@@ -58,6 +58,101 @@
             $anioFiltro,
             $mesFiltro,
         ])->filter(fn($v) => $v !== null && $v !== '')->count();
+
+        $resumenPorTipo = $resumenPorTipo ?? [
+            'BOLETA' => [
+                'label' => 'Boletas',
+                'cantidad' => 0,
+                'neto_bruto' => 0,
+                'total_impuesto' => 0,
+                'total_final' => 0,
+            ],
+            'FACTURA' => [
+                'label' => 'Facturas',
+                'cantidad' => 0,
+                'neto_bruto' => 0,
+                'total_impuesto' => 0,
+                'total_final' => 0,
+            ],
+        ];
+
+        $resumenBoletas = $resumenPorTipo['BOLETA'] ?? [
+            'label' => 'Boletas',
+            'cantidad' => 0,
+            'neto_bruto' => 0,
+            'total_impuesto' => 0,
+            'total_final' => 0,
+        ];
+
+
+        $contadorTipoDocumento = [
+            'BOLETA' => (int) ($resumenBoletas['cantidad'] ?? 0),
+            'FACTURA' => (int) ($resumenFacturas['cantidad'] ?? 0),
+            'DOCUMENTO' => (int) ($resumenDocumentos['cantidad'] ?? 0),
+        ];
+
+        $labelTipoDocumento = function ($tipoDocumento) use ($contadorTipoDocumento) {
+            $tipoNormalizado = mb_strtoupper(trim((string) $tipoDocumento));
+
+            if (str_contains($tipoNormalizado, 'BOLETA')) {
+                return 'Boleta Honorario(' . number_format($contadorTipoDocumento['BOLETA'], 0, ',', '.') . ')';
+            }
+
+            if (str_contains($tipoNormalizado, 'FACTURA')) {
+                return 'Factura(' . number_format($contadorTipoDocumento['FACTURA'], 0, ',', '.') . ')';
+            }
+
+            if (str_contains($tipoNormalizado, 'DOCUMENTO')) {
+                return 'Documento(' . number_format($contadorTipoDocumento['DOCUMENTO'], 0, ',', '.') . ')';
+            }
+
+            return $tipoDocumento;
+        };
+
+        $resumenFacturas = $resumenPorTipo['FACTURA'] ?? [
+            'label' => 'Facturas',
+            'cantidad' => 0,
+            'neto_bruto' => 0,
+            'total_impuesto' => 0,
+            'total_final' => 0,
+        ];
+
+        $resumenDocumentos = $resumenPorTipo['DOCUMENTO'] ?? [
+            'label' => 'Documentos',
+            'cantidad' => 0,
+            'neto_bruto' => 0,
+            'total_impuesto' => 0,
+            'total_final' => 0,
+        ];
+
+        $resumenTotalGeneral = $resumenPorTipo['TOTAL'] ?? [
+            'label' => 'Total general',
+            'cantidad' => 0,
+            'neto_bruto' => 0,
+            'total_impuesto' => 0,
+            'total_final' => 0,
+        ];
+
+        $buscarValorTipoDocumento = function (string $clave) use ($tiposDocumento) {
+            return collect($tiposDocumento)
+                ->first(function ($tipoDocumento) use ($clave) {
+                    return str_contains(
+                        mb_strtoupper(trim((string) $tipoDocumento)),
+                        $clave
+                    );
+                }) ?? $clave;
+        };
+
+        $tipoDocumentoValue = $buscarValorTipoDocumento('DOCUMENTO');
+        $tipoBoletaValue = $buscarValorTipoDocumento('BOLETA');
+        $tipoFacturaValue = $buscarValorTipoDocumento('FACTURA');
+
+        $tipoSeleccionado = function ($valor) use ($tipoFiltro) {
+            return mb_strtoupper(trim((string) $tipoFiltro)) === mb_strtoupper(trim((string) $valor));
+        };
+
+
+
     @endphp
 
     <div class="d-flex justify-content-center align-items-center mb-4">
@@ -109,7 +204,7 @@
                             </select>
                         </div>
 
-                        <button type="submit" class="btn btn-success btn-sm w-100">
+                        <button type="submit" class="btn btn-secondary btn-sm w-100">
                             Generar mes completo
                         </button>
                     </form>
@@ -125,7 +220,7 @@
                         <div class="fw-semibold">Filtros de búsqueda</div>
 
                         @if($filtrosActivos)
-                            <span class="hm-summary-badge">
+                            <span class="small text-muted">
                                 {{ $filtrosActivos }} activo(s)
                             </span>
                         @endif
@@ -163,12 +258,20 @@
                                 <select name="tipo" class="form-select form-select-sm">
                                     <option value="">Todos</option>
 
-                                    @foreach($tiposDocumento as $tipoDocumento)
-                                        <option value="{{ $tipoDocumento }}"
-                                            {{ $tipoFiltro === $tipoDocumento ? 'selected' : '' }}>
-                                            {{ $tipoDocumento === 'BOLETA' ? 'Boleta Honorario' : $tipoDocumento }}
-                                        </option>
-                                    @endforeach
+                                    <option value="{{ $tipoDocumentoValue }}"
+                                        {{ $tipoSeleccionado($tipoDocumentoValue) ? 'selected' : '' }}>
+                                        Documento({{ number_format($resumenDocumentos['cantidad'], 0, ',', '.') }})
+                                    </option>
+
+                                    <option value="{{ $tipoBoletaValue }}"
+                                        {{ $tipoSeleccionado($tipoBoletaValue) ? 'selected' : '' }}>
+                                        Boleta Honorario({{ number_format($resumenBoletas['cantidad'], 0, ',', '.') }})
+                                    </option>
+
+                                    <option value="{{ $tipoFacturaValue }}"
+                                        {{ $tipoSeleccionado($tipoFacturaValue) ? 'selected' : '' }}>
+                                        Factura({{ number_format($resumenFacturas['cantidad'], 0, ',', '.') }})
+                                    </option>
                                 </select>
                             </div>
 
@@ -207,7 +310,7 @@
                                 Limpiar
                             </a>
 
-                            <button type="submit" class="btn btn-success btn-sm">
+                            <button type="submit" class="btn btn-secondary btn-sm">
                                 Buscar
                             </button>
                         </div>
@@ -229,10 +332,13 @@
 
                     <form method="POST"
                           action="{{ route('suscripciones.liquidacion-detalles.pdf-masivo') }}"
-                          class="mt-auto">
+                          class="mt-auto"
+                          data-long-loader="300000">
                         @csrf
 
                         <input type="hidden" name="proveedor_pdf" value="{{ $proveedorFiltro }}">
+                        <input type="hidden" name="rut_pdf" value="{{ $rutFiltro }}">
+                        <input type="hidden" name="tipo_pdf" value="{{ $tipoFiltro }}">
 
                         <div class="mb-2">
                             <label class="form-label small text-muted">Año PDF</label>
@@ -259,7 +365,7 @@
                             </select>
                         </div>
 
-                        <button type="submit" class="btn btn-danger btn-sm w-100">
+                        <button type="submit" class="btn btn-secondary btn-sm w-100">
                             Descargar ZIP de pre-facturas
                         </button>
                     </form>
@@ -269,18 +375,59 @@
 
     </div>
 
-    <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
-        <div class="text-muted small">
-            Pre-facturas encontradas:
-            <strong>{{ $cantidadRegistros ?? $prefacturas->total() }}</strong>
+
+    {{-- Resumen suave --}}
+    <div class="border rounded px-3 py-2 mb-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 small text-muted">
+            <div>
+                Pre-facturas encontradas:
+                <strong class="text-dark">{{ $cantidadRegistros ?? $prefacturas->total() }}</strong>
+            </div>
+
+            <div>
+                Total general:
+                <strong class="text-dark">${{ number_format($resumenTotalGeneral['total_final'], 0, ',', '.') }}</strong>
+            </div>
         </div>
 
-        <div class="text-muted small">
-            Total período:
-            <strong>${{ number_format($totalPeriodo ?? 0, 0, ',', '.') }}</strong>
+        <div class="mt-2 pt-2 border-top small text-muted">
+            <div class="row g-2">
+                <div class="col-12 col-lg-3">
+                    <strong class="text-dark">Boletas:</strong>
+                    {{ number_format($resumenBoletas['cantidad'], 0, ',', '.') }}
+                    <span class="mx-1">|</span>
+                    Final:
+                    <strong class="text-dark">${{ number_format($resumenBoletas['total_final'], 0, ',', '.') }}</strong>
+                </div>
+
+                <div class="col-12 col-lg-3">
+                    <strong class="text-dark">Facturas:</strong>
+                    {{ number_format($resumenFacturas['cantidad'], 0, ',', '.') }}
+                    <span class="mx-1">|</span>
+                    Final:
+                    <strong class="text-dark">${{ number_format($resumenFacturas['total_final'], 0, ',', '.') }}</strong>
+                </div>
+
+                <div class="col-12 col-lg-3">
+                    <strong class="text-dark">Documentos:</strong>
+                    {{ number_format($resumenDocumentos['cantidad'], 0, ',', '.') }}
+                    <span class="mx-1">|</span>
+                    Final:
+                    <strong class="text-dark">${{ number_format($resumenDocumentos['total_final'], 0, ',', '.') }}</strong>
+                </div>
+
+                <div class="col-12 col-lg-3 text-lg-end">
+                    <strong class="text-dark">Total:</strong>
+                    {{ number_format($resumenTotalGeneral['cantidad'], 0, ',', '.') }}
+                    <span class="mx-1">|</span>
+                    Final:
+                    <strong class="text-dark">${{ number_format($resumenTotalGeneral['total_final'], 0, ',', '.') }}</strong>
+                </div>
+            </div>
         </div>
     </div>
 
+    {{-- Tabla --}}
     <div class="hm-table-wrap">
         @if($prefacturas->isEmpty())
             <div class="p-3">
@@ -294,7 +441,7 @@
                     <tr>
                         <th>Año</th>
                         <th>Mes</th>
-                        <th>Proveedor</th>
+                        <th class="text-center">Proveedor</th>
                         <th>RUT</th>
                         <th>Tipo</th>
                         <th class="text-end">Neto/Bruto</th>
@@ -314,9 +461,9 @@
                                 {{ $prefactura['mes_nombre'] }}
                             </td>
 
-                            <td>
+                            <td class="text-center">
                                 <a href="{{ route('suscripciones.liquidacion-detalles.show', $prefactura['detalle_id']) }}"
-                                   class="fw-semibold text-decoration-none">
+                                   class="fw-semibold text-decoration-none text-reset">
                                     {{ $prefactura['proveedor'] }}
                                 </a>
                             </td>
@@ -326,19 +473,7 @@
                             </td>
 
                             <td class="hm-nowrap">
-                                @if($prefactura['tipo'] === 'BOLETA')
-                                    <span class="hm-chip hm-chip-ok">
-                                        Boleta Honorario
-                                    </span>
-                                @elseif($prefactura['tipo'] === 'FACTURA')
-                                    <span class="hm-chip hm-chip-info">
-                                        FACTURA
-                                    </span>
-                                @else
-                                    <span class="hm-chip">
-                                        {{ $prefactura['tipo'] }}
-                                    </span>
-                                @endif
+                                {{ $prefactura['tipo'] === 'BOLETA' ? 'Boleta Honorario' : $prefactura['tipo'] }}
                             </td>
 
                             <td class="hm-nowrap text-end fw-semibold">

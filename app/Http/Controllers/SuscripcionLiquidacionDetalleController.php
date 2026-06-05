@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\Suscripciones\SuscripcionLiquidacionResumenService;
+use App\Services\Suscripciones\SuscripcionPrefacturaZipService;
 use Illuminate\Http\Request;
 use ZipArchive;
 
@@ -135,7 +136,62 @@ class SuscripcionLiquidacionDetalleController extends Controller
             })
             ->values();
 
-        $totalPeriodo = $prefacturas->sum('neto_bruto');
+        $resumenPorTipo = [
+            'BOLETA' => [
+                'label' => 'Boletas',
+                'cantidad' => 0,
+                'neto_bruto' => 0,
+                'total_impuesto' => 0,
+                'total_final' => 0,
+            ],
+            'FACTURA' => [
+                'label' => 'Facturas',
+                'cantidad' => 0,
+                'neto_bruto' => 0,
+                'total_impuesto' => 0,
+                'total_final' => 0,
+            ],
+            'DOCUMENTO' => [
+                'label' => 'Documentos',
+                'cantidad' => 0,
+                'neto_bruto' => 0,
+                'total_impuesto' => 0,
+                'total_final' => 0,
+            ],
+            'TOTAL' => [
+                'label' => 'Total general',
+                'cantidad' => 0,
+                'neto_bruto' => 0,
+                'total_impuesto' => 0,
+                'total_final' => 0,
+            ],
+        ];
+
+        foreach ($prefacturas as $prefactura) {
+            $tipoDocumento = mb_strtoupper(trim((string) ($prefactura['tipo'] ?? '')));
+
+            if (str_contains($tipoDocumento, 'BOLETA')) {
+                $clave = 'BOLETA';
+            } elseif (str_contains($tipoDocumento, 'FACTURA')) {
+                $clave = 'FACTURA';
+            } elseif (str_contains($tipoDocumento, 'DOCUMENTO')) {
+                $clave = 'DOCUMENTO';
+            } else {
+                continue;
+            }
+
+            $resumenPorTipo[$clave]['cantidad']++;
+            $resumenPorTipo[$clave]['neto_bruto'] += $prefactura['neto_bruto'];
+            $resumenPorTipo[$clave]['total_impuesto'] += $prefactura['total_impuesto'];
+            $resumenPorTipo[$clave]['total_final'] += $prefactura['total_final'];
+
+            $resumenPorTipo['TOTAL']['cantidad']++;
+            $resumenPorTipo['TOTAL']['neto_bruto'] += $prefactura['neto_bruto'];
+            $resumenPorTipo['TOTAL']['total_impuesto'] += $prefactura['total_impuesto'];
+            $resumenPorTipo['TOTAL']['total_final'] += $prefactura['total_final'];
+        }
+
+        $totalPeriodo = $resumenPorTipo['TOTAL']['neto_bruto'];
         $cantidadRegistros = $prefacturas->count();
 
         $filtrosActivos = collect([
@@ -172,6 +228,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'totalPeriodo' => $totalPeriodo,
             'cantidadRegistros' => $cantidadRegistros,
             'filtrosActivos' => $filtrosActivos,
+            'resumenPorTipo' => $resumenPorTipo,
         ]);
     }
 
@@ -450,17 +507,21 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function pdfMasivo(Request $request, SuscripcionLiquidacionResumenService $resumenService)
+    public function pdfMasivo(Request $request, SuscripcionPrefacturaZipService $zipService)
     {
         $request->validate([
             'anio_pdf' => 'required|integer|min:2020|max:2100',
             'mes_pdf' => 'required|integer|min:1|max:12',
             'proveedor_pdf' => 'nullable|string',
+            'rut_pdf' => 'nullable|string',
+            'tipo_pdf' => 'nullable|string',
         ]);
 
         $anio = (int) $request->anio_pdf;
         $mes = (int) $request->mes_pdf;
         $proveedorFiltro = trim((string) $request->proveedor_pdf);
+        $rutFiltro = trim((string) $request->rut_pdf);
+        $tipoFiltro = trim((string) $request->tipo_pdf);
 
         $query = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
@@ -478,7 +539,21 @@ class SuscripcionLiquidacionDetalleController extends Controller
             });
         }
 
-        $detallesBase = $query->get();
+        if ($rutFiltro !== '') {
+            $query->whereHas('asignacion.suscripcionProveedor.cobranzaCompra', function ($q) use ($rutFiltro) {
+                $q->where('rut_cliente', 'like', '%' . $rutFiltro . '%');
+            });
+        }
+
+        if ($tipoFiltro !== '') {
+            $query->whereHas('asignacion.suscripcionProveedor', function ($q) use ($tipoFiltro) {
+                $q->where('tipo', $tipoFiltro);
+            });
+        }
+
+        $detallesBase = $query
+            ->orderBy('codigo')
+            ->get();
 
         if ($detallesBase->isEmpty()) {
             return back()->withErrors([
@@ -486,117 +561,16 @@ class SuscripcionLiquidacionDetalleController extends Controller
             ]);
         }
 
-        $proveedorIds = $detallesBase
-            ->map(fn ($detalle) => $detalle->asignacion?->suscripcion_proveedor_id)
-            ->filter()
-            ->unique()
-            ->values();
-
-        $tmpDir = storage_path('app/temp_prefacturas');
-
-        if (!is_dir($tmpDir)) {
-            mkdir($tmpDir, 0775, true);
-        }
-
-        $zipFileName = 'prefacturas_suscripciones_' . $anio . '_' . str_pad($mes, 2, '0', STR_PAD_LEFT) . '_' . now()->format('Ymd_His') . '.zip';
-        $zipPath = $tmpDir . DIRECTORY_SEPARATOR . $zipFileName;
-
-        $zip = new ZipArchive();
-
-        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        try {
+            $resultado = $zipService->generarDesdeDetalles($detallesBase, $anio, $mes);
+        } catch (\Throwable $e) {
             return back()->withErrors([
-                'pdf_masivo' => 'No se pudo crear el archivo ZIP.',
-            ]);
-        }
-
-        $meses = [
-            1 => 'Enero',
-            2 => 'Febrero',
-            3 => 'Marzo',
-            4 => 'Abril',
-            5 => 'Mayo',
-            6 => 'Junio',
-            7 => 'Julio',
-            8 => 'Agosto',
-            9 => 'Septiembre',
-            10 => 'Octubre',
-            11 => 'Noviembre',
-            12 => 'Diciembre',
-        ];
-
-        $generados = 0;
-
-        foreach ($proveedorIds as $suscripcionProveedorId) {
-            $detallesProveedor = SuscripcionLiquidacionDetalle::with([
-                'asignacion.suscripcionProveedor.cobranzaCompra',
-                'asignacion.suscripcionProveedor.cobranzaCompra.banco',
-                'asignacion.suscripcionProveedor.cobranzaCompra.tipoCuenta',
-                'asignacion.transportista',
-                'asignacion.opvPuntos',
-            ])
-            ->whereHas('asignacion', function ($query) use ($suscripcionProveedorId) {
-                $query->where('suscripcion_proveedor_id', $suscripcionProveedorId);
-            })
-            ->where('anio', $anio)
-            ->where('mes', $mes)
-            ->orderBy('codigo')
-            ->get();
-
-            if ($detallesProveedor->isEmpty()) {
-                continue;
-            }
-
-            $detalle = $detallesProveedor->first();
-
-            $calculosDetalle = $resumenService->calcularPorDetalles($detallesProveedor);
-
-            $proveedor = $detalle->asignacion?->suscripcionProveedor;
-            $cobranzaCompra = $proveedor?->cobranzaCompra;
-
-            $totalBruto = $detallesProveedor->sum('total');
-            $totalImpuesto = $calculosDetalle->sum('total_impuesto');
-            $totalLiquido = $calculosDetalle->sum('liquido');
-
-            $pdf = Pdf::loadView('suscripciones.liquidacion_detalles.pdf', [
-                'detalle' => $detalle,
-                'detallesProveedor' => $detallesProveedor,
-                'calculosDetalle' => $calculosDetalle,
-                'proveedor' => $proveedor,
-                'cobranzaCompra' => $cobranzaCompra,
-                'totalBruto' => $totalBruto,
-                'totalImpuesto' => $totalImpuesto,
-                'totalLiquido' => $totalLiquido,
-                'meses' => $meses,
-            ])->setPaper('letter', 'portrait');
-
-            $nombreProveedor = $cobranzaCompra?->razon_social ?? 'PROVEEDOR';
-            $tipo = $proveedor?->tipo ?? 'DOC';
-
-            $nombreLimpio = preg_replace('/[^A-Za-z0-9_\-]/', '_', $nombreProveedor);
-            $nombreLimpio = preg_replace('/_+/', '_', $nombreLimpio);
-            $nombreLimpio = trim($nombreLimpio, '_');
-
-            $pdfFileName = 'Prefactura_Susc_' . $tipo . '_' . $nombreLimpio . '_' . $anio . '_' . str_pad($mes, 2, '0', STR_PAD_LEFT) . '.pdf';
-
-            $zip->addFromString($pdfFileName, $pdf->output());
-
-            $generados++;
-        }
-
-        $zip->close();
-
-        if ($generados === 0) {
-            if (file_exists($zipPath)) {
-                unlink($zipPath);
-            }
-
-            return back()->withErrors([
-                'pdf_masivo' => 'No se generó ningún PDF.',
+                'pdf_masivo' => $e->getMessage(),
             ]);
         }
 
         return response()
-            ->download($zipPath, $zipFileName)
+            ->download($resultado['zip_path'], $resultado['zip_file_name'])
             ->deleteFileAfterSend(true);
     }
 
