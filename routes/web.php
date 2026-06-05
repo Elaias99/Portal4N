@@ -1090,6 +1090,15 @@ Route::prefix('suscripciones')->name('suscripciones.')->group(function () {
     Route::put('/liquidacion-detalles/{detalle}', [SuscripcionLiquidacionDetalleController::class, 'update'])
         ->name('liquidacion-detalles.update');
 
+    Route::get('/liquidacion-detalles/{detalle}', [SuscripcionLiquidacionDetalleController::class, 'show'])
+        ->name('liquidacion-detalles.show');
+
+    Route::get('/liquidacion-detalles/{detalle}/pdf', [SuscripcionLiquidacionDetalleController::class, 'pdf'])
+        ->name('liquidacion-detalles.pdf');
+
+    Route::post('/liquidacion-detalles/pdf-masivo', [SuscripcionLiquidacionDetalleController::class, 'pdfMasivo'])
+        ->name('liquidacion-detalles.pdf-masivo');
+
 
 });
 

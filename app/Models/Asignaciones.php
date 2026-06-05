@@ -29,6 +29,11 @@ class Asignaciones extends Model
         return $this->hasMany(SuscripcionLiquidacionDetalle::class, 'suscripcion_asignacion_id');
     }
 
+    public function opvPuntos()
+    {
+        return $this->hasMany(SuscripcionOPVPuntos::class, 'suscripcion_asignacion_id');
+    }
+
 
 
 }
