@@ -21,6 +21,8 @@ class SuscripcionLiquidacionDetalleController extends Controller
     public function index(Request $request, SuscripcionLiquidacionResumenService $resumenService)
     {
         $proveedor = trim((string) $request->input('proveedor'));
+        $rut = trim((string) $request->input('rut'));
+        $tipo = trim((string) $request->input('tipo'));
         $anio = $request->input('anio');
         $mes = $request->input('mes');
 
@@ -39,6 +41,14 @@ class SuscripcionLiquidacionDetalleController extends Controller
             12 => 'Diciembre',
         ];
 
+        $tiposDocumento = \App\Models\SuscripcionProveedor::query()
+            ->whereNotNull('tipo')
+            ->where('tipo', '<>', '')
+            ->select('tipo')
+            ->distinct()
+            ->orderBy('tipo')
+            ->pluck('tipo');
+
         $query = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.transportista',
@@ -47,6 +57,18 @@ class SuscripcionLiquidacionDetalleController extends Controller
         if ($proveedor !== '') {
             $query->whereHas('asignacion.suscripcionProveedor.cobranzaCompra', function ($q) use ($proveedor) {
                 $q->where('razon_social', 'like', '%' . $proveedor . '%');
+            });
+        }
+
+        if ($rut !== '') {
+            $query->whereHas('asignacion.suscripcionProveedor.cobranzaCompra', function ($q) use ($rut) {
+                $q->where('rut_cliente', 'like', '%' . $rut . '%');
+            });
+        }
+
+        if ($tipo !== '') {
+            $query->whereHas('asignacion.suscripcionProveedor', function ($q) use ($tipo) {
+                $q->where('tipo', $tipo);
             });
         }
 
@@ -116,6 +138,14 @@ class SuscripcionLiquidacionDetalleController extends Controller
         $totalPeriodo = $prefacturas->sum('neto_bruto');
         $cantidadRegistros = $prefacturas->count();
 
+        $filtrosActivos = collect([
+            $proveedor,
+            $rut,
+            $tipo,
+            $anio,
+            $mes,
+        ])->filter(fn ($value) => $value !== null && $value !== '')->count();
+
         $page = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
         $perPage = 10;
 
@@ -133,11 +163,15 @@ class SuscripcionLiquidacionDetalleController extends Controller
         return view('suscripciones.liquidacion_detalles.index', [
             'prefacturas' => $prefacturasPaginadas,
             'proveedor' => $proveedor,
+            'rut' => $rut,
+            'tipo' => $tipo,
             'anio' => $anio,
             'mes' => $mes,
             'meses' => $meses,
+            'tiposDocumento' => $tiposDocumento,
             'totalPeriodo' => $totalPeriodo,
             'cantidadRegistros' => $cantidadRegistros,
+            'filtrosActivos' => $filtrosActivos,
         ]);
     }
 
@@ -332,11 +366,14 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function pdf( SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService) 
+    public function pdf(SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService) 
     {
         $detalle->load([
             'asignacion.suscripcionProveedor.cobranzaCompra',
+            'asignacion.suscripcionProveedor.cobranzaCompra.banco',
+            'asignacion.suscripcionProveedor.cobranzaCompra.tipoCuenta',
             'asignacion.transportista',
+            'asignacion.opvPuntos',
         ]);
 
         $suscripcionProveedorId = $detalle->asignacion?->suscripcion_proveedor_id;
@@ -347,7 +384,10 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
         $detallesProveedor = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
+            'asignacion.suscripcionProveedor.cobranzaCompra.banco',
+            'asignacion.suscripcionProveedor.cobranzaCompra.tipoCuenta',
             'asignacion.transportista',
+            'asignacion.opvPuntos',
         ])
         ->whereHas('asignacion', function ($query) use ($suscripcionProveedorId) {
             $query->where('suscripcion_proveedor_id', $suscripcionProveedorId);
@@ -424,7 +464,10 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
         $query = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
+            'asignacion.suscripcionProveedor.cobranzaCompra.banco',
+            'asignacion.suscripcionProveedor.cobranzaCompra.tipoCuenta',
             'asignacion.transportista',
+            'asignacion.opvPuntos',
         ])
         ->where('anio', $anio)
         ->where('mes', $mes);
@@ -486,7 +529,10 @@ class SuscripcionLiquidacionDetalleController extends Controller
         foreach ($proveedorIds as $suscripcionProveedorId) {
             $detallesProveedor = SuscripcionLiquidacionDetalle::with([
                 'asignacion.suscripcionProveedor.cobranzaCompra',
+                'asignacion.suscripcionProveedor.cobranzaCompra.banco',
+                'asignacion.suscripcionProveedor.cobranzaCompra.tipoCuenta',
                 'asignacion.transportista',
+                'asignacion.opvPuntos',
             ])
             ->whereHas('asignacion', function ($query) use ($suscripcionProveedorId) {
                 $query->where('suscripcion_proveedor_id', $suscripcionProveedorId);
@@ -553,7 +599,6 @@ class SuscripcionLiquidacionDetalleController extends Controller
             ->download($zipPath, $zipFileName)
             ->deleteFileAfterSend(true);
     }
-
 
 
 

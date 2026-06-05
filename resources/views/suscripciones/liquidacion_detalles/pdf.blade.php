@@ -103,6 +103,17 @@
         .detail-table td {
             border: 1px solid #000;
             padding: 5px;
+            vertical-align: top;
+        }
+
+        .detail-table tfoot td {
+            border: 1px solid #000;
+            padding: 5px;
+        }
+
+        .detail-table tfoot .total-spacer {
+            border: none;
+            background: #fff;
         }
 
         .text-end {
@@ -111,17 +122,6 @@
 
         .fw-bold {
             font-weight: bold;
-        }
-
-        .totals-table {
-            width: 47%;
-            margin-left: auto;
-            border-collapse: collapse;
-        }
-
-        .totals-table td {
-            border: 1px solid #000;
-            padding: 5px;
         }
 
         .payment-box {
@@ -170,7 +170,9 @@
         }
 
         $tipo = mb_strtoupper(trim((string) ($proveedor?->tipo ?? '')));
+        $detalleDocumento = mb_strtoupper(trim((string) ($proveedor?->detalle_documento ?? 'BRUTO')));
         $detalleImpuesto = mb_strtoupper(trim((string) ($proveedor?->detalle_impuesto ?? 'IMPUESTO')));
+        $final = mb_strtoupper(trim((string) ($proveedor?->final ?? 'LIQUIDO')));
 
         $porcentaje = 0;
 
@@ -278,15 +280,18 @@
         <tbody>
             @foreach($detallesProveedor as $item)
                 @php
-                    $esValorFijo = str_ends_with(mb_strtoupper(trim($item->codigo)), '.COM');
+                    $codigo = mb_strtoupper(trim((string) $item->codigo));
+                    $esValorFijo = str_ends_with($codigo, '.COM');
+
+                    $punto = trim((string) ($item->asignacion?->punto_1 ?? ''));
+                    $servicio = trim((string) ($item->asignacion?->servicio ?? ''));
+
+                    $detalleTexto = trim($punto . ' / ' . $servicio, ' /');
                 @endphp
 
                 <tr>
                     <td>
-                        {{ $item->asignacion?->punto_1 ?? '—' }}
-                        /
-                        {{ $item->asignacion?->servicio ?? '—' }}
-                        ({{ $item->codigo }})
+                        {{ $detalleTexto ?: '—' }}
                     </td>
 
                     <td class="text-end">
@@ -303,33 +308,38 @@
                 </tr>
             @endforeach
         </tbody>
-    </table>
 
-    <table class="totals-table">
-        <tr>
-            <td class="fw-bold text-end">TOTAL BRUTO</td>
-            <td class="fw-bold text-end">
-                {{ number_format($totalBruto, 0, ',', '.') }}
-            </td>
-        </tr>
+        <tfoot>
+            <tr>
+                <td class="total-spacer"></td>
+                <td colspan="2" class="fw-bold text-end">
+                    TOTAL {{ $detalleDocumento ?: 'BRUTO' }}
+                </td>
+                <td class="fw-bold text-end">
+                    {{ number_format($totalBruto, 0, ',', '.') }}
+                </td>
+            </tr>
 
-        <tr>
-            <td class="fw-bold text-end">
-                {{ $detalleImpuesto }} {{ number_format($porcentaje, 2, ',', '.') }}%
-            </td>
-            <td class="fw-bold text-end">
-                {{ number_format($totalImpuesto, 0, ',', '.') }}
-            </td>
-        </tr>
+            <tr>
+                <td class="total-spacer"></td>
+                <td colspan="2" class="fw-bold text-end">
+                    {{ $detalleImpuesto ?: 'IMPUESTO' }} {{ number_format($porcentaje, 2, ',', '.') }}%
+                </td>
+                <td class="fw-bold text-end">
+                    {{ number_format($totalImpuesto, 0, ',', '.') }}
+                </td>
+            </tr>
 
-        <tr>
-            <td class="fw-bold text-end">
-                {{ mb_strtoupper($proveedor?->final ?? 'LIQUIDO') }}
-            </td>
-            <td class="fw-bold text-end">
-                {{ number_format($totalLiquido, 0, ',', '.') }}
-            </td>
-        </tr>
+            <tr>
+                <td class="total-spacer"></td>
+                <td colspan="2" class="fw-bold text-end">
+                    {{ $final ?: 'LIQUIDO' }}
+                </td>
+                <td class="fw-bold text-end">
+                    {{ number_format($totalLiquido, 0, ',', '.') }}
+                </td>
+            </tr>
+        </tfoot>
     </table>
 
     <div class="payment-box">
