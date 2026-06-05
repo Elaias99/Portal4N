@@ -1,130 +1,9 @@
 @extends('layouts.app')
 
 @section('content')
-<style>
-    .liquidaciones-page {
-        padding: 16px 8px;
-    }
+<div class="container">
 
-    .liquidaciones-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 16px;
-    }
-
-    .liquidaciones-header h1 {
-        margin: 0;
-        font-size: 26px;
-        font-weight: 500;
-    }
-
-    .liquidaciones-header .btn {
-        white-space: nowrap;
-    }
-
-    .liquidaciones-card {
-        border: 1px solid #d6d8db;
-        border-radius: 4px;
-        background: #fff;
-        margin-bottom: 12px;
-    }
-
-    .liquidaciones-card-body {
-        padding: 14px;
-    }
-
-    .liquidaciones-card-title {
-        font-size: 14px;
-        font-weight: 600;
-        margin-bottom: 6px;
-    }
-
-    .liquidaciones-card-help {
-        font-size: 12px;
-        color: #6c757d;
-        margin-bottom: 10px;
-    }
-
-    .liquidaciones-form label {
-        font-size: 12px;
-        font-weight: 500;
-        margin-bottom: 4px;
-    }
-
-    .liquidaciones-form .form-control {
-        height: 34px;
-        font-size: 13px;
-        padding: 5px 8px;
-    }
-
-    .liquidaciones-form .btn {
-        height: 34px;
-        font-size: 13px;
-        padding: 5px 12px;
-        white-space: nowrap;
-    }
-
-    .liquidaciones-table-card {
-        border: 1px solid #d6d8db;
-        border-radius: 4px;
-        background: #fff;
-    }
-
-    .liquidaciones-table-body {
-        padding: 12px;
-    }
-
-    .liquidaciones-table {
-        width: 100%;
-        margin-bottom: 0;
-        font-size: 13px;
-    }
-
-    .liquidaciones-table th,
-    .liquidaciones-table td {
-        padding: 9px 10px;
-        vertical-align: middle;
-        white-space: nowrap;
-    }
-
-    .liquidaciones-table th {
-        font-size: 12px;
-        font-weight: 700;
-        text-align: center;
-    }
-
-    .liquidaciones-table td {
-        font-size: 13px;
-    }
-
-    .liquidaciones-table .text-end {
-        text-align: right;
-    }
-
-    .liquidaciones-table .proveedor-col {
-        width: 40%;
-    }
-
-    .liquidaciones-table .tipo-col {
-        width: 15%;
-    }
-
-    .liquidaciones-table .monto-col {
-        width: 15%;
-    }
-
-    .liquidaciones-pagination {
-        margin-top: 12px;
-        display: flex;
-        justify-content: center;
-    }
-</style>
-
-<div class="container-fluid liquidaciones-page">
-
-    <div class="liquidaciones-header">
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Liquidaciones de Suscripciones</h1>
 
         <a href="{{ route('suscripciones.liquidacion-detalles.create') }}" class="btn btn-primary">
@@ -166,23 +45,23 @@
     @endphp
 
     {{-- Generar mes completo --}}
-    <div class="liquidaciones-card">
-        <div class="liquidaciones-card-body">
-            <div class="liquidaciones-card-title">
-                Generar mes completo
-            </div>
+    <div class="card mb-3">
+        <div class="card-header">
+            <strong>Generar mes completo</strong>
+        </div>
 
-            <div class="liquidaciones-card-help">
+        <div class="card-body">
+            <p class="text-muted mb-3">
                 Crea los registros mensuales en base a las asignaciones existentes. Esta acción registra datos en la tabla de liquidación.
-            </div>
+            </p>
 
-            <form method="POST" action="{{ route('suscripciones.liquidacion-detalles.generar-mes') }}" class="liquidaciones-form">
+            <form method="POST" action="{{ route('suscripciones.liquidacion-detalles.generar-mes') }}">
                 @csrf
 
                 <input type="hidden" name="proveedor_actual" value="{{ request('proveedor') }}">
 
                 <div class="row g-2 align-items-end">
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label class="form-label">Año a generar</label>
                         <input 
                             type="number"
@@ -195,7 +74,7 @@
                         >
                     </div>
 
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label class="form-label">Mes a generar</label>
                         <select name="mes_generar" class="form-control" required>
                             @foreach($meses as $numero => $nombre)
@@ -206,8 +85,8 @@
                         </select>
                     </div>
 
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-success w-100">
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-success">
                             Generar mes completo
                         </button>
                     </div>
@@ -216,16 +95,16 @@
         </div>
     </div>
 
-    {{-- Buscador / filtros --}}
-    <div class="liquidaciones-card">
-        <div class="liquidaciones-card-body">
-            <div class="liquidaciones-card-title">
-                Filtros
-            </div>
+    {{-- Filtros --}}
+    <div class="card mb-3">
+        <div class="card-header">
+            <strong>Filtros</strong>
+        </div>
 
-            <form method="GET" action="{{ route('suscripciones.liquidacion-detalles.index') }}" class="liquidaciones-form">
+        <div class="card-body">
+            <form method="GET" action="{{ route('suscripciones.liquidacion-detalles.index') }}">
                 <div class="row g-2 align-items-end">
-                    <div class="col-md-4">
+                    <div class="col-md-5">
                         <label class="form-label">Buscar proveedor</label>
                         <input 
                             type="text"
@@ -259,14 +138,12 @@
                         </select>
                     </div>
 
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100">
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary">
                             Buscar
                         </button>
-                    </div>
 
-                    <div class="col-md-2">
-                        <a href="{{ route('suscripciones.liquidacion-detalles.index') }}" class="btn btn-secondary w-100">
+                        <a href="{{ route('suscripciones.liquidacion-detalles.index') }}" class="btn btn-secondary">
                             Limpiar
                         </a>
                     </div>
@@ -276,24 +153,24 @@
     </div>
 
     {{-- Generar PDFs masivos --}}
-    <div class="liquidaciones-card">
-        <div class="liquidaciones-card-body">
-            <div class="liquidaciones-card-title">
-                Descargar pre-facturas PDF
-            </div>
+    <div class="card mb-3">
+        <div class="card-header">
+            <strong>Descargar pre-facturas PDF</strong>
+        </div>
 
-            <div class="liquidaciones-card-help">
+        <div class="card-body">
+            <p class="text-muted mb-3">
                 Genera un archivo ZIP con una pre-factura PDF por cada proveedor del período seleccionado.
                 Si hay un proveedor escrito en el filtro, sólo se generarán PDFs para ese proveedor.
-            </div>
+            </p>
 
-            <form method="POST" action="{{ route('suscripciones.liquidacion-detalles.pdf-masivo') }}" class="liquidaciones-form">
+            <form method="POST" action="{{ route('suscripciones.liquidacion-detalles.pdf-masivo') }}">
                 @csrf
 
                 <input type="hidden" name="proveedor_pdf" value="{{ request('proveedor') }}">
 
                 <div class="row g-2 align-items-end">
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label class="form-label">Año PDF</label>
                         <input 
                             type="number"
@@ -306,7 +183,7 @@
                         >
                     </div>
 
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label class="form-label">Mes PDF</label>
                         <select name="mes_pdf" class="form-control" required>
                             @foreach($meses as $numero => $nombre)
@@ -317,8 +194,8 @@
                         </select>
                     </div>
 
-                    <div class="col-md-3">
-                        <button type="submit" class="btn btn-danger w-100">
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-danger">
                             Descargar ZIP de pre-facturas
                         </button>
                     </div>
@@ -327,71 +204,94 @@
         </div>
     </div>
 
+
+
+
+
+
+
+
     {{-- Tabla --}}
-    <div class="liquidaciones-table-card">
-        <div class="liquidaciones-table-body">
+    <div class="card">
+        <div class="card-header">
+            <strong>Listado de pre-facturas</strong>
+        </div>
 
-            <table class="table table-bordered table-striped align-middle liquidaciones-table">
-                <thead>
-                    <tr>
-                        <th class="proveedor-col">Proveedor</th>
-                        <th class="tipo-col">Tipo</th>
-                        <th class="monto-col text-end">Neto/Bruto</th>
-                        <th class="monto-col text-end">Total Impuesto</th>
-                        <th class="monto-col text-end">Neto</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @forelse($detalles as $detalle)
-                        @php
-                            $calculo = $calculosDetalle[$detalle->id] ?? null;
-                        @endphp
-
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped align-middle">
+                    <thead>
                         <tr>
-                            <td>
-                                <a href="{{ route('suscripciones.liquidacion-detalles.show', $detalle->id) }}"
-                                   class="text-decoration-none fw-bold text-primary">
-                                    {{ $detalle->asignacion?->suscripcionProveedor?->cobranzaCompra?->razon_social ?? '—' }}
-                                </a>
-                            </td>
-
-                            <td>
-                                @php
-                                    $tipo = $detalle->asignacion?->suscripcionProveedor?->tipo;
-                                @endphp
-
-                                {{ $tipo === 'BOLETA' ? 'Boleta Honorario' : ($tipo ?? '—') }}
-                            </td>
-
-                            <td class="text-end">
-                                ${{ number_format($calculo['neto_bruto'] ?? 0, 0, ',', '.') }}
-                            </td>
-
-                            <td class="text-end">
-                                ${{ number_format($calculo['total_impuesto'] ?? 0, 1, ',', '.') }}
-                            </td>
-
-                            <td class="text-end fw-bold">
-                                ${{ number_format($calculo['liquido'] ?? 0, 0, ',', '.') }}
-                            </td>
+                            <th>Año</th>
+                            <th>Mes</th>
+                            <th>Proveedor</th>
+                            <th>RUT</th>
+                            <th>Tipo</th>
+                            {{-- <th class="text-end">Líneas</th> --}}
+                            <th class="text-end">Neto/Bruto</th>
+                            <th class="text-end">Total Impuesto</th>
+                            <th class="text-end">Final</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="text-center">
-                                No hay detalles mensuales registrados.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                    </thead>
 
-            <div class="liquidaciones-pagination">
-                {{ $detalles->appends(request()->query())->links('pagination::bootstrap-4') }}
+                    <tbody>
+                        @forelse($prefacturas as $prefactura)
+                            <tr>
+                                <td>{{ $prefactura['anio'] }}</td>
+
+                                <td>{{ $prefactura['mes_nombre'] }}</td>
+
+                                <td>
+                                    <a href="{{ route('suscripciones.liquidacion-detalles.show', $prefactura['detalle_id']) }}"
+                                    class="text-decoration-none fw-bold text-primary">
+                                        {{ $prefactura['proveedor'] }}
+                                    </a>
+                                </td>
+
+                                <td>
+                                    {{ $prefactura['rut'] }}
+                                </td>
+
+                                <td>
+                                    {{ $prefactura['tipo'] === 'BOLETA' ? 'Boleta Honorario' : $prefactura['tipo'] }}
+                                </td>
+
+
+                                <td class="text-end">
+                                    ${{ number_format($prefactura['neto_bruto'], 0, ',', '.') }}
+                                </td>
+
+                                <td class="text-end">
+                                    ${{ number_format($prefactura['total_impuesto'], 1, ',', '.') }}
+                                </td>
+
+                                <td class="text-end fw-bold" title="{{ $prefactura['final'] }}">
+                                    ${{ number_format($prefactura['total_final'], 0, ',', '.') }}
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="9" class="text-center">
+                                    No hay pre-facturas registradas para los filtros seleccionados.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
 
+            <div class="mt-3 d-flex justify-content-center">
+                {{ $prefacturas->appends(request()->query())->links('pagination::bootstrap-4') }}
+            </div>
         </div>
     </div>
+
+
+
+
+
+
+
 
 </div>
 @endsection

@@ -58,30 +58,87 @@ class SuscripcionLiquidacionDetalleController extends Controller
             $query->where('mes', $mes);
         }
 
-        $totalPeriodo = (clone $query)->sum('total');
-        $cantidadRegistros = (clone $query)->count();
-
-        $detalles = $query
+        $detallesFiltrados = $query
             ->orderBy('anio', 'desc')
             ->orderBy('mes', 'desc')
             ->orderBy('codigo')
-            ->paginate(10)
-            ->appends($request->query());
+            ->get();
 
-        $calculosDetalle = $resumenService->calcularPorDetalles(
-            $detalles->getCollection()
+        $prefacturas = $detallesFiltrados
+            ->groupBy(function ($detalle) {
+                $suscripcionProveedorId = $detalle->asignacion?->suscripcion_proveedor_id ?? 'sin_proveedor';
+
+                return $suscripcionProveedorId . '_' . $detalle->anio . '_' . $detalle->mes;
+            })
+            ->map(function ($items) use ($resumenService, $meses) {
+                $detalleBase = $items->first();
+
+                $proveedor = $detalleBase->asignacion?->suscripcionProveedor;
+                $cobranzaCompra = $proveedor?->cobranzaCompra;
+
+                $calculosDetalle = $resumenService->calcularPorDetalles($items);
+
+                return [
+                    'detalle_id' => $detalleBase->id,
+                    'suscripcion_proveedor_id' => $detalleBase->asignacion?->suscripcion_proveedor_id,
+                    'anio' => $detalleBase->anio,
+                    'mes' => $detalleBase->mes,
+                    'mes_nombre' => $meses[$detalleBase->mes] ?? $detalleBase->mes,
+
+                    'proveedor' => $cobranzaCompra?->razon_social ?? '—',
+                    'rut' => $cobranzaCompra?->rut_cliente ?? '—',
+
+                    'tipo' => $proveedor?->tipo ?? '—',
+                    'detalle_documento' => $proveedor?->detalle_documento ?? 'Neto/Bruto',
+                    'detalle_impuesto' => $proveedor?->detalle_impuesto ?? 'Impuesto',
+                    'final' => $proveedor?->final ?? 'Final',
+
+                    'cantidad_lineas' => $items->count(),
+
+                    'neto_bruto' => $items->sum('total'),
+                    'total_impuesto' => $calculosDetalle->sum('total_impuesto'),
+                    'total_final' => $calculosDetalle->sum('liquido'),
+                ];
+            })
+            ->sort(function ($a, $b) {
+                if ($a['anio'] !== $b['anio']) {
+                    return $b['anio'] <=> $a['anio'];
+                }
+
+                if ($a['mes'] !== $b['mes']) {
+                    return $b['mes'] <=> $a['mes'];
+                }
+
+                return strcmp($a['proveedor'], $b['proveedor']);
+            })
+            ->values();
+
+        $totalPeriodo = $prefacturas->sum('neto_bruto');
+        $cantidadRegistros = $prefacturas->count();
+
+        $page = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
+        $perPage = 10;
+
+        $prefacturasPaginadas = new \Illuminate\Pagination\LengthAwarePaginator(
+            $prefacturas->slice(($page - 1) * $perPage, $perPage)->values(),
+            $prefacturas->count(),
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
         );
 
-        return view('suscripciones.liquidacion_detalles.index', compact(
-            'detalles',
-            'proveedor',
-            'anio',
-            'mes',
-            'meses',
-            'totalPeriodo',
-            'cantidadRegistros',
-            'calculosDetalle'
-        ));
+        return view('suscripciones.liquidacion_detalles.index', [
+            'prefacturas' => $prefacturasPaginadas,
+            'proveedor' => $proveedor,
+            'anio' => $anio,
+            'mes' => $mes,
+            'meses' => $meses,
+            'totalPeriodo' => $totalPeriodo,
+            'cantidadRegistros' => $cantidadRegistros,
+        ]);
     }
 
 
@@ -225,6 +282,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
         $detallesProveedor = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.transportista',
+            'asignacion.opvPuntos',
         ])
         ->whereHas('asignacion', function ($query) use ($suscripcionProveedorId) {
             $query->where('suscripcion_proveedor_id', $suscripcionProveedorId);

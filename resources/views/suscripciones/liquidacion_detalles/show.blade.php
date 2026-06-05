@@ -17,37 +17,40 @@
 
     <div class="card mb-3">
         <div class="card-body">
-            <h4>{{ mb_strtoupper($meses[$detalle->mes] ?? $detalle->mes) }} {{ $detalle->anio }}</h4>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4>{{ mb_strtoupper($meses[$detalle->mes] ?? $detalle->mes) }} {{ $detalle->anio }}</h4>
 
-            <p class="mb-1">
-                <strong>Proveedor:</strong>
-                {{ $cobranzaCompra?->razon_social ?? '—' }}
-            </p>
+                    <p class="mb-1">
+                        <strong>Proveedor:</strong>
+                        {{ $cobranzaCompra?->razon_social ?? '—' }}
+                    </p>
 
-            <p class="mb-1">
-                <strong>RUT:</strong>
-                {{ $cobranzaCompra?->rut_cliente ?? '—' }}
-            </p>
+                    <p class="mb-1">
+                        <strong>RUT:</strong>
+                        {{ $cobranzaCompra?->rut_cliente ?? '—' }}
+                    </p>
 
-            <p class="mb-1">
-                <strong>Tipo documento:</strong>
-                {{ $proveedor?->tipo ?? '—' }}
-            </p>
+                    <p class="mb-1">
+                        <strong>Tipo documento:</strong>
+                        {{ $proveedor?->tipo ?? '—' }}
+                    </p>
 
-            <p class="mb-0">
-                <strong>Servicio:</strong>
-                {{ $cobranzaCompra?->servicio ?? 'SUSCRIPCIONES' }}
-            </p>
+                    <p class="mb-0">
+                        <strong>Servicio:</strong>
+                        {{ $cobranzaCompra?->servicio ?? 'SUSCRIPCIONES' }}
+                    </p>
+                </div>
+
+                <div>
+                    <a href="{{ route('suscripciones.liquidacion-detalles.pdf', $detalle->id) }}"
+                       class="btn btn-danger"
+                       target="_blank">
+                        Generar PDF
+                    </a>
+                </div>
+            </div>
         </div>
-    </div>
-
-    <div class="mb-3">
-        {{-- Aquí después conectamos la ruta PDF --}}
-        <a href="{{ route('suscripciones.liquidacion-detalles.pdf', $detalle->id) }}"
-        class="btn btn-danger"
-        target="_blank">
-            Generar PDF
-        </a>
     </div>
 
     <div class="card">
@@ -62,11 +65,12 @@
                         <tr>
                             <th>Detalle</th>
                             <th class="text-end">Valor</th>
+                            <th class="text-center">Base cálculo</th>
                             <th class="text-end">Cantidad</th>
-                            <th class="text-end">Total</th>
+                            <th class="text-end">Neto/Bruto</th>
                             <th class="text-end">Impuesto</th>
                             <th class="text-end">Total Impuesto</th>
-                            <th class="text-end">Neto</th>
+                            <th class="text-end">{{ $proveedor?->final ?? 'Neto' }}</th>
                         </tr>
                     </thead>
 
@@ -74,7 +78,24 @@
                         @foreach($detallesProveedor as $item)
                             @php
                                 $calculo = $calculosDetalle[$item->id] ?? null;
-                                $esValorFijo = str_ends_with(mb_strtoupper(trim($item->codigo)), '.COM');
+
+                                $codigo = mb_strtoupper(trim((string) $item->codigo));
+                                $servicio = mb_strtoupper(trim((string) ($item->asignacion?->servicio ?? '')));
+                                $origenGasto = mb_strtoupper(trim((string) ($item->asignacion?->origen_gasto ?? '')));
+
+                                $esValorFijo = str_ends_with($codigo, '.COM');
+
+                                $esOPV = $codigo === 'OPV'
+                                    || str_ends_with($codigo, '.OPV')
+                                    || $servicio === 'OPV'
+                                    || $origenGasto === 'OPV';
+
+                                $puntosOPV = $item->asignacion?->opvPuntos?->count() ?? 0;
+
+                                $nombresPuntosOPV = $item->asignacion?->opvPuntos
+                                    ?->pluck('nombre_local_corto')
+                                    ->filter()
+                                    ->implode(', ');
                             @endphp
 
                             <tr>
@@ -83,17 +104,59 @@
                                     /
                                     {{ $item->asignacion?->servicio ?? '—' }}
                                     ({{ $item->codigo }})
+
+                                    @if($esOPV)
+                                        <small class="text-muted d-block mt-1">
+                                            OPV: {{ $puntosOPV }} punto{{ $puntosOPV === 1 ? '' : 's' }} asociado{{ $puntosOPV === 1 ? '' : 's' }}.
+
+                                            @if($nombresPuntosOPV)
+                                                {{ $nombresPuntosOPV }}.
+                                            @endif
+                                        </small>
+                                    @elseif($esValorFijo)
+                                        <small class="text-muted d-block mt-1">
+                                            Valor fijo mensual. No se multiplica por fines de semana.
+                                        </small>
+                                    @endif
                                 </td>
 
                                 <td class="text-end">
                                     ${{ number_format($item->costo, 0, ',', '.') }}
                                 </td>
 
+                                <td class="text-center">
+                                    @if($esOPV)
+                                        {{ $item->q_calendario }} fines de semana
+                                        <small class="text-muted d-block">
+                                            x {{ $puntosOPV }} punto{{ $puntosOPV === 1 ? '' : 's' }} OPV
+                                        </small>
+                                    @elseif($esValorFijo)
+                                        Fijo
+                                    @else
+                                        {{ $item->q_calendario }} fines de semana
+
+                                        @if($item->q_inasistencia > 0)
+                                            <small class="text-muted d-block">
+                                                - {{ $item->q_inasistencia }} inasistencia{{ $item->q_inasistencia === 1 ? '' : 's' }}
+                                            </small>
+                                        @endif
+                                    @endif
+                                </td>
+
                                 <td class="text-end">
                                     @if($esValorFijo)
                                         1
+                                        <small class="text-muted d-block">
+                                            fijo
+                                        </small>
                                     @else
                                         {{ $item->cantidad }}
+
+                                        @if($esOPV)
+                                            <small class="text-muted d-block">
+                                                {{ $item->q_calendario }} x {{ $puntosOPV }}
+                                            </small>
+                                        @endif
                                     @endif
                                 </td>
 
@@ -118,14 +181,20 @@
 
                     <tfoot>
                         <tr>
-                            <th colspan="3" class="text-end">Total bruto</th>
+                            <th colspan="4" class="text-end">
+                                Total {{ mb_strtolower($proveedor?->detalle_documento ?? 'bruto') }}
+                            </th>
+
                             <th class="text-end">
                                 ${{ number_format($totalBruto, 0, ',', '.') }}
                             </th>
+
                             <th></th>
+
                             <th class="text-end">
                                 ${{ number_format($totalImpuesto, 0, ',', '.') }}
                             </th>
+
                             <th class="text-end">
                                 ${{ number_format($totalLiquido, 0, ',', '.') }}
                             </th>
