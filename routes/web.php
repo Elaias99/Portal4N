@@ -1099,6 +1099,9 @@ Route::prefix('suscripciones')->name('suscripciones.')->group(function () {
     Route::post('/liquidacion-detalles/pdf-masivo', [SuscripcionLiquidacionDetalleController::class, 'pdfMasivo'])
         ->name('liquidacion-detalles.pdf-masivo');
 
+    Route::get('/liquidacion-detalles/opv-puntos/{asignacion}', [SuscripcionLiquidacionDetalleController::class, 'opvPuntos'])
+        ->name('liquidacion-detalles.opv-puntos');
+
 
 });
 

@@ -53,6 +53,50 @@
         </div>
     </div>
 
+    @if(($opvPendientes ?? collect())->isNotEmpty())
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong>Observaciones OPV</strong>
+            </div>
+
+            <div class="card-body">
+                @foreach($opvPendientes as $opvPendiente)
+                    <a href="{{ route('suscripciones.liquidacion-detalles.opv-puntos', $opvPendiente->id) }}"
+                    class="text-decoration-none text-reset">
+                        <div class="border rounded p-3 mb-2">
+                            <div class="fw-semibold mb-1">
+                                Ruta OPV sin locales asignados
+                            </div>
+
+                            <div class="small">
+                                Este proveedor tiene una ruta OPV en
+                                <strong>{{ $opvPendiente->punto_1 ?? '—' }}</strong>,
+                                pero no se generó porque no tiene locales OPV asignados.
+                            </div>
+
+                            <div class="small text-muted mt-1">
+                                Transportista:
+                                {{ $opvPendiente->transportista?->nombre_transportista ?? '—' }}
+                                |
+                                Código:
+                                {{ $opvPendiente->codigo ?? '—' }}
+                                |
+                                Costo base:
+                                ${{ number_format($opvPendiente->costo ?? 0, 0, ',', '.') }}
+                            </div>
+
+                            <div class="small text-muted mt-2">
+                                Haz clic para revisar los puntos OPV registrados para esta asignación.
+                            </div>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
+
+
     <div class="card">
         <div class="card-header">
             <strong>Detalle de servicios</strong>
@@ -204,6 +248,81 @@
             </div>
         </div>
     </div>
+
+
+        {{-- Estado de pre-facturas --}}
+    <div class="card mb-3">
+        <div class="card-header">
+            <strong>Estado de pre-facturas {{ $detalle->anio }}</strong>
+        </div>
+
+        <div class="card-body">
+            <div class="row g-2">
+                @foreach($estadoPrefacturas ?? [] as $estado)
+                    <div class="col-6 col-md-4 col-lg-2">
+                        @if($estado['generada'])
+                            <a href="{{ route('suscripciones.liquidacion-detalles.show', $estado['detalle_id']) }}"
+                               class="text-decoration-none text-reset">
+                                <div class="border rounded p-2 h-100 {{ $estado['es_actual'] ? 'border-dark' : '' }}">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <strong>
+                                            {{ mb_strtoupper(mb_substr($estado['mes_nombre'], 0, 3)) }}
+                                        </strong>
+
+                                        <span>✓</span>
+                                    </div>
+
+                                    <div class="small">
+                                        Generada
+                                    </div>
+
+                                    <div class="small text-muted">
+                                        {{ $estado['cantidad_lineas'] }} línea{{ $estado['cantidad_lineas'] === 1 ? '' : 's' }}
+                                    </div>
+
+                                    <div class="small fw-semibold mt-1">
+                                        ${{ number_format($estado['total_final'], 0, ',', '.') }}
+                                    </div>
+                                </div>
+                            </a>
+                        @else
+                            <div class="border rounded p-2 h-100 text-muted">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong>
+                                        {{ mb_strtoupper(mb_substr($estado['mes_nombre'], 0, 3)) }}
+                                    </strong>
+
+                                    <span>—</span>
+                                </div>
+
+                                <div class="small">
+                                    Pendiente
+                                </div>
+
+                                <div class="small">
+                                    Sin pre-factura
+                                </div>
+
+                                <div class="small mt-1">
+                                    $0
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="small text-muted mt-3">
+                El mes con borde marcado corresponde a la pre-factura que estás revisando actualmente.
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+
 
 </div>
 @endsection

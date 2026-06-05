@@ -11,6 +11,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\Suscripciones\SuscripcionLiquidacionResumenService;
 use App\Services\Suscripciones\SuscripcionPrefacturaZipService;
 use Illuminate\Http\Request;
+use App\Models\SuscripcionOPVPuntos;
 use ZipArchive;
 
 class SuscripcionLiquidacionDetalleController extends Controller
@@ -357,7 +358,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function show( SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService) 
+    public function show(SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService) 
     {
         $detalle->load([
             'asignacion.suscripcionProveedor.cobranzaCompra',
@@ -407,6 +408,69 @@ class SuscripcionLiquidacionDetalleController extends Controller
             12 => 'Diciembre',
         ];
 
+        $detallesAnioProveedor = SuscripcionLiquidacionDetalle::with([
+            'asignacion.suscripcionProveedor.cobranzaCompra',
+            'asignacion.transportista',
+        ])
+        ->whereHas('asignacion', function ($query) use ($suscripcionProveedorId) {
+            $query->where('suscripcion_proveedor_id', $suscripcionProveedorId);
+        })
+        ->where('anio', $detalle->anio)
+        ->orderBy('mes')
+        ->orderBy('codigo')
+        ->get();
+
+        $prefacturasProveedorAnio = $detallesAnioProveedor
+            ->groupBy('mes')
+            ->map(function ($items) use ($resumenService, $meses) {
+                $detalleBase = $items->first();
+
+                $calculosMes = $resumenService->calcularPorDetalles($items);
+
+                return [
+                    'detalle_id' => $detalleBase->id,
+                    'anio' => $detalleBase->anio,
+                    'mes' => (int) $detalleBase->mes,
+                    'mes_nombre' => $meses[(int) $detalleBase->mes] ?? $detalleBase->mes,
+                    'cantidad_lineas' => $items->count(),
+                    'total_bruto' => $items->sum('total'),
+                    'total_impuesto' => $calculosMes->sum('total_impuesto'),
+                    'total_final' => $calculosMes->sum('liquido'),
+                ];
+            });
+
+        $estadoPrefacturas = collect($meses)
+            ->map(function ($nombreMes, $numeroMes) use ($prefacturasProveedorAnio, $detalle) {
+                $prefacturaMes = $prefacturasProveedorAnio->get($numeroMes);
+
+                return [
+                    'mes' => $numeroMes,
+                    'mes_nombre' => $nombreMes,
+                    'generada' => (bool) $prefacturaMes,
+                    'es_actual' => (int) $detalle->mes === (int) $numeroMes,
+                    'detalle_id' => $prefacturaMes['detalle_id'] ?? null,
+                    'cantidad_lineas' => $prefacturaMes['cantidad_lineas'] ?? 0,
+                    'total_final' => $prefacturaMes['total_final'] ?? 0,
+                ];
+            })
+            ->values();
+
+        $opvPendientes = Asignaciones::with([
+            'suscripcionProveedor.cobranzaCompra',
+            'transportista',
+            'opvPuntos',
+        ])
+        ->where('suscripcion_proveedor_id', $suscripcionProveedorId)
+        ->where(function ($query) {
+            $query->whereRaw("UPPER(TRIM(codigo)) = 'OPV'")
+                ->orWhereRaw("UPPER(TRIM(codigo)) LIKE '%.OPV'")
+                ->orWhereRaw("UPPER(TRIM(servicio)) = 'OPV'")
+                ->orWhereRaw("UPPER(TRIM(origen_gasto)) = 'OPV'");
+        })
+        ->whereDoesntHave('opvPuntos')
+        ->orderBy('punto_1')
+        ->get();    
+
         return view('suscripciones.liquidacion_detalles.show', compact(
             'detalle',
             'detallesProveedor',
@@ -416,7 +480,9 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'totalBruto',
             'totalImpuesto',
             'totalLiquido',
-            'meses'
+            'meses',
+            'estadoPrefacturas',
+            'opvPendientes'
         ));
     }
 
@@ -587,10 +653,17 @@ class SuscripcionLiquidacionDetalleController extends Controller
         $mes = (int) $request->mes_generar;
         $proveedorActual = trim((string) $request->input('proveedor_actual'));
 
-        $asignaciones = Asignaciones::orderBy('codigo')->get();
+        $asignaciones = Asignaciones::with([
+            'transportista',
+            'suscripcionProveedor.cobranzaCompra',
+            'opvPuntos',
+        ])
+        ->orderBy('codigo')
+        ->get();
 
         $creados = 0;
-        $omitidos = 0;
+        $duplicados = 0;
+        $opvSinRutas = collect();
 
         foreach ($asignaciones as $asignacion) {
             $existe = SuscripcionLiquidacionDetalle::where('suscripcion_asignacion_id', $asignacion->id)
@@ -599,15 +672,21 @@ class SuscripcionLiquidacionDetalleController extends Controller
                 ->exists();
 
             if ($existe) {
-                $omitidos++;
+                $duplicados++;
                 continue;
             }
 
-            if ($this->esAsignacionOPV($asignacion) && $asignacion->opvPuntos()->count() === 0) {
-                $omitidos++;
+            if ($this->esAsignacionOPV($asignacion) && $asignacion->opvPuntos->count() === 0) {
+                $nombreResponsable = $asignacion->transportista?->nombre_transportista
+                    ?? $asignacion->suscripcionProveedor?->cobranzaCompra?->razon_social
+                    ?? 'Sin transportista';
+
+                $punto = $asignacion->punto_1 ?? 'Sin punto';
+
+                $opvSinRutas->push($nombreResponsable . ' / ' . $punto);
+
                 continue;
             }
-
 
             $calculo = $this->calcularDetalleMensual(
                 $asignacion,
@@ -640,9 +719,46 @@ class SuscripcionLiquidacionDetalleController extends Controller
             $params['proveedor'] = $proveedorActual;
         }
 
+        $mensaje = "Mes generado correctamente. Creados: {$creados}.";
+
+        if ($duplicados > 0) {
+            $mensaje .= " Registros ya existentes no duplicados: {$duplicados}.";
+        }
+
+        if ($opvSinRutas->isNotEmpty()) {
+            $mensaje .= ' No se generaron las siguientes rutas OPV porque no tienen locales OPV asignados: ';
+            $mensaje .= $opvSinRutas->unique()->implode('; ') . '.';
+        }
+
         return redirect()
             ->route('suscripciones.liquidacion-detalles.index', $params)
-            ->with('success', "Mes generado correctamente. Creados: {$creados}. Omitidos por duplicados: {$omitidos}.");
+            ->with('success', $mensaje);
+    }
+
+
+
+
+    public function opvPuntos(Asignaciones $asignacion)
+    {
+        $asignacion->load([
+            'suscripcionProveedor.cobranzaCompra',
+            'transportista',
+            'opvPuntos',
+        ]);
+
+        if (!$this->esAsignacionOPV($asignacion)) {
+            abort(404, 'La asignación seleccionada no corresponde a una ruta OPV.');
+        }
+
+        $opvPuntos = SuscripcionOPVPuntos::query()
+            ->orderBy('ruta_nombre')
+            ->orderBy('local')
+            ->get();
+
+        return view('suscripciones.liquidacion_detalles.opv_puntos', compact(
+            'asignacion',
+            'opvPuntos'
+        ));
     }
 
 
@@ -740,6 +856,9 @@ class SuscripcionLiquidacionDetalleController extends Controller
             || $servicio === 'OPV'
             || $origenGasto === 'OPV';
     }
+
+
+
 
 
 
