@@ -480,7 +480,9 @@
                         @if($doc->tipo_documento_id == 61)
 
                         @else
-                            <span class="badge {{ $color }}">{{ $doc->estado_visible }}</span>
+                            <span class="badge {{ $color }}">
+                                {{ $doc->estado_visible === 'Factory' ? 'Factoring' : $doc->estado_visible }}
+                            </span>
 
                             @include('cobranzas.modal_status', ['doc' => $doc])
                         @endif

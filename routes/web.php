@@ -196,20 +196,23 @@ Route::resource('clasificacion-operativa', \App\Http\Controllers\ClasificacionOp
 
 
 
-///PanelFinanza//////Historial de Movimientos Ventas
+/// PanelFinanza /// Historial de Movimientos Ventas
 Route::get('/panelfinanza/show', [App\Http\Controllers\PanelFinanzaController::class, 'show'])
-    ->name('panelfinanza.show');
+    ->name('panelfinanza.show')
+    ->middleware('auth');
 
 /// PanelFinanza /// Historial de Movimientos Compras
 Route::get('/panelfinanza/show-compras', [App\Http\Controllers\PanelFinanzaController::class, 'showCompras'])
-    ->name('panelfinanza.show_compras');
-
+    ->name('panelfinanza.show_compras')
+    ->middleware('auth');
 
 Route::get('/panelfinanza/export', [App\Http\Controllers\PanelFinanzaController::class, 'export'])
-    ->name('panelfinanza.export');
+    ->name('panelfinanza.export')
+    ->middleware('auth');
 
 Route::get('/panelfinanza/export-compras', [App\Http\Controllers\PanelFinanzaController::class, 'exportCompras'])
-    ->name('panelfinanza.export_compras');
+    ->name('panelfinanza.export_compras')
+    ->middleware('auth');
 
 
 
@@ -263,67 +266,84 @@ Route::resource('equipos', EquipoController::class);
 
 // Importar archivo Excel
 Route::post('/cobranzas/documentos/import', [DocumentoFinancieroController::class, 'import'])
-    ->name('cobranzas.import');
+    ->name('cobranzas.import')
+    ->middleware('auth');
+
 // Mostrar documentos financieros
 Route::get('/cobranzas/documentos', [DocumentoFinancieroController::class, 'index'])
-    ->name('cobranzas.documentos');
+    ->name('cobranzas.documentos')
+    ->middleware('auth');
 
 Route::patch('/documentos/{documento}/status', [DocumentoFinancieroController::class, 'updateStatus'])
-    ->name('documentos.updateStatus');
+    ->name('documentos.updateStatus')
+    ->middleware('auth');
 
 Route::get('documentos/export', [DocumentoFinancieroController::class, 'export'])
-    ->name('documentos.export');
+    ->name('documentos.export')
+    ->middleware('auth');
 
-Route::get('/finanzas/export-all', [DocumentoFinancieroController::class, 'exportAll'])->name('finanzas.exportAll');
-
+Route::get('/finanzas/export-all', [DocumentoFinancieroController::class, 'exportAll'])
+    ->name('finanzas.exportAll')
+    ->middleware('auth');
 
 // Mostrar formulario de edición de un documento financiero
 Route::get('/cobranzas/documentos/{documento}/edit', [DocumentoFinancieroController::class, 'edit'])
-    ->name('cobranzas.documentos.edit');
+    ->name('cobranzas.documentos.edit')
+    ->middleware('auth');
 
 // Actualizar un documento financiero
 Route::put('/cobranzas/documentos/{documento}', [DocumentoFinancieroController::class, 'update'])
-    ->name('cobranzas.documentos.update');
+    ->name('cobranzas.documentos.update')
+    ->middleware('auth');
 
-
-Route::get('/documentos/{documento}/detalles', [App\Http\Controllers\DocumentoFinancieroController::class, 'show'])
-    ->name('documentos.detalles');
-
+Route::get('/documentos/{documento}/detalles', [DocumentoFinancieroController::class, 'show'])
+    ->name('documentos.detalles')
+    ->middleware('auth');
 
 Route::post('/documentos/{documento}/abonos', [DocumentoFinancieroController::class, 'storeAbono'])
-    ->name('documentos.abonos.store');    
+    ->name('documentos.abonos.store')
+    ->middleware('auth');
 
-//Registrar un nuevo cruce
+// Registrar un nuevo cruce
 Route::post('/documentos/{documento}/cruces', [DocumentoFinancieroController::class, 'storeCruce'])
-    ->name('documentos.cruces.store');
+    ->name('documentos.cruces.store')
+    ->middleware('auth');
 
-
-Route::get('/cobranzas/general', [App\Http\Controllers\DocumentoFinancieroController::class, 'general'])
-        ->name('cobranzas.general');
-
+Route::get('/cobranzas/general', [DocumentoFinancieroController::class, 'general'])
+    ->name('cobranzas.general')
+    ->middleware('auth');
 
 Route::get('/cobranzas/documentos/column-filter', [DocumentoFinancieroController::class, 'filtrarColumnas'])
-    ->name('cobranzas.column_filter');
+    ->name('cobranzas.column_filter')
+    ->middleware('auth');
 
 Route::get('/cobranzas/documentos/exportar-al-corte', [DocumentoFinancieroController::class, 'exportAlCorte'])
-    ->name('cobranzas.documentos.exportar_al_corte');
+    ->name('cobranzas.documentos.exportar_al_corte')
+    ->middleware('auth');
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////// Cobranzas ////////////////////////////////////////////// 
 ///////////////////////////////////////////////////////////////////////////////////////////    
 
-Route::get('/cobranzas/export', [CobranzaController::class, 'export'])->name('cobranzas.export');
+Route::get('/cobranzas/export', [CobranzaController::class, 'export'])
+    ->name('cobranzas.export')
+    ->middleware('auth');
+
 Route::post('/cobranzas/reprocesar-pendientes', [CobranzaController::class, 'reprocesarPendientes'])
-     ->name('cobranzas.reprocesar-pendientes');
-     
+    ->name('cobranzas.reprocesar-pendientes')
+    ->middleware('auth');
+
 Route::post('cobranzas/reprocesar-pendientes-compras', [CobranzaController::class, 'reprocesarPendientesCompras'])
-    ->name('cobranzas.reprocesar-pendientes-compras');
+    ->name('cobranzas.reprocesar-pendientes-compras')
+    ->middleware('auth');
 
-Route::post('/cobranzas/cancelar-pendientes', [App\Http\Controllers\CobranzaController::class, 'cancelarPendientes'])
-    ->name('cobranzas.cancelar-pendientes');
+Route::post('/cobranzas/cancelar-pendientes', [CobranzaController::class, 'cancelarPendientes'])
+    ->name('cobranzas.cancelar-pendientes')
+    ->middleware('auth');
 
-Route::resource('cobranzas', CobranzaController::class);
+Route::resource('cobranzas', CobranzaController::class)
+    ->middleware('auth');
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -331,23 +351,25 @@ Route::resource('cobranzas', CobranzaController::class);
 
 
 
-Route::get('/cobranzas/export/compras', [CobranzaCompraController::class, 'export'])->name('cobranzasCompra.export');
-
+Route::get('/cobranzas/export/compras', [CobranzaCompraController::class, 'export'])
+    ->name('cobranzasCompra.export')
+    ->middleware('auth');
 
 Route::post('/cobranzas-compras/reprocesar-pendientes-compras', [CobranzaCompraController::class, 'reprocesarPendientesCompras'])
-    ->name('cobranzas-compras.reprocesar-pendientes-compras');
+    ->name('cobranzas-compras.reprocesar-pendientes-compras')
+    ->middleware('auth');
 
+Route::get('/cobranzas-compras/salud', [CobranzaCompraController::class, 'salud'])
+    ->name('cobranzas-compras.salud')
+    ->middleware('auth');
 
-Route::get('/cobranzas-compras/salud', 
-    [\App\Http\Controllers\CobranzaCompraController::class, 'salud']
-)->name('cobranzas-compras.salud');
-
-Route::post('/cobranzas-compras/cancelar-pendientes', [App\Http\Controllers\CobranzaCompraController::class, 'cancelarPendientesCompras'])
-    ->name('cobranzas-compras.cancelar-pendientes-compras');
-
+Route::post('/cobranzas-compras/cancelar-pendientes', [CobranzaCompraController::class, 'cancelarPendientesCompras'])
+    ->name('cobranzas-compras.cancelar-pendientes-compras')
+    ->middleware('auth');
 
 Route::resource('cobranzas-compras', CobranzaCompraController::class)
-    ->parameters(['cobranzas-compras' => 'cobranzaCompra']);
+    ->parameters(['cobranzas-compras' => 'cobranzaCompra'])
+    ->middleware('auth');
 
 
 
@@ -362,35 +384,54 @@ Route::resource('cotizadores', CotizadorController::class);
 Route::post('/cotizadores/calcular-distancia', [CotizadorController::class, 'calcularDistancia'])
     ->name('cotizadores.calcular-distancia');
 
-// abonos
+
+
+// ABONO //
 // Mostrar todos los abonos de un documento
 Route::get('/documentos/{documento}/abonos', [AbonoController::class, 'index'])
-    ->name('abonos.index');
+    ->name('abonos.index')
+    ->middleware('auth');
 
 // Mostrar formulario para editar un abono
 Route::get('/abonos/{id}/edit', [AbonoController::class, 'edit'])
-    ->name('abonos.edit');
+    ->name('abonos.edit')
+    ->middleware('auth');
 
 // Actualizar un abono existente
 Route::put('/abonos/{id}', [AbonoController::class, 'update'])
-    ->name('abonos.update');
+    ->name('abonos.update')
+    ->middleware('auth');
 
 // Eliminar un abono
 Route::delete('/abonos/{id}', [AbonoController::class, 'destroy'])
-    ->name('abonos.destroy');
+    ->name('abonos.destroy')
+    ->middleware('auth');
 
-Route::get('/abonos/show', [AbonoController::class, 'show'])->name('abonos.show');
+Route::get('/abonos/show', [AbonoController::class, 'show'])
+    ->name('abonos.show')
+    ->middleware('auth');
 
-
-
-/////CRUCES
+///// CRUCES
 // CRUD de cruces
-Route::get('/documentos/{documento}/cruces', [CruceController::class, 'index'])->name('cruces.index');
-Route::get('/cruces/{id}/edit', [CruceController::class, 'edit'])->name('cruces.edit');
-Route::put('/cruces/{id}', [CruceController::class, 'update'])->name('cruces.update');
-Route::delete('/cruces/{id}', [CruceController::class, 'destroy'])->name('cruces.destroy');
-Route::get('/cruces/show', [App\Http\Controllers\CruceController::class, 'show'])
-    ->name('cruces.show');
+Route::get('/documentos/{documento}/cruces', [CruceController::class, 'index'])
+    ->name('cruces.index')
+    ->middleware('auth');
+
+Route::get('/cruces/{id}/edit', [CruceController::class, 'edit'])
+    ->name('cruces.edit')
+    ->middleware('auth');
+
+Route::put('/cruces/{id}', [CruceController::class, 'update'])
+    ->name('cruces.update')
+    ->middleware('auth');
+
+Route::delete('/cruces/{id}', [CruceController::class, 'destroy'])
+    ->name('cruces.destroy')
+    ->middleware('auth');
+
+Route::get('/cruces/show', [CruceController::class, 'show'])
+    ->name('cruces.show')
+    ->middleware('auth');
 
 
 
@@ -398,16 +439,20 @@ use App\Http\Controllers\FactoryController;
 
 
 Route::get('/factoring', [FactoryController::class, 'index'])
-    ->name('factoring.index');
+    ->name('factoring.index')
+    ->middleware('auth');
 
 Route::post('/documentos/{documento}/factory', [FactoryController::class, 'store'])
-    ->name('documentos.factory.store');
+    ->name('documentos.factory.store')
+    ->middleware('auth');
 
 Route::delete('/factories/{factory}', [FactoryController::class, 'destroy'])
-    ->name('factories.destroy');
+    ->name('factories.destroy')
+    ->middleware('auth');
 
 Route::post('/documentos/factory-masivo', [FactoryController::class, 'storeMasivo'])
-    ->name('documentos.factory.masivo.store');
+    ->name('documentos.factory.masivo.store')
+    ->middleware('auth');
 
 
 
@@ -422,35 +467,41 @@ Route::post('/documentos/factory-masivo', [FactoryController::class, 'storeMasiv
 
 // Registrar un pago directamente desde PagoDocumentoController
 Route::post('/documentos/{documento}/pagos', [App\Http\Controllers\PagoDocumentoController::class, 'store'])
-    ->name('documentos.pagos.store');
+    ->name('documentos.pagos.store')
+    ->middleware('auth');
 
-//Ruta para registrar pagos masivos
+// Ruta para registrar pagos masivos
 Route::post('/documentos/pagos/masivo', [App\Http\Controllers\PagoDocumentoController::class, 'storeMasivo'])
-    ->name('documentos.pagos.masivo');
+    ->name('documentos.pagos.masivo')
+    ->middleware('auth');
 
 Route::post(
     '/documentos/pagos/masivo/panel-hoy',
     [App\Http\Controllers\PagoDocumentoController::class, 'storeMasivoDesdePanel']
-)->name('documentos.pagos.masivo.panel_hoy');
+)->name('documentos.pagos.masivo.panel_hoy')
+    ->middleware('auth');
 
-//Buscar documentos pendientes para pagos masivos
+// Buscar documentos pendientes para pagos masivos
 Route::get('/api/documentos/buscar', [App\Http\Controllers\PagoDocumentoController::class, 'buscarDocumentos'])
-    ->name('documentos.pagos.buscar');
-
+    ->name('documentos.pagos.buscar')
+    ->middleware('auth');
 
 // Eliminar un pago
 Route::delete('/pagos/{id}', [App\Http\Controllers\PagoDocumentoController::class, 'destroy'])
-    ->name('pagos.destroy');
+    ->name('pagos.destroy')
+    ->middleware('auth');
 
 Route::get(
     '/documentos/pagos/masivo/export',
     [App\Http\Controllers\PagoDocumentoController::class, 'exportPagosMasivos']
-)->name('documentos.pagos.masivo.export');
+)->name('documentos.pagos.masivo.export')
+    ->middleware('auth');
 
 Route::get(
     'documentos/pagos/masivo/empresa/{token}',
     [App\Http\Controllers\PagoDocumentoController::class, 'downloadPagosMasivosEmpresa']
-)->name('documentos.pagos.masivo.empresa.descargar');
+)->name('documentos.pagos.masivo.empresa.descargar')
+    ->middleware('auth');
 
 
 
@@ -478,11 +529,11 @@ Route::get('/labels/excel/template', [LabelController::class, 'downloadTemplate'
 //ProntoPAGO///////////////////////////////////////// 
 // Registrar un pronto pago
 Route::post('/prontopagos/{documento}', [App\Http\Controllers\ProntoPagoController::class, 'store'])
-    ->name('prontopagos.store');
+    ->name('prontopagos.store')->middleware('auth');
 
 // Eliminar un pronto pago
 Route::delete('/prontopagos/{id}', [App\Http\Controllers\ProntoPagoController::class, 'destroy'])
-    ->name('prontopagos.destroy');
+    ->name('prontopagos.destroy')->middleware('auth');
 
 
 
@@ -490,66 +541,66 @@ Route::delete('/prontopagos/{id}', [App\Http\Controllers\ProntoPagoController::c
 //////////////////////////////// 
 // cobranzas/finanzas_compras
 Route::get('/finanzas/compras/filtrar-columnas', [App\Http\Controllers\DocumentoCompraController::class, 'filtrar'])
-    ->name('finanzas_compras.column_filter');
+    ->name('finanzas_compras.column_filter')->middleware('auth');
     
-Route::get('/finanzas/compras', [DocumentoCompraController::class, 'index'])->name('finanzas_compras.index');
-Route::post('/finanzas/compras/import', [DocumentoCompraController::class, 'import'])->name('finanzas_compras.import');
-Route::get('/finanzas_compras/export', [DocumentoCompraController::class, 'export'])->name('finanzas_compras.export');
+Route::get('/finanzas/compras', [DocumentoCompraController::class, 'index'])->name('finanzas_compras.index')->middleware('auth');
+Route::post('/finanzas/compras/import', [DocumentoCompraController::class, 'import'])->name('finanzas_compras.import')->middleware('auth');
+Route::get('/finanzas_compras/export', [DocumentoCompraController::class, 'export'])->name('finanzas_compras.export')->middleware('auth');
 Route::get('/finanzas-compras/export-all', [DocumentoCompraController::class, 'exportAll'])
-    ->name('finanzas_compras.exportAll');
+    ->name('finanzas_compras.exportAll')->middleware('auth');
 
 Route::post(
     'finanzas-compras/proximo-pago/exportar',
     [DocumentoCompraController::class, 'storePagoProgramadoMasivoExport']
-)->name('finanzas_compras.proximo_pago.exportar');
+)->name('finanzas_compras.proximo_pago.exportar')->middleware('auth');
 
 Route::get(
     'finanzas-compras/proximo-pago/descargar/{token}',
     [DocumentoCompraController::class, 'downloadPagoProgramadoEmpresa']
-)->name('finanzas_compras.proximo_pago.descargar');
+)->name('finanzas_compras.proximo_pago.descargar')->middleware('auth');
 
 //Actualizar estado de un documento de compra
 Route::patch('/finanzas/compras/{id}/estado', [DocumentoCompraController::class, 'updateEstado'])
-    ->name('finanzas_compras.updateEstado');
+    ->name('finanzas_compras.updateEstado')->middleware('auth');
 
 //Registrar Abono manual
 Route::post('/finanzas/compras/{documento}/abono', [DocumentoCompraController::class, 'storeAbono'])
-    ->name('finanzas_compras.abonos.store');
+    ->name('finanzas_compras.abonos.store')->middleware('auth');
 
 //Registrar Cruce manual
 Route::post('/finanzas/compras/{documento}/cruce', [DocumentoCompraController::class, 'storeCruce'])
-    ->name('finanzas_compras.cruces.store');
+    ->name('finanzas_compras.cruces.store')->middleware('auth');
 
 Route::get('/finanzas/compras/{documento}', [DocumentoCompraController::class, 'show'])
-    ->name('finanzas_compras.show');
+    ->name('finanzas_compras.show')->middleware('auth');
 
 Route::get('/finanzas/compras/sugerencias', [DocumentoCompraController::class, 'sugerencias'])
-    ->name('finanzas_compras.sugerencias');
+    ->name('finanzas_compras.sugerencias')->middleware('auth');
 
 Route::get('/compras/limpiar-sugerencias', function () {
     session()->forget('sugerencias_notas_compras');
     return response()->json(['ok' => true]);
-})->name('compras.limpiar_sugerencias');
+})->name('compras.limpiar_sugerencias')->middleware('auth');
 
 Route::post('/compras/asignar-referencia', [DocumentoCompraController::class, 'asignarReferencia'])
-    ->name('compras.asignar_referencia');
+    ->name('compras.asignar_referencia')->middleware('auth');
 Route::post('/compras/asignar-referencias', [DocumentoCompraController::class, 'asignarReferencias'])
-    ->name('compras.asignar_referencias');
+    ->name('compras.asignar_referencias')->middleware('auth');
 
 
 Route::delete('/finanzas-compras/{id}/quitar-referencia', [DocumentoCompraController::class, 'quitarReferencia'])
-    ->name('finanzas_compras.quitar_referencia');
+    ->name('finanzas_compras.quitar_referencia')->middleware('auth');
 
     Route::post('/finanzas/compras/{id}/asignar-referencia', [DocumentoCompraController::class, 'asignarNuevaReferencia'])
-    ->name('finanzas_compras.asignar_referencia');
+    ->name('finanzas_compras.asignar_referencia')->middleware('auth');
 
 Route::post('/finanzas/compras/proximo-pago', [DocumentoCompraController::class, 'storePagoProgramadoMasivo'])
-    ->name('finanzas_compras.proximo_pago.store');
+    ->name('finanzas_compras.proximo_pago.store')->middleware('auth');
 
 Route::delete(
     '/finanzas-compras/pago-programado/eliminar-masivo',
     [DocumentoCompraController::class, 'destroyPagoProgramadoMasivo']
-)->name('finanzas_compras.pago-programado.destroy.masivo');
+)->name('finanzas_compras.pago-programado.destroy.masivo')->middleware('auth');
 
 
 
@@ -558,18 +609,18 @@ Route::delete(
 Route::get(
     '/honorarios/resumen-anual',
     [HonorarioResumenAnualController::class, 'index']
-)->name('honorarios.resumen.index');
+)->name('honorarios.resumen.index')->middleware('auth');
 
 Route::post(
     '/honorarios/resumen-anual/store',
     [HonorarioResumenAnualController::class, 'store']
-)->name('honorarios.resumen.store');
+)->name('honorarios.resumen.store')->middleware('auth');
 
 
 Route::post(
     '/honorarios/resumen-anual/import',
     [HonorarioResumenAnualController::class, 'import']
-)->name('honorarios.resumen.import');
+)->name('honorarios.resumen.import')->middleware('auth');
 
 
 
@@ -580,18 +631,18 @@ Route::post(
 Route::post(
     '/honorarios/mensual-rec/proveedores/store',
     [\App\Http\Controllers\HonorarioMensualRecController::class, 'storeProveedores']
-)->name('honorarios.mensual.proveedores.store');
+)->name('honorarios.mensual.proveedores.store')->middleware('auth');
 
 
 Route::post(
     '/honorarios-mensual/reprocesar-pendientes',
     [HonorarioMensualRecController::class, 'reprocesarPendientesHonorarios']
-)->name('honorarios.mensual.reprocesar-pendientes');
+)->name('honorarios.mensual.reprocesar-pendientes')->middleware('auth');
 
 Route::post(
     '/honorarios-mensual/cancelar-pendientes',
     [HonorarioMensualRecController::class, 'cancelarPendientesHonorarios']
-)->name('honorarios.mensual.cancelar-pendientes');
+)->name('honorarios.mensual.cancelar-pendientes')->middleware('auth');
 
 
 // Exportar
@@ -601,73 +652,73 @@ Route::post(
 Route::get(
     'honorarios/mensual-rec/export',
     [HonorarioMensualRecController::class, 'export']
-)->name('honorarios.mensual.export');
+)->name('honorarios.mensual.export')->middleware('auth');
 
 Route::get(
     '/honorarios/mensual-rec',
     [HonorarioMensualRecController::class, 'index']
-)->name('honorarios.mensual.index');
+)->name('honorarios.mensual.index')->middleware('auth');
 
 
 Route::post(
     '/honorarios/mensual-rec/import',
     [HonorarioMensualRecController::class, 'import']
-)->name('honorarios.mensual.import');
+)->name('honorarios.mensual.import')->middleware('auth');
 
 Route::post(
     '/honorarios/mensual-rec/store',
     [HonorarioMensualRecController::class, 'store']
-)->name('honorarios.mensual.store');
+)->name('honorarios.mensual.store')->middleware('auth');
 
 Route::get(
     '/honorarios/panel',
     [HonorarioMensualRecController::class, 'panel']
-)->name('honorarios.mensual.panel');
+)->name('honorarios.mensual.panel')->middleware('auth');
 
 
 Route::get(
         '/boleta-mensual/panel',
         [HonorarioMensualRecController::class, 'panel']
-    )->name('boleta.mensual.panel');
+    )->name('boleta.mensual.panel')->middleware('auth');
 
 
 // Detalle Honorarios Mensuales Recibidos (por empresa y periodo)
 Route::get(
     '/honorarios/mensual-rec/detalle/{empresa}/{anio}/{mes}',
     [HonorarioMensualRecController::class, 'detalle']
-)->name('honorarios.mensual.detalle');
+)->name('honorarios.mensual.detalle')->middleware('auth');
 
 Route::post(
     '/honorarios/mensual-rec/{honorario}/abono',
     [HonorarioMensualRecController::class, 'storeAbono']
-)->name('honorarios.mensual.abono.store');
+)->name('honorarios.mensual.abono.store')->middleware('auth');
 
 Route::post(
     '/honorarios/mensual-rec/{honorario}/cruce',
     [HonorarioMensualRecController::class, 'storeCruce']
-)->name('honorarios.mensual.cruce.store');
+)->name('honorarios.mensual.cruce.store')->middleware('auth');
 
 Route::post(
     '/honorarios/mensual-rec/{honorario}/pago',
     [HonorarioMensualRecController::class, 'storePago']
-)->name('honorarios.mensual.pago.store');
+)->name('honorarios.mensual.pago.store')->middleware('auth');
 
 
 Route::post(
     'honorarios/mensual/pago-masivo',
     [HonorarioMensualRecController::class, 'storePagoMasivo']
-)->name('honorarios.mensual.pago.masivo');
+)->name('honorarios.mensual.pago.masivo')->middleware('auth');
 
 
 Route::post(
     'honorarios/mensual/pago-masivo/exportar',
     [HonorarioMensualRecController::class, 'storePagoMasivoExport']
-)->name('honorarios.mensual.pago.masivo.exportar');
+)->name('honorarios.mensual.pago.masivo.exportar')->middleware('auth');
 
 Route::get(
     'honorarios/mensual/pago-masivo/descargar/{token}',
     [HonorarioMensualRecController::class, 'downloadPagoMasivoExcel']
-)->name('honorarios.mensual.pago.masivo.descargar');
+)->name('honorarios.mensual.pago.masivo.descargar')->middleware('auth');
 
 
 
@@ -676,76 +727,76 @@ Route::get(
 Route::get(
     'honorarios/mensual/buscar',
     [HonorarioMensualRecController::class, 'buscarHonorarios']
-)->name('honorarios.mensual.buscar');
+)->name('honorarios.mensual.buscar')->middleware('auth');
 
 
 Route::post(
     '/honorarios/mensual-rec/{honorario}/pronto-pago',
     [HonorarioMensualRecController::class, 'storeProntoPago']
-)->name('honorarios.mensual.prontopago.store');
+)->name('honorarios.mensual.prontopago.store')->middleware('auth');
 
 Route::post(
     '/honorarios/mensual-rec/estado',
     [HonorarioMensualRecController::class, 'storeEstado']
-)->name('honorarios.mensual.estado.store');
+)->name('honorarios.mensual.estado.store')->middleware('auth');
 
 Route::get(
     'honorarios/mensual-rec/{honorario}',
     [\App\Http\Controllers\HonorarioMensualRecController::class, 'show']
-)->name('honorarios.mensual.show');
+)->name('honorarios.mensual.show')->middleware('auth');
 
 // Revetir cambios y eliminar estados manuales
 Route::delete(
     '/honorarios/mensual-rec/abonos/{abonoId}/revertir',
     [HonorarioMensualRecController::class, 'revertirAbono']
-)->name('honorarios.mensual.abono.revertir');
+)->name('honorarios.mensual.abono.revertir')->middleware('auth');
 
 Route::delete(
     '/honorarios/mensual-rec/cruces/{cruceId}/revertir',
     [HonorarioMensualRecController::class, 'revertirCruce']
-)->name('honorarios.mensual.cruce.revertir');
+)->name('honorarios.mensual.cruce.revertir')->middleware('auth');
 
 Route::delete(
     '/honorarios/mensual-rec/pagos/{pagoId}/revertir',
     [HonorarioMensualRecController::class, 'revertirPago']
-)->name('honorarios.mensual.pago.revertir');
+)->name('honorarios.mensual.pago.revertir')->middleware('auth');
 
 Route::delete(
     '/honorarios/mensual-rec/pronto-pagos/{prontoPagoId}/revertir',
     [HonorarioMensualRecController::class, 'revertirProntoPago']
-)->name('honorarios.mensual.prontopago.revertir');
+)->name('honorarios.mensual.prontopago.revertir')->middleware('auth');
 
 // Actualizar servicio cuado es otro
 Route::patch(
     '/honorarios-mensuales/{honorario}/servicio',
     [HonorarioMensualRecController::class, 'updateServicio']
-)->name('honorarios.mensual.servicio.update');
+)->name('honorarios.mensual.servicio.update')->middleware('auth');
 
 
 Route::get('/honorarios-mensuales/calendario', 
     [HonorarioMensualRecController::class, 'calendario']
-)->name('honorarios.mensual.calendario');
+)->name('honorarios.mensual.calendario')->middleware('auth');
 
 Route::post(
     'honorarios/mensual/proximo-pago',
     [HonorarioMensualRecController::class, 'storePagoProgramadoMasivo']
-)->name('honorarios.mensual.proximo-pago.store');
+)->name('honorarios.mensual.proximo-pago.store')->middleware('auth');
 
 Route::delete(
     '/honorarios-mensual/pago-programado/eliminar-masivo',
     [HonorarioMensualRecController::class, 'destroyPagoProgramadoMasivo']
-)->name('honorarios.mensual.pago-programado.destroy.masivo');
+)->name('honorarios.mensual.pago-programado.destroy.masivo')->middleware('auth');
 
 
 Route::post(
     'honorarios/mensual/proximo-pago/exportar',
     [HonorarioMensualRecController::class, 'storePagoProgramadoMasivoExport']
-)->name('honorarios.mensual.proximo-pago.exportar');
+)->name('honorarios.mensual.proximo-pago.exportar')->middleware('auth');
 
 Route::get(
     'honorarios/mensual/proximo-pago/descargar/{token}',
     [HonorarioMensualRecController::class, 'downloadPagoProgramadoExcel']
-)->name('honorarios.mensual.proximo-pago.descargar');
+)->name('honorarios.mensual.proximo-pago.descargar')->middleware('auth');
 
 
 // Historial de cambios en honorarios mensuales recibidos
@@ -754,13 +805,13 @@ use App\Http\Controllers\MovimientoHonorarioMensualRecController;
 Route::get(
     '/movimientos-honorarios-mensuales-rec/export',
     [MovimientoHonorarioMensualRecController::class, 'export']
-)->name('movimientos.honorarios.export');
+)->name('movimientos.honorarios.export')->middleware('auth');
 
 
 Route::get(
     'movimientos-honorarios-mensuales-rec/historial',
     [MovimientoHonorarioMensualRecController::class, 'historial']
-)->name('movimientos.honorarios.historial');
+)->name('movimientos.honorarios.historial')->middleware('auth');
 
 
 
@@ -860,11 +911,11 @@ Route::get('/tracking/dashboard', [TrackingDashboardController::class, 'index'])
 
 
 // Áreas
-Route::post('/areas/{area}/asignar', [AreaController::class, 'asignar'])->name('areas.asignar');
-Route::post('/areas/{area}/quitar-trabajador/{trabajador}', [AreaController::class, 'quitar'])->name('areas.quitar');
+Route::post('/areas/{area}/asignar', [AreaController::class, 'asignar'])->name('areas.asignar')->middleware('auth');
+Route::post('/areas/{area}/quitar-trabajador/{trabajador}', [AreaController::class, 'quitar'])->name('areas.quitar')->middleware('auth');
 
-Route::post('/areas/{area}/asignar-secundaria', [AreaController::class, 'asignarSecundaria'])->name('areas.asignarSecundaria');
-Route::post('/areas/{area}/quitar-secundaria/{trabajador}', [AreaController::class, 'quitarSecundaria'])->name('areas.quitarSecundaria');
+Route::post('/areas/{area}/asignar-secundaria', [AreaController::class, 'asignarSecundaria'])->name('areas.asignarSecundaria')->middleware('auth');
+Route::post('/areas/{area}/quitar-secundaria/{trabajador}', [AreaController::class, 'quitarSecundaria'])->name('areas.quitarSecundaria')->middleware('auth');
 
 
 Route::resource('areas', 'App\Http\Controllers\AreaController')->middleware('auth');
@@ -874,30 +925,30 @@ Route::resource('areas', 'App\Http\Controllers\AreaController')->middleware('aut
 // Ruta para las compras
 // Rutas estáticas primero
 Route::get('/compras/exportar-proveedores-faltantes', [CompraController::class, 'exportarProveedoresFaltantes'])
-    ->name('compras.exportarProveedoresFaltantes');
-Route::post('/compras/importar', [CompraController::class, 'importar'])->name('compras.importar');
-Route::post('/compras/confirmar-importacion', [CompraController::class, 'confirmarImportacion'])->name('compras.confirmarImportacion');
-Route::get('/compras/descargar-plantilla', [CompraController::class, 'descargarPlantilla'])->name('compras.plantilla');
-Route::get('/compras/exportar', [CompraController::class, 'export'])->name('compras.exportar');
+    ->name('compras.exportarProveedoresFaltantes')->middleware('auth');
+Route::post('/compras/importar', [CompraController::class, 'importar'])->name('compras.importar')->middleware('auth');
+Route::post('/compras/confirmar-importacion', [CompraController::class, 'confirmarImportacion'])->name('compras.confirmarImportacion')->middleware('auth');
+Route::get('/compras/descargar-plantilla', [CompraController::class, 'descargarPlantilla'])->name('compras.plantilla')->middleware('auth');
+Route::get('/compras/exportar', [CompraController::class, 'export'])->name('compras.exportar')->middleware('auth');
 
 // Rutas con parámetros después
-Route::get('/compras/{id}/archivo-oc', [CompraController::class, 'descargarArchivoOC'])->name('compras.descargarArchivoOC');
-Route::get('/compras/{id}/archivo-documento', [CompraController::class, 'descargarArchivoDocumento'])->name('compras.descargarArchivoDocumento');
-Route::patch('/compras/{id}/status', [CompraController::class, 'updateStatus'])->name('compras.updateStatus');
+Route::get('/compras/{id}/archivo-oc', [CompraController::class, 'descargarArchivoOC'])->name('compras.descargarArchivoOC')->middleware('auth');
+Route::get('/compras/{id}/archivo-documento', [CompraController::class, 'descargarArchivoDocumento'])->name('compras.descargarArchivoDocumento')->middleware('auth');
+Route::patch('/compras/{id}/status', [CompraController::class, 'updateStatus'])->name('compras.updateStatus')->middleware('auth');
 
 // Recurso al final
 Route::resource('compras', CompraController::class);
 
 
 // MANIFIESTO
-Route::get('/manifiesto', [ManifiestoController::class, 'index'])->name('manifiesto.index');
-Route::post('/manifiesto/upload', [ManifiestoController::class, 'upload'])->name('manifiesto.upload');
-Route::post('/manifiesto/store', [ManifiestoController::class, 'store'])->name('manifiesto.store');
+Route::get('/manifiesto', [ManifiestoController::class, 'index'])->name('manifiesto.index')->middleware('auth');
+Route::post('/manifiesto/upload', [ManifiestoController::class, 'upload'])->name('manifiesto.upload')->middleware('auth');
+Route::post('/manifiesto/store', [ManifiestoController::class, 'store'])->name('manifiesto.store')->middleware('auth');
 // Nueva ruta para procesar tabla pegada desde el correo
-Route::post('/manifiesto/pegar', [ManifiestoController::class, 'paste'])->name('manifiesto.paste');
-Route::get('/manifiestos/export', [ManifiestoController::class, 'export'])->name('manifiestos.export');
-Route::get('/manifiestos/limpiar', [ManifiestoController::class, 'limpiar'])->name('manifiestos.limpiar');
-Route::post('/manifiesto/confirmar-area', [ManifiestoController::class, 'confirmarArea'])->name('manifiesto.confirmar-area');
+Route::post('/manifiesto/pegar', [ManifiestoController::class, 'paste'])->name('manifiesto.paste')->middleware('auth');
+Route::get('/manifiestos/export', [ManifiestoController::class, 'export'])->name('manifiestos.export')->middleware('auth');
+Route::get('/manifiestos/limpiar', [ManifiestoController::class, 'limpiar'])->name('manifiestos.limpiar')->middleware('auth');
+Route::post('/manifiesto/confirmar-area', [ManifiestoController::class, 'confirmarArea'])->name('manifiesto.confirmar-area')->middleware('auth');
 
 
 
@@ -921,8 +972,13 @@ Route::post('/reclamos/{id}/comentar', [ReclamoController::class, 'comentar'])->
 Route::resource('reclamos', 'App\Http\Controllers\ReclamoController')->middleware('auth');
 
 // Ruta PDF MANUAL
-Route::get('/rrhh/generar-pdf', [SolicitudManualController::class, 'formulario'])->name('rrhh.formulario');
-Route::post('/rrhh/generar-pdf', [SolicitudManualController::class, 'generarPDF'])->name('rrhh.generar-pdf');
+Route::get('/rrhh/generar-pdf', [SolicitudManualController::class, 'formulario'])
+    ->name('rrhh.formulario')
+    ->middleware('auth');
+
+Route::post('/rrhh/generar-pdf', [SolicitudManualController::class, 'generarPDF'])
+    ->name('rrhh.generar-pdf')
+    ->middleware('auth');
 
 // Tutorial Videos
 Route::get('/tutorial', function () {
@@ -959,10 +1015,15 @@ Route::put('/facturas/{factura}/update-status', [FacturaController::class, 'upda
 
 // Ruta resource para gestionar todas las operaciones del HistorialVacacionController
 Route::post('/historial-vacacion/{id}/subir', [HistorialVacacionController::class, 'subirArchivo'])
-    ->name('historial-vacacion.subir');
+    ->name('historial-vacacion.subir')
+    ->middleware('auth');
+
 Route::get('/historial-vacacion/{id}/descargar', [HistorialVacacionController::class, 'descargarArchivo'])
-    ->name('historial-vacacion.descargar');
-Route::resource('historial-vacacion', HistorialVacacionController::class);
+    ->name('historial-vacacion.descargar')
+    ->middleware('auth');
+
+Route::resource('historial-vacacion', HistorialVacacionController::class)
+    ->middleware('auth');
 
     
 // Pagos
@@ -1063,47 +1124,48 @@ Route::get('/admin', function () {
 
 Route::get('/tracking-data/{tracking}', [PublicTrackingController::class, 'data'])
     ->where('tracking', '[A-Za-z0-9\-]+')
-    ->name('tracking.public.data');
+    ->name('tracking.public.data')->middleware('auth');
 
 Route::get('/tracking/{tracking}', [PublicTrackingController::class, 'show'])
     ->where('tracking', '[A-Za-z0-9\-]+')
-    ->name('tracking.public.show');
+    ->name('tracking.public.show')->middleware('auth');
 
 
 
-Route::prefix('suscripciones')->name('suscripciones.')->group(function () {
-    Route::get('/liquidacion-detalles', [SuscripcionLiquidacionDetalleController::class, 'index'])
-        ->name('liquidacion-detalles.index');
+Route::middleware('auth')
+    ->prefix('suscripciones')
+    ->name('suscripciones.')
+    ->group(function () {
+        Route::get('/liquidacion-detalles', [SuscripcionLiquidacionDetalleController::class, 'index'])
+            ->name('liquidacion-detalles.index');
 
-    Route::get('/liquidacion-detalles/create', [SuscripcionLiquidacionDetalleController::class, 'create'])
-        ->name('liquidacion-detalles.create');
+        Route::get('/liquidacion-detalles/create', [SuscripcionLiquidacionDetalleController::class, 'create'])
+            ->name('liquidacion-detalles.create');
 
-    Route::post('/liquidacion-detalles', [SuscripcionLiquidacionDetalleController::class, 'store'])
-        ->name('liquidacion-detalles.store');
+        Route::post('/liquidacion-detalles', [SuscripcionLiquidacionDetalleController::class, 'store'])
+            ->name('liquidacion-detalles.store');
 
-    Route::post('/liquidacion-detalles/generar-mes', [SuscripcionLiquidacionDetalleController::class, 'generarMes'])
-        ->name('liquidacion-detalles.generar-mes');
+        Route::post('/liquidacion-detalles/generar-mes', [SuscripcionLiquidacionDetalleController::class, 'generarMes'])
+            ->name('liquidacion-detalles.generar-mes');
 
-    Route::get('/liquidacion-detalles/{detalle}/edit', [SuscripcionLiquidacionDetalleController::class, 'edit'])
-        ->name('liquidacion-detalles.edit');
+        Route::get('/liquidacion-detalles/{detalle}/edit', [SuscripcionLiquidacionDetalleController::class, 'edit'])
+            ->name('liquidacion-detalles.edit');
 
-    Route::put('/liquidacion-detalles/{detalle}', [SuscripcionLiquidacionDetalleController::class, 'update'])
-        ->name('liquidacion-detalles.update');
+        Route::put('/liquidacion-detalles/{detalle}', [SuscripcionLiquidacionDetalleController::class, 'update'])
+            ->name('liquidacion-detalles.update');
 
-    Route::get('/liquidacion-detalles/{detalle}', [SuscripcionLiquidacionDetalleController::class, 'show'])
-        ->name('liquidacion-detalles.show');
+        Route::get('/liquidacion-detalles/{detalle}', [SuscripcionLiquidacionDetalleController::class, 'show'])
+            ->name('liquidacion-detalles.show');
 
-    Route::get('/liquidacion-detalles/{detalle}/pdf', [SuscripcionLiquidacionDetalleController::class, 'pdf'])
-        ->name('liquidacion-detalles.pdf');
+        Route::get('/liquidacion-detalles/{detalle}/pdf', [SuscripcionLiquidacionDetalleController::class, 'pdf'])
+            ->name('liquidacion-detalles.pdf');
 
-    Route::post('/liquidacion-detalles/pdf-masivo', [SuscripcionLiquidacionDetalleController::class, 'pdfMasivo'])
-        ->name('liquidacion-detalles.pdf-masivo');
+        Route::post('/liquidacion-detalles/pdf-masivo', [SuscripcionLiquidacionDetalleController::class, 'pdfMasivo'])
+            ->name('liquidacion-detalles.pdf-masivo');
 
-    Route::get('/liquidacion-detalles/opv-puntos/{asignacion}', [SuscripcionLiquidacionDetalleController::class, 'opvPuntos'])
-        ->name('liquidacion-detalles.opv-puntos');
-
-
-});
+        Route::get('/liquidacion-detalles/opv-puntos/{asignacion}', [SuscripcionLiquidacionDetalleController::class, 'opvPuntos'])
+            ->name('liquidacion-detalles.opv-puntos');
+ });
 
 
 // Route::get('/liquidacion-detalles', [SuscripcionLiquidacionDetalleController::class, 'index'])
