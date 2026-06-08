@@ -519,20 +519,27 @@
                         </small>
                     @endif
 
+
+
+
                     @php
                         $crucesCxP = $doc->cruces->filter(fn($cruce) => !is_null($cruce->documento_compra_id));
                     @endphp
 
                     @if($crucesCxP->isNotEmpty())
-                        <div class="mt-1">
-                            @foreach($crucesCxP as $cruce)
-                                <small class="badge bg-primary text-white d-inline-block mb-1">
-                                    Cruzado con CxP Folio {{ $cruce->documentoCompra?->folio ?? $cruce->documento_compra_id }}
-                                    — ${{ number_format($cruce->monto, 0, ',', '.') }}
-                                </small>
-                            @endforeach
-                        </div>
+                        @foreach($crucesCxP as $cruce)
+                            <small class="badge bg-primary text-white d-inline-block ms-1 align-middle">
+                                Cruzado con CxP Folio {{ $cruce->documentoCompra?->folio ?? $cruce->documento_compra_id }}
+                                — ${{ number_format($cruce->monto, 0, ',', '.') }}
+                            </small>
+                        @endforeach
                     @endif
+
+
+
+
+
+
                     </td>
 
                     {{-- Fecha Docto --}}
