@@ -585,19 +585,46 @@ class DocumentoCompraController extends Controller
     {
         $perPage = 10;
         $page = $request->get('page', 1);
-        $offset = ($page - 1) * $perPage;
 
-        // === Query base ===
-        $query = DocumentoCompra::with([
-            'empresa:id,Nombre',
-            'tipoDocumento:id,nombre',
-            'referencia:id,tipo_documento_id,folio,fecha_docto',
-            'referencia.tipoDocumento:id,nombre',
-            'referenciados:id,referencia_id,tipo_documento_id,folio,monto_total',
-            'referenciados.tipoDocumento:id,nombre',
-        ]);
+        // === Query base optimizada ===
+        $query = DocumentoCompra::query()
+            ->select([
+                'id',
+                'empresa_id',
+                'tipo_documento_id',
+                'nro',
+                'tipo_doc',
+                'tipo_compra',
+                'rut_proveedor',
+                'razon_social',
+                'folio',
+                'fecha_docto',
+                'fecha_vencimiento',
+                'status_original',
+                'estado',
+                'fecha_estado_manual',
+                'monto_exento',
+                'monto_neto',
+                'monto_iva_recuperable',
+                'monto_iva_no_recuperable',
+                'monto_total',
+                'saldo_pendiente',
+                'referencia_id',
+                'fecha_recepcion',
+                'fecha_acuse',
+                'created_at',
+                'updated_at',
+            ])
+            ->with([
+                'empresa:id,Nombre',
+                'tipoDocumento:id,nombre',
+                'referencia:id,tipo_documento_id,folio,fecha_docto',
+                'referencia.tipoDocumento:id,nombre',
+                'referenciados:id,referencia_id,tipo_documento_id,folio,monto_total',
+                'referenciados.tipoDocumento:id,nombre',
+            ]);
 
-        // ===Filtros principales ===
+        // === Filtros principales ===
         if ($request->filled('rut_proveedor')) {
             $query->where('rut_proveedor', 'like', "%{$request->rut_proveedor}%");
         }
@@ -613,13 +640,16 @@ class DocumentoCompraController extends Controller
         if ($request->filled('estado')) {
             $query->where(function ($q) use ($request) {
                 $q->where('status_original', $request->estado)
-                ->orWhere('estado', $request->estado);
+                    ->orWhere('estado', $request->estado);
             });
         }
 
-        // ===Filtros de fechas ===
+        // === Filtros de fechas ===
         if ($request->filled('fecha_docto_inicio') && $request->filled('fecha_docto_fin')) {
-            $query->whereBetween('fecha_docto', [$request->fecha_docto_inicio, $request->fecha_docto_fin]);
+            $query->whereBetween('fecha_docto', [
+                $request->fecha_docto_inicio,
+                $request->fecha_docto_fin,
+            ]);
         } elseif ($request->filled('fecha_docto_inicio')) {
             $query->whereDate('fecha_docto', '>=', $request->fecha_docto_inicio);
         } elseif ($request->filled('fecha_docto_fin')) {
@@ -627,14 +657,17 @@ class DocumentoCompraController extends Controller
         }
 
         if ($request->filled('fecha_venc_inicio') && $request->filled('fecha_venc_fin')) {
-            $query->whereBetween('fecha_vencimiento', [$request->fecha_venc_inicio, $request->fecha_venc_fin]);
+            $query->whereBetween('fecha_vencimiento', [
+                $request->fecha_venc_inicio,
+                $request->fecha_venc_fin,
+            ]);
         } elseif ($request->filled('fecha_venc_inicio')) {
             $query->whereDate('fecha_vencimiento', '>=', $request->fecha_venc_inicio);
         } elseif ($request->filled('fecha_venc_fin')) {
             $query->whereDate('fecha_vencimiento', '<=', $request->fecha_venc_fin);
         }
 
-        // ===Filtros personalizados (filtrarColumnas) ===
+        // === Filtros personalizados ===
         if ($request->filled('columna') && $request->filled('valor')) {
             switch ($request->columna) {
                 case 'razon_social':
@@ -662,7 +695,7 @@ class DocumentoCompraController extends Controller
             }
         }
 
-        // ===Filtro de estado de pago (directo en SQL) ===
+        // === Filtro de estado de pago directo en SQL ===
         if ($request->filled('estado_pago')) {
             if ($request->estado_pago === 'Pagado') {
                 $query->where('saldo_pendiente', '<=', 0);
@@ -671,48 +704,46 @@ class DocumentoCompraController extends Controller
             }
         }
 
-        // ===Excluir notas de crédito / anulados ===
+        // === Excluir notas de crédito / anulados ===
         $query->whereNotIn('tipo_documento_id', [61, 56]);
 
-        // ===Orden ===
+        // === Orden ===
         if ($request->filled('sort_by')) {
             $sortBy = $request->get('sort_by', 'razon_social');
             $sortOrder = $request->get('sort_order', 'asc');
+
             $query->orderBy($sortBy, $sortOrder);
         } else {
             $query->orderBy('fecha_vencimiento', 'desc');
         }
 
-        // ===Ejecutar query ===
-        $documentos = $query->get();
+        // === Paginar antes de cargar ===
+        $documentosPaginados = $query->paginate($perPage, ['*'], 'page', $page);
 
-        // ===Actualizar estado automático ===
+        $documentos = $documentosPaginados->getCollection();
+
+        // === Preparar datos para exportar sin disparar accessor saldo_pendiente ===
         $hoy = \Carbon\Carbon::today();
-        foreach ($documentos as $doc) {
-            if ($doc->fecha_vencimiento && $doc->saldo_pendiente > 0) {
-                $fechaVenc = \Carbon\Carbon::parse($doc->fecha_vencimiento);
-                $nuevoEstado = $fechaVenc->lt($hoy) ? 'Vencido' : 'Al día';
 
+        $documentos->each(function ($doc) use ($hoy) {
+            $saldoPendienteBD = (int) ($doc->getRawOriginal('saldo_pendiente') ?? 0);
 
+            // Campo auxiliar solo para el Excel
+            $doc->saldo_pendiente_export = $saldoPendienteBD;
 
-                if ($doc->status_original !== $nuevoEstado) {
-                    DocumentoCompra::whereKey($doc->id)->update([
-                        'status_original' => $nuevoEstado,
-                    ]);
+            // Calcular estado solo para mostrar en el Excel, sin actualizar BD
+            if ($doc->fecha_vencimiento && $saldoPendienteBD > 0) {
+                $fechaVencimiento = \Carbon\Carbon::parse($doc->fecha_vencimiento);
 
-                    $doc->status_original = $nuevoEstado;
-                }
-
-
-
+                $doc->status_original = $fechaVencimiento->lt($hoy)
+                    ? 'Vencido'
+                    : 'Al día';
             }
-        }
+        });
 
-        // === Paginación manual ===
-        $documentos = $documentos->slice($offset, $perPage)->values();
-
-        // ===Exportación ===
+        // === Exportación ===
         $fecha = now()->format('Y-m-d_H-i-s');
+
         return Excel::download(
             new DocumentoCompraExport($documentos),
             "Cuentas_Por_Pagar_Pagina_{$page}_{$fecha}.xlsx"
@@ -859,7 +890,7 @@ class DocumentoCompraController extends Controller
             }
         }
 
-        // === Filtro de estado de pago ===
+        // === Filtro de estado de pago directo en SQL ===
         if ($request->filled('estado_pago')) {
             if ($request->estado_pago === 'Pagado') {
                 $query->where('saldo_pendiente', '<=', 0);
@@ -898,9 +929,6 @@ class DocumentoCompraController extends Controller
             }
         }
 
-        // === Excluir notas de crédito / anulados ===
-        // $query->whereNotIn('tipo_documento_id', [61, 56]);
-
         // === Orden ===
         if ($request->filled('sort_by')) {
             $sortBy = $request->get('sort_by', 'razon_social');
@@ -914,11 +942,17 @@ class DocumentoCompraController extends Controller
         // === Ejecutar query ===
         $documentos = $query->get();
 
-        // === Calcular estado automático solo para el Excel, sin actualizar la BD ===
+        // === Preparar datos para exportar SIN disparar el accessor saldo_pendiente ===
         $hoy = \Carbon\Carbon::today();
 
         $documentos->each(function ($doc) use ($hoy) {
-            if ($doc->fecha_vencimiento && $doc->saldo_pendiente > 0) {
+            $saldoPendienteBD = (int) ($doc->getRawOriginal('saldo_pendiente') ?? 0);
+
+            // Campo auxiliar solo para el Excel
+            $doc->saldo_pendiente_export = $saldoPendienteBD;
+
+            // Calcular estado solo para mostrar en el Excel, sin actualizar BD
+            if ($doc->fecha_vencimiento && $saldoPendienteBD > 0) {
                 $fechaVencimiento = \Carbon\Carbon::parse($doc->fecha_vencimiento);
 
                 $doc->status_original = $fechaVencimiento->lt($hoy)

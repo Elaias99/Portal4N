@@ -39,7 +39,11 @@ class DocumentoCompraExport implements FromCollection, WithHeadings, WithMapping
             // Nota de crédito → saldo 0
             $saldoPendiente = 0;
         } else {
-            $saldoPendiente = $doc->saldo_pendiente;
+            $saldoPendiente = (int) (
+                $doc->saldo_pendiente_export
+                ?? $doc->getRawOriginal('saldo_pendiente')
+                ?? 0
+            );
         }
 
         // === Documento Referencia (si este documento referencia otro) ===
