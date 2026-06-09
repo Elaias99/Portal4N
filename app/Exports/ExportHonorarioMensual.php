@@ -10,14 +10,17 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class ExportHonorarioMensual implements
     FromCollection,
     WithHeadings,
     WithMapping,
     ShouldAutoSize,
-    WithEvents
+    WithEvents,
+    WithColumnFormatting
 {
     protected $request;
 
@@ -139,8 +142,8 @@ class ExportHonorarioMensual implements
             $h->anio,
             $h->mes,
             $h->folio,
-            $this->format($h->fecha_emision),
-            $this->format($h->fecha_vencimiento),
+            $this->excelDate($h->fecha_emision),
+            $this->excelDate($h->fecha_vencimiento),
             $h->estado,
             $h->estado_financiero_inicial,
             $h->estado_financiero_final,
@@ -152,10 +155,22 @@ class ExportHonorarioMensual implements
             $h->monto_retenido,
             $h->monto_pagado,
             $h->saldo_pendiente,
-            $this->format($h->fecha_estado_financiero),
-            $this->format($h->fecha_anulacion),
-            $this->format($h->created_at),
-            $this->format($h->updated_at),
+            $this->excelDate($h->fecha_estado_financiero),
+            $this->excelDate($h->fecha_anulacion),
+            $this->excelDate($h->created_at),
+            $this->excelDate($h->updated_at),
+        ];
+    }
+
+    public function columnFormats(): array
+    {
+        return [
+            'E' => 'dd-mm-yyyy', // Fecha Emisión
+            'F' => 'dd-mm-yyyy', // Fecha Vencimiento
+            'R' => 'dd-mm-yyyy', // Fecha Estado Financiero
+            'S' => 'dd-mm-yyyy', // Fecha Anulación
+            'T' => 'dd-mm-yyyy', // Creado
+            'U' => 'dd-mm-yyyy', // Actualizado
         ];
     }
 
@@ -163,7 +178,6 @@ class ExportHonorarioMensual implements
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
-
                 $sheet = $event->sheet->getDelegate();
 
                 // Encabezados en negrita
@@ -172,8 +186,16 @@ class ExportHonorarioMensual implements
         ];
     }
 
-    private function format($date)
+    private function excelDate($date)
     {
-        return $date ? Carbon::parse($date)->format('d-m-Y') : null;
+        if (!$date) {
+            return null;
+        }
+
+        try {
+            return ExcelDate::dateTimeToExcel(Carbon::parse($date));
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 }

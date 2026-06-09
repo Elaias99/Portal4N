@@ -9,8 +9,10 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
-class MovimientoExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize
+class MovimientoExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithColumnFormatting
 {
     protected $fechaInicio;
     protected $fechaFin;
@@ -73,9 +75,7 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
      */
     public function map($mov): array
     {
-        $fechaMovimiento = $mov->created_at
-            ? Carbon::parse($mov->created_at)->format('d-m-Y')
-            : '—';
+        $fechaMovimiento = $this->excelDate($mov->created_at);
 
         $tipoOriginal = $mov->tipo_movimiento ?? '—';
 
@@ -93,9 +93,7 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
 
         $fechaEstado = $mov->fecha_estado_historial ?? null;
 
-        $fechaEstadoFormateada = $fechaEstado
-            ? Carbon::parse($fechaEstado)->format('d-m-Y')
-            : '—';
+        $fechaEstadoExcel = $this->excelDate($fechaEstado);
 
         $montoFirmado = (int) ($mov->monto_movimiento_historial ?? 0);
 
@@ -110,10 +108,31 @@ class MovimientoExport implements FromCollection, WithHeadings, WithMapping, Sho
             $tipoDoc,
             $cliente,
             $empresa,
-            $fechaEstadoFormateada,
+            $fechaEstadoExcel,
             $montoFormateado,
             $usuario,
             $descripcion,
         ];
+    }
+
+    public function columnFormats(): array
+    {
+        return [
+            'A' => 'dd-mm-yyyy', // Fecha movimiento
+            'G' => 'dd-mm-yyyy', // Fecha ingreso estado
+        ];
+    }
+
+    private function excelDate($date)
+    {
+        if (!$date) {
+            return null;
+        }
+
+        try {
+            return ExcelDate::dateTimeToExcel(Carbon::parse($date));
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 }

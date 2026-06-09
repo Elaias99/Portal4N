@@ -7,10 +7,12 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 
-class MovimientoCompraExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize
+class MovimientoCompraExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithColumnFormatting
 {
     protected $fechaInicio;
     protected $fechaFin;
@@ -32,6 +34,7 @@ class MovimientoCompraExport implements FromCollection, WithHeadings, WithMappin
                         if ($this->fechaInicio) {
                             $a->whereDate('fecha_abono', '>=', $this->fechaInicio);
                         }
+
                         if ($this->fechaFin) {
                             $a->whereDate('fecha_abono', '<=', $this->fechaFin);
                         }
@@ -42,6 +45,7 @@ class MovimientoCompraExport implements FromCollection, WithHeadings, WithMappin
                         if ($this->fechaInicio) {
                             $p->whereDate('fecha_pago', '>=', $this->fechaInicio);
                         }
+
                         if ($this->fechaFin) {
                             $p->whereDate('fecha_pago', '<=', $this->fechaFin);
                         }
@@ -52,6 +56,7 @@ class MovimientoCompraExport implements FromCollection, WithHeadings, WithMappin
                         if ($this->fechaInicio) {
                             $c->whereDate('fecha_cruce', '>=', $this->fechaInicio);
                         }
+
                         if ($this->fechaFin) {
                             $c->whereDate('fecha_cruce', '<=', $this->fechaFin);
                         }
@@ -62,6 +67,7 @@ class MovimientoCompraExport implements FromCollection, WithHeadings, WithMappin
                         if ($this->fechaInicio) {
                             $pp->whereDate('fecha_pronto_pago', '>=', $this->fechaInicio);
                         }
+
                         if ($this->fechaFin) {
                             $pp->whereDate('fecha_pronto_pago', '<=', $this->fechaFin);
                         }
@@ -90,6 +96,7 @@ class MovimientoCompraExport implements FromCollection, WithHeadings, WithMappin
     public function map($mov): array
     {
         $tipo = strtolower($mov->tipo_movimiento ?? '');
+
         $empresa = $mov->compra?->empresa?->Nombre ?? '—';
         $proveedor = $mov->compra?->razon_social ?? '—';
         $folio = $mov->compra?->folio ?? '—';
@@ -97,41 +104,45 @@ class MovimientoCompraExport implements FromCollection, WithHeadings, WithMappin
         $usuario = $mov->user?->name ?? '—';
         $descripcion = $mov->descripcion ?? '—';
 
+        $datosNuevos = $mov->datos_nuevos ?? [];
+        $datosAnteriores = $mov->datos_anteriores ?? [];
+
         // ==============================
         // FECHA REAL DEL EVENTO
         // ==============================
         $fechaEvento = null;
 
         if (Str::contains($tipo, 'abono')) {
-            $fechaEvento = $mov->datos_nuevos['fecha_abono']
-                ?? $mov->datos_anteriores['fecha_abono']
+            $fechaEvento = $datosNuevos['fecha_abono']
+                ?? $datosAnteriores['fecha_abono']
                 ?? null;
         } elseif (Str::contains($tipo, 'cruce')) {
-            $fechaEvento = $mov->datos_nuevos['fecha_cruce']
-                ?? $mov->datos_anteriores['fecha_cruce']
+            $fechaEvento = $datosNuevos['fecha_cruce']
+                ?? $datosAnteriores['fecha_cruce']
                 ?? null;
         } elseif (Str::contains(Str::ascii($tipo), 'pronto pago')) {
-            $fechaEvento = $mov->datos_nuevos['fecha_pronto_pago']
-                ?? $mov->datos_anteriores['fecha_pronto_pago']
+            $fechaEvento = $datosNuevos['fecha_pronto_pago']
+                ?? $datosAnteriores['fecha_pronto_pago']
                 ?? null;
         } elseif (Str::contains($tipo, 'pago')) {
-            $fechaEvento = $mov->datos_nuevos['fecha_pago']
-                ?? $mov->datos_anteriores['fecha_pago']
+            $fechaEvento = $datosNuevos['fecha_pago']
+                ?? $datosAnteriores['fecha_pago']
                 ?? null;
         }
 
         // Fallback
-        $fechaEventoFormateada = $fechaEvento
-            ? Carbon::parse($fechaEvento)->format('d-m-Y')
-            : Carbon::parse($mov->fecha_cambio ?? $mov->created_at)->format('d-m-Y');
+        $fechaEventoExcel = $this->excelDate(
+            $fechaEvento ?? $mov->fecha_cambio ?? $mov->created_at
+        );
 
         // ==============================
         // MONTO MOVIMIENTO
         // ==============================
         $monto = 0;
+
         if (Str::contains($tipo, 'abono') || Str::contains($tipo, 'cruce')) {
-            $monto = $mov->datos_nuevos['monto']
-                ?? $mov->datos_anteriores['monto']
+            $monto = $datosNuevos['monto']
+                ?? $datosAnteriores['monto']
                 ?? 0;
         } elseif (Str::contains($tipo, 'pago') || Str::contains($tipo, 'pronto pago')) {
             $monto = $mov->compra->monto_total ?? 0;
@@ -143,7 +154,7 @@ class MovimientoCompraExport implements FromCollection, WithHeadings, WithMappin
         }
 
         return [
-            $fechaEventoFormateada,
+            $fechaEventoExcel,
             ucfirst($mov->tipo_movimiento),
             $empresa,
             $proveedor,
@@ -153,5 +164,25 @@ class MovimientoCompraExport implements FromCollection, WithHeadings, WithMappin
             $usuario,
             $descripcion,
         ];
+    }
+
+    public function columnFormats(): array
+    {
+        return [
+            'A' => 'dd-mm-yyyy', // Fecha evento
+        ];
+    }
+
+    private function excelDate($date)
+    {
+        if (!$date) {
+            return null;
+        }
+
+        try {
+            return ExcelDate::dateTimeToExcel(Carbon::parse($date));
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 }

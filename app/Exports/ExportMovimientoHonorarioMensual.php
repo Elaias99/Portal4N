@@ -9,14 +9,17 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class ExportMovimientoHonorarioMensual implements
     FromCollection,
     WithHeadings,
     WithMapping,
     ShouldAutoSize,
-    WithEvents
+    WithEvents,
+    WithColumnFormatting
 {
     public function collection()
     {
@@ -65,9 +68,18 @@ class ExportMovimientoHonorarioMensual implements
             $movimiento->descripcion,
             $datosAnteriores['saldo'] ?? null,
             $datosNuevos['saldo'] ?? null,
-            $this->format($movimiento->fecha_cambio),
-            $this->format($movimiento->created_at),
-            $this->format($movimiento->updated_at),
+            $this->excelDate($movimiento->fecha_cambio),
+            $this->excelDate($movimiento->created_at),
+            $this->excelDate($movimiento->updated_at),
+        ];
+    }
+
+    public function columnFormats(): array
+    {
+        return [
+            'L' => 'dd-mm-yyyy', // Fecha Cambio
+            'M' => 'dd-mm-yyyy', // Creado
+            'N' => 'dd-mm-yyyy', // Actualizado
         ];
     }
 
@@ -75,7 +87,6 @@ class ExportMovimientoHonorarioMensual implements
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
-
                 $sheet = $event->sheet->getDelegate();
 
                 // Encabezados en negrita
@@ -84,8 +95,16 @@ class ExportMovimientoHonorarioMensual implements
         ];
     }
 
-    private function format($date)
+    private function excelDate($date)
     {
-        return $date ? Carbon::parse($date)->format('d-m-Y') : null;
+        if (!$date) {
+            return null;
+        }
+
+        try {
+            return ExcelDate::dateTimeToExcel(Carbon::parse($date));
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 }

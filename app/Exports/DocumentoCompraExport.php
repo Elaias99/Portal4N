@@ -2,15 +2,15 @@
 
 namespace App\Exports;
 
-use App\Models\DocumentoCompra;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-
 use Maatwebsite\Excel\Concerns\Exportable;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 use Carbon\Carbon;
 
-class DocumentoCompraExport implements FromCollection, WithHeadings, WithMapping
+class DocumentoCompraExport implements FromCollection, WithHeadings, WithMapping, WithColumnFormatting
 {
     use Exportable;
 
@@ -30,12 +30,12 @@ class DocumentoCompraExport implements FromCollection, WithHeadings, WithMapping
     }
 
     /**
-     * Mapeo de filas del Excel (similar al exportador financiero)
+     * Mapeo de filas del Excel
      */
     public function map($doc): array
     {
         // === Saldo pendiente dinámico ===
-        if ($doc->tipo_documento_id == 61) {
+        if ((int) $doc->tipo_documento_id === 61) {
             // Nota de crédito → saldo 0
             $saldoPendiente = 0;
         } else {
@@ -44,9 +44,11 @@ class DocumentoCompraExport implements FromCollection, WithHeadings, WithMapping
 
         // === Documento Referencia (si este documento referencia otro) ===
         $documentoReferencia = null;
+
         if ($doc->referencia) {
             $ref = $doc->referencia;
             $documentoReferencia = "{$ref->tipoDocumento?->nombre} folio {$ref->folio}";
+
             if ($ref->fecha_docto) {
                 $documentoReferencia .= " ({$this->format($ref->fecha_docto)})";
             }
@@ -54,10 +56,14 @@ class DocumentoCompraExport implements FromCollection, WithHeadings, WithMapping
 
         // === Referenciado Por (si tiene notas asociadas) ===
         $referenciadoPor = null;
-        if ($doc->referenciados->isNotEmpty()) {
+
+        if ($doc->referenciados && $doc->referenciados->isNotEmpty()) {
             $referenciadoPor = $doc->referenciados->map(function ($ref) {
                 $monto = number_format($ref->monto_total, 0, ',', '.');
-                return $ref->tipoDocumento?->nombre . ' folio ' . $ref->folio . ' ($' . $monto . ')';
+
+                return $ref->tipoDocumento?->nombre
+                    . ' folio ' . $ref->folio
+                    . ' ($' . $monto . ')';
             })->join(', ');
         }
 
@@ -72,13 +78,13 @@ class DocumentoCompraExport implements FromCollection, WithHeadings, WithMapping
             $doc->folio,
 
             // Fechas base
-            $this->format($doc->fecha_docto),
-            $this->format($doc->fecha_vencimiento),
+            $this->excelDate($doc->fecha_docto),
+            $this->excelDate($doc->fecha_vencimiento),
 
             // Estados
             $doc->status_original,
             $doc->estado,
-            $this->format($doc->fecha_estado_manual),
+            $this->excelDate($doc->fecha_estado_manual),
 
             // Montos
             $doc->monto_exento,
@@ -95,12 +101,12 @@ class DocumentoCompraExport implements FromCollection, WithHeadings, WithMapping
             $referenciadoPor,
 
             // Fechas administrativas del registro
-            $this->format($doc->fecha_recepcion),
-            $this->format($doc->fecha_acuse),
+            $this->excelDate($doc->fecha_recepcion),
+            $this->excelDate($doc->fecha_acuse),
 
             // Timestamps
-            $this->format($doc->created_at),
-            $this->format($doc->updated_at),
+            $this->excelDate($doc->created_at),
+            $this->excelDate($doc->updated_at),
         ];
     }
 
@@ -139,7 +145,40 @@ class DocumentoCompraExport implements FromCollection, WithHeadings, WithMapping
     }
 
     /**
-     * Formateo seguro de fechas
+     * Formato real de fechas en Excel.
+     */
+    public function columnFormats(): array
+    {
+        return [
+            'I' => 'dd-mm-yyyy', // Fecha Documento
+            'J' => 'dd-mm-yyyy', // Fecha Vencimiento
+            'M' => 'dd-mm-yyyy', // Fecha Estado Manual
+            'V' => 'dd-mm-yyyy', // Fecha Recepción
+            'W' => 'dd-mm-yyyy', // Fecha Acuse
+            'X' => 'dd-mm-yyyy', // Creado en
+            'Y' => 'dd-mm-yyyy', // Actualizado en
+        ];
+    }
+
+    /**
+     * Fecha real para Excel.
+     */
+    private function excelDate($date)
+    {
+        if (!$date) {
+            return null;
+        }
+
+        try {
+            return ExcelDate::dateTimeToExcel(Carbon::parse($date));
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Formateo seguro de fechas para textos internos,
+     * por ejemplo: Documento Referencia.
      */
     private function format($date)
     {
