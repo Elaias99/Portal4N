@@ -15,21 +15,47 @@ class SuscripcionPrefacturaZipService
 
     public function generarDesdeDetalles(Collection $detallesBase, int $anio, int $mes): array
     {
-        $tmpDir = storage_path('app/temp_prefacturas');
+        @set_time_limit(0);
+        ini_set('memory_limit', '1024M');
 
-        if (!is_dir($tmpDir)) {
-            mkdir($tmpDir, 0775, true);
+        $baseDir = storage_path('app/temp_prefacturas');
+        $zipDir = $baseDir . DIRECTORY_SEPARATOR . 'zips';
+        $pdfDir = $baseDir . DIRECTORY_SEPARATOR . 'pdfs';
+
+        foreach ([$baseDir, $zipDir, $pdfDir] as $dir) {
+            if (!is_dir($dir)) {
+                mkdir($dir, 0775, true);
+            }
         }
+
+        $detallesPorProveedor = $detallesBase
+            ->filter(fn ($detalle) => $detalle->asignacion?->suscripcion_proveedor_id)
+            ->groupBy(fn ($detalle) => $detalle->asignacion->suscripcion_proveedor_id);
+
+        if ($detallesPorProveedor->isEmpty()) {
+            throw new \RuntimeException('No se generó ningún PDF.');
+        }
+
+        $zipCacheKey = $this->generarCacheKey($detallesBase, $anio, $mes);
 
         $zipFileName = 'prefacturas_suscripciones_'
             . $anio
             . '_'
             . str_pad($mes, 2, '0', STR_PAD_LEFT)
             . '_'
-            . now()->format('Ymd_His')
+            . $zipCacheKey
             . '.zip';
 
-        $zipPath = $tmpDir . DIRECTORY_SEPARATOR . $zipFileName;
+        $zipPath = $zipDir . DIRECTORY_SEPARATOR . $zipFileName;
+
+        if (file_exists($zipPath) && filesize($zipPath) > 0) {
+            return [
+                'zip_path' => $zipPath,
+                'zip_file_name' => $zipFileName,
+                'generados' => $detallesPorProveedor->count(),
+                'desde_cache' => true,
+            ];
+        }
 
         $zip = new ZipArchive();
 
@@ -38,11 +64,6 @@ class SuscripcionPrefacturaZipService
         }
 
         $meses = $this->meses();
-
-        $detallesPorProveedor = $detallesBase
-            ->filter(fn ($detalle) => $detalle->asignacion?->suscripcion_proveedor_id)
-            ->groupBy(fn ($detalle) => $detalle->asignacion->suscripcion_proveedor_id);
-
         $generados = 0;
 
         foreach ($detallesPorProveedor as $detallesProveedor) {
@@ -56,31 +77,41 @@ class SuscripcionPrefacturaZipService
 
             $detalle = $detallesProveedor->first();
 
-            $calculosDetalle = $this->resumenService->calcularPorDetalles($detallesProveedor);
-
             $proveedor = $detalle->asignacion?->suscripcionProveedor;
             $cobranzaCompra = $proveedor?->cobranzaCompra;
 
-            $totalBruto = $detallesProveedor->sum('total');
-            $totalImpuesto = $calculosDetalle->sum('total_impuesto');
-            $totalLiquido = $calculosDetalle->sum('liquido');
+            $nombrePdf = $this->nombreArchivoPdf($proveedor, $cobranzaCompra, $anio, $mes);
 
-            $pdf = Pdf::loadView('suscripciones.liquidacion_detalles.pdf', [
-                'detalle' => $detalle,
-                'detallesProveedor' => $detallesProveedor,
-                'calculosDetalle' => $calculosDetalle,
-                'proveedor' => $proveedor,
-                'cobranzaCompra' => $cobranzaCompra,
-                'totalBruto' => $totalBruto,
-                'totalImpuesto' => $totalImpuesto,
-                'totalLiquido' => $totalLiquido,
-                'meses' => $meses,
-            ])->setPaper('letter', 'portrait');
+            $pdfCacheKey = $this->generarCacheKey($detallesProveedor, $anio, $mes);
 
-            $zip->addFromString(
-                $this->nombreArchivoPdf($proveedor, $cobranzaCompra, $anio, $mes),
-                $pdf->output()
-            );
+            $pdfPath = $pdfDir . DIRECTORY_SEPARATOR . $pdfCacheKey . '.pdf';
+
+            if (!file_exists($pdfPath) || filesize($pdfPath) === 0) {
+                $calculosDetalle = $this->resumenService->calcularPorDetalles($detallesProveedor);
+
+                $totalBruto = $detallesProveedor->sum('total');
+                $totalImpuesto = $calculosDetalle->sum('total_impuesto');
+                $totalLiquido = $calculosDetalle->sum('liquido');
+
+                $pdf = Pdf::loadView('suscripciones.liquidacion_detalles.pdf', [
+                    'detalle' => $detalle,
+                    'detallesProveedor' => $detallesProveedor,
+                    'calculosDetalle' => $calculosDetalle,
+                    'proveedor' => $proveedor,
+                    'cobranzaCompra' => $cobranzaCompra,
+                    'totalBruto' => $totalBruto,
+                    'totalImpuesto' => $totalImpuesto,
+                    'totalLiquido' => $totalLiquido,
+                    'meses' => $meses,
+                ])->setPaper('letter', 'portrait');
+
+                file_put_contents($pdfPath, $pdf->output());
+
+                unset($pdf, $calculosDetalle);
+                gc_collect_cycles();
+            }
+
+            $zip->addFile($pdfPath, $nombrePdf);
 
             $generados++;
         }
@@ -99,6 +130,7 @@ class SuscripcionPrefacturaZipService
             'zip_path' => $zipPath,
             'zip_file_name' => $zipFileName,
             'generados' => $generados,
+            'desde_cache' => false,
         ];
     }
 
@@ -139,4 +171,60 @@ class SuscripcionPrefacturaZipService
             12 => 'Diciembre',
         ];
     }
+
+    private function generarCacheKey(Collection $detalles, int $anio, int $mes): string
+    {
+        $base = $detalles
+            ->sortBy('id')
+            ->map(function ($detalle) {
+                $asignacion = $detalle->asignacion;
+                $proveedor = $asignacion?->suscripcionProveedor;
+                $cobranzaCompra = $proveedor?->cobranzaCompra;
+
+                return implode('|', [
+                    $detalle->id,
+                    $detalle->suscripcion_asignacion_id,
+                    $detalle->anio,
+                    $detalle->mes,
+                    $detalle->codigo,
+                    $detalle->costo,
+                    $detalle->q_calendario,
+                    $detalle->q_inasistencia,
+                    $detalle->cantidad,
+                    $detalle->total,
+
+                    $asignacion?->id,
+                    $asignacion?->codigo,
+                    $asignacion?->servicio,
+                    $asignacion?->costo,
+
+                    $proveedor?->id,
+                    $proveedor?->tipo,
+                    $proveedor?->detalle_documento,
+                    $proveedor?->detalle_impuesto,
+                    $proveedor?->final,
+
+                    $cobranzaCompra?->id,
+                    $cobranzaCompra?->rut_cliente,
+                    $cobranzaCompra?->razon_social,
+                    $cobranzaCompra?->nombre_cuenta,
+                    $cobranzaCompra?->rut_cuenta,
+                    $cobranzaCompra?->numero_cuenta,
+                    $cobranzaCompra?->banco_id,
+                    $cobranzaCompra?->tipo_cuenta_id,
+
+                    optional($detalle->updated_at)->timestamp,
+                    optional($asignacion?->updated_at)->timestamp,
+                    optional($proveedor?->updated_at)->timestamp,
+                    optional($cobranzaCompra?->updated_at)->timestamp,
+                ]);
+            })
+            ->implode('||');
+
+        return sha1($anio . '|' . $mes . '|' . $base);
+    }
+
+
+
+
 }

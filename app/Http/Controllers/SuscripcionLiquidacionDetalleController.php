@@ -636,8 +636,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
         }
 
         return response()
-            ->download($resultado['zip_path'], $resultado['zip_file_name'])
-            ->deleteFileAfterSend(true);
+            ->download($resultado['zip_path'], $resultado['zip_file_name']);
     }
 
 
