@@ -20,6 +20,8 @@ class SuscripcionOPVPuntos extends Model
         'nombre_local_corto',
         'direccion',
         'comuna',
+        'lat',
+        'lng'
     ];
 
     public function asignacion()

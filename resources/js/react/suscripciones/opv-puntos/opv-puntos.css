@@ -1,0 +1,228 @@
+.opv-map-card {
+    border: 1px solid #d8dee4;
+    border-radius: 12px;
+    background: #fff;
+    margin-bottom: 18px;
+    overflow: hidden;
+}
+
+.opv-map-card__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    padding: 18px 20px;
+    border-bottom: 1px solid #eef1f4;
+    background: #f8fafc;
+}
+
+.opv-map-card__eyebrow {
+    margin: 0 0 4px;
+    font-size: 12px;
+    color: #667085;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.opv-map-card__title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.opv-map-card__badge {
+    border: 1px solid #cfd6dd;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: #344054;
+    background: #fff;
+    white-space: nowrap;
+}
+
+.opv-map-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr);
+    gap: 18px;
+    padding: 18px;
+}
+
+.opv-map-placeholder {
+    min-height: 360px;
+    border: 1px solid #d8dee4;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    background: #f3f6f8;
+}
+
+.opv-map-placeholder__grid {
+    position: absolute;
+    inset: 0;
+
+
+    background-image:
+        linear-gradient(rgba(148, 163, 184, .18) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, .18) 1px, transparent 1px);
+
+
+    background-size: 34px 34px;
+}
+
+.opv-map-placeholder__content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    text-align: left;
+    color: #334155;
+}
+
+.opv-map-placeholder__content p {
+    margin: 4px 0 0;
+    color: #64748b;
+}
+
+.opv-map-placeholder__pin {
+    font-size: 34px;
+}
+
+.opv-point-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 360px;
+    overflow: auto;
+    padding-right: 4px;
+}
+
+.opv-point-card {
+    display: flex;
+    gap: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px;
+    background: #fff;
+}
+
+.opv-point-card__number {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #eef2f7;
+    color: #344054;
+    font-size: 13px;
+    font-weight: 700;
+    flex: 0 0 auto;
+}
+
+.opv-point-card__body h3 {
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.opv-point-card__body p {
+    margin: 0 0 4px;
+    font-size: 13px;
+    color: #475467;
+}
+
+.opv-point-card__body span {
+    display: block;
+    font-size: 12px;
+    color: #667085;
+}
+
+.opv-map-empty {
+    padding: 18px;
+    color: #667085;
+}
+
+.opv-map-status {
+    padding: 12px 18px;
+    border-bottom: 1px solid #eef1f4;
+    font-size: 13px;
+    color: #667085;
+    background: #fff;
+}
+
+.opv-leaflet-map-wrap {
+    min-height: 360px;
+    border: 1px solid #d8dee4;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f3f6f8;
+}
+
+.opv-leaflet-map {
+    width: 100%;
+    height: 360px;
+}
+
+.opv-leaflet-marker {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    background: #334155;
+    border: 3px solid #fff;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, .28);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+}
+
+.opv-leaflet-marker span {
+    line-height: 1;
+}
+
+.opv-point-card__top {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.opv-point-card__coord {
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 3px 7px;
+    font-size: 11px;
+    color: #667085;
+    background: #f8fafc;
+    white-space: nowrap;
+}
+
+.opv-point-card__coord--ok {
+    color: #166534;
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+}
+
+.opv-point-card__link {
+    display: inline-block;
+    margin-top: 7px;
+    font-size: 12px;
+    color: #475569;
+    text-decoration: underline;
+}
+
+@media (max-width: 992px) {
+    .opv-map-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .opv-point-list {
+        max-height: none;
+    }
+}

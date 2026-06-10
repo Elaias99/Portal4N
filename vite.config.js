@@ -24,6 +24,7 @@ export default defineConfig({
                 'resources/css/cuentas-cobrar.css',
                 'resources/css/boleta_mensual.css',
                 'resources/css/finanzas_compras.css',
+                'resources/js/react/suscripciones/opv-puntos/opv-puntos.css',
                 'resources/sass/app.scss',
 
                 'resources/js/app.js',
@@ -47,6 +48,11 @@ export default defineConfig({
                 'resources/js/react/tracking/main.jsx',
                 'resources/js/react/latam-tracking/main.jsx',
                 'resources/js/react/sidebar/main.jsx',
+                'resources/js/react/suscripciones/opv-puntos/OpvPuntosMap.jsx',
+                'resources/js/react/suscripciones/opv-puntos/main.jsx'
+
+
+
             ],
             refresh: true,
         }),

@@ -5,6 +5,36 @@
 
     @php
         $cantidadPuntosAsignados = $asignacion->opvPuntos?->count() ?? 0;
+
+        $opvPuntosMapProps = [
+            'asignacion' => [
+                'id' => $asignacion->id,
+                'punto' => $asignacion->punto_1,
+                'codigo' => $asignacion->codigo,
+                'servicio' => $asignacion->servicio,
+                'proveedor' => $asignacion->suscripcionProveedor?->cobranzaCompra?->razon_social,
+                'rut' => $asignacion->suscripcionProveedor?->cobranzaCompra?->rut_cliente,
+                'transportista' => $asignacion->transportista?->nombre_transportista,
+            ],
+
+
+            'puntos' => $opvPuntos->map(function ($punto) {
+                return [
+                    'id' => $punto->id,
+                    'ruta' => $punto->ruta_nombre,
+                    'local' => $punto->local,
+                    'nombre' => $punto->nombre_local,
+                    'nombre_corto' => $punto->nombre_local_corto,
+                    'direccion' => $punto->direccion,
+                    'comuna' => $punto->comuna,
+                    'lat' => $punto->lat,
+                    'lng' => $punto->lng,
+                ];
+            })->values(),
+
+
+
+        ];
     @endphp
 
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -47,9 +77,16 @@
         </div>
     </div>
 
+    {{-- Isla React OPV --}}
+    <script type="application/json" id="opv-puntos-map-props">{!!
+        json_encode($opvPuntosMapProps, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+    !!}</script>
+
+    <div id="opv-puntos-map-root"></div>
+
     <div class="card">
         <div class="card-header">
-            <strong>Tabla completa de puntos OPV</strong>
+            <strong>Puntos OPV de la ruta consultada</strong>
         </div>
 
         <div class="card-body">
@@ -91,3 +128,7 @@
 
 </div>
 @endsection
+
+@push('scripts')
+    @vite('resources/js/react/suscripciones/opv-puntos/main.jsx')
+@endpush
