@@ -46,6 +46,9 @@
     @endphp
 
     <x-finanzas.top-section actions-width="320px">
+
+
+
         <x-slot:filters>
             <x-finanzas.filters-card>
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -335,7 +338,27 @@
 
 
 
-                    <div class="d-flex justify-content-end mt-3">
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+
+
+                        <div>
+                            <strong>Saldo pendiente total:</strong>
+                            <span class="text-success fw-semibold">
+                                ${{ number_format($totalSaldoPendiente ?? 0, 0, ',', '.') }}
+                            </span>
+
+                            @if(($boletasPorEmpresa ?? collect())->isNotEmpty())
+                                <div class="small text-muted mt-1">
+                                    @foreach($boletasPorEmpresa as $item)
+                                        <span class="me-2">
+                                            {{ $item->empresa?->Nombre ?? 'Sin empresa' }}:
+                                            {{ $item->total }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+
                         <a href="{{ route('cobranzas-compras.index', ['origen' => 'honorarios']) }}"
                         class="btn btn-outline-secondary btn-sm">
                             Detalle Proveedor
@@ -348,6 +371,10 @@
                 
             </x-finanzas.filters-card>
         </x-slot:filters>
+
+
+
+
 
         <x-slot:actions>
             <x-finanzas.mass-actions-card title="Gestión Masiva">

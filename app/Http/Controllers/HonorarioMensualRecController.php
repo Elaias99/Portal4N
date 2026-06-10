@@ -283,6 +283,16 @@ class HonorarioMensualRecController extends Controller
         $totalPendientes = (clone $query)
             ->where('saldo_pendiente', '>', 0)
             ->count();
+        
+        $totalSaldoPendiente = (clone $query)
+            ->where('saldo_pendiente', '>', 0)
+            ->sum('saldo_pendiente');
+
+        $boletasPorEmpresa = (clone $query)
+            ->selectRaw('empresa_id, COUNT(*) as total')
+            ->groupBy('empresa_id')
+            ->with('empresa:id,Nombre')
+            ->get();
 
         // =========================
         // ORDEN + PAGINACIÓN
@@ -442,7 +452,9 @@ class HonorarioMensualRecController extends Controller
             'estadosSiiColumna',
             'fechasAnulacionColumna',
             'montosPagadosColumna',
-            'saldosPendientesColumna'
+            'saldosPendientesColumna',
+            'totalSaldoPendiente',
+            'boletasPorEmpresa',
         ));
     }
 
