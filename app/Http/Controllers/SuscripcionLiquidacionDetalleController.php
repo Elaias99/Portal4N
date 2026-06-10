@@ -750,7 +750,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
             abort(404, 'La asignación seleccionada no corresponde a una ruta OPV.');
         }
 
-        $opvPuntos = SuscripcionOPVPuntos::query()
+        $opvPuntos = $asignacion->opvPuntos()
             ->orderBy('ruta_nombre')
             ->orderBy('local')
             ->get();

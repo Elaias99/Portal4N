@@ -1165,7 +1165,7 @@ Route::middleware('auth')
 
         Route::get('/liquidacion-detalles/opv-puntos/{asignacion}', [SuscripcionLiquidacionDetalleController::class, 'opvPuntos'])
             ->name('liquidacion-detalles.opv-puntos');
- });
+});
 
 
 // Route::get('/liquidacion-detalles', [SuscripcionLiquidacionDetalleController::class, 'index'])

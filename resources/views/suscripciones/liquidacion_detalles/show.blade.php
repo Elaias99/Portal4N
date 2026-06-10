@@ -53,6 +53,7 @@
         </div>
     </div>
 
+    {{-- OPV sin puntos: acceso desde observaciones --}}
     @if(($opvPendientes ?? collect())->isNotEmpty())
         <div class="card mb-3">
             <div class="card-header">
@@ -62,7 +63,7 @@
             <div class="card-body">
                 @foreach($opvPendientes as $opvPendiente)
                     <a href="{{ route('suscripciones.liquidacion-detalles.opv-puntos', $opvPendiente->id) }}"
-                    class="text-decoration-none text-reset">
+                       class="text-decoration-none text-reset">
                         <div class="border rounded p-3 mb-2">
                             <div class="fw-semibold mb-1">
                                 Ruta OPV sin locales asignados
@@ -94,8 +95,6 @@
             </div>
         </div>
     @endif
-
-
 
     <div class="card">
         <div class="card-header">
@@ -157,6 +156,13 @@
                                                 {{ $nombresPuntosOPV }}.
                                             @endif
                                         </small>
+
+                                        @if($item->asignacion)
+                                            <a href="{{ route('suscripciones.liquidacion-detalles.opv-puntos', $item->asignacion->id) }}"
+                                               class="btn btn-outline-secondary btn-sm mt-2">
+                                                Ver puntos OPV
+                                            </a>
+                                        @endif
                                     @elseif($esValorFijo)
                                         <small class="text-muted d-block mt-1">
                                             Valor fijo mensual. No se multiplica por fines de semana.
@@ -249,8 +255,7 @@
         </div>
     </div>
 
-
-        {{-- Estado de pre-facturas --}}
+    {{-- Estado de pre-facturas --}}
     <div class="card mb-3">
         <div class="card-header">
             <strong>Estado de pre-facturas {{ $detalle->anio }}</strong>
@@ -317,12 +322,6 @@
             </div>
         </div>
     </div>
-
-
-
-
-
-
 
 </div>
 @endsection
