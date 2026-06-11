@@ -10,9 +10,8 @@ use Carbon\CarbonPeriod;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\Suscripciones\SuscripcionLiquidacionResumenService;
 use App\Services\Suscripciones\SuscripcionPrefacturaZipService;
+use App\Services\Suscripciones\SuscripcionPrefacturaAgrupacionService;
 use Illuminate\Http\Request;
-use App\Models\SuscripcionOPVPuntos;
-use ZipArchive;
 
 class SuscripcionLiquidacionDetalleController extends Controller
 {
@@ -358,7 +357,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function show(SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService) 
+    public function show( SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService, SuscripcionPrefacturaAgrupacionService $agrupacionService) 
     {
         $detalle->load([
             'asignacion.suscripcionProveedor.cobranzaCompra',
@@ -370,6 +369,9 @@ class SuscripcionLiquidacionDetalleController extends Controller
         if (!$suscripcionProveedorId) {
             abort(404, 'No se encontró el proveedor de suscripción asociado.');
         }
+
+        $grupoPrefactura = $agrupacionService->grupoDesdeDetalle($detalle);
+        $grupoPrefacturaLabel = $agrupacionService->etiquetaGrupo($grupoPrefactura);
 
         $detallesProveedor = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
@@ -383,6 +385,34 @@ class SuscripcionLiquidacionDetalleController extends Controller
         ->where('mes', $detalle->mes)
         ->orderBy('codigo')
         ->get();
+
+        $gruposPrefactura = $detallesProveedor
+            ->groupBy(function ($item) use ($agrupacionService) {
+                $grupo = $agrupacionService->grupoDesdeDetalle($item);
+
+                return $agrupacionService->claveGrupo($grupo);
+            })
+            ->map(function ($items) use ($resumenService, $agrupacionService) {
+                $items = $items->values();
+                $detalleBase = $items->first();
+
+                $grupo = $agrupacionService->grupoDesdeDetalle($detalleBase);
+                $grupoLabel = $agrupacionService->etiquetaGrupo($grupo);
+                $calculosGrupo = $resumenService->calcularPorDetalles($items);
+
+                return [
+                    'label' => $grupoLabel,
+                    'es_general' => mb_strtoupper($grupoLabel) === 'GENERAL',
+                    'detalle_id' => $detalleBase->id,
+                    'items' => $items,
+                    'calculos' => $calculosGrupo,
+                    'total_bruto' => $items->sum('total'),
+                    'total_impuesto' => $calculosGrupo->sum('total_impuesto'),
+                    'total_liquido' => $calculosGrupo->sum('liquido'),
+                ];
+            })
+            ->sortBy(fn ($grupo) => $grupo['es_general'] ? 0 : 1)
+            ->values();
 
         $calculosDetalle = $resumenService->calcularPorDetalles($detallesProveedor);
 
@@ -469,7 +499,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
         })
         ->whereDoesntHave('opvPuntos')
         ->orderBy('punto_1')
-        ->get();    
+        ->get();
 
         return view('suscripciones.liquidacion_detalles.show', compact(
             'detalle',
@@ -482,14 +512,17 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'totalLiquido',
             'meses',
             'estadoPrefacturas',
-            'opvPendientes'
+            'opvPendientes',
+            'grupoPrefactura',
+            'grupoPrefacturaLabel',
+            'gruposPrefactura'
         ));
     }
 
 
 
 
-    public function pdf(SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService) 
+    public function pdf( SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService, SuscripcionPrefacturaAgrupacionService $agrupacionService) 
     {
         $detalle->load([
             'asignacion.suscripcionProveedor.cobranzaCompra',
@@ -505,6 +538,9 @@ class SuscripcionLiquidacionDetalleController extends Controller
             abort(404, 'No se encontró el proveedor de suscripción asociado.');
         }
 
+        $grupoPrefactura = $agrupacionService->grupoDesdeDetalle($detalle);
+        $grupoPrefacturaLabel = $agrupacionService->etiquetaGrupo($grupoPrefactura);
+
         $detallesProveedor = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.suscripcionProveedor.cobranzaCompra.banco',
@@ -512,8 +548,10 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'asignacion.transportista',
             'asignacion.opvPuntos',
         ])
-        ->whereHas('asignacion', function ($query) use ($suscripcionProveedorId) {
+        ->whereHas('asignacion', function ($query) use ($suscripcionProveedorId, $grupoPrefactura, $agrupacionService) {
             $query->where('suscripcion_proveedor_id', $suscripcionProveedorId);
+
+            $agrupacionService->aplicarFiltroGrupoEnAsignacion($query, $grupoPrefactura);
         })
         ->where('anio', $detalle->anio)
         ->where('mes', $detalle->mes)
@@ -553,7 +591,17 @@ class SuscripcionLiquidacionDetalleController extends Controller
             preg_replace('/[^A-Za-z0-9\s]/', '', $nombreProveedor)
         );
 
-        $nombreArchivo = "PreFactura_Susc_{$tipo}_{$nombreArchivoProveedor}_{$detalle->anio}_{$detalle->mes}.pdf";
+        $grupoArchivo = '';
+
+        if ($grupoPrefactura !== null) {
+            $grupoArchivo = '_' . str_replace(
+                ' ',
+                '_',
+                preg_replace('/[^A-Za-z0-9\s._-]/', '', $grupoPrefacturaLabel)
+            );
+        }
+
+        $nombreArchivo = "PreFactura_Susc_{$tipo}_{$nombreArchivoProveedor}{$grupoArchivo}_{$detalle->anio}_{$detalle->mes}.pdf";
 
         $pdf = Pdf::loadView('suscripciones.liquidacion_detalles.pdf', [
             'detalle' => $detalle,
@@ -565,6 +613,8 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'totalImpuesto' => $totalImpuesto,
             'totalLiquido' => $totalLiquido,
             'meses' => $meses,
+            'grupoPrefactura' => $grupoPrefactura,
+            'grupoPrefacturaLabel' => $grupoPrefacturaLabel,
         ])->setPaper('letter', 'portrait');
 
         return $pdf->stream($nombreArchivo);

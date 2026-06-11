@@ -2,7 +2,6 @@
 
 namespace App\Services\Suscripciones;
 
-use App\Models\SuscripcionLiquidacionDetalle;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Collection;
 use ZipArchive;
@@ -10,7 +9,8 @@ use ZipArchive;
 class SuscripcionPrefacturaZipService
 {
     public function __construct(
-        private SuscripcionLiquidacionResumenService $resumenService
+        private SuscripcionLiquidacionResumenService $resumenService,
+        private SuscripcionPrefacturaAgrupacionService $agrupacionService
     ) {}
 
     public function generarDesdeDetalles(Collection $detallesBase, int $anio, int $mes): array
@@ -28,11 +28,14 @@ class SuscripcionPrefacturaZipService
             }
         }
 
-        $detallesPorProveedor = $detallesBase
+        $detallesConProveedor = $detallesBase
             ->filter(fn ($detalle) => $detalle->asignacion?->suscripcion_proveedor_id)
-            ->groupBy(fn ($detalle) => $detalle->asignacion->suscripcion_proveedor_id);
+            ->values();
 
-        if ($detallesPorProveedor->isEmpty()) {
+        $detallesPorPrefactura = $this->agrupacionService
+            ->agruparPorPrefactura($detallesConProveedor);
+
+        if ($detallesPorPrefactura->isEmpty()) {
             throw new \RuntimeException('No se generó ningún PDF.');
         }
 
@@ -52,7 +55,7 @@ class SuscripcionPrefacturaZipService
             return [
                 'zip_path' => $zipPath,
                 'zip_file_name' => $zipFileName,
-                'generados' => $detallesPorProveedor->count(),
+                'generados' => $detallesPorPrefactura->count(),
                 'desde_cache' => true,
             ];
         }
@@ -65,37 +68,49 @@ class SuscripcionPrefacturaZipService
 
         $meses = $this->meses();
         $generados = 0;
+        $nombresPdfUsados = [];
 
-        foreach ($detallesPorProveedor as $detallesProveedor) {
-            $detallesProveedor = $detallesProveedor
+        foreach ($detallesPorPrefactura as $detallesPrefactura) {
+            $detallesPrefactura = $detallesPrefactura
                 ->sortBy('codigo')
                 ->values();
 
-            if ($detallesProveedor->isEmpty()) {
+            if ($detallesPrefactura->isEmpty()) {
                 continue;
             }
 
-            $detalle = $detallesProveedor->first();
+            $detalle = $detallesPrefactura->first();
 
             $proveedor = $detalle->asignacion?->suscripcionProveedor;
             $cobranzaCompra = $proveedor?->cobranzaCompra;
 
-            $nombrePdf = $this->nombreArchivoPdf($proveedor, $cobranzaCompra, $anio, $mes);
+            $grupoPrefactura = $this->agrupacionService->grupoDesdeDetalle($detalle);
+            $grupoPrefacturaLabel = $this->agrupacionService->etiquetaGrupo($grupoPrefactura);
 
-            $pdfCacheKey = $this->generarCacheKey($detallesProveedor, $anio, $mes);
+            $nombrePdf = $this->nombreArchivoPdf(
+                $proveedor,
+                $cobranzaCompra,
+                $anio,
+                $mes,
+                $grupoPrefacturaLabel
+            );
+
+            $nombrePdf = $this->resolverNombreUnicoPdf($nombrePdf, $nombresPdfUsados);
+
+            $pdfCacheKey = $this->generarCacheKey($detallesPrefactura, $anio, $mes);
 
             $pdfPath = $pdfDir . DIRECTORY_SEPARATOR . $pdfCacheKey . '.pdf';
 
             if (!file_exists($pdfPath) || filesize($pdfPath) === 0) {
-                $calculosDetalle = $this->resumenService->calcularPorDetalles($detallesProveedor);
+                $calculosDetalle = $this->resumenService->calcularPorDetalles($detallesPrefactura);
 
-                $totalBruto = $detallesProveedor->sum('total');
+                $totalBruto = $detallesPrefactura->sum('total');
                 $totalImpuesto = $calculosDetalle->sum('total_impuesto');
                 $totalLiquido = $calculosDetalle->sum('liquido');
 
                 $pdf = Pdf::loadView('suscripciones.liquidacion_detalles.pdf', [
                     'detalle' => $detalle,
-                    'detallesProveedor' => $detallesProveedor,
+                    'detallesProveedor' => $detallesPrefactura,
                     'calculosDetalle' => $calculosDetalle,
                     'proveedor' => $proveedor,
                     'cobranzaCompra' => $cobranzaCompra,
@@ -103,6 +118,8 @@ class SuscripcionPrefacturaZipService
                     'totalImpuesto' => $totalImpuesto,
                     'totalLiquido' => $totalLiquido,
                     'meses' => $meses,
+                    'grupoPrefactura' => $grupoPrefactura,
+                    'grupoPrefacturaLabel' => $grupoPrefacturaLabel,
                 ])->setPaper('letter', 'portrait');
 
                 file_put_contents($pdfPath, $pdf->output());
@@ -111,7 +128,15 @@ class SuscripcionPrefacturaZipService
                 gc_collect_cycles();
             }
 
-            $zip->addFile($pdfPath, $nombrePdf);
+            if (!$zip->addFile($pdfPath, $nombrePdf)) {
+                $zip->close();
+
+                if (file_exists($zipPath)) {
+                    unlink($zipPath);
+                }
+
+                throw new \RuntimeException('No se pudo agregar una pre-factura al ZIP.');
+            }
 
             $generados++;
         }
@@ -134,24 +159,72 @@ class SuscripcionPrefacturaZipService
         ];
     }
 
-    private function nombreArchivoPdf($proveedor, $cobranzaCompra, int $anio, int $mes): string
+    private function nombreArchivoPdf($proveedor, $cobranzaCompra, int $anio, int $mes, ?string $grupoPrefacturaLabel = null): string
     {
         $nombreProveedor = $cobranzaCompra?->razon_social ?? 'PROVEEDOR';
         $tipo = $proveedor?->tipo ?? 'DOC';
 
-        $nombreLimpio = preg_replace('/[^A-Za-z0-9_\-]/', '_', $nombreProveedor);
-        $nombreLimpio = preg_replace('/_+/', '_', $nombreLimpio);
-        $nombreLimpio = trim($nombreLimpio, '_');
+        $nombreLimpio = $this->limpiarNombreArchivo($nombreProveedor);
+
+        $grupoLimpio = '';
+        $grupoNormalizado = mb_strtoupper(trim((string) $grupoPrefacturaLabel));
+
+        if (
+            $grupoNormalizado !== ''
+            && $grupoNormalizado !== SuscripcionPrefacturaAgrupacionService::GRUPO_GENERAL
+        ) {
+            $grupoLimpio = '_' . $this->limpiarNombreArchivo($grupoPrefacturaLabel);
+        }
 
         return 'Prefactura_Susc_'
             . $tipo
             . '_'
             . $nombreLimpio
+            . $grupoLimpio
             . '_'
             . $anio
             . '_'
             . str_pad($mes, 2, '0', STR_PAD_LEFT)
             . '.pdf';
+    }
+
+    private function resolverNombreUnicoPdf(string $nombrePdf, array &$nombresPdfUsados): string
+    {
+        if (!in_array($nombrePdf, $nombresPdfUsados, true)) {
+            $nombresPdfUsados[] = $nombrePdf;
+
+            return $nombrePdf;
+        }
+
+        $info = pathinfo($nombrePdf);
+        $base = $info['filename'] ?? 'prefactura';
+        $extension = isset($info['extension']) ? '.' . $info['extension'] : '';
+
+        $contador = 2;
+
+        do {
+            $nombreUnico = $base . '_' . $contador . $extension;
+            $contador++;
+        } while (in_array($nombreUnico, $nombresPdfUsados, true));
+
+        $nombresPdfUsados[] = $nombreUnico;
+
+        return $nombreUnico;
+    }
+
+    private function limpiarNombreArchivo(?string $valor): string
+    {
+        $valor = trim((string) $valor);
+
+        if ($valor === '') {
+            return 'SIN_NOMBRE';
+        }
+
+        $valor = preg_replace('/[^A-Za-z0-9_\-]/', '_', $valor);
+        $valor = preg_replace('/_+/', '_', $valor);
+        $valor = trim($valor, '_');
+
+        return $valor !== '' ? $valor : 'SIN_NOMBRE';
     }
 
     private function meses(): array
@@ -181,6 +254,9 @@ class SuscripcionPrefacturaZipService
                 $proveedor = $asignacion?->suscripcionProveedor;
                 $cobranzaCompra = $proveedor?->cobranzaCompra;
 
+                $grupoPrefactura = $asignacion?->grupo_prefactura;
+                $grupoPrefacturaClave = $this->agrupacionService->claveGrupo($grupoPrefactura);
+
                 return implode('|', [
                     $detalle->id,
                     $detalle->suscripcion_asignacion_id,
@@ -197,6 +273,8 @@ class SuscripcionPrefacturaZipService
                     $asignacion?->codigo,
                     $asignacion?->servicio,
                     $asignacion?->costo,
+                    $asignacion?->grupo_prefactura,
+                    $grupoPrefacturaClave,
 
                     $proveedor?->id,
                     $proveedor?->tipo,
@@ -221,10 +299,6 @@ class SuscripcionPrefacturaZipService
             })
             ->implode('||');
 
-        return sha1($anio . '|' . $mes . '|' . $base);
+        return sha1('prefactura_grupo_v2|' . $anio . '|' . $mes . '|' . $base);
     }
-
-
-
-
 }

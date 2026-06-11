@@ -11,7 +11,7 @@ class Asignaciones extends Model
 
     protected $table = 'suscripcion_asignaciones';
 
-    protected $fillable = ['suscripcion_proveedor_id','suscripcion_transportista_id','punto_1','punto_2','origen_gasto','codigo','servicio','costo'];
+    protected $fillable = ['suscripcion_proveedor_id','suscripcion_transportista_id','punto_1','punto_2','origen_gasto','codigo','servicio','costo','grupo_prefactura'];
 
 
     public function suscripcionProveedor()
