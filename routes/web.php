@@ -14,7 +14,7 @@ use App\Http\Controllers\CompraController;
 use App\Http\Controllers\LabelController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\AsistenciaController;
-use App\Models\User;
+use App\Http\Controllers\SuscripcionComisionMensualController;
 use App\Http\Controllers\SolicitudManualController;
 use App\Http\Controllers\BultoController;
 use App\Http\Controllers\AreaController;
@@ -1168,11 +1168,8 @@ Route::middleware('auth')
 });
 
 
-// Route::get('/liquidacion-detalles', [SuscripcionLiquidacionDetalleController::class, 'index'])
-//     ->name('liquidacion-detalles.index');
+Route::get('/suscripciones/comisiones-mensuales/create', [SuscripcionComisionMensualController::class, 'create'])
+    ->name('suscripciones.comisiones-mensuales.create');
 
-// Route::get('/liquidacion-detalles/create', [SuscripcionLiquidacionDetalleController::class, 'create'])
-//     ->name('liquidacion-detalles.create');    
-
-// Route::post('/liquidacion-detalles', [SuscripcionLiquidacionDetalleController::class, 'store'])
-//     ->name('liquidacion-detalles.store');
+Route::post('/suscripciones/comisiones-mensuales', [SuscripcionComisionMensualController::class, 'store'])
+    ->name('suscripciones.comisiones-mensuales.store');

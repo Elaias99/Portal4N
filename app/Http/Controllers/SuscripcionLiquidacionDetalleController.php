@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Asignaciones;
 use App\Models\SuscripcionLiquidacionDetalle;
+use App\Models\SuscripcionComisionMensual;
 use App\Services\Calendar\ChileCalendarService;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -707,11 +708,17 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'suscripcionProveedor.cobranzaCompra',
             'opvPuntos',
         ])
+        ->where(function ($query) {
+            $query->whereNull('generar_automaticamente')
+                ->orWhere('generar_automaticamente', 1);
+        })
         ->orderBy('codigo')
         ->get();
 
         $creados = 0;
         $duplicados = 0;
+        $comisionesCreadas = 0;
+        $comisionesDuplicadas = 0;
         $opvSinRutas = collect();
 
         foreach ($asignaciones as $asignacion) {
@@ -759,6 +766,40 @@ class SuscripcionLiquidacionDetalleController extends Controller
             $creados++;
         }
 
+        $comisionesMensuales = SuscripcionComisionMensual::with('asignacion')
+            ->where('anio', $anio)
+            ->where('mes', $mes)
+            ->orderBy('codigo')
+            ->get();
+
+        foreach ($comisionesMensuales as $comision) {
+            $existe = SuscripcionLiquidacionDetalle::where('suscripcion_asignacion_id', $comision->suscripcion_asignacion_id)
+                ->where('anio', $anio)
+                ->where('mes', $mes)
+                ->exists();
+
+            if ($existe) {
+                $duplicados++;
+                $comisionesDuplicadas++;
+                continue;
+            }
+
+            SuscripcionLiquidacionDetalle::create([
+                'suscripcion_asignacion_id' => $comision->suscripcion_asignacion_id,
+                'anio' => $anio,
+                'mes' => $mes,
+                'codigo' => $comision->codigo ?? $comision->asignacion?->codigo,
+                'costo' => $comision->costo,
+                'q_calendario' => 1,
+                'q_inasistencia' => 0,
+                'cantidad' => $comision->cantidad,
+                'total' => $comision->total,
+            ]);
+
+            $creados++;
+            $comisionesCreadas++;
+        }
+
         $params = [
             'anio' => $anio,
             'mes' => $mes,
@@ -770,8 +811,16 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
         $mensaje = "Mes generado correctamente. Creados: {$creados}.";
 
+        if ($comisionesCreadas > 0) {
+            $mensaje .= " Comisiones agregadas: {$comisionesCreadas}.";
+        }
+
         if ($duplicados > 0) {
             $mensaje .= " Registros ya existentes no duplicados: {$duplicados}.";
+        }
+
+        if ($comisionesDuplicadas > 0) {
+            $mensaje .= " Comisiones ya existentes no duplicadas: {$comisionesDuplicadas}.";
         }
 
         if ($opvSinRutas->isNotEmpty()) {
