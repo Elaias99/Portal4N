@@ -3,11 +3,28 @@
 @section('content')
 <div class="container">
 
+    @php
+        $meses = [
+            1 => 'Enero',
+            2 => 'Febrero',
+            3 => 'Marzo',
+            4 => 'Abril',
+            5 => 'Mayo',
+            6 => 'Junio',
+            7 => 'Julio',
+            8 => 'Agosto',
+            9 => 'Septiembre',
+            10 => 'Octubre',
+            11 => 'Noviembre',
+            12 => 'Diciembre',
+        ];
+    @endphp
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="mb-1">Agregar comisión mensual</h1>
+            <h1 class="mb-1">Preparar generación mensual</h1>
             <div class="small text-muted">
-                Selecciona el proveedor y registra una comisión puntual para el mes indicado.
+                Antes de generar el mes, registra una comisión si corresponde.
             </div>
         </div>
 
@@ -31,13 +48,20 @@
         </div>
     @endif
 
+    <div class="alert alert-info">
+        Si este mes tiene comisión, completa el formulario y presiona
+        <strong>Guardar comisión y generar mes</strong>.  
+        Si no existen comisiones, presiona
+        <strong>Generar mes sin comisión</strong>.
+    </div>
+
     <div class="card">
         <div class="card-header">
             <strong>Datos de la comisión</strong>
         </div>
 
         <div class="card-body">
-            <form method="POST" action="{{ route('suscripciones.comisiones-mensuales.store') }}">
+            <form id="form-comision" method="POST" action="{{ route('suscripciones.comisiones-mensuales.store') }}">
                 @csrf
 
                 <div class="row g-3">
@@ -59,23 +83,6 @@
                     <div class="col-md-3">
                         <label for="mes" class="form-label">Mes</label>
                         <select name="mes" id="mes" class="form-select" required>
-                            @php
-                                $meses = [
-                                    1 => 'Enero',
-                                    2 => 'Febrero',
-                                    3 => 'Marzo',
-                                    4 => 'Abril',
-                                    5 => 'Mayo',
-                                    6 => 'Junio',
-                                    7 => 'Julio',
-                                    8 => 'Agosto',
-                                    9 => 'Septiembre',
-                                    10 => 'Octubre',
-                                    11 => 'Noviembre',
-                                    12 => 'Diciembre',
-                                ];
-                            @endphp
-
                             @foreach($meses as $numeroMes => $nombreMes)
                                 <option
                                     value="{{ $numeroMes }}"
@@ -186,6 +193,9 @@
                             value="COMISION"
                             disabled
                         >
+                        <div class="form-text">
+                            Definido automáticamente por el sistema.
+                        </div>
                     </div>
 
                     <div class="col-md-4">
@@ -228,6 +238,10 @@
                             name="cantidad"
                             value="1"
                         >
+
+                        <div class="form-text">
+                            Las comisiones siempre se registran con cantidad 1.
+                        </div>
                     </div>
 
                     <div class="col-md-4">
@@ -254,20 +268,34 @@
                     </div>
 
                 </div>
-
-                <div class="d-flex justify-content-end gap-2 mt-4">
-                    <a href="{{ route('suscripciones.liquidacion-detalles.index', [
-                        'anio' => $anio,
-                        'mes' => $mes,
-                    ]) }}" class="btn btn-outline-secondary">
-                        Cancelar
-                    </a>
-
-                    <button type="submit" class="btn btn-primary">
-                        Guardar comisión
-                    </button>
-                </div>
             </form>
+
+            <form id="form-sin-comision"
+                  method="POST"
+                  action="{{ route('suscripciones.liquidacion-detalles.generar-mes') }}">
+                @csrf
+
+                <input type="hidden" name="anio_generar" id="anio_generar_sin_comision" value="{{ old('anio', $anio) }}">
+                <input type="hidden" name="mes_generar" id="mes_generar_sin_comision" value="{{ old('mes', $mes) }}">
+                <input type="hidden" name="proveedor_actual" value="{{ request('proveedor_actual') }}">
+            </form>
+
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <a href="{{ route('suscripciones.liquidacion-detalles.index', [
+                    'anio' => $anio,
+                    'mes' => $mes,
+                ]) }}" class="btn btn-outline-secondary">
+                    Cancelar
+                </a>
+
+                <button type="submit" form="form-sin-comision" class="btn btn-outline-primary">
+                    Generar mes sin comisión
+                </button>
+
+                <button type="submit" form="form-comision" class="btn btn-primary">
+                    Guardar comisión y generar mes
+                </button>
+            </div>
         </div>
     </div>
 
@@ -275,6 +303,11 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const anioInput = document.getElementById('anio');
+        const mesInput = document.getElementById('mes');
+        const anioSinComisionInput = document.getElementById('anio_generar_sin_comision');
+        const mesSinComisionInput = document.getElementById('mes_generar_sin_comision');
+
         const costoInput = document.getElementById('costo');
         const cantidadInput = document.getElementById('cantidad');
         const totalInput = document.getElementById('total_estimado');
@@ -285,16 +318,23 @@
 
         function actualizarTotal() {
             const costo = parseInt(costoInput.value || 0, 10);
-            const cantidad = parseInt(cantidadInput.value || 0, 10);
+            const cantidad = parseInt(cantidadInput.value || 1, 10);
             const total = costo * cantidad;
 
             totalInput.value = formatearCLP(total);
         }
 
+        function sincronizarPeriodoSinComision() {
+            anioSinComisionInput.value = anioInput.value;
+            mesSinComisionInput.value = mesInput.value;
+        }
+
         costoInput.addEventListener('input', actualizarTotal);
-        cantidadInput.addEventListener('input', actualizarTotal);
+        anioInput.addEventListener('input', sincronizarPeriodoSinComision);
+        mesInput.addEventListener('change', sincronizarPeriodoSinComision);
 
         actualizarTotal();
+        sincronizarPeriodoSinComision();
     });
 </script>
 @endsection

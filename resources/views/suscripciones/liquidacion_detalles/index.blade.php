@@ -172,10 +172,9 @@
                         </div>
                     </div>
 
-                    <form method="POST"
-                          action="{{ route('suscripciones.liquidacion-detalles.generar-mes') }}"
-                          class="mt-auto">
-                        @csrf
+                    <form method="GET"
+                        action="{{ route('suscripciones.comisiones-mensuales.create') }}"
+                        class="mt-auto">
 
                         <input type="hidden" name="proveedor_actual" value="{{ $proveedorFiltro }}">
 
@@ -183,7 +182,7 @@
                             <label class="form-label small text-muted">Año</label>
                             <input
                                 type="number"
-                                name="anio_generar"
+                                name="anio"
                                 class="form-control form-control-sm"
                                 value="{{ request('anio', 2026) }}"
                                 min="2020"
@@ -194,7 +193,7 @@
 
                         <div class="mb-3">
                             <label class="form-label small text-muted">Mes</label>
-                            <select name="mes_generar" class="form-select form-select-sm" required>
+                            <select name="mes" class="form-select form-select-sm" required>
                                 @foreach($meses as $numero => $nombre)
                                     <option value="{{ $numero }}"
                                         {{ (int) request('mes', 5) === $numero ? 'selected' : '' }}>
@@ -205,9 +204,12 @@
                         </div>
 
                         <button type="submit" class="btn btn-secondary btn-sm w-100">
-                            Generar mes completo
+                            Continuar generación
                         </button>
                     </form>
+
+
+
                 </div>
             </div>
         </div>

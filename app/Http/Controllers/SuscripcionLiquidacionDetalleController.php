@@ -12,6 +12,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\Suscripciones\SuscripcionLiquidacionResumenService;
 use App\Services\Suscripciones\SuscripcionPrefacturaZipService;
 use App\Services\Suscripciones\SuscripcionPrefacturaAgrupacionService;
+use App\Services\Suscripciones\SuscripcionGeneracionMensualService;
 use Illuminate\Http\Request;
 
 class SuscripcionLiquidacionDetalleController extends Controller
@@ -692,7 +693,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function generarMes(Request $request)
+    public function generarMes(Request $request, SuscripcionGeneracionMensualService $generacionMensualService)
     {
         $request->validate([
             'anio_generar' => 'required|integer|min:2020|max:2100',
@@ -703,102 +704,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
         $mes = (int) $request->mes_generar;
         $proveedorActual = trim((string) $request->input('proveedor_actual'));
 
-        $asignaciones = Asignaciones::with([
-            'transportista',
-            'suscripcionProveedor.cobranzaCompra',
-            'opvPuntos',
-        ])
-        ->where(function ($query) {
-            $query->whereNull('generar_automaticamente')
-                ->orWhere('generar_automaticamente', 1);
-        })
-        ->orderBy('codigo')
-        ->get();
-
-        $creados = 0;
-        $duplicados = 0;
-        $comisionesCreadas = 0;
-        $comisionesDuplicadas = 0;
-        $opvSinRutas = collect();
-
-        foreach ($asignaciones as $asignacion) {
-            $existe = SuscripcionLiquidacionDetalle::where('suscripcion_asignacion_id', $asignacion->id)
-                ->where('anio', $anio)
-                ->where('mes', $mes)
-                ->exists();
-
-            if ($existe) {
-                $duplicados++;
-                continue;
-            }
-
-            if ($this->esAsignacionOPV($asignacion) && $asignacion->opvPuntos->count() === 0) {
-                $nombreResponsable = $asignacion->transportista?->nombre_transportista
-                    ?? $asignacion->suscripcionProveedor?->cobranzaCompra?->razon_social
-                    ?? 'Sin transportista';
-
-                $punto = $asignacion->punto_1 ?? 'Sin punto';
-
-                $opvSinRutas->push($nombreResponsable . ' / ' . $punto);
-
-                continue;
-            }
-
-            $calculo = $this->calcularDetalleMensual(
-                $asignacion,
-                $anio,
-                $mes,
-                0
-            );
-
-            SuscripcionLiquidacionDetalle::create([
-                'suscripcion_asignacion_id' => $asignacion->id,
-                'anio' => $anio,
-                'mes' => $mes,
-                'codigo' => $asignacion->codigo,
-                'costo' => $asignacion->costo,
-                'q_calendario' => $calculo['q_calendario'],
-                'q_inasistencia' => $calculo['q_inasistencia'],
-                'cantidad' => $calculo['cantidad'],
-                'total' => $calculo['total'],
-            ]);
-
-            $creados++;
-        }
-
-        $comisionesMensuales = SuscripcionComisionMensual::with('asignacion')
-            ->where('anio', $anio)
-            ->where('mes', $mes)
-            ->orderBy('codigo')
-            ->get();
-
-        foreach ($comisionesMensuales as $comision) {
-            $existe = SuscripcionLiquidacionDetalle::where('suscripcion_asignacion_id', $comision->suscripcion_asignacion_id)
-                ->where('anio', $anio)
-                ->where('mes', $mes)
-                ->exists();
-
-            if ($existe) {
-                $duplicados++;
-                $comisionesDuplicadas++;
-                continue;
-            }
-
-            SuscripcionLiquidacionDetalle::create([
-                'suscripcion_asignacion_id' => $comision->suscripcion_asignacion_id,
-                'anio' => $anio,
-                'mes' => $mes,
-                'codigo' => $comision->codigo ?? $comision->asignacion?->codigo,
-                'costo' => $comision->costo,
-                'q_calendario' => 1,
-                'q_inasistencia' => 0,
-                'cantidad' => $comision->cantidad,
-                'total' => $comision->total,
-            ]);
-
-            $creados++;
-            $comisionesCreadas++;
-        }
+        $resultado = $generacionMensualService->generar($anio, $mes);
 
         $params = [
             'anio' => $anio,
@@ -809,23 +715,23 @@ class SuscripcionLiquidacionDetalleController extends Controller
             $params['proveedor'] = $proveedorActual;
         }
 
-        $mensaje = "Mes generado correctamente. Creados: {$creados}.";
+        $mensaje = "Mes generado correctamente. Creados: {$resultado['creados']}.";
 
-        if ($comisionesCreadas > 0) {
-            $mensaje .= " Comisiones agregadas: {$comisionesCreadas}.";
+        if ($resultado['comisiones_creadas'] > 0) {
+            $mensaje .= " Comisiones agregadas: {$resultado['comisiones_creadas']}.";
         }
 
-        if ($duplicados > 0) {
-            $mensaje .= " Registros ya existentes no duplicados: {$duplicados}.";
+        if ($resultado['duplicados'] > 0) {
+            $mensaje .= " Registros ya existentes no duplicados: {$resultado['duplicados']}.";
         }
 
-        if ($comisionesDuplicadas > 0) {
-            $mensaje .= " Comisiones ya existentes no duplicadas: {$comisionesDuplicadas}.";
+        if ($resultado['comisiones_duplicadas'] > 0) {
+            $mensaje .= " Comisiones ya existentes no duplicadas: {$resultado['comisiones_duplicadas']}.";
         }
 
-        if ($opvSinRutas->isNotEmpty()) {
+        if ($resultado['opv_sin_rutas']->isNotEmpty()) {
             $mensaje .= ' No se generaron las siguientes rutas OPV porque no tienen locales OPV asignados: ';
-            $mensaje .= $opvSinRutas->unique()->implode('; ') . '.';
+            $mensaje .= $resultado['opv_sin_rutas']->unique()->implode('; ') . '.';
         }
 
         return redirect()

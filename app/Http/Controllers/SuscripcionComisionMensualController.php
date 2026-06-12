@@ -6,6 +6,7 @@ use App\Models\Asignaciones;
 use App\Models\SuscripcionComisionMensual;
 use App\Models\SuscripcionProveedor;
 use App\Models\SuscripcionTransportista;
+use App\Services\Suscripciones\SuscripcionGeneracionMensualService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -42,7 +43,7 @@ class SuscripcionComisionMensualController extends Controller
 
 
 
-    public function store(Request $request)
+    public function store(Request $request, SuscripcionGeneracionMensualService $generacionMensualService)
     {
         $data = $request->validate([
             'suscripcion_proveedor_id' => 'required|exists:suscripcion_proveedores,id',
@@ -53,11 +54,6 @@ class SuscripcionComisionMensualController extends Controller
             'punto_1' => 'nullable|string|max:255',
             'origen_gasto' => 'nullable|string|max:255',
             'punto_2' => 'nullable|string|max:255',
-
-
-
-
-
             'servicio' => 'nullable|string|max:255',
 
             'costo' => 'required|integer|min:0',
@@ -66,17 +62,6 @@ class SuscripcionComisionMensualController extends Controller
         ]);
 
         $codigo = 'COMISION';
-
-        $esCodigoComision = str_ends_with($codigo, '.COM')
-            || str_contains($codigo, 'COMISION');
-
-        if (!$esCodigoComision) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'codigo' => 'El código debe corresponder a una comisión. Ejemplo: AM.COM o COMISION.',
-                ]);
-        }
 
         $existe = SuscripcionComisionMensual::where('anio', $data['anio'])
             ->where('mes', $data['mes'])
@@ -91,7 +76,7 @@ class SuscripcionComisionMensualController extends Controller
             return back()
                 ->withInput()
                 ->withErrors([
-                    'codigo' => 'Esta comisión ya existe para el proveedor, transportista, año y mes seleccionado.',
+                    'suscripcion_proveedor_id' => 'Esta comisión ya existe para el proveedor, transportista, año y mes seleccionado.',
                 ]);
         }
 
@@ -133,14 +118,37 @@ class SuscripcionComisionMensualController extends Controller
             ]);
         });
 
+        $resultado = $generacionMensualService->generar(
+            (int) $data['anio'],
+            (int) $data['mes']
+        );
+
+        $mensaje = "Comisión mensual registrada correctamente. Mes generado correctamente. Creados: {$resultado['creados']}.";
+
+        if ($resultado['comisiones_creadas'] > 0) {
+            $mensaje .= " Comisiones agregadas: {$resultado['comisiones_creadas']}.";
+        }
+
+        if ($resultado['duplicados'] > 0) {
+            $mensaje .= " Registros ya existentes no duplicados: {$resultado['duplicados']}.";
+        }
+
+        if ($resultado['comisiones_duplicadas'] > 0) {
+            $mensaje .= " Comisiones ya existentes no duplicadas: {$resultado['comisiones_duplicadas']}.";
+        }
+
+        if ($resultado['opv_sin_rutas']->isNotEmpty()) {
+            $mensaje .= ' No se generaron las siguientes rutas OPV porque no tienen locales OPV asignados: ';
+            $mensaje .= $resultado['opv_sin_rutas']->unique()->implode('; ') . '.';
+        }
+
         return redirect()
             ->route('suscripciones.liquidacion-detalles.index', [
                 'anio' => $data['anio'],
                 'mes' => $data['mes'],
             ])
-            ->with('success', 'Comisión mensual registrada correctamente.');
+            ->with('success', $mensaje);
     }
-
 
 
 
