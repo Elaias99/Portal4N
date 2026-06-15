@@ -88,7 +88,9 @@
         }
 
         .detail-table {
+            width: 100%;
             margin-top: 0;
+            table-layout: fixed;
         }
 
         .detail-table th {
@@ -111,13 +113,36 @@
             padding: 5px;
         }
 
-        .detail-table tfoot .total-spacer {
-            border: none;
-            background: #fff;
+        .col-detalle {
+            width: 54%;
+        }
+
+        .col-valor {
+            width: 15%;
+        }
+
+        .col-cantidad {
+            width: 15%;
+        }
+
+        .col-total {
+            width: 16%;
+        }
+
+        .detalle-nota {
+            display: block;
+            margin-top: 3px;
+            font-size: 9px;
+            color: #555;
+            line-height: 1.2;
         }
 
         .text-end {
             text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
         }
 
         .fw-bold {
@@ -194,6 +219,8 @@
 
         $fechaDocumento = now()->locale('es')->translatedFormat('l, d \d\e F \d\e Y');
         $fechaPie = now()->locale('es')->translatedFormat('l, d \d\e F \d\e Y');
+
+        $numeroOc = sprintf('%04d%02d01', (int) $detalle->anio, (int) $detalle->mes);
     @endphp
 
     <div class="titulo">PRE FACTURA DE SERVICIOS</div>
@@ -265,15 +292,19 @@
             <td class="left">FECHA DE DOCUMENTO</td>
             <td>{{ $fechaDocumento }}</td>
         </tr>
+        <tr>
+            <td class="left">OC / NRO</td>
+            <td>{{ $numeroOc }}</td>
+        </tr>
     </table>
 
     <table class="detail-table">
         <thead>
             <tr>
-                <th style="width: 54%;">DETALLE</th>
-                <th style="width: 15%;">VALOR</th>
-                <th style="width: 15%;">CANTIDAD</th>
-                <th style="width: 16%;">TOTAL</th>
+                <th class="col-detalle">DETALLE</th>
+                <th class="col-valor">VALOR</th>
+                <th class="col-cantidad">CANTIDAD</th>
+                <th class="col-total">TOTAL</th>
             </tr>
         </thead>
 
@@ -281,7 +312,15 @@
             @foreach($detallesProveedor as $item)
                 @php
                     $codigo = mb_strtoupper(trim((string) $item->codigo));
-                    $esValorFijo = str_ends_with($codigo, '.COM');
+                    $esValorFijo = str_ends_with($codigo, '.COM')
+                        || str_contains($codigo, 'COMISION');
+
+                    $cantidadesMensuales = $item->asignacion?->cantidadesMensuales ?? collect();
+
+                    $esCantidadMensual = $cantidadesMensuales
+                        ->where('anio', (int) $item->anio)
+                        ->where('mes', (int) $item->mes)
+                        ->isNotEmpty();
 
                     $punto = trim((string) ($item->asignacion?->punto_1 ?? ''));
                     $servicio = trim((string) ($item->asignacion?->servicio ?? ''));
@@ -292,6 +331,16 @@
                 <tr>
                     <td>
                         {{ $detalleTexto ?: '—' }}
+
+                        @if($esCantidadMensual)
+                            <span class="detalle-nota">
+                                Cantidad mensual informada manualmente.
+                            </span>
+                        @elseif($esValorFijo)
+                            <span class="detalle-nota">
+                                Valor fijo mensual.
+                            </span>
+                        @endif
                     </td>
 
                     <td class="text-end">
@@ -311,8 +360,7 @@
 
         <tfoot>
             <tr>
-                <td class="total-spacer"></td>
-                <td colspan="2" class="fw-bold text-end">
+                <td colspan="3" class="fw-bold text-end">
                     TOTAL {{ $detalleDocumento ?: 'BRUTO' }}
                 </td>
                 <td class="fw-bold text-end">
@@ -321,8 +369,7 @@
             </tr>
 
             <tr>
-                <td class="total-spacer"></td>
-                <td colspan="2" class="fw-bold text-end">
+                <td colspan="3" class="fw-bold text-end">
                     {{ $detalleImpuesto ?: 'IMPUESTO' }} {{ number_format($porcentaje, 2, ',', '.') }}%
                 </td>
                 <td class="fw-bold text-end">
@@ -331,8 +378,7 @@
             </tr>
 
             <tr>
-                <td class="total-spacer"></td>
-                <td colspan="2" class="fw-bold text-end">
+                <td colspan="3" class="fw-bold text-end">
                     {{ $final ?: 'LIQUIDO' }}
                 </td>
                 <td class="fw-bold text-end">

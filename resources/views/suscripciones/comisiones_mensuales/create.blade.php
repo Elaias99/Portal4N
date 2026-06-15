@@ -24,15 +24,15 @@
         <div>
             <h1 class="mb-1">Preparar generación mensual</h1>
             <div class="small text-muted">
-                Antes de generar el mes, registra una comisión si corresponde.
+                Define las cantidades variables y la comisión antes de generar el mes completo.
             </div>
         </div>
 
         <a href="{{ route('suscripciones.liquidacion-detalles.index', [
             'anio' => $anio,
             'mes' => $mes,
-        ]) }}" class="btn btn-secondary">
-            Volver
+        ]) }}" class="link-secondary text-decoration-none">
+            ← Volver
         </a>
     </div>
 
@@ -49,23 +49,21 @@
     @endif
 
     <div class="alert alert-info">
-        Si este mes tiene comisión, completa el formulario y presiona
-        <strong>Guardar comisión y generar mes</strong>.  
-        Si no existen comisiones, presiona
-        <strong>Generar mes sin comisión</strong>.
+        Completa los datos necesarios para el periodo. Al presionar
+        <strong>Guardar datos y generar mes completo</strong>, el sistema registrará la cantidad variable,
+        registrará la comisión y luego generará el mes.
     </div>
 
-    <div class="card">
-        <div class="card-header">
-            <strong>Datos de la comisión</strong>
-        </div>
+    <form id="form-generacion-mensual" method="POST" action="{{ route('suscripciones.comisiones-mensuales.store') }}">
+        @csrf
 
-        <div class="card-body">
-            <form id="form-comision" method="POST" action="{{ route('suscripciones.comisiones-mensuales.store') }}">
-                @csrf
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>Periodo a generar</strong>
+            </div>
 
+            <div class="card-body">
                 <div class="row g-3">
-
                     <div class="col-md-3">
                         <label for="anio" class="form-label">Año</label>
                         <input
@@ -93,6 +91,103 @@
                             @endforeach
                         </select>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        @if($asignacionesCantidadMensual->isNotEmpty())
+            <div class="card mb-4">
+                <div class="card-header">
+                    <strong>Cantidades variables del mes</strong>
+                </div>
+
+                <div class="card-body">
+                    <div class="small text-muted mb-3">
+                        Registra aquí las rutas que no se calculan por calendario, por ejemplo LOTA.
+                    </div>
+
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-6">
+                            <label for="cantidad_mensual_asignacion_id" class="form-label">
+                                Ruta / asignación
+                            </label>
+
+                            <select
+                                name="cantidad_mensual_asignacion_id"
+                                id="cantidad_mensual_asignacion_id"
+                                class="form-select"
+                            >
+                                <option value="">Seleccionar ruta...</option>
+
+                                @foreach($asignacionesCantidadMensual as $asignacion)
+                                    @php
+                                        $cobranza = $asignacion->suscripcionProveedor?->cobranzaCompra;
+                                        $transportista = $asignacion->transportista;
+                                    @endphp
+
+                                    <option
+                                        value="{{ $asignacion->id }}"
+                                        data-costo="{{ (int) $asignacion->costo }}"
+                                        @selected((int) old('cantidad_mensual_asignacion_id') === (int) $asignacion->id)
+                                    >
+                                        {{ $asignacion->codigo }}
+                                        |
+                                        {{ $cobranza?->razon_social ?? 'Sin proveedor' }}
+                                        |
+                                        {{ $transportista?->nombre_transportista ?? 'Sin transportista' }}
+                                        |
+                                        ${{ number_format($asignacion->costo, 0, ',', '.') }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label for="cantidad_mensual_cantidad" class="form-label">Cantidad</label>
+                            <input
+                                type="number"
+                                name="cantidad_mensual_cantidad"
+                                id="cantidad_mensual_cantidad"
+                                class="form-control"
+                                value="{{ old('cantidad_mensual_cantidad') }}"
+                                min="1"
+                            >
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Total estimado cantidad variable</label>
+                            <input
+                                type="text"
+                                id="total_variable_estimado"
+                                class="form-control"
+                                value="$0"
+                                disabled
+                            >
+                        </div>
+
+                        <div class="col-md-12">
+                            <label for="cantidad_mensual_observacion" class="form-label">Observación cantidad variable</label>
+                            <input
+                                type="text"
+                                name="cantidad_mensual_observacion"
+                                id="cantidad_mensual_observacion"
+                                class="form-control"
+                                value="{{ old('cantidad_mensual_observacion') }}"
+                                placeholder="Ej: cantidad de repartos informada para este mes"
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        <div class="card">
+            <div class="card-header">
+                <strong>Datos de la comisión</strong>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
 
                     <div class="col-md-6">
                         <label for="suscripcion_proveedor_id" class="form-label">
@@ -210,7 +305,7 @@
                     </div>
 
                     <div class="col-md-4">
-                        <label for="costo" class="form-label">Costo</label>
+                        <label for="costo" class="form-label">Costo comisión</label>
                         <input
                             type="number"
                             name="costo"
@@ -223,7 +318,7 @@
                     </div>
 
                     <div class="col-md-4">
-                        <label for="cantidad" class="form-label">Cantidad</label>
+                        <label for="cantidad" class="form-label">Cantidad comisión</label>
 
                         <input
                             type="number"
@@ -245,7 +340,7 @@
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Total estimado</label>
+                        <label class="form-label">Total estimado comisión</label>
                         <input
                             type="text"
                             id="total_estimado"
@@ -256,7 +351,7 @@
                     </div>
 
                     <div class="col-md-8">
-                        <label for="observacion" class="form-label">Observación</label>
+                        <label for="observacion" class="form-label">Observación comisión</label>
                         <input
                             type="text"
                             name="observacion"
@@ -268,55 +363,33 @@
                     </div>
 
                 </div>
-            </form>
 
-            <form id="form-sin-comision"
-                  method="POST"
-                  action="{{ route('suscripciones.liquidacion-detalles.generar-mes') }}">
-                @csrf
-
-                <input type="hidden" name="anio_generar" id="anio_generar_sin_comision" value="{{ old('anio', $anio) }}">
-                <input type="hidden" name="mes_generar" id="mes_generar_sin_comision" value="{{ old('mes', $mes) }}">
-                <input type="hidden" name="proveedor_actual" value="{{ request('proveedor_actual') }}">
-            </form>
-
-            <div class="d-flex justify-content-end gap-2 mt-4">
-                <a href="{{ route('suscripciones.liquidacion-detalles.index', [
-                    'anio' => $anio,
-                    'mes' => $mes,
-                ]) }}" class="btn btn-outline-secondary">
-                    Cancelar
-                </a>
-
-                <button type="submit" form="form-sin-comision" class="btn btn-outline-primary">
-                    Generar mes sin comisión
-                </button>
-
-                <button type="submit" form="form-comision" class="btn btn-primary">
-                    Guardar comisión y generar mes
-                </button>
+                <div class="d-flex justify-content-end mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        Guardar datos y generar mes completo
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
+    </form>
 
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const anioInput = document.getElementById('anio');
-        const mesInput = document.getElementById('mes');
-        const anioSinComisionInput = document.getElementById('anio_generar_sin_comision');
-        const mesSinComisionInput = document.getElementById('mes_generar_sin_comision');
-
         const costoInput = document.getElementById('costo');
         const cantidadInput = document.getElementById('cantidad');
         const totalInput = document.getElementById('total_estimado');
+
+        const asignacionCantidadSelect = document.getElementById('cantidad_mensual_asignacion_id');
+        const cantidadVariableInput = document.getElementById('cantidad_mensual_cantidad');
+        const totalVariableInput = document.getElementById('total_variable_estimado');
 
         function formatearCLP(valor) {
             return '$' + new Intl.NumberFormat('es-CL').format(valor);
         }
 
-        function actualizarTotal() {
+        function actualizarTotalComision() {
             const costo = parseInt(costoInput.value || 0, 10);
             const cantidad = parseInt(cantidadInput.value || 1, 10);
             const total = costo * cantidad;
@@ -324,17 +397,31 @@
             totalInput.value = formatearCLP(total);
         }
 
-        function sincronizarPeriodoSinComision() {
-            anioSinComisionInput.value = anioInput.value;
-            mesSinComisionInput.value = mesInput.value;
+        function actualizarTotalVariable() {
+            if (!asignacionCantidadSelect || !cantidadVariableInput || !totalVariableInput) {
+                return;
+            }
+
+            const selectedOption = asignacionCantidadSelect.options[asignacionCantidadSelect.selectedIndex];
+            const costo = parseInt(selectedOption?.dataset?.costo || 0, 10);
+            const cantidad = parseInt(cantidadVariableInput.value || 0, 10);
+            const total = costo * cantidad;
+
+            totalVariableInput.value = formatearCLP(total);
         }
 
-        costoInput.addEventListener('input', actualizarTotal);
-        anioInput.addEventListener('input', sincronizarPeriodoSinComision);
-        mesInput.addEventListener('change', sincronizarPeriodoSinComision);
+        costoInput.addEventListener('input', actualizarTotalComision);
 
-        actualizarTotal();
-        sincronizarPeriodoSinComision();
+        if (asignacionCantidadSelect) {
+            asignacionCantidadSelect.addEventListener('change', actualizarTotalVariable);
+        }
+
+        if (cantidadVariableInput) {
+            cantidadVariableInput.addEventListener('input', actualizarTotalVariable);
+        }
+
+        actualizarTotalComision();
+        actualizarTotalVariable();
     });
 </script>
 @endsection

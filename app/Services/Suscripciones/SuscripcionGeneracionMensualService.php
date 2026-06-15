@@ -3,10 +3,10 @@
 namespace App\Services\Suscripciones;
 
 use App\Models\Asignaciones;
+use App\Models\SuscripcionCantidadMensual;
 use App\Models\SuscripcionComisionMensual;
 use App\Models\SuscripcionLiquidacionDetalle;
 use Carbon\Carbon;
-use Illuminate\Support\Collection;
 
 class SuscripcionGeneracionMensualService
 {
@@ -26,8 +26,13 @@ class SuscripcionGeneracionMensualService
 
         $creados = 0;
         $duplicados = 0;
+
+        $cantidadesCreadas = 0;
+        $cantidadesDuplicadas = 0;
+
         $comisionesCreadas = 0;
         $comisionesDuplicadas = 0;
+
         $opvSinRutas = collect();
 
         foreach ($asignaciones as $asignacion) {
@@ -70,6 +75,40 @@ class SuscripcionGeneracionMensualService
             $creados++;
         }
 
+        $cantidadesMensuales = SuscripcionCantidadMensual::with('asignacion')
+            ->where('anio', $anio)
+            ->where('mes', $mes)
+            ->orderBy('codigo')
+            ->get();
+
+        foreach ($cantidadesMensuales as $cantidadMensual) {
+            $existe = SuscripcionLiquidacionDetalle::where('suscripcion_asignacion_id', $cantidadMensual->suscripcion_asignacion_id)
+                ->where('anio', $anio)
+                ->where('mes', $mes)
+                ->exists();
+
+            if ($existe) {
+                $duplicados++;
+                $cantidadesDuplicadas++;
+                continue;
+            }
+
+            SuscripcionLiquidacionDetalle::create([
+                'suscripcion_asignacion_id' => $cantidadMensual->suscripcion_asignacion_id,
+                'anio' => $anio,
+                'mes' => $mes,
+                'codigo' => $cantidadMensual->codigo ?? $cantidadMensual->asignacion?->codigo,
+                'costo' => $cantidadMensual->costo,
+                'q_calendario' => 1,
+                'q_inasistencia' => 0,
+                'cantidad' => $cantidadMensual->cantidad,
+                'total' => $cantidadMensual->total,
+            ]);
+
+            $creados++;
+            $cantidadesCreadas++;
+        }
+
         $comisionesMensuales = SuscripcionComisionMensual::with('asignacion')
             ->where('anio', $anio)
             ->where('mes', $mes)
@@ -107,8 +146,13 @@ class SuscripcionGeneracionMensualService
         return [
             'creados' => $creados,
             'duplicados' => $duplicados,
+
+            'cantidades_creadas' => $cantidadesCreadas,
+            'cantidades_duplicadas' => $cantidadesDuplicadas,
+
             'comisiones_creadas' => $comisionesCreadas,
             'comisiones_duplicadas' => $comisionesDuplicadas,
+
             'opv_sin_rutas' => $opvSinRutas,
         ];
     }

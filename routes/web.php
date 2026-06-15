@@ -1173,3 +1173,12 @@ Route::get('/suscripciones/comisiones-mensuales/create', [SuscripcionComisionMen
 
 Route::post('/suscripciones/comisiones-mensuales', [SuscripcionComisionMensualController::class, 'store'])
     ->name('suscripciones.comisiones-mensuales.store');
+
+
+use App\Http\Controllers\SuscripcionCantidadMensualController;
+
+Route::get('/suscripciones/cantidades-mensuales/create', [SuscripcionCantidadMensualController::class, 'create'])
+    ->name('suscripciones.cantidades-mensuales.create');
+
+Route::post('/suscripciones/cantidades-mensuales', [SuscripcionCantidadMensualController::class, 'store'])
+    ->name('suscripciones.cantidades-mensuales.store');

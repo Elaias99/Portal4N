@@ -6,6 +6,7 @@ use App\Models\Asignaciones;
 use App\Models\SuscripcionComisionMensual;
 use App\Models\SuscripcionProveedor;
 use App\Models\SuscripcionTransportista;
+use App\Models\SuscripcionCantidadMensual;
 use App\Services\Suscripciones\SuscripcionGeneracionMensualService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,11 +32,22 @@ class SuscripcionComisionMensualController extends Controller
             ->orderBy('nombre_transportista')
             ->get();
 
+        $asignacionesCantidadMensual = Asignaciones::with([
+            'suscripcionProveedor.cobranzaCompra',
+            'transportista',
+        ])
+        ->where('generar_automaticamente', 0)
+        ->whereRaw("UPPER(TRIM(codigo)) NOT LIKE '%.COM'")
+        ->whereRaw("UPPER(TRIM(codigo)) NOT LIKE '%COMISION%'")
+        ->orderBy('codigo')
+        ->get();
+
         return view('suscripciones.comisiones_mensuales.create', compact(
             'anio',
             'mes',
             'proveedores',
-            'transportistas'
+            'transportistas',
+            'asignacionesCantidadMensual'
         ));
     }
 
@@ -46,10 +58,15 @@ class SuscripcionComisionMensualController extends Controller
     public function store(Request $request, SuscripcionGeneracionMensualService $generacionMensualService)
     {
         $data = $request->validate([
-            'suscripcion_proveedor_id' => 'required|exists:suscripcion_proveedores,id',
-            'suscripcion_transportista_id' => 'required|exists:suscripcion_transportistas,id',
             'anio' => 'required|integer|min:2020|max:2100',
             'mes' => 'required|integer|min:1|max:12',
+
+            'cantidad_mensual_asignacion_id' => 'nullable|required_with:cantidad_mensual_cantidad|exists:suscripcion_asignaciones,id',
+            'cantidad_mensual_cantidad' => 'nullable|required_with:cantidad_mensual_asignacion_id|integer|min:1',
+            'cantidad_mensual_observacion' => 'nullable|string|max:1000',
+
+            'suscripcion_proveedor_id' => 'required|exists:suscripcion_proveedores,id',
+            'suscripcion_transportista_id' => 'required|exists:suscripcion_transportistas,id',
 
             'punto_1' => 'nullable|string|max:255',
             'origen_gasto' => 'nullable|string|max:255',
@@ -61,18 +78,39 @@ class SuscripcionComisionMensualController extends Controller
             'observacion' => 'nullable|string|max:1000',
         ]);
 
-        $codigo = 'COMISION';
+        $anio = (int) $data['anio'];
+        $mes = (int) $data['mes'];
 
-        $existe = SuscripcionComisionMensual::where('anio', $data['anio'])
-            ->where('mes', $data['mes'])
-            ->whereRaw('UPPER(TRIM(codigo)) = ?', [$codigo])
+        $codigoComision = 'COMISION';
+
+        $debeGuardarCantidadMensual = !empty($data['cantidad_mensual_asignacion_id'])
+            && !empty($data['cantidad_mensual_cantidad']);
+
+        if ($debeGuardarCantidadMensual) {
+            $existeCantidadMensual = SuscripcionCantidadMensual::where('suscripcion_asignacion_id', $data['cantidad_mensual_asignacion_id'])
+                ->where('anio', $anio)
+                ->where('mes', $mes)
+                ->exists();
+
+            if ($existeCantidadMensual) {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        'cantidad_mensual_asignacion_id' => 'Esta cantidad mensual ya existe para la asignación, año y mes seleccionado.',
+                    ]);
+            }
+        }
+
+        $existeComision = SuscripcionComisionMensual::where('anio', $anio)
+            ->where('mes', $mes)
+            ->whereRaw('UPPER(TRIM(codigo)) = ?', [$codigoComision])
             ->whereHas('asignacion', function ($query) use ($data) {
                 $query->where('suscripcion_proveedor_id', $data['suscripcion_proveedor_id'])
                     ->where('suscripcion_transportista_id', $data['suscripcion_transportista_id']);
             })
             ->exists();
 
-        if ($existe) {
+        if ($existeComision) {
             return back()
                 ->withInput()
                 ->withErrors([
@@ -80,9 +118,9 @@ class SuscripcionComisionMensualController extends Controller
                 ]);
         }
 
-        $costo = (int) $data['costo'];
-        $cantidad = (int) $data['cantidad'];
-        $total = $costo * $cantidad;
+        $costoComision = (int) $data['costo'];
+        $cantidadComision = (int) $data['cantidad'];
+        $totalComision = $costoComision * $cantidadComision;
 
         $grupoPrefactura = Asignaciones::query()
             ->where('suscripcion_proveedor_id', $data['suscripcion_proveedor_id'])
@@ -92,40 +130,71 @@ class SuscripcionComisionMensualController extends Controller
             ->orderBy('id')
             ->value('grupo_prefactura');
 
-        DB::transaction(function () use ($data, $codigo, $costo, $cantidad, $total, $grupoPrefactura) {
-            $asignacion = Asignaciones::create([
+        DB::transaction(function () use (
+            $data,
+            $anio,
+            $mes,
+            $codigoComision,
+            $debeGuardarCantidadMensual,
+            $costoComision,
+            $cantidadComision,
+            $totalComision,
+            $grupoPrefactura
+        ) {
+            if ($debeGuardarCantidadMensual) {
+                $asignacionCantidad = Asignaciones::findOrFail($data['cantidad_mensual_asignacion_id']);
+
+                $codigoCantidad = $asignacionCantidad->codigo;
+                $costoCantidad = (int) $asignacionCantidad->costo;
+                $cantidadMensual = (int) $data['cantidad_mensual_cantidad'];
+                $totalCantidad = $costoCantidad * $cantidadMensual;
+
+                SuscripcionCantidadMensual::create([
+                    'suscripcion_asignacion_id' => $asignacionCantidad->id,
+                    'anio' => $anio,
+                    'mes' => $mes,
+                    'codigo' => $codigoCantidad,
+                    'costo' => $costoCantidad,
+                    'cantidad' => $cantidadMensual,
+                    'total' => $totalCantidad,
+                    'observacion' => $data['cantidad_mensual_observacion'] ?? null,
+                ]);
+            }
+
+            $asignacionComision = Asignaciones::create([
                 'suscripcion_proveedor_id' => (int) $data['suscripcion_proveedor_id'],
                 'suscripcion_transportista_id' => (int) $data['suscripcion_transportista_id'],
                 'punto_1' => $data['punto_1'] ?? null,
                 'origen_gasto' => $data['origen_gasto'] ?? 'Suscripciones',
                 'punto_2' => $data['punto_2'] ?? null,
-                'codigo' => $codigo,
+                'codigo' => $codigoComision,
                 'servicio' => $data['servicio'] ?? 'Comisión mensual',
-                'costo' => $costo,
+                'costo' => $costoComision,
                 'grupo_prefactura' => $grupoPrefactura,
                 'generar_automaticamente' => 0,
             ]);
 
             SuscripcionComisionMensual::create([
-                'suscripcion_asignacion_id' => $asignacion->id,
-                'anio' => (int) $data['anio'],
-                'mes' => (int) $data['mes'],
-                'codigo' => $codigo,
-                'costo' => $costo,
-                'cantidad' => $cantidad,
-                'total' => $total,
+                'suscripcion_asignacion_id' => $asignacionComision->id,
+                'anio' => $anio,
+                'mes' => $mes,
+                'codigo' => $codigoComision,
+                'costo' => $costoComision,
+                'cantidad' => $cantidadComision,
+                'total' => $totalComision,
                 'observacion' => $data['observacion'] ?? null,
             ]);
         });
 
-        $resultado = $generacionMensualService->generar(
-            (int) $data['anio'],
-            (int) $data['mes']
-        );
+        $resultado = $generacionMensualService->generar($anio, $mes);
 
-        $mensaje = "Comisión mensual registrada correctamente. Mes generado correctamente. Creados: {$resultado['creados']}.";
+        $mensaje = "Datos registrados correctamente. Mes generado correctamente. Creados: {$resultado['creados']}.";
 
-        if ($resultado['comisiones_creadas'] > 0) {
+        if (($resultado['cantidades_creadas'] ?? 0) > 0) {
+            $mensaje .= " Cantidades variables agregadas: {$resultado['cantidades_creadas']}.";
+        }
+
+        if (($resultado['comisiones_creadas'] ?? 0) > 0) {
             $mensaje .= " Comisiones agregadas: {$resultado['comisiones_creadas']}.";
         }
 
@@ -133,7 +202,11 @@ class SuscripcionComisionMensualController extends Controller
             $mensaje .= " Registros ya existentes no duplicados: {$resultado['duplicados']}.";
         }
 
-        if ($resultado['comisiones_duplicadas'] > 0) {
+        if (($resultado['cantidades_duplicadas'] ?? 0) > 0) {
+            $mensaje .= " Cantidades variables ya existentes no duplicadas: {$resultado['cantidades_duplicadas']}.";
+        }
+
+        if (($resultado['comisiones_duplicadas'] ?? 0) > 0) {
             $mensaje .= " Comisiones ya existentes no duplicadas: {$resultado['comisiones_duplicadas']}.";
         }
 
@@ -144,8 +217,8 @@ class SuscripcionComisionMensualController extends Controller
 
         return redirect()
             ->route('suscripciones.liquidacion-detalles.index', [
-                'anio' => $data['anio'],
-                'mes' => $data['mes'],
+                'anio' => $anio,
+                'mes' => $mes,
             ])
             ->with('success', $mensaje);
     }

@@ -379,7 +379,9 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.transportista',
             'asignacion.opvPuntos',
+            'asignacion.cantidadesMensuales',
         ])
+
         ->whereHas('asignacion', function ($query) use ($suscripcionProveedorId) {
             $query->where('suscripcion_proveedor_id', $suscripcionProveedorId);
         })
@@ -443,7 +445,10 @@ class SuscripcionLiquidacionDetalleController extends Controller
         $detallesAnioProveedor = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.transportista',
+            'asignacion.cantidadesMensuales',
         ])
+
+
         ->whereHas('asignacion', function ($query) use ($suscripcionProveedorId) {
             $query->where('suscripcion_proveedor_id', $suscripcionProveedorId);
         })
@@ -549,6 +554,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'asignacion.suscripcionProveedor.cobranzaCompra.tipoCuenta',
             'asignacion.transportista',
             'asignacion.opvPuntos',
+            'asignacion.cantidadesMensuales',
         ])
         ->whereHas('asignacion', function ($query) use ($suscripcionProveedorId, $grupoPrefactura, $agrupacionService) {
             $query->where('suscripcion_proveedor_id', $suscripcionProveedorId);

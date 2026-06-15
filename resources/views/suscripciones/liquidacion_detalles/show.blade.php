@@ -187,6 +187,13 @@
 
                                     $esValorFijo = str_ends_with($codigo, '.COM');
 
+                                    $cantidadesMensuales = $item->asignacion?->cantidadesMensuales ?? collect();
+
+                                    $esCantidadMensual = $cantidadesMensuales
+                                        ->where('anio', (int) $item->anio)
+                                        ->where('mes', (int) $item->mes)
+                                        ->isNotEmpty();
+
                                     $esOPV = $codigo === 'OPV'
                                         || str_ends_with($codigo, '.OPV')
                                         || $servicio === 'OPV'
@@ -222,11 +229,19 @@
                                                     Ver puntos OPV
                                                 </a>
                                             @endif
-                                        @elseif($esValorFijo)
-                                            <small class="text-muted d-block mt-1">
-                                                Valor fijo mensual. No se multiplica por fines de semana.
-                                            </small>
-                                        @endif
+
+
+                                            @elseif($esCantidadMensual)
+                                                <small class="text-muted d-block mt-1">
+                                                    Cantidad mensual informada manualmente. No se calcula por calendario.
+                                                </small>
+                                            @elseif($esValorFijo)
+                                                <small class="text-muted d-block mt-1">
+                                                    Valor fijo mensual. No se multiplica por fines de semana.
+                                                </small>
+                                            @endif
+
+
                                     </td>
 
                                     <td class="text-end">
@@ -242,9 +257,15 @@
                                                     x {{ $puntosOPV }} punto{{ $puntosOPV === 1 ? '' : 's' }} OPV
                                                 </small>
                                             @endif
-                                        @elseif($esValorFijo)
-                                            Fijo
-                                        @else
+
+                                            @elseif($esCantidadMensual)
+                                                Cantidad mensual
+                                                <small class="text-muted d-block">
+                                                    Informada manualmente
+                                                </small>
+                                            @elseif($esValorFijo)
+                                                Fijo
+                                            @else
                                             {{ $item->q_calendario }} fines de semana
 
                                             @if($item->q_inasistencia > 0)
@@ -256,12 +277,22 @@
                                     </td>
 
                                     <td class="text-end">
+
+
                                         @if($esValorFijo)
                                             1
                                             <small class="text-muted d-block">
                                                 fijo
                                             </small>
+                                        @elseif($esCantidadMensual)
+                                            {{ $item->cantidad }}
+                                            <small class="text-muted d-block">
+                                                informada
+                                            </small>
                                         @else
+
+
+
                                             {{ $item->cantidad }}
 
                                             @if($esOPV && $puntosOPV > 0)
