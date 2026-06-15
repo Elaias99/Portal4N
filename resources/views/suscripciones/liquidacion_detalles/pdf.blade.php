@@ -264,7 +264,7 @@
     </table>
 
     <div class="black-title">
-        PRE FACTURA SUSCRIPCIONES
+        OC / NRO {{ $ocPrefactura ?? '—' }}
     </div>
 
     <div class="section-title">
@@ -291,10 +291,6 @@
         <tr>
             <td class="left">FECHA DE DOCUMENTO</td>
             <td>{{ $fechaDocumento }}</td>
-        </tr>
-        <tr>
-            <td class="left">OC / NRO</td>
-            <td>{{ $numeroOc }}</td>
         </tr>
     </table>
 

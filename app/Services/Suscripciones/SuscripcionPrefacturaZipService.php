@@ -10,7 +10,8 @@ class SuscripcionPrefacturaZipService
 {
     public function __construct(
         private SuscripcionLiquidacionResumenService $resumenService,
-        private SuscripcionPrefacturaAgrupacionService $agrupacionService
+        private SuscripcionPrefacturaAgrupacionService $agrupacionService,
+        private SuscripcionPrefacturaOcService $ocService
     ) {}
 
     public function generarDesdeDetalles(Collection $detallesBase, int $anio, int $mes): array
@@ -84,6 +85,14 @@ class SuscripcionPrefacturaZipService
             $proveedor = $detalle->asignacion?->suscripcionProveedor;
             $cobranzaCompra = $proveedor?->cobranzaCompra;
 
+            $ocPrefactura = $proveedor
+                ? $this->ocService->generarOC(
+                    (int) $anio,
+                    (int) $mes,
+                    (int) $proveedor->id
+                )
+                : '—';
+
             $grupoPrefactura = $this->agrupacionService->grupoDesdeDetalle($detalle);
             $grupoPrefacturaLabel = $this->agrupacionService->etiquetaGrupo($grupoPrefactura);
 
@@ -120,6 +129,7 @@ class SuscripcionPrefacturaZipService
                     'meses' => $meses,
                     'grupoPrefactura' => $grupoPrefactura,
                     'grupoPrefacturaLabel' => $grupoPrefacturaLabel,
+                    'ocPrefactura' => $ocPrefactura,
                 ])->setPaper('letter', 'portrait');
 
                 file_put_contents($pdfPath, $pdf->output());
@@ -299,6 +309,6 @@ class SuscripcionPrefacturaZipService
             })
             ->implode('||');
 
-        return sha1('prefactura_grupo_v2|' . $anio . '|' . $mes . '|' . $base);
+        return sha1('prefactura_grupo_v3_oc|' . $anio . '|' . $mes . '|' . $base);
     }
 }

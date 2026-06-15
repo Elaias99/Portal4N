@@ -13,6 +13,7 @@ use App\Services\Suscripciones\SuscripcionLiquidacionResumenService;
 use App\Services\Suscripciones\SuscripcionPrefacturaZipService;
 use App\Services\Suscripciones\SuscripcionPrefacturaAgrupacionService;
 use App\Services\Suscripciones\SuscripcionGeneracionMensualService;
+use App\Services\Suscripciones\SuscripcionPrefacturaOcService;
 use Illuminate\Http\Request;
 
 class SuscripcionLiquidacionDetalleController extends Controller
@@ -529,7 +530,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function pdf( SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService, SuscripcionPrefacturaAgrupacionService $agrupacionService) 
+    public function pdf( SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService, SuscripcionPrefacturaAgrupacionService $agrupacionService, SuscripcionPrefacturaOcService $ocService ) 
     {
         $detalle->load([
             'asignacion.suscripcionProveedor.cobranzaCompra',
@@ -540,6 +541,12 @@ class SuscripcionLiquidacionDetalleController extends Controller
         ]);
 
         $suscripcionProveedorId = $detalle->asignacion?->suscripcion_proveedor_id;
+
+        $ocPrefactura = $ocService->generarOC(
+            (int) $detalle->anio,
+            (int) $detalle->mes,
+            (int) $suscripcionProveedorId
+        );
 
         if (!$suscripcionProveedorId) {
             abort(404, 'No se encontró el proveedor de suscripción asociado.');
@@ -623,6 +630,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'meses' => $meses,
             'grupoPrefactura' => $grupoPrefactura,
             'grupoPrefacturaLabel' => $grupoPrefacturaLabel,
+            'ocPrefactura' => $ocPrefactura,
         ])->setPaper('letter', 'portrait');
 
         return $pdf->stream($nombreArchivo);
