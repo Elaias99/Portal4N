@@ -14,6 +14,7 @@ use App\Services\Suscripciones\SuscripcionPrefacturaZipService;
 use App\Services\Suscripciones\SuscripcionPrefacturaAgrupacionService;
 use App\Services\Suscripciones\SuscripcionGeneracionMensualService;
 use App\Services\Suscripciones\SuscripcionPrefacturaOcService;
+use App\Services\Suscripciones\SuscripcionAjusteMensualService;
 use Illuminate\Http\Request;
 
 class SuscripcionLiquidacionDetalleController extends Controller
@@ -22,7 +23,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function index(Request $request, SuscripcionLiquidacionResumenService $resumenService)
+    public function index( Request $request, SuscripcionLiquidacionResumenService $resumenService, SuscripcionAjusteMensualService $ajusteMensualService) 
     {
         $proveedor = trim((string) $request->input('proveedor'));
         $rut = trim((string) $request->input('rut'));
@@ -58,24 +59,6 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'asignacion.transportista',
         ]);
 
-        if ($proveedor !== '') {
-            $query->whereHas('asignacion.suscripcionProveedor.cobranzaCompra', function ($q) use ($proveedor) {
-                $q->where('razon_social', 'like', '%' . $proveedor . '%');
-            });
-        }
-
-        if ($rut !== '') {
-            $query->whereHas('asignacion.suscripcionProveedor.cobranzaCompra', function ($q) use ($rut) {
-                $q->where('rut_cliente', 'like', '%' . $rut . '%');
-            });
-        }
-
-        if ($tipo !== '') {
-            $query->whereHas('asignacion.suscripcionProveedor', function ($q) use ($tipo) {
-                $q->where('tipo', $tipo);
-            });
-        }
-
         if ($anio) {
             $query->where('anio', $anio);
         }
@@ -84,29 +67,81 @@ class SuscripcionLiquidacionDetalleController extends Controller
             $query->where('mes', $mes);
         }
 
+        /*
+        * Los filtros por proveedor, rut y tipo se aplican después de traer los detalles,
+        * porque ahora pueden depender de un ajuste mensual.
+        *
+        * Ejemplo:
+        * - La asignación base puede ser de José Luis.
+        * - Pero en mayo puede facturar Manuel Hernández.
+        */
         $detallesFiltrados = $query
             ->orderBy('anio', 'desc')
             ->orderBy('mes', 'desc')
             ->orderBy('codigo')
-            ->get();
+            ->get()
+            ->filter(function ($detalle) use ($proveedor, $rut, $tipo, $ajusteMensualService) {
+                $proveedorPrefactura = $ajusteMensualService->proveedorFacturacionParaDetalle($detalle);
+                $cobranzaCompra = $proveedorPrefactura?->cobranzaCompra;
 
+                $tipoDocumento = $ajusteMensualService->tipoDocumentoParaDetalle($detalle)
+                    ?? $proveedorPrefactura?->tipo;
+
+                if ($proveedor !== '') {
+                    $razonSocial = mb_strtoupper(trim((string) $cobranzaCompra?->razon_social));
+                    $proveedorFiltro = mb_strtoupper($proveedor);
+
+                    if (!str_contains($razonSocial, $proveedorFiltro)) {
+                        return false;
+                    }
+                }
+
+                if ($rut !== '') {
+                    $rutCliente = mb_strtoupper(trim((string) $cobranzaCompra?->rut_cliente));
+                    $rutFiltro = mb_strtoupper($rut);
+
+                    if (!str_contains($rutCliente, $rutFiltro)) {
+                        return false;
+                    }
+                }
+
+                if ($tipo !== '') {
+                    $tipoDocumento = mb_strtoupper(trim((string) $tipoDocumento));
+                    $tipoFiltro = mb_strtoupper(trim($tipo));
+
+                    if ($tipoDocumento !== $tipoFiltro) {
+                        return false;
+                    }
+                }
+
+                return true;
+            })
+            ->values();
+
+        /*
+        * El index debe seguir mostrando una sola fila por proveedor/año/mes.
+        * Pero ahora el proveedor puede venir desde el ajuste mensual.
+        */
         $prefacturas = $detallesFiltrados
-            ->groupBy(function ($detalle) {
-                $suscripcionProveedorId = $detalle->asignacion?->suscripcion_proveedor_id ?? 'sin_proveedor';
+            ->groupBy(function ($detalle) use ($ajusteMensualService) {
+                $proveedorPrefactura = $ajusteMensualService->proveedorFacturacionParaDetalle($detalle);
+                $suscripcionProveedorId = $proveedorPrefactura?->id ?? 'sin_proveedor';
 
                 return $suscripcionProveedorId . '_' . $detalle->anio . '_' . $detalle->mes;
             })
-            ->map(function ($items) use ($resumenService, $meses) {
+            ->map(function ($items) use ($resumenService, $meses, $ajusteMensualService) {
+                $items = $items->values();
                 $detalleBase = $items->first();
 
-                $proveedor = $detalleBase->asignacion?->suscripcionProveedor;
+                $proveedor = $ajusteMensualService->proveedorFacturacionParaDetalle($detalleBase);
                 $cobranzaCompra = $proveedor?->cobranzaCompra;
 
                 $calculosDetalle = $resumenService->calcularPorDetalles($items);
+                $calculoBase = $calculosDetalle->first();
 
                 return [
                     'detalle_id' => $detalleBase->id,
-                    'suscripcion_proveedor_id' => $detalleBase->asignacion?->suscripcion_proveedor_id,
+                    'suscripcion_proveedor_id' => $proveedor?->id,
                     'anio' => $detalleBase->anio,
                     'mes' => $detalleBase->mes,
                     'mes_nombre' => $meses[$detalleBase->mes] ?? $detalleBase->mes,
@@ -114,10 +149,10 @@ class SuscripcionLiquidacionDetalleController extends Controller
                     'proveedor' => $cobranzaCompra?->razon_social ?? '—',
                     'rut' => $cobranzaCompra?->rut_cliente ?? '—',
 
-                    'tipo' => $proveedor?->tipo ?? '—',
-                    'detalle_documento' => $proveedor?->detalle_documento ?? 'Neto/Bruto',
-                    'detalle_impuesto' => $proveedor?->detalle_impuesto ?? 'Impuesto',
-                    'final' => $proveedor?->final ?? 'Final',
+                    'tipo' => $calculoBase['tipo'] ?? $proveedor?->tipo ?? '—',
+                    'detalle_documento' => $calculoBase['detalle_documento'] ?? $proveedor?->detalle_documento ?? 'Neto/Bruto',
+                    'detalle_impuesto' => $calculoBase['detalle_impuesto'] ?? $proveedor?->detalle_impuesto ?? 'Impuesto',
+                    'final' => $calculoBase['final'] ?? $proveedor?->final ?? 'Final',
 
                     'cantidad_lineas' => $items->count(),
 
@@ -360,14 +395,21 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function show( SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService, SuscripcionPrefacturaAgrupacionService $agrupacionService) 
+    public function show( SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService, SuscripcionPrefacturaAgrupacionService $agrupacionService, SuscripcionAjusteMensualService $ajusteMensualService) 
     {
         $detalle->load([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.transportista',
         ]);
 
-        $suscripcionProveedorId = $detalle->asignacion?->suscripcion_proveedor_id;
+        /*
+        * Ahora el proveedor de la pre-factura puede venir desde el ajuste mensual.
+        * Ejemplo:
+        * - Asignación base: José Luis
+        * - Mayo 2026: proveedor facturación Manuel Hernández
+        */
+        $proveedorPrefactura = $ajusteMensualService->proveedorFacturacionParaDetalle($detalle);
+        $suscripcionProveedorId = $proveedorPrefactura?->id;
 
         if (!$suscripcionProveedorId) {
             abort(404, 'No se encontró el proveedor de suscripción asociado.');
@@ -376,20 +418,27 @@ class SuscripcionLiquidacionDetalleController extends Controller
         $grupoPrefactura = $agrupacionService->grupoDesdeDetalle($detalle);
         $grupoPrefacturaLabel = $agrupacionService->etiquetaGrupo($grupoPrefactura);
 
+        /*
+        * Antes se filtraba por asignacion.suscripcion_proveedor_id.
+        * Ahora se traen los detalles del periodo y se filtran por proveedor efectivo
+        * de pre-factura, considerando ajustes mensuales.
+        */
         $detallesProveedor = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.transportista',
             'asignacion.opvPuntos',
             'asignacion.cantidadesMensuales',
         ])
+            ->where('anio', $detalle->anio)
+            ->where('mes', $detalle->mes)
+            ->orderBy('codigo')
+            ->get()
+            ->filter(function ($item) use ($suscripcionProveedorId, $ajusteMensualService) {
+                $proveedorItem = $ajusteMensualService->proveedorFacturacionParaDetalle($item);
 
-        ->whereHas('asignacion', function ($query) use ($suscripcionProveedorId) {
-            $query->where('suscripcion_proveedor_id', $suscripcionProveedorId);
-        })
-        ->where('anio', $detalle->anio)
-        ->where('mes', $detalle->mes)
-        ->orderBy('codigo')
-        ->get();
+                return (int) $proveedorItem?->id === (int) $suscripcionProveedorId;
+            })
+            ->values();
 
         $gruposPrefactura = $detallesProveedor
             ->groupBy(function ($item) use ($agrupacionService) {
@@ -421,7 +470,11 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
         $calculosDetalle = $resumenService->calcularPorDetalles($detallesProveedor);
 
-        $proveedor = $detalle->asignacion?->suscripcionProveedor;
+        /*
+        * Encabezado de la pre-factura.
+        * Usa proveedor efectivo de facturación.
+        */
+        $proveedor = $proveedorPrefactura;
         $cobranzaCompra = $proveedor?->cobranzaCompra;
 
         $totalBruto = $detallesProveedor->sum('total');
@@ -443,24 +496,31 @@ class SuscripcionLiquidacionDetalleController extends Controller
             12 => 'Diciembre',
         ];
 
+        /*
+        * Estado anual del proveedor efectivo.
+        * Esto permite que mayo aparezca bajo Manuel si existe ajuste,
+        * y que abril siga bajo José Luis si no tiene ajuste.
+        */
         $detallesAnioProveedor = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.transportista',
             'asignacion.cantidadesMensuales',
         ])
+            ->where('anio', $detalle->anio)
+            ->orderBy('mes')
+            ->orderBy('codigo')
+            ->get()
+            ->filter(function ($item) use ($suscripcionProveedorId, $ajusteMensualService) {
+                $proveedorItem = $ajusteMensualService->proveedorFacturacionParaDetalle($item);
 
-
-        ->whereHas('asignacion', function ($query) use ($suscripcionProveedorId) {
-            $query->where('suscripcion_proveedor_id', $suscripcionProveedorId);
-        })
-        ->where('anio', $detalle->anio)
-        ->orderBy('mes')
-        ->orderBy('codigo')
-        ->get();
+                return (int) $proveedorItem?->id === (int) $suscripcionProveedorId;
+            })
+            ->values();
 
         $prefacturasProveedorAnio = $detallesAnioProveedor
             ->groupBy('mes')
             ->map(function ($items) use ($resumenService, $meses) {
+                $items = $items->values();
                 $detalleBase = $items->first();
 
                 $calculosMes = $resumenService->calcularPorDetalles($items);
@@ -493,21 +553,24 @@ class SuscripcionLiquidacionDetalleController extends Controller
             })
             ->values();
 
+        /*
+        * OPV pendientes se revisan sobre el proveedor efectivo de la pre-factura.
+        */
         $opvPendientes = Asignaciones::with([
             'suscripcionProveedor.cobranzaCompra',
             'transportista',
             'opvPuntos',
         ])
-        ->where('suscripcion_proveedor_id', $suscripcionProveedorId)
-        ->where(function ($query) {
-            $query->whereRaw("UPPER(TRIM(codigo)) = 'OPV'")
-                ->orWhereRaw("UPPER(TRIM(codigo)) LIKE '%.OPV'")
-                ->orWhereRaw("UPPER(TRIM(servicio)) = 'OPV'")
-                ->orWhereRaw("UPPER(TRIM(origen_gasto)) = 'OPV'");
-        })
-        ->whereDoesntHave('opvPuntos')
-        ->orderBy('punto_1')
-        ->get();
+            ->where('suscripcion_proveedor_id', $suscripcionProveedorId)
+            ->where(function ($query) {
+                $query->whereRaw("UPPER(TRIM(codigo)) = 'OPV'")
+                    ->orWhereRaw("UPPER(TRIM(codigo)) LIKE '%.OPV'")
+                    ->orWhereRaw("UPPER(TRIM(servicio)) = 'OPV'")
+                    ->orWhereRaw("UPPER(TRIM(origen_gasto)) = 'OPV'");
+            })
+            ->whereDoesntHave('opvPuntos')
+            ->orderBy('punto_1')
+            ->get();
 
         return view('suscripciones.liquidacion_detalles.show', compact(
             'detalle',

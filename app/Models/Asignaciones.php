@@ -44,6 +44,11 @@ class Asignaciones extends Model
         return $this->hasMany(SuscripcionCantidadMensual::class, 'suscripcion_asignacion_id');
     }
 
+    public function ajustesMensuales()
+    {
+        return $this->hasMany(SuscripcionAjusteMensual::class, 'suscripcion_asignacion_id');
+    }
+
 
 
 }
