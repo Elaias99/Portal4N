@@ -1124,11 +1124,11 @@ Route::get('/admin', function () {
 
 Route::get('/tracking-data/{tracking}', [PublicTrackingController::class, 'data'])
     ->where('tracking', '[A-Za-z0-9\-]+')
-    ->name('tracking.public.data')->middleware('auth');
+    ->name('tracking.public.data');
 
 Route::get('/tracking/{tracking}', [PublicTrackingController::class, 'show'])
     ->where('tracking', '[A-Za-z0-9\-]+')
-    ->name('tracking.public.show')->middleware('auth');
+    ->name('tracking.public.show');
 
 
 
