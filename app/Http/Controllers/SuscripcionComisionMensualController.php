@@ -34,23 +34,45 @@ class SuscripcionComisionMensualController extends Controller
             ->orderBy('nombre_transportista')
             ->get();
 
+        /*
+        * Cantidades variables del mes.
+        *
+        * Por ahora dejamos esta sección estrictamente limitada a LOTA,
+        * porque otras asignaciones con generar_automaticamente = 0 pueden ser
+        * contenedoras de reemplazos, pagos adicionales o líneas especiales,
+        * y no deben aparecer como cantidades variables.
+        *
+        * Ejemplo correcto:
+        * - LOTA: cantidad variable informada del mes.
+        *
+        * Ejemplos que NO deben aparecer aquí:
+        * - VA03, VA04
+        * - BH.01, 02, 03
+        * - COMISION
+        * - .COM
+        */
         $asignacionesCantidadMensual = Asignaciones::with([
             'suscripcionProveedor.cobranzaCompra',
             'transportista',
         ])
-        ->where('generar_automaticamente', 0)
-        ->whereRaw("UPPER(TRIM(codigo)) NOT LIKE '%.COM'")
-        ->whereRaw("UPPER(TRIM(codigo)) NOT LIKE '%COMISION%'")
-        ->orderBy('codigo')
-        ->get();
+            ->where('generar_automaticamente', 0)
+            ->whereRaw("UPPER(TRIM(codigo)) = 'LOTA'")
+            ->orderBy('codigo')
+            ->get();
 
-
+        /*
+        * Novedades mensuales.
+        *
+        * Aquí sí dejamos disponibles las asignaciones existentes,
+        * porque el filtro fino lo hace la vista según el tipo de novedad:
+        * INASISTENCIA, FIJO_MENSUAL, FACTURACION, REEMPLAZO, etc.
+        */
         $asignacionesAjustesMensuales = Asignaciones::with([
             'suscripcionProveedor.cobranzaCompra',
             'transportista',
         ])
-        ->orderBy('codigo')
-        ->get();
+            ->orderBy('codigo')
+            ->get();
 
         return view('suscripciones.comisiones_mensuales.create', compact(
             'anio',

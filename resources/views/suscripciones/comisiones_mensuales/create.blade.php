@@ -51,9 +51,13 @@
     @endif
 
     <div class="alert alert-info">
-        Completa los datos necesarios para el periodo. Al presionar
-        <strong>Guardar datos y generar mes completo</strong>, el sistema registrará la cantidad variable si corresponde,
-        registrará las comisiones agregadas si existen, registrará las novedades mensuales y luego generará el mes.
+        <strong>Flujo recomendado:</strong> primero define el periodo, luego registra cantidades variables como LOTA,
+        después agrega sólo las novedades reales del mes y finalmente presiona
+        <strong>Guardar datos y generar mes completo</strong>.
+        <div class="small mt-2 mb-0">
+            Importante: una cantidad variable no debe cargarse como fijo mensual. Si LOTA cambia de proveedor facturador,
+            carga la cantidad arriba y registra aquí sólo el <strong>cambio de facturación</strong>.
+        </div>
     </div>
 
     <form id="form-generacion-mensual" method="POST" action="{{ route('suscripciones.comisiones-mensuales.store') }}">
@@ -104,8 +108,10 @@
                 </div>
 
                 <div class="card-body">
-                    <div class="small text-muted mb-3">
-                        Registra aquí las rutas que no se calculan por calendario, por ejemplo LOTA.
+                    <div class="alert alert-light border small mb-3">
+                        <strong>Usa esta sección sólo para cantidades variables.</strong>
+                        Ejemplo: LOTA se calcula por cantidad informada del mes, no por fines de semana.
+                        No cargues aquí reemplazos, fijos mensuales, comisiones ni pagos adicionales.
                     </div>
 
                     <div class="row g-3 align-items-end">
@@ -125,11 +131,35 @@
                                     @php
                                         $cobranza = $asignacion->suscripcionProveedor?->cobranzaCompra;
                                         $transportista = $asignacion->transportista;
+
+                                        $codigoCantidadNormalizado = mb_strtoupper(trim((string) $asignacion->codigo));
+                                        $servicioCantidadNormalizado = mb_strtoupper(trim((string) $asignacion->servicio));
+                                        $origenCantidadNormalizado = mb_strtoupper(trim((string) $asignacion->origen_gasto));
+
+                                        $esCantidadComision = str_ends_with($codigoCantidadNormalizado, '.COM')
+                                            || str_contains($codigoCantidadNormalizado, 'COMISION');
+
+                                        $esCantidadOpv = $codigoCantidadNormalizado === 'OPV'
+                                            || str_ends_with($codigoCantidadNormalizado, '.OPV')
+                                            || $servicioCantidadNormalizado === 'OPV'
+                                            || $origenCantidadNormalizado === 'OPV';
+
+                                        /*
+                                         * Marcador operativo actual:
+                                         * LOTA es cantidad variable validada contra Excel/BD.
+                                         * Si en el futuro aparecen más rutas variables, conviene mover esta clasificación
+                                         * a una columna/configuración y no depender del código.
+                                         */
+                                        $esCantidadVariableOperativa = !$esCantidadComision
+                                            && !$esCantidadOpv
+                                            && str_contains($codigoCantidadNormalizado, 'LOTA');
                                     @endphp
 
                                     <option
                                         value="{{ $asignacion->id }}"
                                         data-costo="{{ (int) $asignacion->costo }}"
+                                        data-codigo="{{ $asignacion->codigo }}"
+                                        data-es-cantidad-variable-operativa="{{ $esCantidadVariableOperativa ? 1 : 0 }}"
                                         @selected((int) old('cantidad_mensual_asignacion_id') === (int) $asignacion->id)
                                     >
                                         {{ $asignacion->codigo }}
@@ -142,6 +172,10 @@
                                     </option>
                                 @endforeach
                             </select>
+
+                            <div id="cantidad_variable_advertencia" class="form-text text-muted">
+                                Selecciona una ruta variable y escribe la cantidad mensual informada.
+                            </div>
                         </div>
 
                         <div class="col-md-2">
@@ -402,8 +436,11 @@
 
             <div class="card-body">
                 <div class="alert alert-warning small mb-3">
-                    Usa este bloque sólo para sucesos especiales del periodo. El sistema guardará estas novedades en
-                    <strong>suscripcion_ajustes_mensuales</strong> y luego las aplicará sobre el detalle mensual generado.
+                    <strong>Usa este bloque sólo para excepciones del periodo.</strong>
+                    No reemplaza la sección de cantidades variables. Por ejemplo, LOTA se carga arriba con su cantidad mensual
+                    y aquí sólo se registra si cambia proveedor facturador, documento o transportista efectivo.
+                    El sistema guardará estas novedades en <strong>suscripcion_ajustes_mensuales</strong> y luego las aplicará
+                    sobre el detalle mensual generado.
                 </div>
 
                 <div class="border rounded p-3 mb-3">
@@ -437,6 +474,16 @@
                             >
                         </div>
 
+                        <div class="col-md-12">
+                            <div id="ajuste_guia_operativa" class="alert alert-light border small mb-0">
+                                Selecciona un tipo de novedad. El formulario mostrará sólo los campos necesarios para evitar errores.
+                            </div>
+                        </div>
+
+                        <div class="col-md-12 d-none" id="ajuste_advertencia_asignacion_wrapper">
+                            <div id="ajuste_advertencia_asignacion" class="alert alert-warning small mb-0"></div>
+                        </div>
+
                         <div class="col-md-12 d-none" id="bloque-ajuste-asignacion">
                             <label for="ajuste_suscripcion_asignacion_id" class="form-label">
                                 Asignación existente
@@ -449,6 +496,29 @@
                                     @php
                                         $cobranza = $asignacion->suscripcionProveedor?->cobranzaCompra;
                                         $transportista = $asignacion->transportista;
+
+                                        $codigoAsignacionNormalizado = mb_strtoupper(trim((string) $asignacion->codigo));
+                                        $servicioAsignacionNormalizado = mb_strtoupper(trim((string) $asignacion->servicio));
+                                        $origenAsignacionNormalizado = mb_strtoupper(trim((string) $asignacion->origen_gasto));
+                                        $generarAutomaticamente = $asignacion->generar_automaticamente;
+
+                                        $esAsignacionComision = str_ends_with($codigoAsignacionNormalizado, '.COM')
+                                            || str_contains($codigoAsignacionNormalizado, 'COMISION');
+
+                                        $esAsignacionOpv = $codigoAsignacionNormalizado === 'OPV'
+                                            || str_ends_with($codigoAsignacionNormalizado, '.OPV')
+                                            || $servicioAsignacionNormalizado === 'OPV'
+                                            || $origenAsignacionNormalizado === 'OPV';
+
+                                        /*
+                                         * Marcador operativo actual para evitar errores de UX:
+                                         * LOTA es cantidad variable, no fijo mensual ni inasistencia.
+                                         */
+                                        $esAsignacionCantidadVariable = !$esAsignacionComision
+                                            && !$esAsignacionOpv
+                                            && str_contains($codigoAsignacionNormalizado, 'LOTA');
+
+                                        $esAsignacionNoAutomatica = (string) $generarAutomaticamente === '0';
 
                                         $asignacionLabel = trim(
                                             ($asignacion->codigo ?? 'Sin código')
@@ -471,14 +541,19 @@
                                         data-punto-2="{{ $asignacion->punto_2 }}"
                                         data-servicio="{{ $asignacion->servicio }}"
                                         data-grupo-prefactura="{{ $asignacion->grupo_prefactura }}"
+                                        data-generar-automaticamente="{{ $generarAutomaticamente }}"
+                                        data-es-comision="{{ $esAsignacionComision ? 1 : 0 }}"
+                                        data-es-opv="{{ $esAsignacionOpv ? 1 : 0 }}"
+                                        data-es-cantidad-variable="{{ $esAsignacionCantidadVariable ? 1 : 0 }}"
+                                        data-es-no-automatica="{{ $esAsignacionNoAutomatica ? 1 : 0 }}"
                                     >
                                         {{ $asignacionLabel }}
                                     </option>
                                 @endforeach
                             </select>
 
-                            <div class="form-text">
-                                Para inasistencias y cambios de facturación, selecciona la ruta original existente.
+                            <div class="form-text" id="ajuste_asignacion_ayuda">
+                                Selecciona la ruta original. El listado se ajusta según el tipo de novedad.
                             </div>
                         </div>
 
@@ -827,6 +902,7 @@
         const asignacionCantidadSelect = document.getElementById('cantidad_mensual_asignacion_id');
         const cantidadVariableInput = document.getElementById('cantidad_mensual_cantidad');
         const totalVariableInput = document.getElementById('total_variable_estimado');
+        const cantidadVariableAdvertencia = document.getElementById('cantidad_variable_advertencia');
 
         const proveedorSelect = document.getElementById('comision_proveedor_id');
         const transportistaSelect = document.getElementById('comision_transportista_id');
@@ -846,6 +922,10 @@
 
         const ajusteTipoSelect = document.getElementById('ajuste_tipo_ajuste');
         const ajusteTipoDescripcion = document.getElementById('ajuste_tipo_descripcion');
+        const ajusteGuiaOperativa = document.getElementById('ajuste_guia_operativa');
+        const ajusteAdvertenciaWrapper = document.getElementById('ajuste_advertencia_asignacion_wrapper');
+        const ajusteAdvertenciaAsignacion = document.getElementById('ajuste_advertencia_asignacion');
+        const ajusteAsignacionAyuda = document.getElementById('ajuste_asignacion_ayuda');
 
         const bloqueAjusteAsignacion = document.getElementById('bloque-ajuste-asignacion');
         const bloqueAjusteProveedor = document.getElementById('bloque-ajuste-proveedor');
@@ -938,12 +1018,263 @@
             return limpiarTexto(valor).toUpperCase().replaceAll(' ', '_').replaceAll('-', '_');
         }
 
+        function normalizarCodigo(valor) {
+            return limpiarTexto(valor).toUpperCase();
+        }
+
         function esTipoLineaAdicional(tipo) {
             return ['LINEA_ADICIONAL', 'PAGO_ADICIONAL', 'REEMPLAZO'].includes(normalizarTipo(tipo));
         }
 
         function esTipoAsignacionExistente(tipo) {
             return ['INASISTENCIA', 'FIJO_MENSUAL', 'FACTURACION'].includes(normalizarTipo(tipo));
+        }
+
+        function contenedorCampo(input) {
+            return input?.closest('.col-md-2, .col-md-3, .col-md-4, .col-md-6, .col-md-8, .col-md-9, .col-md-12');
+        }
+
+        const camposAjuste = {
+            punto1: contenedorCampo(ajustePunto1Input),
+            origenGasto: contenedorCampo(ajusteOrigenGastoInput),
+            punto2: contenedorCampo(ajustePunto2Input),
+            codigo: contenedorCampo(ajusteCodigoInput),
+            servicio: contenedorCampo(ajusteServicioInput),
+            grupoPrefactura: contenedorCampo(ajusteGrupoPrefacturaInput),
+            costo: contenedorCampo(ajusteCostoInput),
+            qCalendario: contenedorCampo(ajusteQCalendarioInput),
+            qInasistencia: contenedorCampo(ajusteQInasistenciaInput),
+            cantidad: contenedorCampo(ajusteCantidadInput),
+            total: contenedorCampo(ajusteTotalInput),
+            tipoDocumento: contenedorCampo(ajusteTipoDocumentoInput),
+            detalleDocumento: contenedorCampo(ajusteDetalleDocumentoInput),
+            detalleImpuesto: contenedorCampo(ajusteDetalleImpuestoInput),
+            final: contenedorCampo(ajusteFinalInput),
+            totalEstimado: contenedorCampo(ajusteTotalEstimadoInput),
+            observacion: contenedorCampo(ajusteObservacionInput),
+        };
+
+        function ocultarCamposAjuste() {
+            Object.values(camposAjuste).forEach(function (campo) {
+                if (campo) {
+                    campo.classList.add('d-none');
+                }
+            });
+        }
+
+        function mostrarCamposAjuste(nombres) {
+            nombres.forEach(function (nombre) {
+                if (camposAjuste[nombre]) {
+                    camposAjuste[nombre].classList.remove('d-none');
+                }
+            });
+        }
+
+        function mostrarAvisoAsignacion(mensaje, tipo = 'warning') {
+            if (!ajusteAdvertenciaWrapper || !ajusteAdvertenciaAsignacion) {
+                return;
+            }
+
+            ajusteAdvertenciaAsignacion.className = 'alert small mb-0 alert-' + tipo;
+            ajusteAdvertenciaAsignacion.textContent = mensaje;
+            ajusteAdvertenciaWrapper.classList.remove('d-none');
+        }
+
+        function ocultarAvisoAsignacion() {
+            if (!ajusteAdvertenciaWrapper || !ajusteAdvertenciaAsignacion) {
+                return;
+            }
+
+            ajusteAdvertenciaAsignacion.textContent = '';
+            ajusteAdvertenciaWrapper.classList.add('d-none');
+        }
+
+        function esOpcionComision(option) {
+            return option?.dataset?.esComision === '1';
+        }
+
+        function esOpcionOpv(option) {
+            return option?.dataset?.esOpv === '1';
+        }
+
+        function esOpcionCantidadVariable(option) {
+            return option?.dataset?.esCantidadVariable === '1';
+        }
+
+        function esOpcionNoAutomatica(option) {
+            return option?.dataset?.esNoAutomatica === '1';
+        }
+
+        function opcionAsignacionCompatible(tipo, option) {
+            tipo = normalizarTipo(tipo);
+
+            if (!option || !option.value) {
+                return true;
+            }
+
+            if (tipo === 'INASISTENCIA') {
+                return !esOpcionComision(option)
+                    && !esOpcionOpv(option)
+                    && !esOpcionCantidadVariable(option)
+                    && !esOpcionNoAutomatica(option);
+            }
+
+            if (tipo === 'FIJO_MENSUAL') {
+                return !esOpcionComision(option)
+                    && !esOpcionOpv(option)
+                    && !esOpcionCantidadVariable(option)
+                    && !esOpcionNoAutomatica(option);
+            }
+
+            if (tipo === 'FACTURACION') {
+                return !esOpcionComision(option);
+            }
+
+            return true;
+        }
+
+        function mensajeIncompatibilidadAsignacion(tipo, option) {
+            tipo = normalizarTipo(tipo);
+
+            if (!option || !option.value) {
+                return '';
+            }
+
+            const codigo = normalizarCodigo(option.dataset.codigo || '');
+
+            if (tipo === 'INASISTENCIA' && esOpcionCantidadVariable(option)) {
+                return `${codigo} parece ser una cantidad variable. Cárgala arriba en “Cantidades variables del mes”; no corresponde registrar inasistencia aquí.`;
+            }
+
+            if (tipo === 'FIJO_MENSUAL' && esOpcionCantidadVariable(option)) {
+                return `${codigo} parece ser una cantidad variable. No debe transformarse en fijo mensual, porque perdería la cantidad real del mes.`;
+            }
+
+            if ((tipo === 'INASISTENCIA' || tipo === 'FIJO_MENSUAL') && esOpcionComision(option)) {
+                return 'Esta asignación corresponde a comisión. No debe usarse como inasistencia ni fijo mensual.';
+            }
+
+            if ((tipo === 'INASISTENCIA' || tipo === 'FIJO_MENSUAL') && esOpcionOpv(option)) {
+                return 'Esta asignación corresponde a OPV. Revísala aparte antes de usarla como novedad mensual.';
+            }
+
+            if ((tipo === 'INASISTENCIA' || tipo === 'FIJO_MENSUAL') && esOpcionNoAutomatica(option)) {
+                return 'Esta asignación no se genera automáticamente. Probablemente es contenedora o especial; no conviene usarla para este tipo de novedad.';
+            }
+
+            return 'La asignación seleccionada no es compatible con este tipo de novedad.';
+        }
+
+        function mensajeInformativoAsignacion(tipo, option) {
+            tipo = normalizarTipo(tipo);
+
+            if (!option || !option.value) {
+                return '';
+            }
+
+            const codigo = normalizarCodigo(option.dataset.codigo || '');
+
+            if (tipo === 'FACTURACION' && esOpcionCantidadVariable(option)) {
+                return `${codigo} se debe cargar arriba como cantidad variable. Aquí sólo registrarás el proveedor facturador/documento efectivo del periodo.`;
+            }
+
+            if (tipo === 'FACTURACION' && esOpcionOpv(option)) {
+                return 'Cambio de facturación sobre OPV: confirma que la ruta OPV tenga puntos/locales cargados para el periodo.';
+            }
+
+            return '';
+        }
+
+        function actualizarOpcionesAsignacionPorTipo() {
+            const tipo = normalizarTipo(ajusteTipoSelect.value);
+
+            Array.from(ajusteAsignacionSelect?.options || []).forEach(function (option) {
+                option.disabled = !opcionAsignacionCompatible(tipo, option);
+            });
+
+            const option = selectedOption(ajusteAsignacionSelect);
+
+            if (option && option.value && option.disabled) {
+                mostrarAvisoAsignacion(mensajeIncompatibilidadAsignacion(tipo, option), 'warning');
+                ajusteAsignacionSelect.value = '';
+                limpiarCamposAsignacion();
+                return;
+            }
+
+            actualizarAvisoAsignacionActual();
+        }
+
+        function actualizarAvisoAsignacionActual() {
+            const tipo = normalizarTipo(ajusteTipoSelect.value);
+            const option = selectedOption(ajusteAsignacionSelect);
+
+            ocultarAvisoAsignacion();
+
+            if (!option || !option.value || !tipo) {
+                return;
+            }
+
+            if (!opcionAsignacionCompatible(tipo, option)) {
+                mostrarAvisoAsignacion(mensajeIncompatibilidadAsignacion(tipo, option), 'warning');
+                return;
+            }
+
+            const mensajeInfo = mensajeInformativoAsignacion(tipo, option);
+
+            if (mensajeInfo !== '') {
+                mostrarAvisoAsignacion(mensajeInfo, 'info');
+            }
+        }
+
+        function validarCompatibilidadAsignacionActual() {
+            const tipo = normalizarTipo(ajusteTipoSelect.value);
+            const option = selectedOption(ajusteAsignacionSelect);
+
+            if (!option || !option.value) {
+                return true;
+            }
+
+            if (!opcionAsignacionCompatible(tipo, option)) {
+                alert(mensajeIncompatibilidadAsignacion(tipo, option));
+                actualizarAvisoAsignacionActual();
+                return false;
+            }
+
+            return true;
+        }
+
+        function limpiarCamposAsignacion() {
+            ajustePunto1Input.value = '';
+            ajusteOrigenGastoInput.value = 'Suscripciones';
+            ajustePunto2Input.value = '';
+            ajusteCodigoInput.value = '';
+            ajusteServicioInput.value = 'Reparto fin de semana';
+            ajusteGrupoPrefacturaInput.value = '';
+            ajusteCostoInput.value = '';
+            ajusteQCalendarioInput.value = '';
+            ajusteQInasistenciaInput.value = '';
+            ajusteCantidadInput.value = '';
+            ajusteTotalInput.value = '';
+            actualizarTotalAjusteActual();
+        }
+
+        function limpiarCamposDependientesAjuste() {
+            ajusteAsignacionSelect.value = '';
+            ajusteProveedorSelect.value = '';
+            ajusteTransportistaSelect.value = '';
+            ajusteProveedorFacturacionSelect.value = '';
+            ajusteTransportistaOverrideSelect.value = '';
+
+            limpiarCamposAsignacion();
+
+            ajusteTipoDocumentoInput.value = '';
+            ajusteDetalleDocumentoInput.value = '';
+            ajusteDetalleImpuestoInput.value = '';
+            ajusteFinalInput.value = '';
+            ajusteObservacionInput.value = '';
+
+            ajusteCostoInput.disabled = false;
+            ocultarAvisoAsignacion();
         }
 
         function actualizarTotalVariable() {
@@ -957,6 +1288,20 @@
             const total = costo * cantidad;
 
             totalVariableInput.value = formatearCLP(total);
+
+            if (cantidadVariableAdvertencia) {
+                const esVariableOperativa = option?.dataset?.esCantidadVariableOperativa === '1';
+
+                cantidadVariableAdvertencia.classList.remove('text-danger', 'text-warning', 'text-muted');
+
+                if (option?.value && !esVariableOperativa) {
+                    cantidadVariableAdvertencia.classList.add('text-warning');
+                    cantidadVariableAdvertencia.textContent = 'Revisa esta selección: actualmente la cantidad variable validada es LOTA. No uses aquí reemplazos, fijos ni contenedoras.';
+                } else {
+                    cantidadVariableAdvertencia.classList.add('text-muted');
+                    cantidadVariableAdvertencia.textContent = 'Selecciona una ruta variable y escribe la cantidad mensual informada.';
+                }
+            }
         }
 
         function actualizarTotalComisionActual() {
@@ -1100,6 +1445,18 @@
             renderizarComisiones();
         }
 
+        function actualizarEstadoCostoSegunAsignacion() {
+            const tipo = normalizarTipo(ajusteTipoSelect.value);
+            const option = selectedOption(ajusteAsignacionSelect);
+
+            ajusteCostoInput.disabled = false;
+
+            if (tipo === 'FACTURACION' && option?.value && esOpcionCantidadVariable(option)) {
+                ajusteCostoInput.value = '';
+                ajusteCostoInput.disabled = true;
+            }
+        }
+
         function actualizarCamposAjustePorTipo() {
             const tipo = normalizarTipo(ajusteTipoSelect.value);
 
@@ -1109,16 +1466,37 @@
             bloqueAjusteProveedorFacturacion.classList.add('d-none');
             bloqueAjusteTransportistaOverride.classList.add('d-none');
 
+            ocultarCamposAjuste();
+            ocultarAvisoAsignacion();
+
             ajusteTipoDescripcion.value = 'Selecciona un tipo de novedad para ver los campos necesarios.';
+            ajusteGuiaOperativa.textContent = 'Selecciona un tipo de novedad. El formulario mostrará sólo los campos necesarios para evitar errores.';
+            ajusteAsignacionAyuda.textContent = 'Selecciona la ruta original. El listado se ajusta según el tipo de novedad.';
 
             if (tipo === 'INASISTENCIA') {
                 bloqueAjusteAsignacion.classList.remove('d-none');
-                ajusteTipoDescripcion.value = 'Actualiza cantidad, inasistencia y total de una asignación existente.';
+                mostrarCamposAjuste(['qInasistencia', 'observacion']);
+
+                ajusteTipoDescripcion.value = 'Registra días no realizados en una ruta normal del calendario.';
+                ajusteGuiaOperativa.textContent = 'Elige la asignación original y escribe sólo la cantidad de inasistencias. No uses LOTA, OPV, comisiones ni líneas contenedoras.';
+                ajusteAsignacionAyuda.textContent = 'Sólo se permiten rutas normales generadas por calendario.';
             }
 
             if (tipo === 'FIJO_MENSUAL') {
                 bloqueAjusteAsignacion.classList.remove('d-none');
-                ajusteTipoDescripcion.value = 'Corrige una asignación que debe pagarse una sola vez en el mes, sin multiplicarse por calendario.';
+                mostrarCamposAjuste([
+                    'costo',
+                    'tipoDocumento',
+                    'detalleDocumento',
+                    'detalleImpuesto',
+                    'final',
+                    'totalEstimado',
+                    'observacion',
+                ]);
+
+                ajusteTipoDescripcion.value = 'Convierte una asignación existente en pago único mensual.';
+                ajusteGuiaOperativa.textContent = 'Usa este tipo sólo cuando el Excel indique que la línea no se multiplica por fines de semana. No uses LOTA como fijo mensual.';
+                ajusteAsignacionAyuda.textContent = 'Selecciona la asignación que debe pagarse una sola vez en el mes.';
 
                 ajusteQCalendarioInput.value = '1';
                 ajusteQInasistenciaInput.value = '0';
@@ -1130,15 +1508,49 @@
                 bloqueAjusteAsignacion.classList.remove('d-none');
                 bloqueAjusteProveedorFacturacion.classList.remove('d-none');
                 bloqueAjusteTransportistaOverride.classList.remove('d-none');
-                ajusteTipoDescripcion.value = 'Cambia proveedor facturador, documentos o transportista efectivo sólo para el periodo.';
+
+                mostrarCamposAjuste([
+                    'costo',
+                    'tipoDocumento',
+                    'detalleDocumento',
+                    'detalleImpuesto',
+                    'final',
+                    'observacion',
+                ]);
+
+                ajusteTipoDescripcion.value = 'Cambia proveedor facturador, documento o transportista efectivo sólo para este periodo.';
+                ajusteGuiaOperativa.textContent = 'El detalle mensual se genera normalmente. Esta novedad sólo cambia la facturación efectiva. Para LOTA, primero carga la cantidad arriba.';
+                ajusteAsignacionAyuda.textContent = 'Puedes seleccionar rutas normales o cantidades variables como LOTA. No selecciones comisiones.';
             }
 
             if (esTipoLineaAdicional(tipo)) {
                 bloqueAjusteProveedor.classList.remove('d-none');
                 bloqueAjusteTransportista.classList.remove('d-none');
+
+                mostrarCamposAjuste([
+                    'punto1',
+                    'origenGasto',
+                    'punto2',
+                    'codigo',
+                    'servicio',
+                    'grupoPrefactura',
+                    'costo',
+                    'cantidad',
+                    'total',
+                    'tipoDocumento',
+                    'detalleDocumento',
+                    'detalleImpuesto',
+                    'final',
+                    'totalEstimado',
+                    'observacion',
+                ]);
+
                 ajusteTipoDescripcion.value = 'Crea una línea mensual adicional mediante una asignación contenedora.';
+                ajusteGuiaOperativa.textContent = 'Usa este tipo para reemplazos o pagos que no existen como línea normal del mes. Escribe código, costo y cantidad con cuidado para evitar duplicados.';
             }
 
+            actualizarOpcionesAsignacionPorTipo();
+            actualizarEstadoCostoSegunAsignacion();
             actualizarTotalAjusteActual();
         }
 
@@ -1146,47 +1558,34 @@
             const option = selectedOption(ajusteAsignacionSelect);
 
             if (!option || !option.value) {
+                limpiarCamposAsignacion();
+                ocultarAvisoAsignacion();
                 return;
             }
 
-            if (!ajusteCodigoInput.value) {
-                ajusteCodigoInput.value = limpiarTexto(option.dataset.codigo || '');
+            if (!validarCompatibilidadAsignacionActual()) {
+                ajusteAsignacionSelect.value = '';
+                limpiarCamposAsignacion();
+                return;
             }
 
-            if (!ajusteCostoInput.value) {
-                ajusteCostoInput.value = parseInt(option.dataset.costo || 0, 10) || '';
-            }
-
-            if (!ajustePunto1Input.value) {
-                ajustePunto1Input.value = limpiarTexto(option.dataset.punto1 || '');
-            }
-
-            if (!ajusteOrigenGastoInput.value) {
-                ajusteOrigenGastoInput.value = limpiarTexto(option.dataset.origenGasto || 'Suscripciones');
-            }
-
-            if (!ajustePunto2Input.value) {
-                ajustePunto2Input.value = limpiarTexto(option.dataset.punto2 || '');
-            }
-
-            if (!ajusteServicioInput.value) {
-                ajusteServicioInput.value = limpiarTexto(option.dataset.servicio || '');
-            }
-
-            if (!ajusteGrupoPrefacturaInput.value) {
-                ajusteGrupoPrefacturaInput.value = limpiarTexto(option.dataset.grupoPrefactura || '');
-            }
+            ajusteCodigoInput.value = limpiarTexto(option.dataset.codigo || '');
+            ajusteCostoInput.value = parseInt(option.dataset.costo || 0, 10) || '';
+            ajustePunto1Input.value = limpiarTexto(option.dataset.punto1 || '');
+            ajusteOrigenGastoInput.value = limpiarTexto(option.dataset.origenGasto || 'Suscripciones');
+            ajustePunto2Input.value = limpiarTexto(option.dataset.punto2 || '');
+            ajusteServicioInput.value = limpiarTexto(option.dataset.servicio || '');
+            ajusteGrupoPrefacturaInput.value = limpiarTexto(option.dataset.grupoPrefactura || '');
 
             if (normalizarTipo(ajusteTipoSelect.value) === 'FIJO_MENSUAL') {
                 ajusteQCalendarioInput.value = '1';
                 ajusteQInasistenciaInput.value = '0';
                 ajusteCantidadInput.value = '1';
-
-                if (!ajusteTotalInput.value) {
-                    ajusteTotalInput.value = ajusteCostoInput.value || '';
-                }
+                ajusteTotalInput.value = ajusteCostoInput.value || '';
             }
 
+            actualizarEstadoCostoSegunAsignacion();
+            actualizarAvisoAsignacionActual();
             actualizarTotalAjusteActual();
         }
 
@@ -1228,10 +1627,8 @@
         }
 
         function calcularTotalAjusteEstimado() {
-
             const tipo = normalizarTipo(ajusteTipoSelect.value);
             const costo = parseInt(ajusteCostoInput.value || 0, 10);
-
 
             if (tipo === 'FIJO_MENSUAL') {
                 return costo;
@@ -1263,35 +1660,38 @@
 
         function limpiarFormularioAjuste() {
             ajusteTipoSelect.value = '';
-
-            ajusteAsignacionSelect.value = '';
-            ajusteProveedorSelect.value = '';
-            ajusteTransportistaSelect.value = '';
-            ajusteProveedorFacturacionSelect.value = '';
-            ajusteTransportistaOverrideSelect.value = '';
-
-            ajustePunto1Input.value = '';
-            ajusteOrigenGastoInput.value = 'Suscripciones';
-            ajustePunto2Input.value = '';
-            ajusteCodigoInput.value = '';
-            ajusteServicioInput.value = 'Reparto fin de semana';
-            ajusteGrupoPrefacturaInput.value = '';
-
-            ajusteCostoInput.value = '';
-            ajusteQCalendarioInput.value = '';
-            ajusteQInasistenciaInput.value = '';
-            ajusteCantidadInput.value = '';
-            ajusteTotalInput.value = '';
-
-            ajusteTipoDocumentoInput.value = '';
-            ajusteDetalleDocumentoInput.value = '';
-            ajusteDetalleImpuestoInput.value = '';
-            ajusteFinalInput.value = '';
-
-            ajusteObservacionInput.value = '';
-
+            limpiarCamposDependientesAjuste();
             actualizarCamposAjustePorTipo();
             actualizarTotalAjusteActual();
+        }
+
+        function construirClaveAjuste(tipo) {
+            tipo = normalizarTipo(tipo);
+
+            if (esTipoAsignacionExistente(tipo)) {
+                return [
+                    tipo,
+                    'ASIGNACION',
+                    ajusteAsignacionSelect.value || '',
+                ].join('|');
+            }
+
+            return [
+                tipo,
+                'LINEA',
+                ajusteProveedorSelect.value || '',
+                ajusteTransportistaSelect.value || '',
+                normalizarCodigo(ajusteCodigoInput.value),
+                normalizarCodigo(ajustePunto1Input.value),
+                normalizarCodigo(ajustePunto2Input.value),
+                normalizarCodigo(ajusteOrigenGastoInput.value),
+            ].join('|');
+        }
+
+        function existeAjusteDuplicado(clave) {
+            return ajustesMensuales.some(function (ajuste) {
+                return ajuste.clave_control === clave;
+            });
         }
 
         function agregarAjusteDesdeFormulario() {
@@ -1307,26 +1707,26 @@
                 return;
             }
 
-
+            if (!validarCompatibilidadAsignacionActual()) {
+                return;
+            }
 
             if (tipo === 'INASISTENCIA' && ajusteQInasistenciaInput.value === '') {
                 alert('Ingresa la cantidad de inasistencias.');
                 return;
             }
 
-
             if (tipo === 'FIJO_MENSUAL') {
-                    if (ajusteCostoInput.value === '') {
-                        alert('Ingresa el valor mensual fijo.');
-                        return;
-                    }
+                if (ajusteCostoInput.value === '') {
+                    alert('Ingresa el valor mensual fijo.');
+                    return;
+                }
 
-                    ajusteQCalendarioInput.value = '1';
-                    ajusteQInasistenciaInput.value = '0';
-                    ajusteCantidadInput.value = '1';
-                    ajusteTotalInput.value = ajusteCostoInput.value;
+                ajusteQCalendarioInput.value = '1';
+                ajusteQInasistenciaInput.value = '0';
+                ajusteCantidadInput.value = '1';
+                ajusteTotalInput.value = ajusteCostoInput.value;
             }
-
 
             if (tipo === 'FACTURACION' && !ajusteProveedorFacturacionSelect.value) {
                 alert('Selecciona el proveedor facturador efectivo.');
@@ -1355,6 +1755,13 @@
                 }
             }
 
+            const claveControl = construirClaveAjuste(tipo);
+
+            if (existeAjusteDuplicado(claveControl)) {
+                alert('Ya agregaste una novedad igual para este periodo. Revisa la tabla inferior antes de duplicarla.');
+                return;
+            }
+
             const asignacionLabel = ajusteAsignacionSelect.value
                 ? optionLabel(ajusteAsignacionSelect)
                 : '';
@@ -1375,7 +1782,31 @@
                 ? optionLabel(ajusteTransportistaOverrideSelect)
                 : '';
 
+            let costo = ajusteCostoInput.value;
+            let qCalendario = ajusteQCalendarioInput.value;
+            let qInasistencia = ajusteQInasistenciaInput.value;
+            let cantidad = ajusteCantidadInput.value;
+            let total = ajusteTotalInput.value;
+
+            if (tipo === 'FACTURACION') {
+                qCalendario = '';
+                qInasistencia = '';
+                cantidad = '';
+                total = '';
+
+                if (selectedOption(ajusteAsignacionSelect)?.dataset?.esCantidadVariable === '1') {
+                    costo = '';
+                }
+            }
+
+            if (tipo === 'INASISTENCIA') {
+                qCalendario = '';
+                cantidad = '';
+                total = '';
+            }
+
             ajustesMensuales.push({
+                clave_control: claveControl,
                 tipo_ajuste: tipo,
 
                 suscripcion_asignacion_id: ajusteAsignacionSelect.value,
@@ -1392,11 +1823,11 @@
                 servicio: limpiarTexto(ajusteServicioInput.value),
                 grupo_prefactura: limpiarTexto(ajusteGrupoPrefacturaInput.value),
 
-                costo: ajusteCostoInput.value,
-                q_calendario: ajusteQCalendarioInput.value,
-                q_inasistencia: ajusteQInasistenciaInput.value,
-                cantidad: ajusteCantidadInput.value,
-                total: ajusteTotalInput.value,
+                costo: costo,
+                q_calendario: qCalendario,
+                q_inasistencia: qInasistencia,
+                cantidad: cantidad,
+                total: total,
 
                 tipo_documento: limpiarTexto(ajusteTipoDocumentoInput.value),
                 detalle_documento: limpiarTexto(ajusteDetalleDocumentoInput.value),
@@ -1475,6 +1906,9 @@
                     || ajuste.proveedor_facturacion_label
                     || '—';
 
+                const cantidadLabel = ajuste.cantidad
+                    || (ajuste.tipo_ajuste === 'INASISTENCIA' ? `Inasistencia: ${ajuste.q_inasistencia}` : '—');
+
                 const row = document.createElement('tr');
 
                 row.innerHTML = `
@@ -1482,7 +1916,7 @@
                     <td>${escaparHtml(baseLabel)}</td>
                     <td>${escaparHtml(ajuste.codigo || '—')}</td>
                     <td>${escaparHtml(ajuste.servicio || '—')}</td>
-                    <td class="text-end">${escaparHtml(ajuste.cantidad || '—')}</td>
+                    <td class="text-end">${escaparHtml(cantidadLabel)}</td>
                     <td class="text-end">${formatearCLP(ajuste.total_estimado)}</td>
                     <td>${escaparHtml(ajuste.observacion || '—')}</td>
                     <td class="text-center">
@@ -1536,7 +1970,10 @@
         }
 
         if (ajusteTipoSelect) {
-            ajusteTipoSelect.addEventListener('change', actualizarCamposAjustePorTipo);
+            ajusteTipoSelect.addEventListener('change', function () {
+                limpiarCamposDependientesAjuste();
+                actualizarCamposAjustePorTipo();
+            });
         }
 
         if (ajusteAsignacionSelect) {
@@ -1550,8 +1987,6 @@
         if (ajusteProveedorSelect) {
             ajusteProveedorSelect.addEventListener('change', aplicarDatosProveedorLineaAdicional);
         }
-
-
 
         [
             ajusteCostoInput,
@@ -1609,11 +2044,24 @@
         });
 
         ajustesIniciales.forEach(function (ajuste) {
+            const tipo = normalizarTipo(ajuste.tipo_ajuste || '');
             const totalEstimado = parseInt(ajuste.total || 0, 10)
                 || (parseInt(ajuste.costo || 0, 10) * parseInt(ajuste.cantidad || 0, 10));
 
+            const claveControl = [
+                tipo,
+                ajuste.suscripcion_asignacion_id ? 'ASIGNACION' : 'LINEA',
+                ajuste.suscripcion_asignacion_id || ajuste.suscripcion_proveedor_id || '',
+                ajuste.suscripcion_transportista_id || '',
+                normalizarCodigo(ajuste.codigo || ''),
+                normalizarCodigo(ajuste.punto_1 || ''),
+                normalizarCodigo(ajuste.punto_2 || ''),
+                normalizarCodigo(ajuste.origen_gasto || ''),
+            ].join('|');
+
             ajustesMensuales.push({
-                tipo_ajuste: normalizarTipo(ajuste.tipo_ajuste || ''),
+                clave_control: claveControl,
+                tipo_ajuste: tipo,
 
                 suscripcion_asignacion_id: ajuste.suscripcion_asignacion_id || '',
                 suscripcion_proveedor_id: ajuste.suscripcion_proveedor_id || '',
