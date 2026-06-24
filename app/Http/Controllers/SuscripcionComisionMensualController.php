@@ -51,28 +51,51 @@ class SuscripcionComisionMensualController extends Controller
         * - COMISION
         * - .COM
         */
+
+
+
+
+
+
+
+
+
+        
         $asignacionesCantidadMensual = Asignaciones::with([
             'suscripcionProveedor.cobranzaCompra',
             'transportista',
         ])
-            ->where('generar_automaticamente', 0)
-            ->whereRaw("UPPER(TRIM(codigo)) = 'LOTA'")
+            ->where('tipo_asignacion', 'VARIABLE')
             ->orderBy('codigo')
             ->get();
 
-        /*
-        * Novedades mensuales.
-        *
-        * Aquí sí dejamos disponibles las asignaciones existentes,
-        * porque el filtro fino lo hace la vista según el tipo de novedad:
-        * INASISTENCIA, FIJO_MENSUAL, FACTURACION, REEMPLAZO, etc.
-        */
         $asignacionesAjustesMensuales = Asignaciones::with([
             'suscripcionProveedor.cobranzaCompra',
             'transportista',
         ])
+            ->whereNotIn('tipo_asignacion', [
+                'COMISION',
+                'CONTENEDOR_AJUSTE',
+            ])
             ->orderBy('codigo')
             ->get();
+
+        $asignacionesFijasMensuales = Asignaciones::with([
+            'suscripcionProveedor.cobranzaCompra',
+            'transportista',
+        ])
+            ->where('tipo_asignacion', 'FIJO_MENSUAL')
+            ->orderBy('codigo')
+            ->get();
+
+
+
+
+
+
+
+
+
 
         return view('suscripciones.comisiones_mensuales.create', compact(
             'anio',
@@ -80,7 +103,8 @@ class SuscripcionComisionMensualController extends Controller
             'proveedores',
             'transportistas',
             'asignacionesCantidadMensual',
-            'asignacionesAjustesMensuales'
+            'asignacionesAjustesMensuales',
+            'asignacionesFijasMensuales'
         ));
     }
 
@@ -166,6 +190,18 @@ class SuscripcionComisionMensualController extends Controller
                     ->withInput()
                     ->withErrors([
                         'cantidad_mensual_asignacion_id' => 'Esta cantidad mensual ya existe para la asignación, año y mes seleccionado.',
+                    ]);
+            }
+        }
+
+        if ($debeGuardarCantidadMensual) {
+            $asignacionCantidadMensual = Asignaciones::find($data['cantidad_mensual_asignacion_id']);
+
+            if (!$asignacionCantidadMensual || $asignacionCantidadMensual->tipo_asignacion !== 'VARIABLE') {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        'cantidad_mensual_asignacion_id' => 'La asignación seleccionada no está configurada como cantidad variable mensual.',
                     ]);
             }
         }
@@ -263,6 +299,7 @@ class SuscripcionComisionMensualController extends Controller
                     'costo' => $costoComision,
                     'grupo_prefactura' => $grupoPrefactura,
                     'generar_automaticamente' => 0,
+                    'tipo_asignacion' => 'COMISION',
                 ]);
 
                 SuscripcionComisionMensual::create([
@@ -432,6 +469,44 @@ class SuscripcionComisionMensualController extends Controller
                     $errores["ajustes_mensuales.$index.suscripcion_asignacion_id"] = "La novedad mensual #{$numero} requiere una asignación existente.";
                 }
             }
+
+
+
+
+
+            $asignacionAjuste = null;
+
+            if (!empty($ajuste['suscripcion_asignacion_id'])) {
+                $asignacionAjuste = Asignaciones::find($ajuste['suscripcion_asignacion_id']);
+
+                if (!$asignacionAjuste) {
+                    $errores["ajustes_mensuales.$index.suscripcion_asignacion_id"] = "La novedad mensual #{$numero} tiene una asignación inválida.";
+                    continue;
+                }
+
+                if (in_array($asignacionAjuste->tipo_asignacion, ['COMISION', 'CONTENEDOR_AJUSTE'], true)) {
+                    $errores["ajustes_mensuales.$index.suscripcion_asignacion_id"] = "La novedad mensual #{$numero} no puede usar comisiones ni contenedores como asignación existente.";
+                }
+
+                if ($tipo === 'INASISTENCIA' && $asignacionAjuste->tipo_asignacion !== 'RUTA') {
+                    $errores["ajustes_mensuales.$index.suscripcion_asignacion_id"] = "La inasistencia #{$numero} sólo puede aplicarse a rutas normales.";
+                }
+
+                if ($tipo === 'FACTURACION' && !in_array($asignacionAjuste->tipo_asignacion, ['RUTA', 'VARIABLE', 'FIJO_MENSUAL', 'OPV'], true)) {
+                    $errores["ajustes_mensuales.$index.suscripcion_asignacion_id"] = "El cambio de facturación #{$numero} no puede aplicarse a esta asignación.";
+                }
+            }
+
+
+
+
+
+
+
+
+
+
+
 
             if (in_array($tipo, ['LINEA_ADICIONAL', 'PAGO_ADICIONAL', 'REEMPLAZO'], true)) {
                 if (empty($ajuste['suscripcion_proveedor_id'])) {

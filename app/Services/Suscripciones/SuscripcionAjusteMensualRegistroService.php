@@ -220,12 +220,20 @@ class SuscripcionAjusteMensualRegistroService
         ];
     }
 
+
+
+
+
+
+
     private function guardarLineaAdicional(array $data, int $anio, int $mes): array
     {
         $proveedorId = (int) $data['suscripcion_proveedor_id'];
         $transportistaId = !empty($data['suscripcion_transportista_id'])
             ? (int) $data['suscripcion_transportista_id']
             : null;
+
+        $tipoAjuste = $this->normalizarTipo($data['tipo_ajuste'] ?? 'LINEA_ADICIONAL');
 
         $codigo = $this->texto($data['codigo'] ?? null) ?? 'LINEA_ADICIONAL';
         $servicio = $this->texto($data['servicio'] ?? null) ?? 'Pago adicional';
@@ -239,6 +247,7 @@ class SuscripcionAjusteMensualRegistroService
             $grupoPrefactura = Asignaciones::query()
                 ->where('suscripcion_proveedor_id', $proveedorId)
                 ->where('suscripcion_transportista_id', $transportistaId)
+                ->whereNotIn('tipo_asignacion', ['COMISION', 'CONTENEDOR_AJUSTE'])
                 ->whereNotNull('grupo_prefactura')
                 ->whereRaw("TRIM(grupo_prefactura) <> ''")
                 ->orderBy('id')
@@ -249,6 +258,7 @@ class SuscripcionAjusteMensualRegistroService
             ->where('suscripcion_proveedor_id', $proveedorId)
             ->where('suscripcion_transportista_id', $transportistaId)
             ->where('generar_automaticamente', 0)
+            ->where('tipo_asignacion', 'CONTENEDOR_AJUSTE')
             ->whereRaw('UPPER(TRIM(codigo)) = ?', [mb_strtoupper($codigo)])
             ->whereRaw('COALESCE(TRIM(punto_1), "") = ?', [$punto1 ?? ''])
             ->whereRaw('COALESCE(TRIM(punto_2), "") = ?', [$punto2 ?? ''])
@@ -269,14 +279,13 @@ class SuscripcionAjusteMensualRegistroService
                 'costo' => $this->entero($data['costo'] ?? 0),
                 'grupo_prefactura' => $grupoPrefactura,
                 'generar_automaticamente' => 0,
+                'tipo_asignacion' => 'CONTENEDOR_AJUSTE',
             ]);
 
             $estadoAsignacion = 'creada';
         }
 
         $proveedorFacturacion = SuscripcionProveedor::findOrFail($proveedorId);
-
-        $tipoAjuste = $this->normalizarTipo($data['tipo_ajuste'] ?? 'LINEA_ADICIONAL');
 
         $payload = [
             'tipo_ajuste' => $tipoAjuste,
@@ -322,6 +331,18 @@ class SuscripcionAjusteMensualRegistroService
             ),
         ];
     }
+
+
+
+
+
+
+
+
+
+
+
+
 
     private function guardarOActualizarAjuste(
         int $suscripcionAsignacionId,

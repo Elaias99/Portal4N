@@ -20,13 +20,14 @@
         ];
 
         $asignacionesAjustesMensuales = $asignacionesAjustesMensuales ?? collect();
+        $asignacionesFijasMensuales = $asignacionesFijasMensuales ?? collect();
     @endphp
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="mb-1">Preparar generación mensual</h1>
             <div class="small text-muted">
-                Define las cantidades variables, comisiones y novedades mensuales antes de generar el mes completo.
+                Define las cantidades variables, novedades mensuales y comisiones antes de generar el mes completo.
             </div>
         </div>
 
@@ -52,7 +53,7 @@
 
     <div class="alert alert-info">
         <strong>Flujo recomendado:</strong> primero define el periodo, luego registra cantidades variables como LOTA,
-        después agrega sólo las novedades reales del mes y finalmente presiona
+        después agrega sólo las novedades reales del mes, registra comisiones si corresponde y finalmente presiona
         <strong>Guardar datos y generar mes completo</strong>.
         <div class="small mt-2 mb-0">
             Importante: una cantidad variable no debe cargarse como fijo mensual. Si LOTA cambia de proveedor facturador,
@@ -128,38 +129,25 @@
                                 <option value="">Seleccionar ruta...</option>
 
                                 @foreach($asignacionesCantidadMensual as $asignacion)
+
+
+
+
+                                
+
+
+
+
                                     @php
                                         $cobranza = $asignacion->suscripcionProveedor?->cobranzaCompra;
                                         $transportista = $asignacion->transportista;
-
-                                        $codigoCantidadNormalizado = mb_strtoupper(trim((string) $asignacion->codigo));
-                                        $servicioCantidadNormalizado = mb_strtoupper(trim((string) $asignacion->servicio));
-                                        $origenCantidadNormalizado = mb_strtoupper(trim((string) $asignacion->origen_gasto));
-
-                                        $esCantidadComision = str_ends_with($codigoCantidadNormalizado, '.COM')
-                                            || str_contains($codigoCantidadNormalizado, 'COMISION');
-
-                                        $esCantidadOpv = $codigoCantidadNormalizado === 'OPV'
-                                            || str_ends_with($codigoCantidadNormalizado, '.OPV')
-                                            || $servicioCantidadNormalizado === 'OPV'
-                                            || $origenCantidadNormalizado === 'OPV';
-
-                                        /*
-                                         * Marcador operativo actual:
-                                         * LOTA es cantidad variable validada contra Excel/BD.
-                                         * Si en el futuro aparecen más rutas variables, conviene mover esta clasificación
-                                         * a una columna/configuración y no depender del código.
-                                         */
-                                        $esCantidadVariableOperativa = !$esCantidadComision
-                                            && !$esCantidadOpv
-                                            && str_contains($codigoCantidadNormalizado, 'LOTA');
                                     @endphp
 
                                     <option
                                         value="{{ $asignacion->id }}"
                                         data-costo="{{ (int) $asignacion->costo }}"
                                         data-codigo="{{ $asignacion->codigo }}"
-                                        data-es-cantidad-variable-operativa="{{ $esCantidadVariableOperativa ? 1 : 0 }}"
+                                        data-tipo-asignacion="{{ $asignacion->tipo_asignacion }}"
                                         @selected((int) old('cantidad_mensual_asignacion_id') === (int) $asignacion->id)
                                     >
                                         {{ $asignacion->codigo }}
@@ -170,6 +158,13 @@
                                         |
                                         ${{ number_format($asignacion->costo, 0, ',', '.') }}
                                     </option>
+
+
+
+
+
+
+                                    
                                 @endforeach
                             </select>
 
@@ -219,211 +214,61 @@
             </div>
         @endif
 
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <strong>Pagos adicionales / comisiones del mes</strong>
+        @if($asignacionesFijasMensuales->isNotEmpty())
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <strong>Pagos fijos mensuales incluidos automáticamente</strong>
 
-                <span class="small text-muted">
-                    Opcional: agrega una o varias comisiones.
-                </span>
-            </div>
-
-            <div class="card-body">
-                <div class="small text-muted mb-3">
-                    Completa los datos de una comisión y presiona <strong>Agregar comisión</strong>.
-                    La comisión quedará en la lista inferior antes de generar el mes.
+                    <span class="small text-muted">
+                        No es necesario cargarlos como novedad.
+                    </span>
                 </div>
 
-                <div class="border rounded p-3 mb-3">
-                    <div class="row g-3">
+                <div class="card-body">
+                    <div class="alert alert-light border small mb-3">
+                        Estas asignaciones están configuradas como <strong>fijas mensuales</strong>.
+                        Al generar el mes, el sistema las agregará automáticamente con
+                        <strong>cantidad 1</strong> y el monto mensual definido.
+                        Sólo usa <strong>Fijo mensual excepcional</strong> en novedades si necesitas corregir algo puntual para este periodo.
+                    </div>
 
-                        <div class="col-md-6">
-                            <label for="comision_proveedor_id" class="form-label">
-                                Proveedor a integrar comisión
-                            </label>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Punto</th>
+                                    <th>Proveedor</th>
+                                    <th>Transportista</th>
+                                    <th>Servicio</th>
+                                    <th class="text-end">Monto mensual</th>
+                                </tr>
+                            </thead>
 
-                            <select id="comision_proveedor_id" class="form-select">
-                                <option value="">Seleccionar proveedor...</option>
-
-                                @foreach($proveedores as $proveedor)
+                            <tbody>
+                                @foreach($asignacionesFijasMensuales as $asignacion)
                                     @php
-                                        $cobranza = $proveedor->cobranzaCompra;
-
-                                        $proveedorLabel = trim(
-                                            ($cobranza?->razon_social ?? 'Sin razón social')
-                                            . ' | '
-                                            . ($cobranza?->rut_cliente ?? 'Sin RUT')
-                                            . ' | '
-                                            . ($proveedor->tipo ?? 'Sin tipo')
-                                        );
+                                        $cobranza = $asignacion->suscripcionProveedor?->cobranzaCompra;
+                                        $transportista = $asignacion->transportista;
                                     @endphp
 
-                                    <option
-                                        value="{{ $proveedor->id }}"
-                                        data-label="{{ $proveedorLabel }}"
-                                        data-tipo="{{ $proveedor->tipo }}"
-                                        data-detalle-documento="{{ $proveedor->detalle_documento }}"
-                                        data-detalle-impuesto="{{ $proveedor->detalle_impuesto }}"
-                                        data-final="{{ $proveedor->final }}"
-                                    >
-                                        {{ $proveedorLabel }}
-                                    </option>
+                                    <tr>
+                                        <td>{{ $asignacion->codigo }}</td>
+                                        <td>{{ $asignacion->punto_1 ?? '—' }}</td>
+                                        <td>{{ $cobranza?->razon_social ?? 'Sin proveedor' }}</td>
+                                        <td>{{ $transportista?->nombre_transportista ?? 'Sin transportista' }}</td>
+                                        <td>{{ $asignacion->servicio ?? '—' }}</td>
+                                        <td class="text-end">
+                                            ${{ number_format((int) $asignacion->costo, 0, ',', '.') }}
+                                        </td>
+                                    </tr>
                                 @endforeach
-                            </select>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="comision_transportista_id" class="form-label">
-                                Transportista
-                            </label>
-
-                            <select id="comision_transportista_id" class="form-select">
-                                <option value="">Seleccionar transportista...</option>
-
-                                @foreach($transportistas as $transportista)
-                                    <option
-                                        value="{{ $transportista->id }}"
-                                        data-label="{{ $transportista->nombre_transportista }}"
-                                    >
-                                        {{ $transportista->nombre_transportista }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="col-md-3">
-                            <label for="comision_punto_1" class="form-label">Punto</label>
-                            <input
-                                type="text"
-                                id="comision_punto_1"
-                                class="form-control"
-                                placeholder="Ej: LA DEHESA"
-                            >
-                        </div>
-
-                        <div class="col-md-3">
-                            <label for="comision_origen_gasto" class="form-label">Origen gasto</label>
-                            <input
-                                type="text"
-                                id="comision_origen_gasto"
-                                class="form-control"
-                                value="Suscripciones"
-                            >
-                        </div>
-
-                        <div class="col-md-3">
-                            <label for="comision_punto_2" class="form-label">Punto 2</label>
-                            <input
-                                type="text"
-                                id="comision_punto_2"
-                                class="form-control"
-                                placeholder="Ej: LA DEHESA"
-                            >
-                        </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label">Código comisión</label>
-                            <input
-                                type="text"
-                                class="form-control"
-                                value="COMISION"
-                                disabled
-                            >
-                            <div class="form-text">
-                                Definido automáticamente por el sistema.
-                            </div>
-                        </div>
-
-                        <div class="col-md-4">
-                            <label for="comision_servicio" class="form-label">Servicio</label>
-                            <input
-                                type="text"
-                                id="comision_servicio"
-                                class="form-control"
-                                value="Reparto fin de semana"
-                            >
-                        </div>
-
-                        <div class="col-md-4">
-                            <label for="comision_costo" class="form-label">Costo comisión</label>
-                            <input
-                                type="number"
-                                id="comision_costo"
-                                class="form-control"
-                                min="0"
-                            >
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label">Total estimado comisión actual</label>
-                            <input
-                                type="text"
-                                id="comision_total_estimado"
-                                class="form-control"
-                                value="$0"
-                                disabled
-                            >
-                            <div class="form-text">
-                                Las comisiones siempre se registran con cantidad 1.
-                            </div>
-                        </div>
-
-                        <div class="col-md-9">
-                            <label for="comision_observacion" class="form-label">
-                                Observación comisión
-                            </label>
-                            <input
-                                type="text"
-                                id="comision_observacion"
-                                class="form-control"
-                                placeholder="Ej: comisión informada para este mes"
-                            >
-                        </div>
-
-                        <div class="col-md-3 d-flex align-items-end">
-                            <button type="button" id="btn-agregar-comision" class="btn btn-outline-primary w-100">
-                                Agregar comisión
-                            </button>
-                        </div>
-
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-
-                <div id="comisiones-hidden-container"></div>
-
-                <div class="table-responsive">
-                    <table class="table table-sm table-bordered align-middle mb-2">
-                        <thead>
-                            <tr>
-                                <th>Proveedor</th>
-                                <th>Transportista</th>
-                                <th>Punto</th>
-                                <th>Servicio</th>
-                                <th class="text-end">Costo</th>
-                                <th>Observación</th>
-                                <th class="text-center">Acción</th>
-                            </tr>
-                        </thead>
-
-                        <tbody id="comisiones-resumen-body">
-                            <tr>
-                                <td colspan="7" class="text-muted text-center">
-                                    No hay comisiones agregadas para este periodo.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="small text-muted mt-3">
-                    Comisiones agregadas:
-                    <strong id="comisiones-cantidad">0</strong>
-                    <span class="mx-1">|</span>
-                    Total estimado:
-                    <strong id="comisiones-total">$0</strong>
-                </div>
             </div>
-        </div>
+        @endif
 
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -452,7 +297,7 @@
                             <select id="ajuste_tipo_ajuste" class="form-select">
                                 <option value="">Seleccionar tipo...</option>
                                 <option value="INASISTENCIA">Inasistencia</option>
-                                <option value="FIJO_MENSUAL">Fijo mensual</option>
+                                <option value="FIJO_MENSUAL">Fijo mensual excepcional</option>
                                 <option value="FACTURACION">Cambio de facturación</option>
                                 <option value="LINEA_ADICIONAL">Línea adicional</option>
                                 <option value="PAGO_ADICIONAL">Pago adicional</option>
@@ -542,6 +387,7 @@
                                         data-servicio="{{ $asignacion->servicio }}"
                                         data-grupo-prefactura="{{ $asignacion->grupo_prefactura }}"
                                         data-generar-automaticamente="{{ $generarAutomaticamente }}"
+                                        data-tipo-asignacion="{{ $asignacion->tipo_asignacion }}"
                                         data-es-comision="{{ $esAsignacionComision ? 1 : 0 }}"
                                         data-es-opv="{{ $esAsignacionOpv ? 1 : 0 }}"
                                         data-es-cantidad-variable="{{ $esAsignacionCantidadVariable ? 1 : 0 }}"
@@ -858,19 +704,18 @@
                         <thead>
                             <tr>
                                 <th>Tipo</th>
-                                <th>Base / proveedor</th>
+                                <th>Asignación base / proveedor</th>
+                                <th>Detalle del cambio</th>
                                 <th>Código</th>
-                                <th>Servicio</th>
                                 <th class="text-end">Cantidad</th>
                                 <th class="text-end">Total estimado</th>
-                                <th>Observación</th>
                                 <th class="text-center">Acción</th>
                             </tr>
                         </thead>
 
                         <tbody id="ajustes-resumen-body">
                             <tr>
-                                <td colspan="8" class="text-muted text-center">
+                                <td colspan="7" class="text-muted text-center">
                                     No hay novedades mensuales agregadas para este periodo.
                                 </td>
                             </tr>
@@ -884,6 +729,212 @@
                     <span class="mx-1">|</span>
                     Total estimado:
                     <strong id="ajustes-total">$0</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <strong>Pagos adicionales / comisiones del mes</strong>
+
+                <span class="small text-muted">
+                    Opcional: agrega una o varias comisiones.
+                </span>
+            </div>
+
+            <div class="card-body">
+                <div class="small text-muted mb-3">
+                    Completa los datos de una comisión y presiona <strong>Agregar comisión</strong>.
+                    La comisión quedará en la lista inferior antes de generar el mes.
+                </div>
+
+                <div class="border rounded p-3 mb-3">
+                    <div class="row g-3">
+
+                        <div class="col-md-6">
+                            <label for="comision_proveedor_id" class="form-label">
+                                Proveedor a integrar comisión
+                            </label>
+
+                            <select id="comision_proveedor_id" class="form-select">
+                                <option value="">Seleccionar proveedor...</option>
+
+                                @foreach($proveedores as $proveedor)
+                                    @php
+                                        $cobranza = $proveedor->cobranzaCompra;
+
+                                        $proveedorLabel = trim(
+                                            ($cobranza?->razon_social ?? 'Sin razón social')
+                                            . ' | '
+                                            . ($cobranza?->rut_cliente ?? 'Sin RUT')
+                                            . ' | '
+                                            . ($proveedor->tipo ?? 'Sin tipo')
+                                        );
+                                    @endphp
+
+                                    <option
+                                        value="{{ $proveedor->id }}"
+                                        data-label="{{ $proveedorLabel }}"
+                                        data-tipo="{{ $proveedor->tipo }}"
+                                        data-detalle-documento="{{ $proveedor->detalle_documento }}"
+                                        data-detalle-impuesto="{{ $proveedor->detalle_impuesto }}"
+                                        data-final="{{ $proveedor->final }}"
+                                    >
+                                        {{ $proveedorLabel }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="comision_transportista_id" class="form-label">
+                                Transportista
+                            </label>
+
+                            <select id="comision_transportista_id" class="form-select">
+                                <option value="">Seleccionar transportista...</option>
+
+                                @foreach($transportistas as $transportista)
+                                    <option
+                                        value="{{ $transportista->id }}"
+                                        data-label="{{ $transportista->nombre_transportista }}"
+                                    >
+                                        {{ $transportista->nombre_transportista }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="comision_punto_1" class="form-label">Punto</label>
+                            <input
+                                type="text"
+                                id="comision_punto_1"
+                                class="form-control"
+                                placeholder="Ej: LA DEHESA"
+                            >
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="comision_origen_gasto" class="form-label">Origen gasto</label>
+                            <input
+                                type="text"
+                                id="comision_origen_gasto"
+                                class="form-control"
+                                value="Suscripciones"
+                            >
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="comision_punto_2" class="form-label">Punto 2</label>
+                            <input
+                                type="text"
+                                id="comision_punto_2"
+                                class="form-control"
+                                placeholder="Ej: LA DEHESA"
+                            >
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Código comisión</label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                value="COMISION"
+                                disabled
+                            >
+                            <div class="form-text">
+                                Definido automáticamente por el sistema.
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="comision_servicio" class="form-label">Servicio</label>
+                            <input
+                                type="text"
+                                id="comision_servicio"
+                                class="form-control"
+                                value="Reparto fin de semana"
+                            >
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="comision_costo" class="form-label">Costo comisión</label>
+                            <input
+                                type="number"
+                                id="comision_costo"
+                                class="form-control"
+                                min="0"
+                            >
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Total estimado comisión actual</label>
+                            <input
+                                type="text"
+                                id="comision_total_estimado"
+                                class="form-control"
+                                value="$0"
+                                disabled
+                            >
+                            <div class="form-text">
+                                Las comisiones siempre se registran con cantidad 1.
+                            </div>
+                        </div>
+
+                        <div class="col-md-9">
+                            <label for="comision_observacion" class="form-label">
+                                Observación comisión
+                            </label>
+                            <input
+                                type="text"
+                                id="comision_observacion"
+                                class="form-control"
+                                placeholder="Ej: comisión informada para este mes"
+                            >
+                        </div>
+
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="button" id="btn-agregar-comision" class="btn btn-outline-primary w-100">
+                                Agregar comisión
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div id="comisiones-hidden-container"></div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-2">
+                        <thead>
+                            <tr>
+                                <th>Proveedor</th>
+                                <th>Transportista</th>
+                                <th>Punto</th>
+                                <th>Servicio</th>
+                                <th class="text-end">Costo</th>
+                                <th>Observación</th>
+                                <th class="text-center">Acción</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="comisiones-resumen-body">
+                            <tr>
+                                <td colspan="7" class="text-muted text-center">
+                                    No hay comisiones agregadas para este periodo.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="small text-muted mt-3">
+                    Comisiones agregadas:
+                    <strong id="comisiones-cantidad">0</strong>
+                    <span class="mx-1">|</span>
+                    Total estimado:
+                    <strong id="comisiones-total">$0</strong>
                 </div>
             </div>
         </div>
@@ -1089,20 +1140,32 @@
             ajusteAdvertenciaWrapper.classList.add('d-none');
         }
 
+        function tipoAsignacionOption(option) {
+            return limpiarTexto(option?.dataset?.tipoAsignacion || 'RUTA').toUpperCase();
+        }
+
+        function esOpcionRuta(option) {
+            return tipoAsignacionOption(option) === 'RUTA';
+        }
+
+        function esOpcionFijoMensual(option) {
+            return tipoAsignacionOption(option) === 'FIJO_MENSUAL';
+        }
+
         function esOpcionComision(option) {
-            return option?.dataset?.esComision === '1';
+            return tipoAsignacionOption(option) === 'COMISION';
         }
 
         function esOpcionOpv(option) {
-            return option?.dataset?.esOpv === '1';
+            return tipoAsignacionOption(option) === 'OPV';
         }
 
         function esOpcionCantidadVariable(option) {
-            return option?.dataset?.esCantidadVariable === '1';
+            return tipoAsignacionOption(option) === 'VARIABLE';
         }
 
-        function esOpcionNoAutomatica(option) {
-            return option?.dataset?.esNoAutomatica === '1';
+        function esOpcionContenedorAjuste(option) {
+            return tipoAsignacionOption(option) === 'CONTENEDOR_AJUSTE';
         }
 
         function opcionAsignacionCompatible(tipo, option) {
@@ -1112,22 +1175,22 @@
                 return true;
             }
 
+            const tipoAsignacion = tipoAsignacionOption(option);
+
+            if (['COMISION', 'CONTENEDOR_AJUSTE'].includes(tipoAsignacion)) {
+                return false;
+            }
+
             if (tipo === 'INASISTENCIA') {
-                return !esOpcionComision(option)
-                    && !esOpcionOpv(option)
-                    && !esOpcionCantidadVariable(option)
-                    && !esOpcionNoAutomatica(option);
+                return tipoAsignacion === 'RUTA';
             }
 
             if (tipo === 'FIJO_MENSUAL') {
-                return !esOpcionComision(option)
-                    && !esOpcionOpv(option)
-                    && !esOpcionCantidadVariable(option)
-                    && !esOpcionNoAutomatica(option);
+                return ['RUTA', 'FIJO_MENSUAL'].includes(tipoAsignacion);
             }
 
             if (tipo === 'FACTURACION') {
-                return !esOpcionComision(option);
+                return ['RUTA', 'VARIABLE', 'FIJO_MENSUAL', 'OPV'].includes(tipoAsignacion);
             }
 
             return true;
@@ -1141,28 +1204,37 @@
             }
 
             const codigo = normalizarCodigo(option.dataset.codigo || '');
+            const tipoAsignacion = tipoAsignacionOption(option);
+
+            if (esOpcionComision(option)) {
+                return 'Esta asignación corresponde a comisión. No debe usarse como novedad mensual sobre una asignación existente.';
+            }
+
+            if (esOpcionContenedorAjuste(option)) {
+                return 'Esta asignación corresponde a una línea contenedora de ajuste. No debe seleccionarse como asignación base.';
+            }
 
             if (tipo === 'INASISTENCIA' && esOpcionCantidadVariable(option)) {
-                return `${codigo} parece ser una cantidad variable. Cárgala arriba en “Cantidades variables del mes”; no corresponde registrar inasistencia aquí.`;
+                return `${codigo} está configurada como cantidad variable. Cárgala arriba en “Cantidades variables del mes”; no corresponde registrar inasistencia aquí.`;
+            }
+
+            if (tipo === 'INASISTENCIA' && esOpcionOpv(option)) {
+                return 'Esta asignación corresponde a OPV. No debe usarse como inasistencia normal de calendario.';
+            }
+
+            if (tipo === 'INASISTENCIA' && !esOpcionRuta(option)) {
+                return 'La inasistencia sólo puede aplicarse a rutas normales.';
             }
 
             if (tipo === 'FIJO_MENSUAL' && esOpcionCantidadVariable(option)) {
-                return `${codigo} parece ser una cantidad variable. No debe transformarse en fijo mensual, porque perdería la cantidad real del mes.`;
+                return `${codigo} está configurada como cantidad variable. No debe transformarse en fijo mensual, porque perdería la cantidad real del mes.`;
             }
 
-            if ((tipo === 'INASISTENCIA' || tipo === 'FIJO_MENSUAL') && esOpcionComision(option)) {
-                return 'Esta asignación corresponde a comisión. No debe usarse como inasistencia ni fijo mensual.';
+            if (tipo === 'FIJO_MENSUAL' && esOpcionOpv(option)) {
+                return 'Esta asignación corresponde a OPV. Revísala aparte antes de usarla como fijo mensual excepcional.';
             }
 
-            if ((tipo === 'INASISTENCIA' || tipo === 'FIJO_MENSUAL') && esOpcionOpv(option)) {
-                return 'Esta asignación corresponde a OPV. Revísala aparte antes de usarla como novedad mensual.';
-            }
-
-            if ((tipo === 'INASISTENCIA' || tipo === 'FIJO_MENSUAL') && esOpcionNoAutomatica(option)) {
-                return 'Esta asignación no se genera automáticamente. Probablemente es contenedora o especial; no conviene usarla para este tipo de novedad.';
-            }
-
-            return 'La asignación seleccionada no es compatible con este tipo de novedad.';
+            return `La asignación seleccionada no es compatible con este tipo de novedad. Tipo asignación: ${tipoAsignacion || 'SIN TIPO'}.`;
         }
 
         function mensajeInformativoAsignacion(tipo, option) {
@@ -1290,16 +1362,21 @@
             totalVariableInput.value = formatearCLP(total);
 
             if (cantidadVariableAdvertencia) {
-                const esVariableOperativa = option?.dataset?.esCantidadVariableOperativa === '1';
+
+
+                const esVariableOperativa = option?.dataset?.tipoAsignacion === 'VARIABLE';
+
+
+
 
                 cantidadVariableAdvertencia.classList.remove('text-danger', 'text-warning', 'text-muted');
 
                 if (option?.value && !esVariableOperativa) {
                     cantidadVariableAdvertencia.classList.add('text-warning');
-                    cantidadVariableAdvertencia.textContent = 'Revisa esta selección: actualmente la cantidad variable validada es LOTA. No uses aquí reemplazos, fijos ni contenedoras.';
+                    cantidadVariableAdvertencia.textContent = 'Revisa esta selección: sólo deben cargarse aquí asignaciones configuradas como cantidad variable.';
                 } else {
                     cantidadVariableAdvertencia.classList.add('text-muted');
-                    cantidadVariableAdvertencia.textContent = 'Selecciona una ruta variable y escribe la cantidad mensual informada.';
+                    cantidadVariableAdvertencia.textContent = 'Selecciona una asignación variable y escribe la cantidad mensual informada.';
                 }
             }
         }
@@ -1494,9 +1571,9 @@
                     'observacion',
                 ]);
 
-                ajusteTipoDescripcion.value = 'Convierte una asignación existente en pago único mensual.';
-                ajusteGuiaOperativa.textContent = 'Usa este tipo sólo cuando el Excel indique que la línea no se multiplica por fines de semana. No uses LOTA como fijo mensual.';
-                ajusteAsignacionAyuda.textContent = 'Selecciona la asignación que debe pagarse una sola vez en el mes.';
+                ajusteTipoDescripcion.value = 'Fuerza una asignación como pago único mensual sólo para este periodo.';
+                ajusteGuiaOperativa.textContent = 'Los fijos configurados en el maestro ya se generan automáticamente. Usa esta opción sólo si necesitas corregir una asignación puntual del periodo.';
+                ajusteAsignacionAyuda.textContent = 'Selecciona una asignación sólo si realmente debes forzarla como fijo mensual excepcional.';
 
                 ajusteQCalendarioInput.value = '1';
                 ajusteQInasistenciaInput.value = '0';
@@ -1794,7 +1871,7 @@
                 cantidad = '';
                 total = '';
 
-                if (selectedOption(ajusteAsignacionSelect)?.dataset?.esCantidadVariable === '1') {
+                if (esOpcionCantidadVariable(selectedOption(ajusteAsignacionSelect))) {
                     costo = '';
                 }
             }
@@ -1848,6 +1925,72 @@
             renderizarAjustes();
         }
 
+        function detalleCambioAjuste(ajuste) {
+            const tipo = normalizarTipo(ajuste.tipo_ajuste);
+
+            if (tipo === 'FACTURACION') {
+                const proveedor = ajuste.proveedor_facturacion_label || 'Sin proveedor facturador';
+
+                const documento = [
+                    ajuste.tipo_documento,
+                    ajuste.detalle_documento,
+                    ajuste.detalle_impuesto,
+                    ajuste.final,
+                ].filter(Boolean).join(' / ');
+
+                const partes = [
+                    `Factura a: ${proveedor}`,
+                ];
+
+                if (documento) {
+                    partes.push(`Documento: ${documento}`);
+                }
+
+                if (ajuste.transportista_override_label) {
+                    partes.push(`Transportista efectivo: ${ajuste.transportista_override_label}`);
+                }
+
+                if (ajuste.costo) {
+                    partes.push(`Costo ajustado: ${formatearCLP(parseInt(ajuste.costo || 0, 10))}`);
+                }
+
+                return partes.join('\n');
+            }
+
+            if (tipo === 'INASISTENCIA') {
+                return `Descuenta ${ajuste.q_inasistencia || 0} día(s) de calendario`;
+            }
+
+            if (tipo === 'FIJO_MENSUAL') {
+                return `Fuerza pago mensual único por ${formatearCLP(parseInt(ajuste.costo || 0, 10))}`;
+            }
+
+            if (esTipoLineaAdicional(tipo)) {
+                const proveedor = ajuste.proveedor_label || 'Sin proveedor';
+                const transportista = ajuste.transportista_label || 'Sin transportista';
+
+                const documento = [
+                    ajuste.tipo_documento,
+                    ajuste.detalle_documento,
+                    ajuste.detalle_impuesto,
+                    ajuste.final,
+                ].filter(Boolean).join(' / ');
+
+                const partes = [
+                    `Paga a: ${proveedor}`,
+                    `Transportista: ${transportista}`,
+                ];
+
+                if (documento) {
+                    partes.push(`Documento: ${documento}`);
+                }
+
+                return partes.join('\n');
+            }
+
+            return '—';
+        }
+
         function renderizarAjustes() {
             ajustesHiddenContainer.innerHTML = '';
             ajustesResumenBody.innerHTML = '';
@@ -1855,7 +1998,7 @@
             if (ajustesMensuales.length === 0) {
                 ajustesResumenBody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="text-muted text-center">
+                        <td colspan="7" class="text-muted text-center">
                             No hay novedades mensuales agregadas para este periodo.
                         </td>
                     </tr>
@@ -1909,16 +2052,28 @@
                 const cantidadLabel = ajuste.cantidad
                     || (ajuste.tipo_ajuste === 'INASISTENCIA' ? `Inasistencia: ${ajuste.q_inasistencia}` : '—');
 
+                const detalleCambio = detalleCambioAjuste(ajuste);
                 const row = document.createElement('tr');
 
                 row.innerHTML = `
-                    <td>${escaparHtml(ajuste.tipo_ajuste)}</td>
-                    <td>${escaparHtml(baseLabel)}</td>
+                    <td>
+                        <span class="fw-semibold">${escaparHtml(ajuste.tipo_ajuste)}</span>
+                    </td>
+
+                    <td>
+                        <div class="small">${escaparHtml(baseLabel)}</div>
+                    </td>
+
+                    <td>
+                        <div class="small" style="white-space: pre-line;">${escaparHtml(detalleCambio)}</div>
+                    </td>
+
                     <td>${escaparHtml(ajuste.codigo || '—')}</td>
-                    <td>${escaparHtml(ajuste.servicio || '—')}</td>
+
                     <td class="text-end">${escaparHtml(cantidadLabel)}</td>
+
                     <td class="text-end">${formatearCLP(ajuste.total_estimado)}</td>
-                    <td>${escaparHtml(ajuste.observacion || '—')}</td>
+
                     <td class="text-center">
                         <button
                             type="button"
@@ -1937,6 +2092,7 @@
             cantidadAjustes.textContent = String(ajustesMensuales.length);
             totalAjustes.textContent = formatearCLP(total);
         }
+
 
         if (asignacionCantidadSelect) {
             asignacionCantidadSelect.addEventListener('change', actualizarTotalVariable);

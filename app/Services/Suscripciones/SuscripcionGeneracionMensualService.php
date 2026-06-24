@@ -17,12 +17,17 @@ class SuscripcionGeneracionMensualService
             'suscripcionProveedor.cobranzaCompra',
             'opvPuntos',
         ])
-        ->where(function ($query) {
-            $query->whereNull('generar_automaticamente')
-                ->orWhere('generar_automaticamente', 1);
-        })
-        ->orderBy('codigo')
-        ->get();
+            ->where(function ($query) {
+                $query->whereNull('generar_automaticamente')
+                    ->orWhere('generar_automaticamente', 1);
+            })
+            ->whereNotIn('tipo_asignacion', [
+                'COMISION',
+                'CONTENEDOR_AJUSTE',
+                'VARIABLE',
+            ])
+            ->orderBy('codigo')
+            ->get();
 
         $creados = 0;
         $duplicados = 0;
@@ -65,7 +70,7 @@ class SuscripcionGeneracionMensualService
                 'anio' => $anio,
                 'mes' => $mes,
                 'codigo' => $asignacion->codigo,
-                'costo' => $asignacion->costo,
+                'costo' => $calculo['costo'],
                 'q_calendario' => $calculo['q_calendario'],
                 'q_inasistencia' => $calculo['q_inasistencia'],
                 'cantidad' => $calculo['cantidad'],
@@ -161,13 +166,15 @@ class SuscripcionGeneracionMensualService
     {
         $qCalendario = $this->contarFinesDeSemanaDelMes($anio, $mes);
         $qInasistencia = max(0, $inasistencias);
+        $costo = (int) $asignacion->costo;
 
-        if ($this->esCodigoValorFijo((string) $asignacion->codigo)) {
+        if ($this->esAsignacionFijoMensual($asignacion)) {
             return [
-                'q_calendario' => $qCalendario,
-                'q_inasistencia' => $qInasistencia,
+                'costo' => $costo,
+                'q_calendario' => 1,
+                'q_inasistencia' => 0,
                 'cantidad' => 1,
-                'total' => (int) $asignacion->costo,
+                'total' => $costo,
             ];
         }
 
@@ -176,20 +183,22 @@ class SuscripcionGeneracionMensualService
             $cantidad = max(0, $qCalendario - $qInasistencia) * $cantidadPuntos;
 
             return [
+                'costo' => $costo,
                 'q_calendario' => $qCalendario,
                 'q_inasistencia' => $qInasistencia,
                 'cantidad' => $cantidad,
-                'total' => (int) $asignacion->costo * $cantidad,
+                'total' => $costo * $cantidad,
             ];
         }
 
         $cantidad = max(0, $qCalendario - $qInasistencia);
 
         return [
+            'costo' => $costo,
             'q_calendario' => $qCalendario,
             'q_inasistencia' => $qInasistencia,
             'cantidad' => $cantidad,
-            'total' => (int) $asignacion->costo * $cantidad,
+            'total' => $costo * $cantidad,
         ];
     }
 
@@ -211,21 +220,20 @@ class SuscripcionGeneracionMensualService
         return $cantidad;
     }
 
-    private function esCodigoValorFijo(string $codigo): bool
+    private function esAsignacionFijoMensual(Asignaciones $asignacion): bool
     {
-        $codigo = mb_strtoupper(trim($codigo));
-
-        return str_ends_with($codigo, '.COM')
-            || str_contains($codigo, 'COMISION');
+        return mb_strtoupper(trim((string) $asignacion->tipo_asignacion)) === 'FIJO_MENSUAL';
     }
 
     private function esAsignacionOPV(Asignaciones $asignacion): bool
     {
+        $tipoAsignacion = mb_strtoupper(trim((string) $asignacion->tipo_asignacion));
         $codigo = mb_strtoupper(trim((string) $asignacion->codigo));
         $servicio = mb_strtoupper(trim((string) $asignacion->servicio));
         $origenGasto = mb_strtoupper(trim((string) $asignacion->origen_gasto));
 
-        return $codigo === 'OPV'
+        return $tipoAsignacion === 'OPV'
+            || $codigo === 'OPV'
             || str_ends_with($codigo, '.OPV')
             || $servicio === 'OPV'
             || $origenGasto === 'OPV';
