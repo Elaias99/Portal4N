@@ -41,6 +41,10 @@ class SuscripcionAjusteMensual extends Model
 
         'observacion',
         'activo',
+
+        'concepto_pago_variable_id',
+        'concepto_pago_variable_manual',
+        'concepto_pago_variable_snapshot',
     ];
 
     protected $casts = [
@@ -68,4 +72,15 @@ class SuscripcionAjusteMensual extends Model
     {
         return $this->belongsTo(SuscripcionTransportista::class, 'suscripcion_transportista_override_id');
     }
+
+    public function conceptoPagoVariable()
+    {
+        return $this->belongsTo(SuscripcionConceptoPagoVariable::class, 'concepto_pago_variable_id');
+    }
+
+
+
+
+
+
 }

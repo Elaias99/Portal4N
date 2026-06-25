@@ -9,9 +9,11 @@ use Illuminate\Support\Facades\DB;
 
 class SuscripcionAjusteMensualAplicacionService
 {
+
     private const TIPOS_LINEA_ADICIONAL = [
         'LINEA_ADICIONAL',
-        'PAGO_ADICIONAL',
+        'PAGO_VARIABLE',
+        'PAGO_ADICIONAL', // compatibilidad temporal
         'REEMPLAZO',
     ];
 
@@ -219,13 +221,21 @@ class SuscripcionAjusteMensualAplicacionService
         return $payload;
     }
 
+
+
     private function payloadLineaAdicional(
         SuscripcionAjusteMensual $ajuste,
         Asignaciones $asignacion
     ): array {
+        $tipo = $this->normalizarTipo($ajuste->tipo_ajuste);
+
+        $codigoPorDefecto = $tipo === 'PAGO_VARIABLE'
+            ? 'PAGO_VARIABLE'
+            : 'LINEA_ADICIONAL';
+
         $codigo = $this->valorTexto($ajuste->codigo)
             ?? $this->valorTexto($asignacion->codigo)
-            ?? 'LINEA_ADICIONAL';
+            ?? $codigoPorDefecto;
 
         $costo = (int) ($ajuste->costo ?? $asignacion->costo ?? 0);
         $qCalendario = (int) ($ajuste->q_calendario ?? 1);
@@ -248,6 +258,12 @@ class SuscripcionAjusteMensualAplicacionService
             'total' => $total,
         ];
     }
+
+
+
+
+
+
 
     private function calcularCantidadDesdeAjuste(
         SuscripcionAjusteMensual $ajuste,

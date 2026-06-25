@@ -38,6 +38,7 @@ export default defineConfig({
                 'resources/js/boleta_mensual_index.js',
                 'resources/js/modal_pagos_masivos.js',
                 'resources/js/finanzas_general_pagos_programados.js',
+                'resources/js/suscripciones/generacion-mensual.js',
 
                 // Modal crear cobranza / proveedor
                 'resources/js/modules/cobranza/modalCrearCobranza.js',

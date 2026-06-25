@@ -5,6 +5,7 @@ namespace App\Services\Suscripciones;
 use App\Models\Asignaciones;
 use App\Models\SuscripcionAjusteMensual;
 use App\Models\SuscripcionProveedor;
+use App\Models\SuscripcionConceptoPagoVariable;
 use Illuminate\Support\Facades\DB;
 
 class SuscripcionAjusteMensualRegistroService
@@ -235,8 +236,23 @@ class SuscripcionAjusteMensualRegistroService
 
         $tipoAjuste = $this->normalizarTipo($data['tipo_ajuste'] ?? 'LINEA_ADICIONAL');
 
-        $codigo = $this->texto($data['codigo'] ?? null) ?? 'LINEA_ADICIONAL';
-        $servicio = $this->texto($data['servicio'] ?? null) ?? 'Pago adicional';
+        $conceptoPagoVariable = $this->resolverConceptoPagoVariable($data);
+        $esPagoVariable = $tipoAjuste === 'PAGO_VARIABLE';
+
+        $codigo = $this->texto($data['codigo'] ?? null);
+        $servicio = $this->texto($data['servicio'] ?? null);
+
+        if ($esPagoVariable) {
+            $nombreConcepto = $conceptoPagoVariable['snapshot'] ?? 'Pago variable';
+            $codigoConcepto = $conceptoPagoVariable['codigo'] ?? $this->codigoDesdeTexto($nombreConcepto);
+
+            $codigo = $codigo ?? 'PV-' . $codigoConcepto;
+            $servicio = $servicio ?? 'Pago variable - ' . $nombreConcepto;
+        } else {
+            $codigo = $codigo ?? 'LINEA_ADICIONAL';
+            $servicio = $servicio ?? 'Pago adicional';
+        }
+
         $punto1 = $this->texto($data['punto_1'] ?? null);
         $origenGasto = $this->texto($data['origen_gasto'] ?? null) ?? 'Suscripciones';
         $punto2 = $this->texto($data['punto_2'] ?? null);
@@ -289,6 +305,18 @@ class SuscripcionAjusteMensualRegistroService
 
         $payload = [
             'tipo_ajuste' => $tipoAjuste,
+
+            'concepto_pago_variable_id' => $esPagoVariable
+                ? $conceptoPagoVariable['id']
+                : null,
+
+            'concepto_pago_variable_manual' => $esPagoVariable
+                ? $conceptoPagoVariable['manual']
+                : null,
+
+            'concepto_pago_variable_snapshot' => $esPagoVariable
+                ? $conceptoPagoVariable['snapshot']
+                : null,
 
             'punto_1' => $punto1,
             'origen_gasto' => $origenGasto,
@@ -379,14 +407,21 @@ class SuscripcionAjusteMensualRegistroService
         return 'sin_cambios';
     }
 
+
+
     private function esLineaAdicional(string $tipo): bool
     {
         return in_array($tipo, [
             'LINEA_ADICIONAL',
-            'PAGO_ADICIONAL',
+            'PAGO_VARIABLE',
+            'PAGO_ADICIONAL', // compatibilidad temporal
             'REEMPLAZO',
         ], true);
     }
+
+
+
+
 
     private function normalizarTipo(?string $tipo): string
     {
@@ -411,4 +446,58 @@ class SuscripcionAjusteMensualRegistroService
 
         return (int) $valor;
     }
+
+
+    private function resolverConceptoPagoVariable(array $data): array
+    {
+        $conceptoId = !empty($data['concepto_pago_variable_id'])
+            ? (int) $data['concepto_pago_variable_id']
+            : null;
+
+        $conceptoManual = $this->texto($data['concepto_pago_variable_manual'] ?? null);
+
+        $concepto = null;
+
+        if ($conceptoId !== null) {
+            $concepto = SuscripcionConceptoPagoVariable::query()
+                ->where('activo', true)
+                ->find($conceptoId);
+        }
+
+        $snapshot = $concepto?->nombre ?? $conceptoManual;
+
+        return [
+            'id' => $concepto?->id,
+            'manual' => $concepto ? null : $conceptoManual,
+            'snapshot' => $snapshot,
+            'codigo' => $concepto?->codigo ?? (
+                $snapshot ? $this->codigoDesdeTexto($snapshot) : null
+            ),
+        ];
+    }
+
+    private function codigoDesdeTexto(string $texto): string
+    {
+        $codigo = mb_strtoupper(trim($texto));
+
+        $codigo = str_replace(
+            ['Á', 'É', 'Í', 'Ó', 'Ú', 'Ü', 'Ñ'],
+            ['A', 'E', 'I', 'O', 'U', 'U', 'N'],
+            $codigo
+        );
+
+        $codigo = preg_replace('/[^A-Z0-9]+/', '_', $codigo);
+        $codigo = trim((string) $codigo, '_');
+
+        return $codigo !== '' ? $codigo : 'PAGO_VARIABLE';
+    }
+
+
+
+
+
+
+
+
+
 }

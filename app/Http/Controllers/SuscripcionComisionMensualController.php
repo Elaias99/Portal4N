@@ -7,6 +7,7 @@ use App\Models\SuscripcionComisionMensual;
 use App\Models\SuscripcionProveedor;
 use App\Models\SuscripcionTransportista;
 use App\Models\SuscripcionCantidadMensual;
+use App\Models\SuscripcionConceptoPagoVariable;
 use App\Services\Suscripciones\SuscripcionGeneracionMensualService;
 use App\Services\Suscripciones\SuscripcionAjusteMensualAplicacionService;
 use App\Services\Suscripciones\SuscripcionAjusteMensualRegistroService;
@@ -37,30 +38,9 @@ class SuscripcionComisionMensualController extends Controller
         /*
         * Cantidades variables del mes.
         *
-        * Por ahora dejamos esta sección estrictamente limitada a LOTA,
-        * porque otras asignaciones con generar_automaticamente = 0 pueden ser
-        * contenedoras de reemplazos, pagos adicionales o líneas especiales,
-        * y no deben aparecer como cantidades variables.
-        *
-        * Ejemplo correcto:
-        * - LOTA: cantidad variable informada del mes.
-        *
-        * Ejemplos que NO deben aparecer aquí:
-        * - VA03, VA04
-        * - BH.01, 02, 03
-        * - COMISION
-        * - .COM
+        * Por ahora dejamos esta sección estrictamente limitada a asignaciones
+        * configuradas como VARIABLE, por ejemplo LOTA.
         */
-
-
-
-
-
-
-
-
-
-        
         $asignacionesCantidadMensual = Asignaciones::with([
             'suscripcionProveedor.cobranzaCompra',
             'transportista',
@@ -69,6 +49,11 @@ class SuscripcionComisionMensualController extends Controller
             ->orderBy('codigo')
             ->get();
 
+        /*
+        * Asignaciones disponibles para novedades mensuales.
+        *
+        * No se permiten comisiones ni contenedores técnicos como asignación base.
+        */
         $asignacionesAjustesMensuales = Asignaciones::with([
             'suscripcionProveedor.cobranzaCompra',
             'transportista',
@@ -80,6 +65,9 @@ class SuscripcionComisionMensualController extends Controller
             ->orderBy('codigo')
             ->get();
 
+        /*
+        * Pagos fijos mensuales automáticos.
+        */
         $asignacionesFijasMensuales = Asignaciones::with([
             'suscripcionProveedor.cobranzaCompra',
             'transportista',
@@ -88,14 +76,15 @@ class SuscripcionComisionMensualController extends Controller
             ->orderBy('codigo')
             ->get();
 
-
-
-
-
-
-
-
-
+        /*
+        * Catálogo de conceptos para pago variable:
+        * Compaginado, primera vuelta, segunda vuelta, etc.
+        */
+        $conceptosPagoVariable = SuscripcionConceptoPagoVariable::query()
+            ->where('activo', true)
+            ->orderBy('orden')
+            ->orderBy('nombre')
+            ->get();
 
         return view('suscripciones.comisiones_mensuales.create', compact(
             'anio',
@@ -104,7 +93,8 @@ class SuscripcionComisionMensualController extends Controller
             'transportistas',
             'asignacionesCantidadMensual',
             'asignacionesAjustesMensuales',
-            'asignacionesFijasMensuales'
+            'asignacionesFijasMensuales',
+            'conceptosPagoVariable'
         ));
     }
 
@@ -112,12 +102,8 @@ class SuscripcionComisionMensualController extends Controller
 
 
 
-    public function store(
-        Request $request,
-        SuscripcionGeneracionMensualService $generacionMensualService,
-        SuscripcionAjusteMensualRegistroService $ajusteMensualRegistroService,
-        SuscripcionAjusteMensualAplicacionService $ajusteMensualAplicacionService
-    ) {
+    public function store(Request $request, SuscripcionGeneracionMensualService $generacionMensualService, SuscripcionAjusteMensualRegistroService $ajusteMensualRegistroService, SuscripcionAjusteMensualAplicacionService $ajusteMensualAplicacionService) 
+    {
         $data = $request->validate([
             'anio' => 'required|integer|min:2020|max:2100',
             'mes' => 'required|integer|min:1|max:12',
@@ -138,6 +124,8 @@ class SuscripcionComisionMensualController extends Controller
 
             'ajustes_mensuales' => 'nullable|array',
             'ajustes_mensuales.*.tipo_ajuste' => 'required|string|max:50',
+            'ajustes_mensuales.*.concepto_pago_variable_id' => 'nullable|exists:suscripcion_conceptos_pago_variable,id',
+            'ajustes_mensuales.*.concepto_pago_variable_manual' => 'nullable|string|max:150',
 
             'ajustes_mensuales.*.suscripcion_asignacion_id' => 'nullable|exists:suscripcion_asignaciones,id',
             'ajustes_mensuales.*.suscripcion_proveedor_id' => 'nullable|exists:suscripcion_proveedores,id',
@@ -429,6 +417,10 @@ class SuscripcionComisionMensualController extends Controller
 
 
 
+
+
+
+
     private function validarAjustesMensualesFormulario(array $ajustes): array
     {
         $errores = [];
@@ -443,36 +435,23 @@ class SuscripcionComisionMensualController extends Controller
                 continue;
             }
 
-
-
-
             if (!in_array($tipo, [
                 'INASISTENCIA',
-                'FIJO_MENSUAL',
                 'FACTURACION',
                 'LINEA_ADICIONAL',
-                'PAGO_ADICIONAL',
+                'PAGO_VARIABLE',
+                'PAGO_ADICIONAL', // compatibilidad temporal con formularios antiguos
                 'REEMPLAZO',
             ], true)) {
-
-
-
-
-
-
                 $errores["ajustes_mensuales.$index.tipo_ajuste"] = "La novedad mensual #{$numero} tiene un tipo de ajuste no válido.";
                 continue;
             }
 
-            if (in_array($tipo, ['INASISTENCIA', 'FIJO_MENSUAL', 'FACTURACION'], true)) {
+            if (in_array($tipo, ['INASISTENCIA', 'FACTURACION'], true)) {
                 if (empty($ajuste['suscripcion_asignacion_id'])) {
                     $errores["ajustes_mensuales.$index.suscripcion_asignacion_id"] = "La novedad mensual #{$numero} requiere una asignación existente.";
                 }
             }
-
-
-
-
 
             $asignacionAjuste = null;
 
@@ -497,18 +476,7 @@ class SuscripcionComisionMensualController extends Controller
                 }
             }
 
-
-
-
-
-
-
-
-
-
-
-
-            if (in_array($tipo, ['LINEA_ADICIONAL', 'PAGO_ADICIONAL', 'REEMPLAZO'], true)) {
+            if (in_array($tipo, ['LINEA_ADICIONAL', 'PAGO_VARIABLE', 'PAGO_ADICIONAL', 'REEMPLAZO'], true)) {
                 if (empty($ajuste['suscripcion_proveedor_id'])) {
                     $errores["ajustes_mensuales.$index.suscripcion_proveedor_id"] = "La novedad mensual #{$numero} requiere un proveedor.";
                 }
@@ -524,6 +492,15 @@ class SuscripcionComisionMensualController extends Controller
                 if (!isset($ajuste['cantidad']) || $ajuste['cantidad'] === '') {
                     $errores["ajustes_mensuales.$index.cantidad"] = "La novedad mensual #{$numero} requiere una cantidad.";
                 }
+
+                if ($tipo === 'PAGO_VARIABLE') {
+                    $tieneConceptoSeleccionado = !empty($ajuste['concepto_pago_variable_id']);
+                    $tieneConceptoManual = !empty(trim((string) ($ajuste['concepto_pago_variable_manual'] ?? '')));
+
+                    if (!$tieneConceptoSeleccionado && !$tieneConceptoManual) {
+                        $errores["ajustes_mensuales.$index.concepto_pago_variable_id"] = "El pago variable #{$numero} requiere seleccionar un concepto o escribir uno manualmente.";
+                    }
+                }
             }
 
             if ($tipo === 'INASISTENCIA') {
@@ -531,14 +508,6 @@ class SuscripcionComisionMensualController extends Controller
                     $errores["ajustes_mensuales.$index.q_inasistencia"] = "La novedad mensual #{$numero} requiere cantidad de inasistencias.";
                 }
             }
-
-            if ($tipo === 'FIJO_MENSUAL') {
-                if (!isset($ajuste['costo']) || $ajuste['costo'] === '') {
-                    $errores["ajustes_mensuales.$index.costo"] = "La novedad mensual #{$numero} requiere el valor mensual fijo.";
-                }
-            }
-
-
         }
 
         return $errores;
