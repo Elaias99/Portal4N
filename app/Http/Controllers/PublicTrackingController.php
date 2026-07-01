@@ -72,6 +72,8 @@ class PublicTrackingController extends Controller
         }
     }
 
+
+
     private function transformProxyResponse(string $tracking, array $payload): array
     {
         $data = $payload['data'] ?? [];
@@ -100,9 +102,16 @@ class PublicTrackingController extends Controller
         $deliveredTimeline = collect($data['timeline'] ?? [])
             ->firstWhere('state', 'delivered');
 
+        $rawStatus = $data['delivery_state'] ?? $data['status'] ?? null;
+
+        $status = match ($rawStatus) {
+            'failed' => 'fallido',
+            default => $rawStatus,
+        };
+
         return [
             'tracking' => $tracking,
-            'status' => $data['delivery_state'] ?? $data['status'] ?? null,
+            'status' => $status,
             'delivered_at' =>
                 $data['delivery_date']
                 ?? $proof['created_at']
@@ -123,4 +132,7 @@ class PublicTrackingController extends Controller
             'has_pod' => count($photos) > 0,
         ];
     }
+
+
+
 }
