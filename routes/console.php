@@ -60,6 +60,10 @@ Schedule::call(function () {
 
     // VENTAS (RCV_VENTAS)
     $ventas = DocumentoFinanciero::whereBetween('fecha_vencimiento', [$inicio, $fin])
+        ->where(function ($query) {
+            $query->whereNull('status')
+                ->orWhere('status', '!=', 'Factory');
+        })
         ->get()
         ->filter(fn($doc) => $doc->saldo_pendiente > 0)
         ->sortBy('fecha_vencimiento');
@@ -101,6 +105,10 @@ Schedule::call(function () {
 
     // VENTAS
     $ventas = \App\Models\DocumentoFinanciero::where('fecha_vencimiento', '<', $hoy)
+        ->where(function ($query) {
+            $query->whereNull('status')
+                ->orWhere('status', '!=', 'Factory');
+        })
         ->get()
         ->filter(fn($doc) => $doc->saldo_pendiente > 0)
         ->sortBy('fecha_vencimiento');
