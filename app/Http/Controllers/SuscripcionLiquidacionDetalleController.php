@@ -593,7 +593,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function pdf( SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService, SuscripcionPrefacturaAgrupacionService $agrupacionService, SuscripcionPrefacturaOcService $ocService ) 
+    public function pdf(SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService, SuscripcionPrefacturaAgrupacionService $agrupacionService, SuscripcionPrefacturaOcService $ocService, SuscripcionAjusteMensualService $ajusteMensualService) 
     {
         $detalle->load([
             'asignacion.suscripcionProveedor.cobranzaCompra',
@@ -603,13 +603,15 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'asignacion.opvPuntos',
         ]);
 
-        $suscripcionProveedorId = $detalle->asignacion?->suscripcion_proveedor_id;
-
-        $ocPrefactura = $ocService->generarOC(
-            (int) $detalle->anio,
-            (int) $detalle->mes,
-            (int) $suscripcionProveedorId
-        );
+        /*
+        * El PDF debe usar el mismo proveedor efectivo que la vista show.
+        * Ejemplo:
+        * - Asignación base LOTA: Carlos Calfucura
+        * - Junio 2026: ajuste FACTURACION a Victor Cornejo
+        * - El PDF debe salir a nombre de Victor Cornejo.
+        */
+        $proveedorPrefactura = $ajusteMensualService->proveedorFacturacionParaDetalle($detalle);
+        $suscripcionProveedorId = $proveedorPrefactura?->id;
 
         if (!$suscripcionProveedorId) {
             abort(404, 'No se encontró el proveedor de suscripción asociado.');
@@ -618,6 +620,10 @@ class SuscripcionLiquidacionDetalleController extends Controller
         $grupoPrefactura = $agrupacionService->grupoDesdeDetalle($detalle);
         $grupoPrefacturaLabel = $agrupacionService->etiquetaGrupo($grupoPrefactura);
 
+        /*
+        * Igual que en show(), se traen los detalles del periodo y luego se filtran
+        * por proveedor efectivo, porque puede existir cambio de facturación mensual.
+        */
         $detallesProveedor = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.suscripcionProveedor.cobranzaCompra.banco',
@@ -626,20 +632,47 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'asignacion.opvPuntos',
             'asignacion.cantidadesMensuales',
         ])
-        ->whereHas('asignacion', function ($query) use ($suscripcionProveedorId, $grupoPrefactura, $agrupacionService) {
-            $query->where('suscripcion_proveedor_id', $suscripcionProveedorId);
+            ->where('anio', $detalle->anio)
+            ->where('mes', $detalle->mes)
+            ->orderBy('codigo')
+            ->get()
+            ->filter(function ($item) use (
+                $suscripcionProveedorId,
+                $grupoPrefactura,
+                $agrupacionService,
+                $ajusteMensualService
+            ) {
+                $proveedorItem = $ajusteMensualService->proveedorFacturacionParaDetalle($item);
 
-            $agrupacionService->aplicarFiltroGrupoEnAsignacion($query, $grupoPrefactura);
-        })
-        ->where('anio', $detalle->anio)
-        ->where('mes', $detalle->mes)
-        ->orderBy('codigo')
-        ->get();
+                if ((int) $proveedorItem?->id !== (int) $suscripcionProveedorId) {
+                    return false;
+                }
+
+                $grupoItem = $agrupacionService->grupoDesdeDetalle($item);
+
+                return $agrupacionService->claveGrupo($grupoItem)
+                    === $agrupacionService->claveGrupo($grupoPrefactura);
+            })
+            ->values();
+
+        if ($detallesProveedor->isEmpty()) {
+            abort(404, 'No se encontraron detalles para la pre-factura solicitada.');
+        }
 
         $calculosDetalle = $resumenService->calcularPorDetalles($detallesProveedor);
 
-        $proveedor = $detalle->asignacion?->suscripcionProveedor;
+        /*
+        * Encabezado, datos de pago, tipo documento y nombre de archivo:
+        * todos deben salir desde el proveedor efectivo.
+        */
+        $proveedor = $proveedorPrefactura;
         $cobranzaCompra = $proveedor?->cobranzaCompra;
+
+        $ocPrefactura = $ocService->generarOC(
+            (int) $detalle->anio,
+            (int) $detalle->mes,
+            (int) $suscripcionProveedorId
+        );
 
         $totalBruto = $detallesProveedor->sum('total');
         $totalImpuesto = $calculosDetalle->sum('total_impuesto');
@@ -702,7 +735,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function pdfMasivo(Request $request, SuscripcionPrefacturaZipService $zipService)
+    public function pdfMasivo(Request $request, SuscripcionPrefacturaZipService $zipService, SuscripcionAjusteMensualService $ajusteMensualService) 
     {
         $request->validate([
             'anio_pdf' => 'required|integer|min:2020|max:2100',
@@ -718,37 +751,70 @@ class SuscripcionLiquidacionDetalleController extends Controller
         $rutFiltro = trim((string) $request->rut_pdf);
         $tipoFiltro = trim((string) $request->tipo_pdf);
 
-        $query = SuscripcionLiquidacionDetalle::with([
+        /*
+        * Importante:
+        * No filtramos por proveedor base en SQL, porque una línea puede pertenecer
+        * a otro proveedor efectivo por ajuste mensual.
+        */
+        $detallesBase = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.suscripcionProveedor.cobranzaCompra.banco',
             'asignacion.suscripcionProveedor.cobranzaCompra.tipoCuenta',
             'asignacion.transportista',
             'asignacion.opvPuntos',
+            'asignacion.cantidadesMensuales',
         ])
-        ->where('anio', $anio)
-        ->where('mes', $mes);
-
-        if ($proveedorFiltro !== '') {
-            $query->whereHas('asignacion.suscripcionProveedor.cobranzaCompra', function ($q) use ($proveedorFiltro) {
-                $q->where('razon_social', 'like', '%' . $proveedorFiltro . '%');
-            });
-        }
-
-        if ($rutFiltro !== '') {
-            $query->whereHas('asignacion.suscripcionProveedor.cobranzaCompra', function ($q) use ($rutFiltro) {
-                $q->where('rut_cliente', 'like', '%' . $rutFiltro . '%');
-            });
-        }
-
-        if ($tipoFiltro !== '') {
-            $query->whereHas('asignacion.suscripcionProveedor', function ($q) use ($tipoFiltro) {
-                $q->where('tipo', $tipoFiltro);
-            });
-        }
-
-        $detallesBase = $query
+            ->where('anio', $anio)
+            ->where('mes', $mes)
             ->orderBy('codigo')
-            ->get();
+            ->get()
+            ->filter(function ($detalle) use (
+                $proveedorFiltro,
+                $rutFiltro,
+                $tipoFiltro,
+                $ajusteMensualService
+            ) {
+                $proveedorEfectivo = $ajusteMensualService->proveedorFacturacionParaDetalle($detalle);
+                $cobranzaCompra = $proveedorEfectivo?->cobranzaCompra;
+
+                if (!$proveedorEfectivo) {
+                    return false;
+                }
+
+                if ($proveedorFiltro !== '') {
+                    $razonSocial = mb_strtoupper(trim((string) $cobranzaCompra?->razon_social));
+                    $filtro = mb_strtoupper($proveedorFiltro);
+
+                    if (!str_contains($razonSocial, $filtro)) {
+                        return false;
+                    }
+                }
+
+                if ($rutFiltro !== '') {
+                    $rutCliente = mb_strtoupper(trim((string) $cobranzaCompra?->rut_cliente));
+                    $filtro = mb_strtoupper($rutFiltro);
+
+                    if (!str_contains($rutCliente, $filtro)) {
+                        return false;
+                    }
+                }
+
+                if ($tipoFiltro !== '') {
+                    $tipoDocumento = mb_strtoupper(trim((string) (
+                        $ajusteMensualService->tipoDocumentoParaDetalle($detalle)
+                        ?? $proveedorEfectivo?->tipo
+                    )));
+
+                    $filtro = mb_strtoupper(trim($tipoFiltro));
+
+                    if ($tipoDocumento !== $filtro) {
+                        return false;
+                    }
+                }
+
+                return true;
+            })
+            ->values();
 
         if ($detallesBase->isEmpty()) {
             return back()->withErrors([

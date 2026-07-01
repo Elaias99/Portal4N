@@ -11,7 +11,8 @@ class SuscripcionPrefacturaZipService
     public function __construct(
         private SuscripcionLiquidacionResumenService $resumenService,
         private SuscripcionPrefacturaAgrupacionService $agrupacionService,
-        private SuscripcionPrefacturaOcService $ocService
+        private SuscripcionPrefacturaOcService $ocService,
+        private SuscripcionAjusteMensualService $ajusteMensualService
     ) {}
 
     public function generarDesdeDetalles(Collection $detallesBase, int $anio, int $mes): array
@@ -30,11 +31,25 @@ class SuscripcionPrefacturaZipService
         }
 
         $detallesConProveedor = $detallesBase
-            ->filter(fn ($detalle) => $detalle->asignacion?->suscripcion_proveedor_id)
+            ->filter(function ($detalle) {
+                return $this->ajusteMensualService->proveedorFacturacionParaDetalle($detalle)?->id;
+            })
             ->values();
 
-        $detallesPorPrefactura = $this->agrupacionService
-            ->agruparPorPrefactura($detallesConProveedor);
+        $detallesPorPrefactura = $detallesConProveedor
+            ->groupBy(function ($detalle) {
+                $proveedorEfectivo = $this->ajusteMensualService->proveedorFacturacionParaDetalle($detalle);
+                $grupoPrefactura = $this->agrupacionService->claveGrupo(
+                    $this->agrupacionService->grupoDesdeDetalle($detalle)
+                );
+
+                return implode('_', [
+                    $proveedorEfectivo?->id ?? 'sin_proveedor',
+                    $detalle->anio,
+                    $detalle->mes,
+                    $grupoPrefactura,
+                ]);
+            });
 
         if ($detallesPorPrefactura->isEmpty()) {
             throw new \RuntimeException('No se generó ningún PDF.');
@@ -82,7 +97,7 @@ class SuscripcionPrefacturaZipService
 
             $detalle = $detallesPrefactura->first();
 
-            $proveedor = $detalle->asignacion?->suscripcionProveedor;
+            $proveedor = $this->ajusteMensualService->proveedorFacturacionParaDetalle($detalle);
             $cobranzaCompra = $proveedor?->cobranzaCompra;
 
             $ocPrefactura = $proveedor
@@ -267,7 +282,32 @@ class SuscripcionPrefacturaZipService
                 $grupoPrefactura = $asignacion?->grupo_prefactura;
                 $grupoPrefacturaClave = $this->agrupacionService->claveGrupo($grupoPrefactura);
 
+                $ajuste = $this->ajusteMensualService->resolverParaDetalle($detalle);
+                $proveedorEfectivo = $this->ajusteMensualService->proveedorFacturacionParaDetalle($detalle);
+                $cobranzaEfectiva = $proveedorEfectivo?->cobranzaCompra;
+
                 return implode('|', [
+
+                    $ajuste?->id,
+                    $ajuste?->tipo_ajuste,
+                    $ajuste?->suscripcion_proveedor_facturacion_id,
+                    $ajuste?->tipo_documento,
+                    $ajuste?->detalle_documento,
+                    $ajuste?->detalle_impuesto,
+                    $ajuste?->final,
+                    optional($ajuste?->updated_at)->timestamp,
+
+                    $proveedorEfectivo?->id,
+                    $proveedorEfectivo?->tipo,
+                    $proveedorEfectivo?->detalle_documento,
+                    $proveedorEfectivo?->detalle_impuesto,
+                    $proveedorEfectivo?->final,
+
+                    $cobranzaEfectiva?->id,
+                    $cobranzaEfectiva?->rut_cliente,
+                    $cobranzaEfectiva?->razon_social,
+
+
                     $detalle->id,
                     $detalle->suscripcion_asignacion_id,
                     $detalle->anio,
@@ -309,6 +349,6 @@ class SuscripcionPrefacturaZipService
             })
             ->implode('||');
 
-        return sha1('prefactura_grupo_v3_oc|' . $anio . '|' . $mes . '|' . $base);
+        return sha1('prefactura_grupo_v4_proveedor_efectivo|' . $anio . '|' . $mes . '|' . $base);
     }
 }

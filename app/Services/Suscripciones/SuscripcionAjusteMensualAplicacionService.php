@@ -179,10 +179,8 @@ class SuscripcionAjusteMensualAplicacionService
         return 'sin_cambios';
     }
 
-    private function payloadDetalleDesdeAjuste(
-        SuscripcionAjusteMensual $ajuste,
-        SuscripcionLiquidacionDetalle $detalle
-    ): array {
+    private function payloadDetalleDesdeAjuste(SuscripcionAjusteMensual $ajuste, SuscripcionLiquidacionDetalle $detalle): array 
+    {
         $payload = [];
 
         $codigo = $this->valorTexto($ajuste->codigo);
@@ -223,10 +221,8 @@ class SuscripcionAjusteMensualAplicacionService
 
 
 
-    private function payloadLineaAdicional(
-        SuscripcionAjusteMensual $ajuste,
-        Asignaciones $asignacion
-    ): array {
+    private function payloadLineaAdicional(SuscripcionAjusteMensual $ajuste, Asignaciones $asignacion): array 
+    {
         $tipo = $this->normalizarTipo($ajuste->tipo_ajuste);
 
         $codigoPorDefecto = $tipo === 'PAGO_VARIABLE'
@@ -265,10 +261,8 @@ class SuscripcionAjusteMensualAplicacionService
 
 
 
-    private function calcularCantidadDesdeAjuste(
-        SuscripcionAjusteMensual $ajuste,
-        SuscripcionLiquidacionDetalle $detalle
-    ): int {
+    private function calcularCantidadDesdeAjuste(SuscripcionAjusteMensual $ajuste,SuscripcionLiquidacionDetalle $detalle): int 
+    {
         $qCalendario = (int) ($ajuste->q_calendario ?? $detalle->q_calendario ?? 0);
         $qInasistencia = (int) ($ajuste->q_inasistencia ?? $detalle->q_inasistencia ?? 0);
 

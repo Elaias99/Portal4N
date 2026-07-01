@@ -117,8 +117,6 @@ class SuscripcionAjusteMensualRegistroService
         ];
     }
 
-
-
     private function guardarFijoMensual(array $data, int $anio, int $mes): array
     {
         $asignacion = Asignaciones::findOrFail((int) $data['suscripcion_asignacion_id']);
@@ -164,10 +162,6 @@ class SuscripcionAjusteMensualRegistroService
             ),
         ];
     }
-
-
-
-
 
     private function guardarFacturacion(array $data, int $anio, int $mes): array
     {
@@ -220,12 +214,6 @@ class SuscripcionAjusteMensualRegistroService
             ),
         ];
     }
-
-
-
-
-
-
 
     private function guardarLineaAdicional(array $data, int $anio, int $mes): array
     {
@@ -360,25 +348,8 @@ class SuscripcionAjusteMensualRegistroService
         ];
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-    private function guardarOActualizarAjuste(
-        int $suscripcionAsignacionId,
-        int $anio,
-        int $mes,
-        string $tipoAjuste,
-        array $payload
-    ): string {
+    private function guardarOActualizarAjuste(int $suscripcionAsignacionId, int $anio, int $mes, string $tipoAjuste, array $payload): string 
+    {
         $ajuste = SuscripcionAjusteMensual::query()
             ->where('suscripcion_asignacion_id', $suscripcionAsignacionId)
             ->where('anio', $anio)
@@ -407,8 +378,6 @@ class SuscripcionAjusteMensualRegistroService
         return 'sin_cambios';
     }
 
-
-
     private function esLineaAdicional(string $tipo): bool
     {
         return in_array($tipo, [
@@ -418,10 +387,6 @@ class SuscripcionAjusteMensualRegistroService
             'REEMPLAZO',
         ], true);
     }
-
-
-
-
 
     private function normalizarTipo(?string $tipo): string
     {
@@ -446,7 +411,6 @@ class SuscripcionAjusteMensualRegistroService
 
         return (int) $valor;
     }
-
 
     private function resolverConceptoPagoVariable(array $data): array
     {
@@ -491,13 +455,5 @@ class SuscripcionAjusteMensualRegistroService
 
         return $codigo !== '' ? $codigo : 'PAGO_VARIABLE';
     }
-
-
-
-
-
-
-
-
 
 }

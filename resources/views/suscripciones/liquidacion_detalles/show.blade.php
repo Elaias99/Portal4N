@@ -75,10 +75,6 @@
                     <div class="fs-5 fw-bold">
                         ${{ number_format($totalLiquido, 0, ',', '.') }}
                     </div>
-
-                    {{-- <div class="small text-muted">
-                        {{ $detallesProveedor->count() }} línea{{ $detallesProveedor->count() === 1 ? '' : 's' }}
-                    </div> --}}
                 </div>
             </div>
         </div>
@@ -184,8 +180,24 @@
                                     $codigo = mb_strtoupper(trim((string) $item->codigo));
                                     $servicio = mb_strtoupper(trim((string) ($item->asignacion?->servicio ?? '')));
                                     $origenGasto = mb_strtoupper(trim((string) ($item->asignacion?->origen_gasto ?? '')));
+                                    $tipoAsignacion = mb_strtoupper(trim((string) ($item->asignacion?->tipo_asignacion ?? '')));
 
-                                    $esValorFijo = str_ends_with($codigo, '.COM');
+                                    $esContenedorAjuste = $tipoAsignacion === 'CONTENEDOR_AJUSTE';
+
+                                    $esPagoVariable = $esContenedorAjuste
+                                        && (
+                                            str_starts_with($codigo, 'PV-')
+                                            || str_contains($servicio, 'PAGO VARIABLE')
+                                        );
+
+                                    $esLineaExcepcional = $esContenedorAjuste && !$esPagoVariable;
+
+                                    $esComisionMensual = $tipoAsignacion === 'COMISION'
+                                        || str_ends_with($codigo, '.COM')
+                                        || str_contains($codigo, 'COMISION');
+
+                                    $esValorFijo = $tipoAsignacion === 'FIJO_MENSUAL'
+                                        || $esComisionMensual;
 
                                     $cantidadesMensuales = $item->asignacion?->cantidadesMensuales ?? collect();
 
@@ -214,7 +226,15 @@
                                         {{ $item->asignacion?->servicio ?? '—' }}
                                         ({{ $item->codigo }})
 
-                                        @if($esOPV)
+                                        @if($esPagoVariable)
+                                            <small class="text-muted d-block mt-1">
+                                                Pago variable del periodo. La tarifa se usa como base antes de impuesto o retención.
+                                            </small>
+                                        @elseif($esLineaExcepcional)
+                                            <small class="text-muted d-block mt-1">
+                                                Línea excepcional del periodo. No se calcula por calendario.
+                                            </small>
+                                        @elseif($esOPV)
                                             <small class="text-muted d-block mt-1">
                                                 OPV: {{ $puntosOPV }} punto{{ $puntosOPV === 1 ? '' : 's' }} asociado{{ $puntosOPV === 1 ? '' : 's' }}.
 
@@ -229,19 +249,19 @@
                                                     Ver puntos OPV
                                                 </a>
                                             @endif
-
-
-                                            @elseif($esCantidadMensual)
-                                                <small class="text-muted d-block mt-1">
-                                                    Cantidad mensual informada manualmente. No se calcula por calendario.
-                                                </small>
-                                            @elseif($esValorFijo)
-                                                <small class="text-muted d-block mt-1">
-                                                    Valor fijo mensual. No se multiplica por fines de semana.
-                                                </small>
-                                            @endif
-
-
+                                        @elseif($esCantidadMensual)
+                                            <small class="text-muted d-block mt-1">
+                                                Cantidad mensual informada manualmente. No se calcula por calendario.
+                                            </small>
+                                        @elseif($esComisionMensual)
+                                            <small class="text-muted d-block mt-1">
+                                                Comisión mensual. No se multiplica por fines de semana.
+                                            </small>
+                                        @elseif($esValorFijo)
+                                            <small class="text-muted d-block mt-1">
+                                                Valor fijo mensual. No se multiplica por fines de semana.
+                                            </small>
+                                        @endif
                                     </td>
 
                                     <td class="text-end">
@@ -249,7 +269,17 @@
                                     </td>
 
                                     <td class="text-center">
-                                        @if($esOPV)
+                                        @if($esPagoVariable)
+                                            Tarifa única
+                                            <small class="text-muted d-block">
+                                                Pago variable
+                                            </small>
+                                        @elseif($esLineaExcepcional)
+                                            Línea excepcional
+                                            <small class="text-muted d-block">
+                                                Cantidad propia
+                                            </small>
+                                        @elseif($esOPV)
                                             {{ $item->q_calendario }} fines de semana
 
                                             @if($puntosOPV > 0)
@@ -257,15 +287,22 @@
                                                     x {{ $puntosOPV }} punto{{ $puntosOPV === 1 ? '' : 's' }} OPV
                                                 </small>
                                             @endif
-
-                                            @elseif($esCantidadMensual)
-                                                Cantidad mensual
-                                                <small class="text-muted d-block">
-                                                    Informada manualmente
-                                                </small>
-                                            @elseif($esValorFijo)
-                                                Fijo
-                                            @else
+                                        @elseif($esCantidadMensual)
+                                            Cantidad mensual
+                                            <small class="text-muted d-block">
+                                                Informada manualmente
+                                            </small>
+                                        @elseif($esComisionMensual)
+                                            Comisión
+                                            <small class="text-muted d-block">
+                                                Mensual
+                                            </small>
+                                        @elseif($esValorFijo)
+                                            Fijo
+                                            <small class="text-muted d-block">
+                                                Mensual
+                                            </small>
+                                        @else
                                             {{ $item->q_calendario }} fines de semana
 
                                             @if($item->q_inasistencia > 0)
@@ -277,10 +314,23 @@
                                     </td>
 
                                     <td class="text-end">
-
-
-                                        @if($esValorFijo)
-                                            1
+                                        @if($esPagoVariable)
+                                            {{ $item->cantidad }}
+                                            <small class="text-muted d-block">
+                                                tarifa
+                                            </small>
+                                        @elseif($esLineaExcepcional)
+                                            {{ $item->cantidad }}
+                                            <small class="text-muted d-block">
+                                                propia
+                                            </small>
+                                        @elseif($esComisionMensual)
+                                            {{ $item->cantidad }}
+                                            <small class="text-muted d-block">
+                                                comisión
+                                            </small>
+                                        @elseif($esValorFijo)
+                                            {{ $item->cantidad }}
                                             <small class="text-muted d-block">
                                                 fijo
                                             </small>
@@ -290,9 +340,6 @@
                                                 informada
                                             </small>
                                         @else
-
-
-
                                             {{ $item->cantidad }}
 
                                             @if($esOPV && $puntosOPV > 0)

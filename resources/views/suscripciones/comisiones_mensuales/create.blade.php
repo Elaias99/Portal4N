@@ -239,9 +239,52 @@
                     <strong>Usa este bloque sólo para excepciones del periodo.</strong>
                     No reemplaza la sección de cantidades variables. Por ejemplo, LOTA se carga arriba con su cantidad mensual
                     y aquí sólo se registra si cambia proveedor facturador, documento o transportista efectivo.
-                    Los <strong>pagos variables</strong> como compaginado, primera vuelta o segunda vuelta también se registran aquí,
-                    porque son novedades operativas del mes y no comisiones.
+                    Los <strong>pagos variables</strong> como compaginado, primera vuelta o segunda vuelta se agregan aquí
+                    como una línea propia con <strong>tarifa</strong>, no como comisión ni como cantidad de ruta.
                 </div>
+
+                {{-- <div class="alert alert-light border small mb-3">
+                    <div class="fw-semibold mb-2">Guía rápida por tipo de novedad</div>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Qué modifica</th>
+                                    <th>Campos clave</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Inasistencia</strong></td>
+                                    <td>Descuenta días de una asignación existente.</td>
+                                    <td>Asignación existente + Q inasistencia.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Cambio de facturación</strong></td>
+                                    <td>Cambia proveedor/documento/transportista efectivo de una asignación existente.</td>
+                                    <td>Asignación existente + proveedor facturador + documento. El costo es excepcional/opcional.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Línea adicional</strong></td>
+                                    <td>Crea una línea nueva valorizada para el mes.</td>
+                                    <td>Proveedor + código + servicio + costo + cantidad.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Reemplazo</strong></td>
+                                    <td>Crea una línea nueva por reemplazo del mes.</td>
+                                    <td>Proveedor + transportista + rutas/código + costo + cantidad.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Pago variable</strong></td>
+                                    <td>Crea una línea nueva por concepto operativo.</td>
+                                    <td>Proveedor + transportista si aplica + concepto + tarifa.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div> --}}
 
                 <div class="border rounded p-3 mb-3">
                     <div class="row g-3">
@@ -354,7 +397,7 @@
 
                         <div class="col-md-6 d-none" id="bloque-ajuste-proveedor">
                             <label for="ajuste_suscripcion_proveedor_id" class="form-label">
-                                Proveedor de la línea / pago variable
+                                Proveedor de la novedad
                             </label>
 
                             <select id="ajuste_suscripcion_proveedor_id" class="form-select">
@@ -385,11 +428,15 @@
                                     </option>
                                 @endforeach
                             </select>
+
+                            <div class="form-text">
+                                Para línea adicional, reemplazo o pago variable. En pago variable será quien recibe la línea con tarifa.
+                            </div>
                         </div>
 
                         <div class="col-md-6 d-none" id="bloque-ajuste-transportista">
                             <label for="ajuste_suscripcion_transportista_id" class="form-label">
-                                Transportista de la línea / pago variable
+                                Transportista relacionado / reemplazante
                             </label>
 
                             <select id="ajuste_suscripcion_transportista_id" class="form-select">
@@ -404,6 +451,10 @@
                                     </option>
                                 @endforeach
                             </select>
+
+                            <div class="form-text">
+                                Opcional para pago variable; recomendable para reemplazos cuando el transportista efectivo importa.
+                            </div>
                         </div>
 
                         <div class="col-md-6 d-none" id="bloque-ajuste-concepto-pago-variable">
@@ -436,6 +487,7 @@
 
                             <div class="form-text">
                                 Ejemplo: Compaginado, primera vuelta, segunda vuelta o reposición.
+                                La tarifa se ingresa en el campo <strong>Costo / tarifa</strong>.
                             </div>
                         </div>
 
@@ -571,13 +623,24 @@
                         </div>
 
                         <div class="col-md-4">
-                            <label for="ajuste_costo" class="form-label">Costo</label>
+                            <label for="ajuste_costo" id="ajuste_costo_label" class="form-label">
+                                Costo / tarifa neta
+                            </label>
+
                             <input
                                 type="number"
                                 id="ajuste_costo"
                                 class="form-control"
                                 min="0"
+                                placeholder="Ej: 50000"
                             >
+
+                            <div id="ajuste_costo_ayuda" class="form-text">
+                                Pago variable: ingresa la <strong>tarifa neta de impuesto</strong>.
+                                El sistema calculará impuesto o retención según el tipo de documento del proveedor.
+                                Línea adicional/reemplazo: ingresa el costo unitario.
+                                Cambio de facturación: úsalo sólo si debes corregir el costo del mes.
+                            </div>
                         </div>
 
                         <div class="col-md-3">
@@ -611,6 +674,9 @@
                                 min="0"
                                 placeholder="Opcional"
                             >
+                            <div class="form-text">
+                                Para líneas adicionales y reemplazos. En pago variable se usa cantidad técnica 1.
+                            </div>
                         </div>
 
                         <div class="col-md-3">
@@ -674,7 +740,8 @@
                                 disabled
                             >
                             <div class="form-text">
-                                Si dejas el total manual vacío, el backend calculará costo × cantidad cuando corresponda.
+                                Pago variable: el total estimado corresponde a la tarifa. Línea adicional/reemplazo:
+                                si dejas el total manual vacío, el backend calculará costo × cantidad.
                             </div>
                         </div>
 
@@ -684,7 +751,7 @@
                                 type="text"
                                 id="ajuste_observacion"
                                 class="form-control"
-                                placeholder="Ej: REEMPLAZO VA03 Y VA04 MAYO 2026"
+                                placeholder="Ej: REEMPLAZO VA03 Y VA04 MAYO 2026 / COMPAGINADO MAYO 2026"
                             >
                         </div>
 
@@ -706,7 +773,7 @@
                                 <th>Asignación base / proveedor</th>
                                 <th>Detalle del cambio</th>
                                 <th>Código</th>
-                                <th class="text-end">Cantidad</th>
+                                <th class="text-end">Cantidad / Q</th>
                                 <th class="text-end">Total estimado</th>
                                 <th class="text-center">Acción</th>
                             </tr>
@@ -733,6 +800,7 @@
         </div>
 
         {{-- COMISIONES --}}
+        {{-- PAGOS ADICIONALES --}}
         <div class="card mb-4">
             <button
                 type="button"
@@ -741,9 +809,9 @@
                 aria-expanded="false"
             >
                 <span>
-                    <strong>Comisiones del mes</strong>
+                    <strong>Pagos adicionales del mes</strong>
                     <span class="small text-muted ms-2">
-                        Agrega comisiones sólo si corresponde para este periodo.
+                        Agrega pagos adicionales sólo si corresponde para este periodo.
                     </span>
                 </span>
 
@@ -752,15 +820,15 @@
 
             <div id="panel-comisiones-mensuales" class="card-body d-none">
                 <div class="small text-muted mb-3">
-                    Completa los datos de una comisión y presiona <strong>Agregar comisión</strong>.
-                    La comisión quedará en la lista inferior antes de generar el mes.
+                    Completa los datos de un pago adicional y presiona <strong>Agregar pago adicional</strong>.
+                    El pago quedará en la lista inferior antes de generar el mes.
                 </div>
 
                 <div class="border rounded p-3 mb-3">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label for="comision_proveedor_id" class="form-label">
-                                Proveedor a integrar comisión
+                                Proveedor a integrar pago adicional
                             </label>
 
                             <select id="comision_proveedor_id" class="form-select">
@@ -843,7 +911,7 @@
                         </div>
 
                         <div class="col-md-3">
-                            <label class="form-label">Código comisión</label>
+                            <label class="form-label">Código interno</label>
                             <input
                                 type="text"
                                 class="form-control"
@@ -866,7 +934,7 @@
                         </div>
 
                         <div class="col-md-4">
-                            <label for="comision_costo" class="form-label">Costo comisión</label>
+                            <label for="comision_costo" class="form-label">Monto del pago adicional</label>
                             <input
                                 type="number"
                                 id="comision_costo"
@@ -876,7 +944,7 @@
                         </div>
 
                         <div class="col-md-4">
-                            <label class="form-label">Total estimado comisión actual</label>
+                            <label class="form-label">Total estimado pago actual</label>
                             <input
                                 type="text"
                                 id="comision_total_estimado"
@@ -885,25 +953,25 @@
                                 disabled
                             >
                             <div class="form-text">
-                                Las comisiones siempre se registran con cantidad 1.
+                                Estos pagos se registran con cantidad técnica 1.
                             </div>
                         </div>
 
                         <div class="col-md-9">
                             <label for="comision_observacion" class="form-label">
-                                Observación comisión
+                                Observación del pago adicional
                             </label>
                             <input
                                 type="text"
                                 id="comision_observacion"
                                 class="form-control"
-                                placeholder="Ej: comisión informada para este mes"
+                                placeholder="Ej: pago adicional informado para este mes"
                             >
                         </div>
 
                         <div class="col-md-3 d-flex align-items-end">
                             <button type="button" id="btn-agregar-comision" class="btn btn-outline-primary w-100">
-                                Agregar comisión
+                                Agregar pago adicional
                             </button>
                         </div>
                     </div>
@@ -919,7 +987,7 @@
                                 <th>Transportista</th>
                                 <th>Punto</th>
                                 <th>Servicio</th>
-                                <th class="text-end">Costo</th>
+                                <th class="text-end">Monto</th>
                                 <th>Observación</th>
                                 <th class="text-center">Acción</th>
                             </tr>
@@ -928,7 +996,7 @@
                         <tbody id="comisiones-resumen-body">
                             <tr>
                                 <td colspan="7" class="text-muted text-center">
-                                    No hay comisiones agregadas para este periodo.
+                                    No hay pagos adicionales agregados para este periodo.
                                 </td>
                             </tr>
                         </tbody>
@@ -936,7 +1004,7 @@
                 </div>
 
                 <div class="small text-muted mt-3">
-                    Comisiones agregadas:
+                    Pagos adicionales agregados:
                     <strong id="comisiones-cantidad">0</strong>
                     <span class="mx-1">|</span>
                     Total estimado:

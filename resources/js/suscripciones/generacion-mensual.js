@@ -395,6 +395,59 @@ document.addEventListener('DOMContentLoaded', function () {
         return ['INASISTENCIA', 'FIJO_MENSUAL', 'FACTURACION'].includes(normalizarTipo(tipo));
     }
 
+
+    function esPagoVariable(tipo) {
+        return normalizarTipo(tipo) === 'PAGO_VARIABLE';
+    }
+
+    function tarifaPagoVariableActual() {
+        const valor = parseInt(dom.ajuste.costoInput?.value || '', 10);
+
+        return Number.isNaN(valor) ? 0 : valor;
+    }
+
+    function prepararPagoVariableTecnico() {
+        const a = dom.ajuste;
+        const tipo = normalizarTipo(a.tipoSelect?.value || '');
+
+        if (tipo !== 'PAGO_VARIABLE') {
+            return;
+        }
+
+        const concepto = conceptoPagoVariableSeleccionado();
+        const nombreConcepto = concepto.nombre || concepto.manual || '';
+        const codigoConcepto = concepto.codigo || (nombreConcepto ? slugCodigo(nombreConcepto) : 'PAGO_VARIABLE');
+        const tarifa = tarifaPagoVariableActual();
+
+        if (a.punto1Input) a.punto1Input.value = '';
+        if (a.origenGastoInput) a.origenGastoInput.value = 'Suscripciones';
+        if (a.punto2Input) a.punto2Input.value = '';
+        if (a.grupoPrefacturaInput) a.grupoPrefacturaInput.value = '';
+
+        if (a.codigoInput) {
+            a.codigoInput.value = nombreConcepto ? 'PV-' + codigoConcepto : '';
+        }
+
+        if (a.servicioInput) {
+            a.servicioInput.value = nombreConcepto
+                ? 'Pago variable - ' + nombreConcepto
+                : 'Pago variable';
+        }
+
+        if (a.qCalendarioInput) a.qCalendarioInput.value = '1';
+        if (a.qInasistenciaInput) a.qInasistenciaInput.value = '0';
+        if (a.cantidadInput) a.cantidadInput.value = '1';
+        if (a.totalManualInput) a.totalManualInput.value = tarifa > 0 ? String(tarifa) : '';
+
+        if (a.tipoDocumentoInput) a.tipoDocumentoInput.value = '';
+        if (a.detalleDocumentoInput) a.detalleDocumentoInput.value = '';
+        if (a.detalleImpuestoInput) a.detalleImpuestoInput.value = '';
+        if (a.finalInput) a.finalInput.value = '';
+    }
+
+
+
+
     function contenedorCampo(input) {
         return input?.closest('.col-md-2, .col-md-3, .col-md-4, .col-md-6, .col-md-8, .col-md-9, .col-md-12');
     }
@@ -761,6 +814,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 a.servicioInput.value = 'Pago variable';
             }
 
+            prepararPagoVariableTecnico();
+            actualizarTotalAjusteActual();
+
             return;
         }
 
@@ -777,6 +833,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (a.observacionInput && !limpiarTexto(a.observacionInput.value)) {
             a.observacionInput.value = concepto.nombre;
         }
+
+        prepararPagoVariableTecnico();
+        actualizarTotalAjusteActual();
     }
 
     function actualizarCamposAjustePorTipo() {
@@ -886,6 +945,8 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
+
+
         if (esTipoLineaAdicional(tipo)) {
             a.bloqueProveedor?.classList.remove('d-none');
             a.bloqueTransportista?.classList.remove('d-none');
@@ -893,46 +954,58 @@ document.addEventListener('DOMContentLoaded', function () {
             if (tipo === 'PAGO_VARIABLE') {
                 a.bloqueConceptoPagoVariable?.classList.remove('d-none');
                 actualizarConceptoPagoVariableManual();
-            }
 
-            mostrarCamposAjuste([
-                'punto1',
-                'origenGasto',
-                'punto2',
-                'codigo',
-                'servicio',
-                'grupoPrefactura',
-                'costo',
-                'cantidad',
-                'total',
-                'tipoDocumento',
-                'detalleDocumento',
-                'detalleImpuesto',
-                'final',
-                'totalEstimado',
-                'observacion',
-            ]);
+                mostrarCamposAjuste([
+                    'costo',
+                    'totalEstimado',
+                    'observacion',
+                ]);
 
-            if (a.tipoDescripcion) {
-                a.tipoDescripcion.value = tipo === 'PAGO_VARIABLE'
-                    ? 'Registra un pago operativo variable del mes, como compaginado, primera vuelta o segunda vuelta.'
-                    : 'Crea una línea mensual adicional mediante una asignación contenedora.';
-            }
+                if (a.tipoDescripcion) {
+                    a.tipoDescripcion.value = 'Registra un pago variable del mes asociado a un concepto operativo.';
+                }
 
-            if (a.guiaOperativa) {
-                a.guiaOperativa.textContent = tipo === 'PAGO_VARIABLE'
-                    ? 'Selecciona el concepto del pago variable, proveedor, transportista, costo y cantidad. No se registra como comisión.'
-                    : 'Usa este tipo para reemplazos o líneas que no existen como línea normal del mes. Escribe código, costo y cantidad con cuidado para evitar duplicados.';
-            }
+                if (a.guiaOperativa) {
+                    a.guiaOperativa.textContent = 'Selecciona proveedor, transportista si aplica, concepto y tarifa. La tarifa se agregará como una línea propia en la pre-factura.';
+                }
 
-            if (tipo === 'PAGO_VARIABLE') {
                 if (a.servicioInput && !limpiarTexto(a.servicioInput.value)) {
                     a.servicioInput.value = 'Pago variable';
                 }
 
+                prepararPagoVariableTecnico();
                 aplicarConceptoPagoVariableSeleccionado();
+            } else {
+                mostrarCamposAjuste([
+                    'punto1',
+                    'origenGasto',
+                    'punto2',
+                    'codigo',
+                    'servicio',
+                    'grupoPrefactura',
+                    'costo',
+                    'cantidad',
+                    'total',
+                    'tipoDocumento',
+                    'detalleDocumento',
+                    'detalleImpuesto',
+                    'final',
+                    'totalEstimado',
+                    'observacion',
+                ]);
+
+                if (a.tipoDescripcion) {
+                    a.tipoDescripcion.value = 'Crea una línea mensual adicional mediante una asignación contenedora.';
+                }
+
+                if (a.guiaOperativa) {
+                    a.guiaOperativa.textContent = 'Usa este tipo para reemplazos o líneas que no existen como línea normal del mes. Escribe código, costo y cantidad con cuidado para evitar duplicados.';
+                }
             }
         }
+
+
+
 
         actualizarOpcionesAsignacionPorTipo();
         actualizarEstadoCostoSegunAsignacion();
@@ -1000,35 +1073,64 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    
+
+    function limpiarDatosDocumentoAjuste() {
+        const a = dom.ajuste;
+
+        if (a.tipoDocumentoInput) {
+            a.tipoDocumentoInput.value = '';
+        }
+
+        if (a.detalleDocumentoInput) {
+            a.detalleDocumentoInput.value = '';
+        }
+
+        if (a.detalleImpuestoInput) {
+            a.detalleImpuestoInput.value = '';
+        }
+
+        if (a.finalInput) {
+            a.finalInput.value = '';
+        }
+    }
+
     function aplicarDatosProveedorLineaAdicional() {
         const a = dom.ajuste;
         const option = selectedOption(a.proveedorSelect);
 
         if (!option || !option.value) {
+            limpiarDatosDocumentoAjuste();
             return;
         }
 
-        if (a.tipoDocumentoInput && !a.tipoDocumentoInput.value) {
+        if (a.tipoDocumentoInput) {
             a.tipoDocumentoInput.value = limpiarTexto(option.dataset.tipo || '');
         }
 
-        if (a.detalleDocumentoInput && !a.detalleDocumentoInput.value) {
+        if (a.detalleDocumentoInput) {
             a.detalleDocumentoInput.value = limpiarTexto(option.dataset.detalleDocumento || '');
         }
 
-        if (a.detalleImpuestoInput && !a.detalleImpuestoInput.value) {
+        if (a.detalleImpuestoInput) {
             a.detalleImpuestoInput.value = limpiarTexto(option.dataset.detalleImpuesto || '');
         }
 
-        if (a.finalInput && !a.finalInput.value) {
+        if (a.finalInput) {
             a.finalInput.value = limpiarTexto(option.dataset.final || '');
         }
     }
+
+
 
     function calcularTotalAjusteEstimado() {
         const a = dom.ajuste;
         const tipo = normalizarTipo(a.tipoSelect?.value || '');
         const costo = parseInt(a.costoInput?.value || 0, 10);
+
+        if (tipo === 'PAGO_VARIABLE') {
+            return Number.isNaN(costo) ? 0 : costo;
+        }
 
         if (tipo === 'FIJO_MENSUAL') {
             return costo;
@@ -1053,6 +1155,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         return costo * cantidad;
     }
+
+
+
+    
 
     function actualizarTotalAjusteActual() {
         const a = dom.ajuste;
@@ -1081,6 +1187,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 tipo,
                 'ASIGNACION',
                 a.asignacionSelect?.value || '',
+            ].join('|');
+        }
+
+        if (tipo === 'PAGO_VARIABLE') {
+            const concepto = conceptoPagoVariableSeleccionado();
+            const conceptoClave = concepto.id || normalizarCodigo(concepto.manual || concepto.nombre || '');
+
+            return [
+                tipo,
+                'PAGO_VARIABLE',
+                a.proveedorSelect?.value || '',
+                a.transportistaSelect?.value || '',
+                conceptoClave,
             ].join('|');
         }
 
@@ -1144,11 +1263,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (tipo === 'PAGO_VARIABLE') {
             aplicarConceptoPagoVariableSeleccionado();
+            prepararPagoVariableTecnico();
 
             const concepto = conceptoPagoVariableSeleccionado();
+            const tarifa = tarifaPagoVariableActual();
 
             if (!concepto.id && !concepto.manual) {
                 alert('Selecciona un concepto de pago variable o escribe uno manualmente.');
+                return;
+            }
+
+            if (!a.proveedorSelect?.value) {
+                alert('Selecciona el proveedor del pago variable.');
+                return;
+            }
+
+            if (tarifa <= 0) {
+                alert('Ingresa la tarifa del pago variable.');
                 return;
             }
         }
@@ -1159,19 +1290,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            if (!limpiarTexto(a.codigoInput?.value)) {
-                alert(tipo === 'PAGO_VARIABLE' ? 'Ingresa el código del pago variable.' : 'Ingresa el código de la línea adicional.');
-                return;
-            }
+            if (tipo !== 'PAGO_VARIABLE') {
+                if (!limpiarTexto(a.codigoInput?.value)) {
+                    alert('Ingresa el código de la línea adicional.');
+                    return;
+                }
 
-            if (a.costoInput?.value === '') {
-                alert(tipo === 'PAGO_VARIABLE' ? 'Ingresa el costo del pago variable.' : 'Ingresa el costo de la línea adicional.');
-                return;
-            }
+                if (a.costoInput?.value === '') {
+                    alert('Ingresa el costo de la línea adicional.');
+                    return;
+                }
 
-            if (a.cantidadInput?.value === '') {
-                alert(tipo === 'PAGO_VARIABLE' ? 'Ingresa la cantidad del pago variable.' : 'Ingresa la cantidad de la línea adicional.');
-                return;
+                if (a.cantidadInput?.value === '') {
+                    alert('Ingresa la cantidad de la línea adicional.');
+                    return;
+                }
             }
         }
 
@@ -1210,6 +1343,16 @@ document.addEventListener('DOMContentLoaded', function () {
             qCalendario = '';
             cantidad = '';
             total = '';
+        }
+
+        if (tipo === 'PAGO_VARIABLE') {
+            const tarifa = tarifaPagoVariableActual();
+
+            costo = tarifa > 0 ? String(tarifa) : '';
+            qCalendario = '1';
+            qInasistencia = '0';
+            cantidad = '1';
+            total = tarifa > 0 ? String(tarifa) : '';
         }
 
         ajustesMensuales.push({
@@ -1297,6 +1440,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (tipo === 'FIJO_MENSUAL') {
             return `Fuerza pago mensual único por ${formatearCLP(parseInt(ajuste.costo || 0, 10))}`;
+        }
+
+        if (tipo === 'PAGO_VARIABLE') {
+            const proveedor = ajuste.proveedor_label || 'Sin proveedor';
+            const transportista = ajuste.transportista_label || '';
+            const concepto = ajuste.concepto_pago_variable_label || ajuste.concepto_pago_variable_manual || 'Sin concepto';
+            const tarifa = parseInt(ajuste.costo || ajuste.total || 0, 10);
+
+            const partes = [
+                `Concepto: ${concepto}`,
+                `Proveedor: ${proveedor}`,
+                `Tarifa: ${formatearCLP(tarifa)}`,
+            ];
+
+            if (transportista && transportista !== '—') {
+                partes.push(`Transportista: ${transportista}`);
+            }
+
+            if (ajuste.observacion) {
+                partes.push(`Observación: ${ajuste.observacion}`);
+            }
+
+            return partes.join('\n');
         }
 
         if (esTipoLineaAdicional(tipo)) {
@@ -1391,7 +1557,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
             agregarHidden(`ajustes_mensuales[${index}][observacion]`, ajuste.observacion, a.hiddenContainer);
 
-            const cantidadVisible = ajuste.cantidad || ajuste.q_inasistencia || '—';
+            const tipoRender = normalizarTipo(ajuste.tipo_ajuste);
+            const cantidadVisible = tipoRender === 'PAGO_VARIABLE'
+                ? '—'
+                : (ajuste.cantidad || ajuste.q_inasistencia || '—');
 
             const row = document.createElement('tr');
 
@@ -1442,12 +1611,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function restaurarAjustesIniciales() {
         ajustesIniciales.forEach(function (ajuste) {
+
             const tipo = normalizarTipo(ajuste.tipo_ajuste || '');
 
-            const totalEstimado = parseInt(ajuste.total || 0, 10)
+
+
+            let totalEstimado = parseInt(ajuste.total || 0, 10)
                 || (parseInt(ajuste.costo || 0, 10) * parseInt(ajuste.cantidad || 0, 10));
 
-            const claveControl = [
+            if (tipo === 'PAGO_VARIABLE' && totalEstimado === 0) {
+                totalEstimado = parseInt(ajuste.costo || 0, 10);
+            }
+
+            let claveControl = [
                 tipo,
                 ajuste.suscripcion_asignacion_id ? 'ASIGNACION' : 'LINEA',
                 ajuste.suscripcion_asignacion_id || ajuste.suscripcion_proveedor_id || '',
@@ -1457,6 +1633,27 @@ document.addEventListener('DOMContentLoaded', function () {
                 normalizarCodigo(ajuste.punto_2 || ''),
                 normalizarCodigo(ajuste.origen_gasto || ''),
             ].join('|');
+
+            if (tipo === 'PAGO_VARIABLE') {
+                const conceptoClave = ajuste.concepto_pago_variable_id
+                    || normalizarCodigo(
+                        ajuste.concepto_pago_variable_manual
+                        || ajuste.concepto_pago_variable_snapshot
+                        || ajuste.codigo
+                        || ''
+                    );
+
+                claveControl = [
+                    tipo,
+                    'PAGO_VARIABLE',
+                    ajuste.suscripcion_proveedor_id || '',
+                    ajuste.suscripcion_transportista_id || '',
+                    conceptoClave,
+                ].join('|');
+            }
+
+
+
 
             ajustesMensuales.push({
                 clave_control: claveControl,
