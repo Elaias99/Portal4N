@@ -44,6 +44,13 @@ export default defineConfig({
                 'resources/js/modules/cobranza/modalCrearCobranza.js',
                 'resources/js/boleta_mensual_proveedores_pendientes.js',
 
+                'resources/js/suscripciones/generacion-mensual/acordeones.js',
+                'resources/js/suscripciones/generacion-mensual/ajustes-mensuales.js',
+                'resources/js/suscripciones/generacion-mensual/cantidades-variables.js',
+                'resources/js/suscripciones/generacion-mensual/comisiones.js',
+                'resources/js/suscripciones/generacion-mensual/dom.js',
+                'resources/js/suscripciones/generacion-mensual/utils.js',
+
                 'resources/js/react/landing-test.jsx',
                 'resources/js/react/landing/main.jsx',
                 'resources/js/react/tracking/main.jsx',

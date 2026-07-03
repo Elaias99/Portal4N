@@ -65,7 +65,7 @@
         </div>
     </div>
 
-    <form id="form-generacion-mensual" method="POST" action="{{ route('suscripciones.comisiones-mensuales.store') }}">
+    <form id="form-generacion-mensual" method="POST" action="{{ route('suscripciones.comisiones-mensuales.store') }}" data-long-loader>
         @csrf
 
         {{-- PERIODO --}}
@@ -242,49 +242,6 @@
                     Los <strong>pagos variables</strong> como compaginado, primera vuelta o segunda vuelta se agregan aquí
                     como una línea propia con <strong>tarifa</strong>, no como comisión ni como cantidad de ruta.
                 </div>
-
-                {{-- <div class="alert alert-light border small mb-3">
-                    <div class="fw-semibold mb-2">Guía rápida por tipo de novedad</div>
-
-                    <div class="table-responsive">
-                        <table class="table table-sm table-bordered align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Tipo</th>
-                                    <th>Qué modifica</th>
-                                    <th>Campos clave</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Inasistencia</strong></td>
-                                    <td>Descuenta días de una asignación existente.</td>
-                                    <td>Asignación existente + Q inasistencia.</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Cambio de facturación</strong></td>
-                                    <td>Cambia proveedor/documento/transportista efectivo de una asignación existente.</td>
-                                    <td>Asignación existente + proveedor facturador + documento. El costo es excepcional/opcional.</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Línea adicional</strong></td>
-                                    <td>Crea una línea nueva valorizada para el mes.</td>
-                                    <td>Proveedor + código + servicio + costo + cantidad.</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Reemplazo</strong></td>
-                                    <td>Crea una línea nueva por reemplazo del mes.</td>
-                                    <td>Proveedor + transportista + rutas/código + costo + cantidad.</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Pago variable</strong></td>
-                                    <td>Crea una línea nueva por concepto operativo.</td>
-                                    <td>Proveedor + transportista si aplica + concepto + tarifa.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div> --}}
 
                 <div class="border rounded p-3 mb-3">
                     <div class="row g-3">
@@ -612,7 +569,7 @@
                             >
                         </div>
 
-                        <div class="col-md-4">
+                        {{-- <div class="col-md-4">
                             <label for="ajuste_grupo_prefactura" class="form-label">Grupo prefactura opcional</label>
                             <input
                                 type="text"
@@ -620,7 +577,7 @@
                                 class="form-control"
                                 placeholder="Ej: LA DEHESA / GENERAL"
                             >
-                        </div>
+                        </div> --}}
 
                         <div class="col-md-4">
                             <label for="ajuste_costo" id="ajuste_costo_label" class="form-label">
@@ -679,7 +636,7 @@
                             </div>
                         </div>
 
-                        <div class="col-md-3">
+                        {{-- <div class="col-md-3">
                             <label for="ajuste_total" class="form-label">Total manual opcional</label>
                             <input
                                 type="number"
@@ -688,7 +645,7 @@
                                 min="0"
                                 placeholder="Opcional"
                             >
-                        </div>
+                        </div> --}}
 
                         <div class="col-md-4">
                             <label for="ajuste_tipo_documento" class="form-label">Tipo documento</label>
