@@ -107,6 +107,11 @@
             </div>
         </div>
 
+
+
+
+
+
         {{-- CANTIDADES VARIABLES --}}
         @if($asignacionesCantidadMensual->isNotEmpty())
             <div class="card mb-4">
@@ -216,6 +221,19 @@
             </div>
         @endif
 
+
+
+
+
+
+
+
+
+
+
+
+
+
         {{-- NOVEDADES MENSUALES --}}
         <div class="card mb-4">
             <button
@@ -245,9 +263,12 @@
 
                 <div class="border rounded p-3 mb-3">
                     <div class="row g-3">
-                        <div class="col-md-4">
-                            <label for="ajuste_tipo_ajuste" class="form-label">Tipo de novedad</label>
 
+
+                    <div class="col-md-4">
+                        <label for="ajuste_tipo_ajuste" class="form-label">Tipo de novedad</label>
+
+                        <div class="d-flex gap-2">
                             <select id="ajuste_tipo_ajuste" class="form-select">
                                 <option value="">Seleccionar tipo...</option>
                                 <option value="INASISTENCIA">Inasistencia</option>
@@ -259,7 +280,36 @@
                                 <option value="PAGO_VARIABLE">Pago variable</option>
                                 <option value="REEMPLAZO">Reemplazo</option>
                             </select>
+
+
+
+                            <button
+                                type="button"
+                                id="btn-abrir-inasistencias-masivas"
+                                class="btn btn-outline-secondary text-nowrap d-none ml-2"
+                                data-toggle="modal"
+                                data-target="#modal-ajustes-masivos-inasistencia"
+                            >
+                                Masivo
+                            </button>
+
+                            <button
+                                type="button"
+                                id="btn-abrir-facturaciones-masivas"
+                                class="btn btn-outline-secondary text-nowrap d-none ml-2"
+                                data-toggle="modal"
+                                data-target="#modal-ajustes-masivos-facturacion"
+                            >
+                                Masivo
+                            </button>
+
+
                         </div>
+
+                    </div>
+
+
+
 
                         <div class="col-md-8">
                             <label class="form-label">Descripción del tipo seleccionado</label>
@@ -755,6 +805,28 @@
                 </div>
             </div>
         </div>
+
+        @include('suscripciones.comisiones_mensuales.partials.modal-ajustes-masivos-inasistencia')
+        @include('suscripciones.comisiones_mensuales.partials.modal-ajustes-masivos-facturacion')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         {{-- COMISIONES --}}
         {{-- PAGOS ADICIONALES --}}

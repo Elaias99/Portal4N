@@ -467,9 +467,19 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
         actualizarTotalAjusteActual();
     }
 
+
+
     function actualizarCamposAjustePorTipo() {
         const a = dom.ajuste;
         const tipo = normalizarTipo(a.tipoSelect?.value || '');
+
+        if (a.botonInasistenciasMasivas) {
+            a.botonInasistenciasMasivas.classList.toggle('d-none', tipo !== 'INASISTENCIA');
+        }
+
+        if (a.botonFacturacionesMasivas) {
+            a.botonFacturacionesMasivas.classList.toggle('d-none', tipo !== 'FACTURACION');
+        }
 
         [
             a.bloqueAsignacion,
@@ -500,22 +510,25 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
             a.asignacionAyuda.textContent = 'Selecciona la ruta original. El listado se ajusta según el tipo de novedad.';
         }
 
-        if (tipo === 'INASISTENCIA') {
-            a.bloqueAsignacion?.classList.remove('d-none');
-            mostrarCamposAjuste(['qInasistencia', 'observacion']);
 
+
+
+        if (tipo === 'INASISTENCIA') {
             if (a.tipoDescripcion) {
-                a.tipoDescripcion.value = 'Registra días no realizados en una ruta normal del calendario.';
+                a.tipoDescripcion.value = 'Registra días no realizados en rutas normales del calendario.';
             }
 
             if (a.guiaOperativa) {
-                a.guiaOperativa.textContent = 'Elige la asignación original y escribe sólo la cantidad de inasistencias. No uses LOTA, OPV, comisiones ni líneas contenedoras.';
+                a.guiaOperativa.textContent = 'Para registrar inasistencias, usa el botón Masivo. Ahí podrás buscar rutas, seleccionarlas y definir los días por cada una.';
             }
 
             if (a.asignacionAyuda) {
                 a.asignacionAyuda.textContent = 'Sólo se permiten rutas normales generadas por calendario.';
             }
         }
+
+
+
 
         if (tipo === 'FIJO_MENSUAL') {
             a.bloqueAsignacion?.classList.remove('d-none');
@@ -547,32 +560,28 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
             if (a.totalManualInput) a.totalManualInput.value = a.costoInput?.value || '';
         }
 
+
+
+
+
+
         if (tipo === 'FACTURACION') {
-            a.bloqueAsignacion?.classList.remove('d-none');
-            a.bloqueProveedorFacturacion?.classList.remove('d-none');
-            a.bloqueTransportistaOverride?.classList.remove('d-none');
-
-            mostrarCamposAjuste([
-                'costo',
-                'tipoDocumento',
-                'detalleDocumento',
-                'detalleImpuesto',
-                'final',
-                'observacion',
-            ]);
-
             if (a.tipoDescripcion) {
                 a.tipoDescripcion.value = 'Cambia proveedor facturador, documento o transportista efectivo sólo para este periodo.';
             }
 
             if (a.guiaOperativa) {
-                a.guiaOperativa.textContent = 'El detalle mensual se genera normalmente. Esta novedad sólo cambia la facturación efectiva. Para LOTA, primero carga la cantidad arriba.';
+                a.guiaOperativa.textContent = 'Para registrar cambios de facturación, usa el botón Masivo. Ahí podrás buscar asignaciones, seleccionar proveedor facturador efectivo y ajustar documento o transportista.';
             }
 
             if (a.asignacionAyuda) {
-                a.asignacionAyuda.textContent = 'Puedes seleccionar rutas normales o cantidades variables como LOTA. No selecciones comisiones.';
+                a.asignacionAyuda.textContent = 'Puedes aplicar cambios sobre rutas normales, LOTA, fijos mensuales u OPV desde el modal masivo.';
             }
         }
+
+
+
+
 
         if (esTipoLineaAdicional(tipo)) {
             a.bloqueProveedor?.classList.remove('d-none');
@@ -635,6 +644,9 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
         actualizarEstadoCostoSegunAsignacion();
         actualizarTotalAjusteActual();
     }
+
+
+
 
     function aplicarDatosAsignacionSeleccionada() {
         const a = dom.ajuste;
@@ -835,6 +847,93 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
         return ajustesMensuales.some(function (ajuste) {
             return ajuste.clave_control === clave;
         });
+    }
+
+    function agregarAjustesMasivos(ajustes) {
+        if (!Array.isArray(ajustes)) {
+            return {
+                agregados: 0,
+                duplicados: 0,
+            };
+        }
+
+        let agregados = 0;
+        let duplicados = 0;
+
+        ajustes.forEach(function (ajuste) {
+            const tipo = normalizarTipo(ajuste.tipo_ajuste || '');
+
+            const claveControl = ajuste.clave_control || [
+                tipo,
+                ajuste.suscripcion_asignacion_id ? 'ASIGNACION' : 'LINEA',
+                ajuste.suscripcion_asignacion_id || ajuste.suscripcion_proveedor_id || '',
+                ajuste.suscripcion_transportista_id || '',
+                normalizarCodigo(ajuste.codigo || ''),
+                normalizarCodigo(ajuste.punto_1 || ''),
+                normalizarCodigo(ajuste.punto_2 || ''),
+                normalizarCodigo(ajuste.origen_gasto || ''),
+            ].join('|');
+
+            if (existeAjusteDuplicado(claveControl)) {
+                duplicados++;
+                return;
+            }
+
+            ajustesMensuales.push({
+                clave_control: claveControl,
+                tipo_ajuste: tipo,
+
+                concepto_pago_variable_id: ajuste.concepto_pago_variable_id || '',
+                concepto_pago_variable_manual: ajuste.concepto_pago_variable_manual || '',
+                concepto_pago_variable_label: ajuste.concepto_pago_variable_label || '',
+
+                suscripcion_asignacion_id: ajuste.suscripcion_asignacion_id || '',
+                suscripcion_proveedor_id: ajuste.suscripcion_proveedor_id || '',
+                suscripcion_transportista_id: ajuste.suscripcion_transportista_id || '',
+
+                suscripcion_proveedor_facturacion_id: ajuste.suscripcion_proveedor_facturacion_id || '',
+                suscripcion_transportista_override_id: ajuste.suscripcion_transportista_override_id || '',
+
+                punto_1: ajuste.punto_1 || '',
+                origen_gasto: ajuste.origen_gasto || 'Suscripciones',
+                punto_2: ajuste.punto_2 || '',
+                codigo: ajuste.codigo || '',
+                servicio: ajuste.servicio || '',
+                grupo_prefactura: ajuste.grupo_prefactura || '',
+
+                costo: ajuste.costo || '',
+                q_calendario: ajuste.q_calendario || '',
+                q_inasistencia: ajuste.q_inasistencia || '',
+                cantidad: ajuste.cantidad || '',
+                total: ajuste.total || '',
+
+                tipo_documento: ajuste.tipo_documento || '',
+                detalle_documento: ajuste.detalle_documento || '',
+                detalle_impuesto: ajuste.detalle_impuesto || '',
+                final: ajuste.final || '',
+
+                observacion: ajuste.observacion || '',
+
+                asignacion_label: ajuste.asignacion_label || '',
+                proveedor_label: ajuste.proveedor_label || '',
+                proveedor_facturacion_label: ajuste.proveedor_facturacion_label || '',
+                transportista_label: ajuste.transportista_label || '',
+                transportista_override_label: ajuste.transportista_override_label || '',
+
+                total_estimado: parseInt(ajuste.total_estimado || 0, 10),
+            });
+
+            agregados++;
+        });
+
+        if (agregados > 0) {
+            renderizarAjustes();
+        }
+
+        return {
+            agregados,
+            duplicados,
+        };
     }
 
     function agregarAjusteDesdeFormulario() {
@@ -1367,4 +1466,11 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
     actualizarCamposAjustePorTipo();
     actualizarTotalAjusteActual();
     renderizarAjustes();
+
+    return {
+        agregarAjustesMasivos,
+        renderizarAjustes,
+    };
+
+
 }

@@ -10,6 +10,7 @@ import { obtenerDomGeneracionMensual } from './generacion-mensual/dom';
 import { inicializarCantidadesVariables } from './generacion-mensual/cantidades-variables';
 import { inicializarComisiones } from './generacion-mensual/comisiones';
 import { inicializarAjustesMensuales } from './generacion-mensual/ajustes-mensuales';
+import { inicializarAjustesMasivos } from './generacion-mensual/ajustes-masivos';
 
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('form-generacion-mensual');
@@ -33,5 +34,7 @@ document.addEventListener('DOMContentLoaded', function () {
     inicializarAcordeonesSuscripciones();
     inicializarCantidadesVariables(dom);
     inicializarComisiones(dom, comisionesIniciales);
-    inicializarAjustesMensuales(dom, ajustesIniciales);
+    const ajustesMensualesApi = inicializarAjustesMensuales(dom, ajustesIniciales);
+
+    inicializarAjustesMasivos(dom, ajustesMensualesApi);
 });
