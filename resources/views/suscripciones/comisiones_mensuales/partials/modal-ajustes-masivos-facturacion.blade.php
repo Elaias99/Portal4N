@@ -32,12 +32,17 @@
             </div>
 
             <div class="modal-body">
+
+
                 <div class="alert alert-warning small mb-3">
                     <strong>Importante:</strong>
-                    esta carga masiva sólo registra cambios puntuales del periodo.
-                    No modifica el proveedor base de la asignación maestra.
-                    Las novedades se agregarán al resumen inferior y se guardarán recién al generar el mes completo.
+                    usa esta opción cuando una ruta, servicio o pago ya existe en el periodo,
+                    pero este mes debe pagarse a otro proveedor, con otro documento o con un responsable efectivo distinto.
+                    Este cambio se aplicará sólo al mes seleccionado y no modificará la configuración habitual.
                 </div>
+
+
+
 
                 {{-- Templates para JS --}}
                 <select id="facturacion-masiva-proveedor-template" class="d-none" aria-hidden="true">

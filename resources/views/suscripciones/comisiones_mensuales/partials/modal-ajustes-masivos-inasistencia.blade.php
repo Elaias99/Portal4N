@@ -32,12 +32,14 @@
             </div>
 
             <div class="modal-body">
+
+
                 <div class="alert alert-warning small mb-3">
                     <strong>Importante:</strong>
-                    esta carga masiva aplica a rutas normales calculadas por calendario.
-                    Las rutas de cantidad manual, como LOTA, se manejan en cantidades variables del mes.
-                    Las novedades se agregarán al resumen inferior y se guardarán recién al generar el mes completo.
+                    usa esta opción para registrar días no realizados en rutas habituales del mes.
+                    Las rutas seleccionadas se descontarán del cálculo del periodo.
                 </div>
+
 
                 {{-- SECCIÓN 1: BUSCAR Y SELECCIONAR RUTAS --}}
                 <div class="border rounded p-3 mb-4">

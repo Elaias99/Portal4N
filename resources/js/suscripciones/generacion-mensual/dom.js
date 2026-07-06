@@ -33,8 +33,9 @@ export function obtenerDomGeneracionMensual() {
         ajuste: {
             tipoSelect: document.getElementById('ajuste_tipo_ajuste'),
             botonInasistenciasMasivas: document.getElementById('btn-abrir-inasistencias-masivas'),
-            botonInasistenciasMasivas: document.getElementById('btn-abrir-inasistencias-masivas'),
             botonFacturacionesMasivas: document.getElementById('btn-abrir-facturaciones-masivas'),
+            botonLineasAdicionalesMasivas: document.getElementById('btn-abrir-lineas-adicionales-masivas'),
+            botonPagosVariablesMasivos: document.getElementById('btn-abrir-pagos-variables-masivos'),
             tipoDescripcion: document.getElementById('ajuste_tipo_descripcion'),
             guiaOperativa: document.getElementById('ajuste_guia_operativa'),
 

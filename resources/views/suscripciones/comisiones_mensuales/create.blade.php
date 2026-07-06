@@ -245,7 +245,7 @@
                 <span>
                     <strong>Novedades mensuales</strong>
                     <span class="small text-muted ms-2">
-                        Inasistencias, cambios de facturación, reemplazos, líneas adicionales o pagos variables.
+                        Inasistencias, cambios de facturación/reemplazos, nuevas rutas o pagos variables.
                     </span>
                 </span>
 
@@ -263,53 +263,66 @@
 
                 <div class="border rounded p-3 mb-3">
                     <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="ajuste_tipo_ajuste" class="form-label">Tipo de novedad</label>
+
+                            <div class="d-flex gap-2">
 
 
-                    <div class="col-md-4">
-                        <label for="ajuste_tipo_ajuste" class="form-label">Tipo de novedad</label>
+                                <select id="ajuste_tipo_ajuste" class="form-select">
+                                    <option value="">Seleccionar tipo...</option>
+                                    <option value="INASISTENCIA">Inasistencia de ruta</option>
 
-                        <div class="d-flex gap-2">
-                            <select id="ajuste_tipo_ajuste" class="form-select">
-                                <option value="">Seleccionar tipo...</option>
-                                <option value="INASISTENCIA">Inasistencia</option>
+                                    {{-- <option value="FIJO_MENSUAL">Fijo mensual excepcional</option> --}}
 
-                                {{-- <option value="FIJO_MENSUAL">Fijo mensual excepcional</option> --}}
-
-                                <option value="FACTURACION">Cambio de facturación</option>
-                                <option value="LINEA_ADICIONAL">Línea adicional</option>
-                                <option value="PAGO_VARIABLE">Pago variable</option>
-                                <option value="REEMPLAZO">Reemplazo</option>
-                            </select>
+                                    <option value="FACTURACION">Cambio de facturación en ruta existente</option>
+                                    <option value="LINEA_ADICIONAL">Ruta adicional</option>
+                                    <option value="PAGO_VARIABLE">Pago variable del mes</option>
+                                </select>
 
 
 
-                            <button
-                                type="button"
-                                id="btn-abrir-inasistencias-masivas"
-                                class="btn btn-outline-secondary text-nowrap d-none ml-2"
-                                data-toggle="modal"
-                                data-target="#modal-ajustes-masivos-inasistencia"
-                            >
-                                Masivo
-                            </button>
+                                <button
+                                    type="button"
+                                    id="btn-abrir-inasistencias-masivas"
+                                    class="btn btn-outline-secondary text-nowrap d-none ml-2"
+                                    data-toggle="modal"
+                                    data-target="#modal-ajustes-masivos-inasistencia"
+                                >
+                                    Masivo
+                                </button>
 
-                            <button
-                                type="button"
-                                id="btn-abrir-facturaciones-masivas"
-                                class="btn btn-outline-secondary text-nowrap d-none ml-2"
-                                data-toggle="modal"
-                                data-target="#modal-ajustes-masivos-facturacion"
-                            >
-                                Masivo
-                            </button>
+                                <button
+                                    type="button"
+                                    id="btn-abrir-facturaciones-masivas"
+                                    class="btn btn-outline-secondary text-nowrap d-none ml-2"
+                                    data-toggle="modal"
+                                    data-target="#modal-ajustes-masivos-facturacion"
+                                >
+                                    Masivo
+                                </button>
 
+                                <button
+                                    type="button"
+                                    id="btn-abrir-lineas-adicionales-masivas"
+                                    class="btn btn-outline-secondary text-nowrap d-none ml-2"
+                                    data-toggle="modal"
+                                    data-target="#modal-ajustes-masivos-linea-adicional"
+                                >
+                                    Masivo
+                                </button>
 
+                                <button
+                                    type="button"
+                                    id="btn-abrir-pagos-variables-masivos"
+                                    class="btn btn-outline-secondary text-nowrap d-none ml-2"
+                                    data-toggle="modal"
+                                    data-target="#modal-ajustes-masivos-pago-variable"
+                                >
+                                    Masivo
+                                </button>
+                            </div>
                         </div>
-
-                    </div>
-
-
-
 
                         <div class="col-md-8">
                             <label class="form-label">Descripción del tipo seleccionado</label>
@@ -437,13 +450,13 @@
                             </select>
 
                             <div class="form-text">
-                                Para línea adicional, reemplazo o pago variable. En pago variable será quien recibe la línea con tarifa.
+                                Para nueva ruta o pago variable. En pago variable será quien recibe la línea con tarifa.
                             </div>
                         </div>
 
                         <div class="col-md-6 d-none" id="bloque-ajuste-transportista">
                             <label for="ajuste_suscripcion_transportista_id" class="form-label">
-                                Transportista relacionado / reemplazante
+                                Transportista relacionado
                             </label>
 
                             <select id="ajuste_suscripcion_transportista_id" class="form-select">
@@ -460,7 +473,7 @@
                             </select>
 
                             <div class="form-text">
-                                Opcional para pago variable; recomendable para reemplazos cuando el transportista efectivo importa.
+                                Opcional para pago variable; recomendable para nuevas rutas cuando el transportista efectivo importa.
                             </div>
                         </div>
 
@@ -645,7 +658,7 @@
                             <div id="ajuste_costo_ayuda" class="form-text">
                                 Pago variable: ingresa la <strong>tarifa neta de impuesto</strong>.
                                 El sistema calculará impuesto o retención según el tipo de documento del proveedor.
-                                Línea adicional/reemplazo: ingresa el costo unitario.
+                                Nueva ruta: ingresa el costo unitario.
                                 Cambio de facturación: úsalo sólo si debes corregir el costo del mes.
                             </div>
                         </div>
@@ -682,7 +695,7 @@
                                 placeholder="Opcional"
                             >
                             <div class="form-text">
-                                Para líneas adicionales y reemplazos. En pago variable se usa cantidad técnica 1.
+                                Para nuevas rutas. En pago variable se usa cantidad técnica 1.
                             </div>
                         </div>
 
@@ -747,7 +760,7 @@
                                 disabled
                             >
                             <div class="form-text">
-                                Pago variable: el total estimado corresponde a la tarifa. Línea adicional/reemplazo:
+                                Pago variable: el total estimado corresponde a la tarifa. Nueva ruta:
                                 si dejas el total manual vacío, el backend calculará costo × cantidad.
                             </div>
                         </div>
@@ -758,7 +771,7 @@
                                 type="text"
                                 id="ajuste_observacion"
                                 class="form-control"
-                                placeholder="Ej: REEMPLAZO VA03 Y VA04 MAYO 2026 / COMPAGINADO MAYO 2026"
+                                placeholder="Ej: NUEVA RUTA MAYO 2026 / COMPAGINADO MAYO 2026"
                             >
                         </div>
 
@@ -808,6 +821,8 @@
 
         @include('suscripciones.comisiones_mensuales.partials.modal-ajustes-masivos-inasistencia')
         @include('suscripciones.comisiones_mensuales.partials.modal-ajustes-masivos-facturacion')
+        @include('suscripciones.comisiones_mensuales.partials.modal-ajustes-masivos-linea-adicional')
+        @include('suscripciones.comisiones_mensuales.partials.modal-ajustes-masivos-pago-variable')
 
 
 

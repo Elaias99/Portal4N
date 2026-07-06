@@ -469,6 +469,9 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
 
 
 
+
+
+
     function actualizarCamposAjustePorTipo() {
         const a = dom.ajuste;
         const tipo = normalizarTipo(a.tipoSelect?.value || '');
@@ -479,6 +482,14 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
 
         if (a.botonFacturacionesMasivas) {
             a.botonFacturacionesMasivas.classList.toggle('d-none', tipo !== 'FACTURACION');
+        }
+
+        if (a.botonLineasAdicionalesMasivas) {
+            a.botonLineasAdicionalesMasivas.classList.toggle('d-none', tipo !== 'LINEA_ADICIONAL');
+        }
+
+        if (a.botonPagosVariablesMasivos) {
+            a.botonPagosVariablesMasivos.classList.toggle('d-none', tipo !== 'PAGO_VARIABLE');
         }
 
         [
@@ -510,9 +521,6 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
             a.asignacionAyuda.textContent = 'Selecciona la ruta original. El listado se ajusta según el tipo de novedad.';
         }
 
-
-
-
         if (tipo === 'INASISTENCIA') {
             if (a.tipoDescripcion) {
                 a.tipoDescripcion.value = 'Registra días no realizados en rutas normales del calendario.';
@@ -527,11 +535,9 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
             }
         }
 
-
-
-
         if (tipo === 'FIJO_MENSUAL') {
             a.bloqueAsignacion?.classList.remove('d-none');
+
             mostrarCamposAjuste([
                 'costo',
                 'tipoDocumento',
@@ -560,18 +566,13 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
             if (a.totalManualInput) a.totalManualInput.value = a.costoInput?.value || '';
         }
 
-
-
-
-
-
         if (tipo === 'FACTURACION') {
             if (a.tipoDescripcion) {
                 a.tipoDescripcion.value = 'Cambia proveedor facturador, documento o transportista efectivo sólo para este periodo.';
             }
 
             if (a.guiaOperativa) {
-                a.guiaOperativa.textContent = 'Para registrar cambios de facturación, usa el botón Masivo. Ahí podrás buscar asignaciones, seleccionar proveedor facturador efectivo y ajustar documento o transportista.';
+                a.guiaOperativa.textContent = 'Para registrar cambios de facturación o reemplazos sobre rutas existentes, usa el botón Masivo. Ahí podrás buscar asignaciones, seleccionar proveedor facturador efectivo y ajustar documento, transportista o costo.';
             }
 
             if (a.asignacionAyuda) {
@@ -579,64 +580,70 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
             }
         }
 
+        if (tipo === 'LINEA_ADICIONAL') {
+            if (a.tipoDescripcion) {
+                a.tipoDescripcion.value = 'Agrega una nueva ruta o servicio que no existe en el maestro para este periodo.';
+            }
 
+            if (a.guiaOperativa) {
+                a.guiaOperativa.textContent = 'Para registrar nuevas rutas, usa el botón Masivo. Ahí podrás agregar una o varias líneas con proveedor, ruta, costo, cantidad y documento.';
+            }
 
+            if (a.asignacionAyuda) {
+                a.asignacionAyuda.textContent = 'No necesitas seleccionar una asignación existente. El sistema creará o reutilizará una asignación técnica de ajuste.';
+            }
+        }
 
+        if (tipo === 'PAGO_VARIABLE') {
+            if (a.tipoDescripcion) {
+                a.tipoDescripcion.value = 'Registra pagos variables del mes asociados a conceptos operativos.';
+            }
 
-        if (esTipoLineaAdicional(tipo)) {
+            if (a.guiaOperativa) {
+                a.guiaOperativa.textContent = 'Para registrar pagos variables, usa el botón Masivo. Ahí podrás agregar uno o varios conceptos con proveedor, tarifa y observación opcional.';
+            }
+
+            if (a.asignacionAyuda) {
+                a.asignacionAyuda.textContent = 'No necesitas seleccionar una asignación existente. El sistema creará o reutilizará una asignación técnica de pago variable.';
+            }
+
+            if (a.servicioInput && !limpiarTexto(a.servicioInput.value)) {
+                a.servicioInput.value = 'Pago variable';
+            }
+        }
+
+        if (
+            esTipoLineaAdicional(tipo)
+            && tipo !== 'LINEA_ADICIONAL'
+            && tipo !== 'PAGO_VARIABLE'
+        ) {
             a.bloqueProveedor?.classList.remove('d-none');
             a.bloqueTransportista?.classList.remove('d-none');
 
-            if (tipo === 'PAGO_VARIABLE') {
-                a.bloqueConceptoPagoVariable?.classList.remove('d-none');
-                actualizarConceptoPagoVariableManual();
+            mostrarCamposAjuste([
+                'punto1',
+                'origenGasto',
+                'punto2',
+                'codigo',
+                'servicio',
+                'grupoPrefactura',
+                'costo',
+                'cantidad',
+                'total',
+                'tipoDocumento',
+                'detalleDocumento',
+                'detalleImpuesto',
+                'final',
+                'totalEstimado',
+                'observacion',
+            ]);
 
-                mostrarCamposAjuste([
-                    'costo',
-                    'totalEstimado',
-                    'observacion',
-                ]);
+            if (a.tipoDescripcion) {
+                a.tipoDescripcion.value = 'Crea una línea mensual adicional mediante una asignación contenedora.';
+            }
 
-                if (a.tipoDescripcion) {
-                    a.tipoDescripcion.value = 'Registra un pago variable del mes asociado a un concepto operativo.';
-                }
-
-                if (a.guiaOperativa) {
-                    a.guiaOperativa.textContent = 'Selecciona proveedor, transportista si aplica, concepto y tarifa. La tarifa se agregará como una línea propia en la pre-factura.';
-                }
-
-                if (a.servicioInput && !limpiarTexto(a.servicioInput.value)) {
-                    a.servicioInput.value = 'Pago variable';
-                }
-
-                prepararPagoVariableTecnico();
-                aplicarConceptoPagoVariableSeleccionado();
-            } else {
-                mostrarCamposAjuste([
-                    'punto1',
-                    'origenGasto',
-                    'punto2',
-                    'codigo',
-                    'servicio',
-                    'grupoPrefactura',
-                    'costo',
-                    'cantidad',
-                    'total',
-                    'tipoDocumento',
-                    'detalleDocumento',
-                    'detalleImpuesto',
-                    'final',
-                    'totalEstimado',
-                    'observacion',
-                ]);
-
-                if (a.tipoDescripcion) {
-                    a.tipoDescripcion.value = 'Crea una línea mensual adicional mediante una asignación contenedora.';
-                }
-
-                if (a.guiaOperativa) {
-                    a.guiaOperativa.textContent = 'Usa este tipo para reemplazos o líneas que no existen como línea normal del mes. Escribe código, costo y cantidad con cuidado para evitar duplicados.';
-                }
+            if (a.guiaOperativa) {
+                a.guiaOperativa.textContent = 'Usa este tipo para líneas que no existen como línea normal del mes. Escribe código, costo y cantidad con cuidado para evitar duplicados.';
             }
         }
 
@@ -644,6 +651,9 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
         actualizarEstadoCostoSegunAsignacion();
         actualizarTotalAjusteActual();
     }
+
+
+
 
 
 
