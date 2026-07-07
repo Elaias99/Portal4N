@@ -202,16 +202,29 @@ class SuscripcionComisionMensualController extends Controller
                 ->withErrors($erroresAjustes);
         }
 
+
+
+
+
+
         $clavesComisiones = [];
 
         foreach ($comisiones as $index => $comision) {
-            $claveComision = $comision['suscripcion_proveedor_id'] . '_' . $comision['suscripcion_transportista_id'];
+            $claveComision = implode('|', [
+                $comision['suscripcion_proveedor_id'] ?? '',
+                $comision['suscripcion_transportista_id'] ?? '',
+                mb_strtoupper(trim($comision['punto_1'] ?? '')),
+                mb_strtoupper(trim($comision['punto_2'] ?? '')),
+                mb_strtoupper(trim($comision['servicio'] ?? '')),
+                (int) ($comision['costo'] ?? 0),
+                mb_strtoupper(trim($comision['observacion'] ?? '')),
+            ]);
 
             if (isset($clavesComisiones[$claveComision])) {
                 return back()
                     ->withInput()
                     ->withErrors([
-                        'comisiones' => 'No puedes agregar más de una comisión para el mismo proveedor y transportista en el mismo periodo.',
+                        'comisiones' => 'No puedes agregar una comisión exactamente idéntica en el mismo periodo.',
                     ]);
             }
 
@@ -220,9 +233,13 @@ class SuscripcionComisionMensualController extends Controller
             $existeComision = SuscripcionComisionMensual::where('anio', $anio)
                 ->where('mes', $mes)
                 ->whereRaw('UPPER(TRIM(codigo)) = ?', [$codigoComision])
+                ->where('costo', (int) ($comision['costo'] ?? 0))
                 ->whereHas('asignacion', function ($query) use ($comision) {
                     $query->where('suscripcion_proveedor_id', $comision['suscripcion_proveedor_id'])
-                        ->where('suscripcion_transportista_id', $comision['suscripcion_transportista_id']);
+                        ->where('suscripcion_transportista_id', $comision['suscripcion_transportista_id'])
+                        ->where('punto_1', $comision['punto_1'] ?? null)
+                        ->where('punto_2', $comision['punto_2'] ?? null)
+                        ->where('servicio', $comision['servicio'] ?? 'Reparto fin de semana');
                 })
                 ->exists();
 
@@ -230,10 +247,15 @@ class SuscripcionComisionMensualController extends Controller
                 return back()
                     ->withInput()
                     ->withErrors([
-                        'comisiones' => 'Ya existe una comisión para uno de los proveedores/transportistas seleccionados en este año y mes.',
+                        'comisiones' => 'Ya existe una comisión exactamente igual para este año y mes.',
                     ]);
             }
         }
+
+
+
+
+
 
         DB::transaction(function () use (
             $data,

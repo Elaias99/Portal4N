@@ -44,6 +44,57 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
         actualizarTotalComisionActual();
     }
 
+    function normalizarClave(valor) {
+        return limpiarTexto(valor || '')
+            .toUpperCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function claveComision(comision) {
+        return [
+            comision.suscripcion_proveedor_id || '',
+            comision.suscripcion_transportista_id || '',
+            normalizarClave(comision.punto_1 || ''),
+            normalizarClave(comision.punto_2 || ''),
+            normalizarClave(comision.servicio || ''),
+            parseInt(comision.costo || 0, 10),
+            normalizarClave(comision.observacion || ''),
+        ].join('|');
+    }
+
+    function existeComisionDuplicada(comisionNueva) {
+        const claveNueva = claveComision(comisionNueva);
+
+        return comisiones.some(function (comisionExistente) {
+            return claveComision(comisionExistente) === claveNueva;
+        });
+    }
+
+    function normalizarComision(comision) {
+        const costo = parseInt(comision.costo || 0, 10);
+
+        return {
+            codigo: limpiarTexto(comision.codigo || 'COMISION') || 'COMISION',
+
+            suscripcion_proveedor_id: comision.suscripcion_proveedor_id || '',
+            suscripcion_transportista_id: comision.suscripcion_transportista_id || '',
+
+            proveedor_label: limpiarTexto(comision.proveedor_label || '—'),
+            transportista_label: limpiarTexto(comision.transportista_label || '—'),
+
+            punto_1: limpiarTexto(comision.punto_1 || ''),
+            origen_gasto: limpiarTexto(comision.origen_gasto || 'Suscripciones') || 'Suscripciones',
+            punto_2: limpiarTexto(comision.punto_2 || ''),
+            servicio: limpiarTexto(comision.servicio || 'Reparto fin de semana') || 'Reparto fin de semana',
+
+            costo: Number.isNaN(costo) ? 0 : costo,
+            observacion: limpiarTexto(comision.observacion || ''),
+        };
+    }
+
     function renderizarComisiones() {
         const c = dom.comision;
 
@@ -74,6 +125,7 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
         comisiones.forEach(function (comision, index) {
             total += parseInt(comision.costo || 0, 10);
 
+            agregarHidden(`comisiones[${index}][codigo]`, comision.codigo || 'COMISION', c.hiddenContainer);
             agregarHidden(`comisiones[${index}][suscripcion_proveedor_id]`, comision.suscripcion_proveedor_id, c.hiddenContainer);
             agregarHidden(`comisiones[${index}][suscripcion_transportista_id]`, comision.suscripcion_transportista_id, c.hiddenContainer);
             agregarHidden(`comisiones[${index}][punto_1]`, comision.punto_1, c.hiddenContainer);
@@ -133,17 +185,8 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
             return;
         }
 
-        const existeMismaComision = comisiones.some(function (comision) {
-            return String(comision.suscripcion_proveedor_id) === String(proveedorId)
-                && String(comision.suscripcion_transportista_id) === String(transportistaId);
-        });
-
-        if (existeMismaComision) {
-            alert('Ya agregaste una comisión para este proveedor y transportista.');
-            return;
-        }
-
-        comisiones.push({
+        const comisionNueva = normalizarComision({
+            codigo: 'COMISION',
             suscripcion_proveedor_id: proveedorId,
             suscripcion_transportista_id: transportistaId,
             proveedor_label: optionLabel(c.proveedorSelect),
@@ -151,20 +194,65 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
             punto_1: limpiarTexto(c.punto1Input?.value),
             origen_gasto: limpiarTexto(c.origenGastoInput?.value) || 'Suscripciones',
             punto_2: limpiarTexto(c.punto2Input?.value),
-            servicio: limpiarTexto(c.servicioInput?.value) || 'Comisión mensual',
+            servicio: limpiarTexto(c.servicioInput?.value) || 'Reparto fin de semana',
             costo: costo,
             observacion: limpiarTexto(c.observacionInput?.value),
         });
 
+        if (existeComisionDuplicada(comisionNueva)) {
+            alert('Ya agregaste un pago adicional idéntico.');
+            return;
+        }
+
+        comisiones.push(comisionNueva);
+
         limpiarFormularioComision();
         renderizarComisiones();
+    }
+
+    function agregarComisionesMasivas(comisionesNuevas) {
+        if (!Array.isArray(comisionesNuevas)) {
+            return {
+                agregados: 0,
+                duplicados: 0,
+            };
+        }
+
+        let agregados = 0;
+        let duplicados = 0;
+
+        comisionesNuevas.forEach(function (comision) {
+            const comisionNormalizada = normalizarComision(comision);
+
+            if (!comisionNormalizada.suscripcion_proveedor_id || !comisionNormalizada.suscripcion_transportista_id) {
+                return;
+            }
+
+            if (existeComisionDuplicada(comisionNormalizada)) {
+                duplicados++;
+                return;
+            }
+
+            comisiones.push(comisionNormalizada);
+            agregados++;
+        });
+
+        if (agregados > 0) {
+            renderizarComisiones();
+        }
+
+        return {
+            agregados,
+            duplicados,
+        };
     }
 
     function restaurarComisionesIniciales() {
         const c = dom.comision;
 
         comisionesIniciales.forEach(function (comision) {
-            comisiones.push({
+            comisiones.push(normalizarComision({
+                codigo: comision.codigo || 'COMISION',
                 suscripcion_proveedor_id: comision.suscripcion_proveedor_id,
                 suscripcion_transportista_id: comision.suscripcion_transportista_id,
                 proveedor_label: labelPorValor(c.proveedorSelect, comision.suscripcion_proveedor_id),
@@ -172,10 +260,10 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
                 punto_1: limpiarTexto(comision.punto_1 || ''),
                 origen_gasto: limpiarTexto(comision.origen_gasto || 'Suscripciones'),
                 punto_2: limpiarTexto(comision.punto_2 || ''),
-                servicio: limpiarTexto(comision.servicio || 'Comisión mensual'),
+                servicio: limpiarTexto(comision.servicio || 'Reparto fin de semana'),
                 costo: parseInt(comision.costo || 0, 10),
                 observacion: limpiarTexto(comision.observacion || ''),
-            });
+            }));
         });
     }
 
@@ -210,4 +298,9 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
     restaurarComisionesIniciales();
     actualizarTotalComisionActual();
     renderizarComisiones();
+
+    return {
+        agregarComisionesMasivas,
+        renderizarComisiones,
+    };
 }

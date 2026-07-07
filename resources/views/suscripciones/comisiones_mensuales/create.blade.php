@@ -107,11 +107,6 @@
             </div>
         </div>
 
-
-
-
-
-
         {{-- CANTIDADES VARIABLES --}}
         @if($asignacionesCantidadMensual->isNotEmpty())
             <div class="card mb-4">
@@ -220,19 +215,6 @@
                 </div>
             </div>
         @endif
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         {{-- NOVEDADES MENSUALES --}}
         <div class="card mb-4">
@@ -828,21 +810,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         {{-- COMISIONES --}}
         {{-- PAGOS ADICIONALES --}}
         <div class="card mb-4">
@@ -862,200 +829,74 @@
                 <span data-suscripcion-toggle-icon>⌄</span>
             </button>
 
-            <div id="panel-comisiones-mensuales" class="card-body d-none">
-                <div class="small text-muted mb-3">
-                    Completa los datos de un pago adicional y presiona <strong>Agregar pago adicional</strong>.
-                    El pago quedará en la lista inferior antes de generar el mes.
+
+            
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+            <div>
+                <div class="small text-muted mb-1">
+                    Los pagos adicionales del mes se agregan exclusivamente desde la carga masiva.
                 </div>
 
-                <div class="border rounded p-3 mb-3">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="comision_proveedor_id" class="form-label">
-                                Proveedor a integrar pago adicional
-                            </label>
-
-                            <select id="comision_proveedor_id" class="form-select">
-                                <option value="">Seleccionar proveedor...</option>
-
-                                @foreach($proveedores as $proveedor)
-                                    @php
-                                        $cobranza = $proveedor->cobranzaCompra;
-
-                                        $proveedorLabel = trim(
-                                            ($cobranza?->razon_social ?? 'Sin razón social')
-                                            . ' | '
-                                            . ($cobranza?->rut_cliente ?? 'Sin RUT')
-                                            . ' | '
-                                            . ($proveedor->tipo ?? 'Sin tipo')
-                                        );
-                                    @endphp
-
-                                    <option
-                                        value="{{ $proveedor->id }}"
-                                        data-label="{{ $proveedorLabel }}"
-                                        data-tipo="{{ $proveedor->tipo }}"
-                                        data-detalle-documento="{{ $proveedor->detalle_documento }}"
-                                        data-detalle-impuesto="{{ $proveedor->detalle_impuesto }}"
-                                        data-final="{{ $proveedor->final }}"
-                                    >
-                                        {{ $proveedorLabel }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="comision_transportista_id" class="form-label">
-                                Transportista
-                            </label>
-
-                            <select id="comision_transportista_id" class="form-select">
-                                <option value="">Seleccionar transportista...</option>
-
-                                @foreach($transportistas as $transportista)
-                                    <option
-                                        value="{{ $transportista->id }}"
-                                        data-label="{{ $transportista->nombre_transportista }}"
-                                    >
-                                        {{ $transportista->nombre_transportista }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="col-md-3">
-                            <label for="comision_punto_1" class="form-label">Punto</label>
-                            <input
-                                type="text"
-                                id="comision_punto_1"
-                                class="form-control"
-                                placeholder="Ej: LA DEHESA"
-                            >
-                        </div>
-
-                        <div class="col-md-3">
-                            <label for="comision_origen_gasto" class="form-label">Origen gasto</label>
-                            <input
-                                type="text"
-                                id="comision_origen_gasto"
-                                class="form-control"
-                                value="Suscripciones"
-                            >
-                        </div>
-
-                        <div class="col-md-3">
-                            <label for="comision_punto_2" class="form-label">Punto 2</label>
-                            <input
-                                type="text"
-                                id="comision_punto_2"
-                                class="form-control"
-                                placeholder="Ej: LA DEHESA"
-                            >
-                        </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label">Código interno</label>
-                            <input
-                                type="text"
-                                class="form-control"
-                                value="COMISION"
-                                disabled
-                            >
-                            <div class="form-text">
-                                Definido automáticamente por el sistema.
-                            </div>
-                        </div>
-
-                        <div class="col-md-4">
-                            <label for="comision_servicio" class="form-label">Servicio</label>
-                            <input
-                                type="text"
-                                id="comision_servicio"
-                                class="form-control"
-                                value="Reparto fin de semana"
-                            >
-                        </div>
-
-                        <div class="col-md-4">
-                            <label for="comision_costo" class="form-label">Monto del pago adicional</label>
-                            <input
-                                type="number"
-                                id="comision_costo"
-                                class="form-control"
-                                min="0"
-                            >
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label">Total estimado pago actual</label>
-                            <input
-                                type="text"
-                                id="comision_total_estimado"
-                                class="form-control"
-                                value="$0"
-                                disabled
-                            >
-                            <div class="form-text">
-                                Estos pagos se registran con cantidad técnica 1.
-                            </div>
-                        </div>
-
-                        <div class="col-md-9">
-                            <label for="comision_observacion" class="form-label">
-                                Observación del pago adicional
-                            </label>
-                            <input
-                                type="text"
-                                id="comision_observacion"
-                                class="form-control"
-                                placeholder="Ej: pago adicional informado para este mes"
-                            >
-                        </div>
-
-                        <div class="col-md-3 d-flex align-items-end">
-                            <button type="button" id="btn-agregar-comision" class="btn btn-outline-primary w-100">
-                                Agregar pago adicional
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="comisiones-hidden-container"></div>
-
-                <div class="table-responsive">
-                    <table class="table table-sm table-bordered align-middle mb-2">
-                        <thead>
-                            <tr>
-                                <th>Proveedor</th>
-                                <th>Transportista</th>
-                                <th>Punto</th>
-                                <th>Servicio</th>
-                                <th class="text-end">Monto</th>
-                                <th>Observación</th>
-                                <th class="text-center">Acción</th>
-                            </tr>
-                        </thead>
-
-                        <tbody id="comisiones-resumen-body">
-                            <tr>
-                                <td colspan="7" class="text-muted text-center">
-                                    No hay pagos adicionales agregados para este periodo.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="small text-muted mt-3">
-                    Pagos adicionales agregados:
-                    <strong id="comisiones-cantidad">0</strong>
-                    <span class="mx-1">|</span>
-                    Total estimado:
-                    <strong id="comisiones-total">$0</strong>
+                <div class="small text-muted">
+                    Cada pago agregado quedará en el resumen inferior antes de generar el mes completo.
                 </div>
             </div>
+
+            <button
+                type="button"
+                id="btn-abrir-comisiones-masivas"
+                class="btn btn-outline-primary btn-sm"
+                data-toggle="modal"
+                data-target="#modal-comisiones-masivas"
+            >
+                Carga masiva de pagos adicionales
+            </button>
         </div>
+
+        <div id="comisiones-hidden-container"></div>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle mb-2">
+                <thead>
+                    <tr>
+                        <th>Proveedor</th>
+                        <th>Transportista</th>
+                        <th>Punto</th>
+                        <th>Servicio</th>
+                        <th class="text-end">Monto</th>
+                        <th>Observación</th>
+                        <th class="text-center">Acción</th>
+                    </tr>
+                </thead>
+
+                <tbody id="comisiones-resumen-body">
+                    <tr>
+                        <td colspan="7" class="text-muted text-center">
+                            No hay pagos adicionales agregados para este periodo.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="small text-muted mt-3">
+            Pagos adicionales agregados:
+            <strong id="comisiones-cantidad">0</strong>
+            <span class="mx-1">|</span>
+            Total estimado:
+            <strong id="comisiones-total">$0</strong>
+        </div>
+
+
+
+
+
+        </div>
+        @include('suscripciones.comisiones_mensuales.partials.modal-comisiones-masivas')
+
+
+
+
 
         <div class="d-flex justify-content-end align-items-center mb-4">
             <button type="submit" class="btn btn-primary">
