@@ -1,15 +1,18 @@
 {{-- 
     resources/views/suscripciones/comisiones_mensuales/partials/modal-comisiones-masivas.blade.php
 
-    Modal para registrar comisiones / pagos adicionales masivos.
-    No guarda en BD directamente.
-    El JS debe construir objetos para comisiones[] y agregarlos al flujo actual de comisiones.
+    Modal para registrar pagos adicionales masivos.
 
-    Regla:
-    - No usa suscripcion_asignaciones como origen de carga.
-    - Un mismo proveedor puede tener más de un pago adicional.
-    - Cada clic en "Agregar pago" crea una nueva fila editable.
-    - El código interno se maneja como COMISION desde JS/backend, no se pide al usuario.
+    No guarda directamente en BD.
+    El JS construye un objeto independiente por cada pago preparado
+    y lo agrega al flujo central de comisiones[].
+
+    Reglas:
+    - Se define un monto común para los pagos preparados en esta carga.
+    - Cada clic en "Agregar pago" crea un registro independiente.
+    - Un mismo proveedor puede recibir más de un pago adicional.
+    - El transportista puede revisarse o corregirse por cada pago.
+    - El código interno es COMISION.
 --}}
 
 <div
@@ -20,17 +23,25 @@
     aria-labelledby="modal-comisiones-masivas-title"
     aria-hidden="true"
 >
-    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+    <div
+        class="modal-dialog modal-xl modal-dialog-scrollable"
+        role="document"
+    >
         <div class="modal-content">
+
+            {{-- ENCABEZADO --}}
             <div class="modal-header bg-light">
                 <div>
-                    <h5 class="modal-title mb-1" id="modal-comisiones-masivas-title">
+                    <h5
+                        class="modal-title mb-1"
+                        id="modal-comisiones-masivas-title"
+                    >
                         Pagos adicionales masivos
                     </h5>
 
                     <div class="small text-muted">
-                        Busca un proveedor y presiona <strong>Agregar pago</strong> una o más veces.
-                        Luego completa el monto y ajusta transportista, puntos o servicio si corresponde.
+                        Define un monto común y agrega los pagos adicionales
+                        que correspondan para este periodo.
                     </div>
                 </div>
 
@@ -45,15 +56,22 @@
             </div>
 
             <div class="modal-body">
-                <div class="alert alert-info small mb-3">
+
+                <div class="alert alert-info small mb-4">
                     <strong>Importante:</strong>
-                    esta carga masiva crea pagos adicionales del mes en <code>comisiones[]</code>.
-                    No usa <code>suscripcion_asignaciones</code> como origen y no registra novedades mensuales.
-                    Un mismo proveedor puede tener más de un pago adicional.
+                    el monto ingresado se aplicará a cada pago preparado.
+                    Puedes agregar al mismo proveedor más de una vez si debe recibir
+                    más de un pago adicional durante el periodo.
+                    Cada clic en <strong>Agregar pago</strong> creará un registro independiente
+                    dentro de <code>comisiones[]</code>.
                 </div>
 
-                {{-- Template para que el JS clone selects sin name --}}
-                <select id="comision-masiva-transportista-template" class="d-none">
+                {{-- TEMPLATE DE TRANSPORTISTAS PARA EL JS --}}
+                <select
+                    id="comision-masiva-transportista-template"
+                    class="d-none"
+                    aria-hidden="true"
+                >
                     <option value="">Seleccionar transportista...</option>
 
                     @foreach ($transportistas ?? [] as $transportista)
@@ -67,26 +85,105 @@
                     @endforeach
                 </select>
 
-                {{-- SECCIÓN 1: BUSCAR PROVEEDORES --}}
+                {{-- ===================================================== --}}
+                {{-- SECCIÓN 1: DEFINIR DATOS COMUNES --}}
+                {{-- ===================================================== --}}
+                <div class="border rounded p-3 mb-4">
+                    <div class="mb-3">
+                        <h6 class="mb-1">
+                            1. Definir pago adicional
+                        </h6>
+
+                        <div class="small text-muted">
+                            El monto y la observación se aplicarán a cada pago que prepares
+                            en las siguientes secciones.
+                        </div>
+                    </div>
+
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label
+                                for="comision-masiva-monto"
+                                class="form-label"
+                            >
+                                Monto por pago adicional
+                            </label>
+
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">$</span>
+                                </div>
+
+                                <input
+                                    type="number"
+                                    id="comision-masiva-monto"
+                                    class="form-control"
+                                    min="1"
+                                    step="1"
+                                    placeholder="Ej: 5000"
+                                    autocomplete="off"
+                                >
+                            </div>
+
+                            <div class="form-text">
+                                Este monto se repetirá en cada pago preparado.
+                            </div>
+                        </div>
+
+                        <div class="col-md-8">
+                            <label
+                                for="comision-masiva-observacion-general"
+                                class="form-label"
+                            >
+                                Observación general opcional
+                            </label>
+
+                            <input
+                                type="text"
+                                id="comision-masiva-observacion-general"
+                                class="form-control"
+                                placeholder="Ej: Pago adicional correspondiente al periodo"
+                                autocomplete="off"
+                            >
+
+                            <div class="form-text">
+                                La misma observación se aplicará a todos los pagos de esta carga.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ===================================================== --}}
+                {{-- SECCIÓN 2: BUSCAR Y AGREGAR PAGOS --}}
+                {{-- ===================================================== --}}
                 <div class="border rounded p-3 mb-4">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
-                            <h6 class="mb-1">1. Buscar proveedor</h6>
+                            <h6 class="mb-1">
+                                2. Buscar proveedor y agregar pago
+                            </h6>
+
                             <div class="small text-muted">
-                                Puedes buscar por razón social, RUT o tipo de documento.
-                                Presiona <strong>Agregar pago</strong> por cada comisión que necesites crear.
+                                Busca por razón social, RUT o tipo de documento.
+                                Presiona <strong>Agregar pago</strong> por cada registro que necesites crear.
+                                Puedes presionar el botón varias veces para el mismo proveedor.
                             </div>
                         </div>
 
                         <div class="small text-muted">
-                            Pagos agregados:
-                            <strong id="comision-masiva-seleccionados-contador">0</strong>
+                            Pagos preparados:
+                            <strong id="comision-masiva-seleccionados-contador">
+                                0
+                            </strong>
                         </div>
                     </div>
 
                     <div class="row g-2 align-items-end mb-3">
                         <div class="col-md-8">
-                            <label for="comision-masiva-buscador" class="form-label">
+                            <label
+                                for="comision-masiva-buscador"
+                                class="form-label"
+                            >
                                 Buscar proveedor
                             </label>
 
@@ -118,15 +215,35 @@
                         </div>
                     </div>
 
-                    <div class="table-responsive" style="max-height: 260px; overflow-y: auto;">
+                    <div
+                        class="table-responsive"
+                        style="max-height: 280px; overflow-y: auto;"
+                    >
                         <table class="table table-sm table-bordered align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th style="width: 120px;" class="text-center">Acción</th>
-                                    <th>Proveedor / RUT</th>
-                                    <th style="width: 150px;">Tipo documento</th>
-                                    <th style="width: 230px;">Detalle</th>
-                                    <th style="width: 150px;">Final</th>
+                                    <th
+                                        style="width: 130px;"
+                                        class="text-center"
+                                    >
+                                        Acción
+                                    </th>
+
+                                    <th>
+                                        Proveedor / RUT
+                                    </th>
+
+                                    <th style="width: 150px;">
+                                        Tipo documento
+                                    </th>
+
+                                    <th style="width: 230px;">
+                                        Detalle
+                                    </th>
+
+                                    <th style="width: 150px;">
+                                        Final
+                                    </th>
                                 </tr>
                             </thead>
 
@@ -135,12 +252,23 @@
                                     @php
                                         $cobranzaCompra = $proveedor->cobranzaCompra;
 
-                                        $razonSocial = $cobranzaCompra?->razon_social ?? 'Proveedor sin razón social';
-                                        $rutCliente = $cobranzaCompra?->rut_cliente ?? 'Sin RUT';
-                                        $tipoDocumento = $proveedor->tipo ?? 'Sin tipo';
-                                        $detalleDocumento = $proveedor->detalle_documento ?? '';
-                                        $detalleImpuesto = $proveedor->detalle_impuesto ?? '';
-                                        $final = $proveedor->final ?? '';
+                                        $razonSocial = $cobranzaCompra?->razon_social
+                                            ?? 'Proveedor sin razón social';
+
+                                        $rutCliente = $cobranzaCompra?->rut_cliente
+                                            ?? 'Sin RUT';
+
+                                        $tipoDocumento = $proveedor->tipo
+                                            ?? 'Sin tipo';
+
+                                        $detalleDocumento = $proveedor->detalle_documento
+                                            ?? '';
+
+                                        $detalleImpuesto = $proveedor->detalle_impuesto
+                                            ?? '';
+
+                                        $final = $proveedor->final
+                                            ?? '';
 
                                         $labelProveedor = trim(
                                             $razonSocial
@@ -170,7 +298,9 @@
                                             . $final
                                         ));
 
-                                        $razonSocialNormalizada = mb_strtoupper(trim($razonSocial));
+                                        $razonSocialNormalizada = mb_strtoupper(
+                                            trim($razonSocial)
+                                        );
                                     @endphp
 
                                     <tr
@@ -220,8 +350,12 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="text-muted text-center">
-                                            No hay proveedores disponibles para carga masiva de pagos adicionales.
+                                        <td
+                                            colspan="5"
+                                            class="text-muted text-center"
+                                        >
+                                            No hay proveedores disponibles para
+                                            pagos adicionales.
                                         </td>
                                     </tr>
                                 @endforelse
@@ -230,15 +364,20 @@
                     </div>
                 </div>
 
-                {{-- SECCIÓN 2: COMPLETAR COMISIONES --}}
+                {{-- ===================================================== --}}
+                {{-- SECCIÓN 3: PREVISUALIZACIÓN --}}
+                {{-- ===================================================== --}}
                 <div class="border rounded p-3">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
-                            <h6 class="mb-1">2. Completar pagos adicionales</h6>
+                            <h6 class="mb-1">
+                                3. Revisar pagos preparados
+                            </h6>
+
                             <div class="small text-muted">
                                 Cada fila representa un pago adicional independiente.
-                                El sistema usará código interno <strong>COMISION</strong>.
-                                Sólo el monto es obligatorio; puedes corregir transportista, puntos, servicio u observación.
+                                Un proveedor puede aparecer más de una vez.
+                                Revisa el transportista relacionado antes de confirmar.
                             </div>
                         </div>
 
@@ -247,43 +386,114 @@
                             id="btn-comision-masiva-limpiar"
                             class="btn btn-outline-secondary btn-sm"
                         >
-                            Limpiar pagos agregados
+                            Limpiar pagos preparados
                         </button>
                     </div>
 
-                    <div class="table-responsive" style="max-height: 360px; overflow-y: auto;">
+                    <div
+                        class="table-responsive"
+                        style="max-height: 320px; overflow-y: auto;"
+                    >
                         <table class="table table-sm table-bordered align-middle mb-2">
                             <thead class="table-light">
                                 <tr>
-                                    <th style="min-width: 180px;">Proveedor</th>
-                                    <th style="min-width: 200px;">Transportista</th>
-                                    <th style="min-width: 150px;">Punto</th>
-                                    <th style="min-width: 150px;">Punto 2</th>
-                                    <th style="min-width: 190px;">Servicio</th>
-                                    <th style="min-width: 130px;" class="text-end">Monto</th>
-                                    <th style="min-width: 180px;">Observación</th>
-                                    <th style="width: 80px;" class="text-center">Quitar</th>
+                                    <th style="min-width: 200px;">
+                                        Proveedor
+                                    </th>
+
+                                    <th style="min-width: 220px;">
+                                        Transportista
+                                    </th>
+
+                                    <th
+                                        style="width: 150px;"
+                                        class="text-end"
+                                    >
+                                        Monto
+                                    </th>
+
+                                    <th style="min-width: 200px;">
+                                        Observación
+                                    </th>
+
+                                    <th
+                                        style="width: 90px;"
+                                        class="text-center"
+                                    >
+                                        Acción
+                                    </th>
                                 </tr>
                             </thead>
 
                             <tbody id="comision-masiva-seleccionados-body">
                                 <tr data-comision-masiva-empty>
-                                    <td colspan="8" class="text-muted text-center">
-                                        No hay pagos agregados.
+                                    <td
+                                        colspan="5"
+                                        class="text-muted text-center"
+                                    >
+                                        No hay pagos adicionales preparados.
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
 
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-4">
+                            <div class="border rounded bg-light p-3 h-100">
+                                <div class="small text-muted">
+                                    Pagos preparados
+                                </div>
+
+                                <div
+                                    class="fs-5 fw-semibold"
+                                    id="comision-masiva-resumen-cantidad"
+                                >
+                                    0
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="border rounded bg-light p-3 h-100">
+                                <div class="small text-muted">
+                                    Monto por pago
+                                </div>
+
+                                <div
+                                    class="fs-5 fw-semibold"
+                                    id="comision-masiva-monto-preview"
+                                >
+                                    $0
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="border rounded bg-light p-3 h-100">
+                                <div class="small text-muted">
+                                    Total pagos adicionales
+                                </div>
+
+                                <div
+                                    class="fs-5 fw-semibold"
+                                    id="comision-masiva-total-preview"
+                                >
+                                    $0
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div
                         id="comision-masiva-error"
-                        class="alert alert-danger small d-none mb-0"
+                        class="alert alert-danger small d-none mt-3 mb-0"
                         role="alert"
                     ></div>
                 </div>
             </div>
 
+            {{-- PIE DEL MODAL --}}
             <div class="modal-footer bg-light">
                 <button
                     type="button"

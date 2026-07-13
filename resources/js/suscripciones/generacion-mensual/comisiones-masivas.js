@@ -1,17 +1,6 @@
-/**
- * resources/js/suscripciones/generacion-mensual/comisiones-masivas.js
- *
- * Maneja el modal de carga masiva de comisiones / pagos adicionales.
- * No guarda en BD directamente: sólo prepara objetos para comisiones[].
- *
- * Regla:
- * - Un mismo proveedor puede tener más de un pago adicional.
- * - Cada clic en "Agregar pago" crea una nueva fila editable.
- * - El código interno es COMISION y no se pide al usuario.
- */
-
 import {
     escaparHtml,
+    formatearCLP,
     limpiarTexto,
 } from './utils';
 
@@ -22,21 +11,70 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
         return;
     }
 
-    const transportistaTemplate = document.getElementById('comision-masiva-transportista-template');
+    const transportistaTemplate = document.getElementById(
+        'comision-masiva-transportista-template'
+    );
 
-    const buscadorInput = document.getElementById('comision-masiva-buscador');
-    const buscarBtn = document.getElementById('btn-comision-masiva-buscar');
-    const limpiarBusquedaBtn = document.getElementById('btn-comision-masiva-limpiar-busqueda');
+    const montoInput = document.getElementById('comision-masiva-monto');
 
-    const proveedoresBody = document.getElementById('comision-masiva-proveedores-body');
-    const seleccionadosBody = document.getElementById('comision-masiva-seleccionados-body');
+    const observacionGeneralInput = document.getElementById(
+        'comision-masiva-observacion-general'
+    );
 
-    const limpiarSeleccionBtn = document.getElementById('btn-comision-masiva-limpiar');
-    const confirmarBtn = document.getElementById('btn-confirmar-comisiones-masivas');
+    const buscadorInput = document.getElementById(
+        'comision-masiva-buscador'
+    );
 
-    const contadorSeleccionados = document.getElementById('comision-masiva-seleccionados-contador');
-    const errorBox = document.getElementById('comision-masiva-error');
+    const buscarBtn = document.getElementById(
+        'btn-comision-masiva-buscar'
+    );
 
+    const limpiarBusquedaBtn = document.getElementById(
+        'btn-comision-masiva-limpiar-busqueda'
+    );
+
+    const proveedoresBody = document.getElementById(
+        'comision-masiva-proveedores-body'
+    );
+
+    const seleccionadosBody = document.getElementById(
+        'comision-masiva-seleccionados-body'
+    );
+
+    const limpiarSeleccionBtn = document.getElementById(
+        'btn-comision-masiva-limpiar'
+    );
+
+    const confirmarBtn = document.getElementById(
+        'btn-confirmar-comisiones-masivas'
+    );
+
+    const contadorSeleccionados = document.getElementById(
+        'comision-masiva-seleccionados-contador'
+    );
+
+    const resumenCantidad = document.getElementById(
+        'comision-masiva-resumen-cantidad'
+    );
+
+    const montoPreview = document.getElementById(
+        'comision-masiva-monto-preview'
+    );
+
+    const totalPreview = document.getElementById(
+        'comision-masiva-total-preview'
+    );
+
+    const errorBox = document.getElementById(
+        'comision-masiva-error'
+    );
+
+    /*
+     * Estado temporal del modal.
+     *
+     * Se usa un arreglo porque un mismo proveedor puede tener
+     * más de un pago adicional.
+     */
     let pagos = [];
 
     function ocultarError() {
@@ -69,11 +107,17 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
             return '';
         }
 
-        return limpiarTexto(option.dataset.label || option.text || '');
+        return limpiarTexto(
+            option.dataset.label || option.text || ''
+        );
     }
 
     function entero(valor) {
-        if (valor === null || valor === undefined || valor === '') {
+        if (
+            valor === null
+            || valor === undefined
+            || valor === ''
+        ) {
             return null;
         }
 
@@ -82,12 +126,30 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
         return Number.isNaN(numero) ? null : numero;
     }
 
-    function uid() {
-        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+    function generarUid() {
+        if (
+            window.crypto
+            && typeof window.crypto.randomUUID === 'function'
+        ) {
             return window.crypto.randomUUID();
         }
 
-        return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        return [
+            Date.now(),
+            Math.random().toString(16).slice(2),
+        ].join('-');
+    }
+
+    function montoComun() {
+        const monto = entero(montoInput?.value || '');
+
+        return monto === null ? 0 : monto;
+    }
+
+    function observacionGeneral() {
+        return limpiarTexto(
+            observacionGeneralInput?.value || ''
+        );
     }
 
     function normalizarTexto(valor) {
@@ -105,21 +167,197 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
             return [];
         }
 
-        return Array.from(proveedoresBody.querySelectorAll('[data-comision-masiva-proveedor]'));
+        return Array.from(
+            proveedoresBody.querySelectorAll(
+                '[data-comision-masiva-proveedor]'
+            )
+        );
     }
 
-    function actualizarContador() {
+    function buscarTransportistaPorNombre(nombreProveedor) {
+        if (!transportistaTemplate) {
+            return '';
+        }
+
+        const nombreNormalizado = normalizarTexto(
+            nombreProveedor
+        );
+
+        if (!nombreNormalizado) {
+            return '';
+        }
+
+        const opciones = Array.from(
+            transportistaTemplate.querySelectorAll('option')
+        );
+
+        const coincidenciaExacta = opciones.find(
+            function (option) {
+                if (!option.value) {
+                    return false;
+                }
+
+                const nombreTransportista = normalizarTexto(
+                    option.dataset.label
+                    || option.text
+                    || ''
+                );
+
+                return nombreTransportista === nombreNormalizado;
+            }
+        );
+
+        if (coincidenciaExacta) {
+            return coincidenciaExacta.value;
+        }
+
+        const coincidenciaParcial = opciones.find(
+            function (option) {
+                if (!option.value) {
+                    return false;
+                }
+
+                const nombreTransportista = normalizarTexto(
+                    option.dataset.label
+                    || option.text
+                    || ''
+                );
+
+                return nombreTransportista.includes(
+                    nombreNormalizado
+                ) || nombreNormalizado.includes(
+                    nombreTransportista
+                );
+            }
+        );
+
+        return coincidenciaParcial?.value || '';
+    }
+
+    function datosPagoDesdeFila(row) {
+        const razonSocial = limpiarTexto(
+            row.dataset.razonSocial || ''
+        );
+
+        return {
+            uid: generarUid(),
+
+            suscripcion_proveedor_id:
+                row.dataset.proveedorId || '',
+
+            proveedor_label:
+                limpiarTexto(row.dataset.label || ''),
+
+            razon_social: razonSocial,
+
+            rut: limpiarTexto(
+                row.dataset.rut || ''
+            ),
+
+            suscripcion_transportista_id:
+                buscarTransportistaPorNombre(razonSocial),
+
+            transportista_label: '',
+        };
+    }
+
+    function actualizarResumen() {
+        const cantidad = pagos.length;
+        const monto = montoComun();
+        const total = cantidad * monto;
+
         if (contadorSeleccionados) {
-            contadorSeleccionados.textContent = String(pagos.length);
+            contadorSeleccionados.textContent = String(cantidad);
+        }
+
+        if (resumenCantidad) {
+            resumenCantidad.textContent = String(cantidad);
+        }
+
+        if (montoPreview) {
+            montoPreview.textContent = formatearCLP(monto);
+        }
+
+        if (totalPreview) {
+            totalPreview.textContent = formatearCLP(total);
         }
     }
 
+    function actualizarDatosComunesEnFilas() {
+        if (!seleccionadosBody) {
+            return;
+        }
+
+        const monto = montoComun();
+        const observacion = observacionGeneral();
+
+        seleccionadosBody
+            .querySelectorAll(
+                '[data-comision-masiva-monto-fila]'
+            )
+            .forEach(function (elemento) {
+                elemento.textContent = formatearCLP(monto);
+            });
+
+        seleccionadosBody
+            .querySelectorAll(
+                '[data-comision-masiva-observacion-fila]'
+            )
+            .forEach(function (elemento) {
+                elemento.textContent = observacion || '—';
+            });
+
+        actualizarResumen();
+    }
+
+    function guardarTransportistasEditados() {
+        if (!seleccionadosBody) {
+            return;
+        }
+
+        seleccionadosBody
+            .querySelectorAll('[data-comision-masiva-pago]')
+            .forEach(function (row) {
+                const pagoUid = row.dataset.uid;
+
+                if (!pagoUid) {
+                    return;
+                }
+
+                const index = pagos.findIndex(
+                    function (pago) {
+                        return pago.uid === pagoUid;
+                    }
+                );
+
+                if (index < 0) {
+                    return;
+                }
+
+                const transportistaSelect = row.querySelector(
+                    '[data-comision-masiva-transportista]'
+                );
+
+                pagos[index].suscripcion_transportista_id =
+                    transportistaSelect?.value || '';
+
+                pagos[index].transportista_label =
+                    optionLabel(transportistaSelect);
+            });
+    }
+
     function aplicarBusqueda() {
-        const termino = normalizarTexto(buscadorInput?.value || '');
+        const termino = normalizarTexto(
+            buscadorInput?.value || ''
+        );
 
         filasProveedor().forEach(function (row) {
-            const textoBusqueda = normalizarTexto(row.dataset.busqueda || '');
-            const visible = !termino || textoBusqueda.includes(termino);
+            const textoBusqueda = normalizarTexto(
+                row.dataset.busqueda || ''
+            );
+
+            const visible = !termino
+                || textoBusqueda.includes(termino);
 
             row.classList.toggle('d-none', !visible);
         });
@@ -138,115 +376,23 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
         }
     }
 
-    function buscarTransportistaPorNombre(nombreProveedor) {
-        if (!transportistaTemplate) {
-            return '';
-        }
+    function agregarPago(row) {
+        guardarTransportistasEditados();
 
-        const nombreNormalizado = normalizarTexto(nombreProveedor);
+        const pago = datosPagoDesdeFila(row);
 
-        if (!nombreNormalizado) {
-            return '';
-        }
-
-        const opciones = Array.from(transportistaTemplate.querySelectorAll('option'));
-
-        const exacto = opciones.find(function (option) {
-            return option.value && normalizarTexto(option.dataset.label || option.text || '') === nombreNormalizado;
-        });
-
-        if (exacto) {
-            return exacto.value;
-        }
-
-        const parcial = opciones.find(function (option) {
-            if (!option.value) {
-                return false;
-            }
-
-            const texto = normalizarTexto(option.dataset.label || option.text || '');
-
-            return texto.includes(nombreNormalizado) || nombreNormalizado.includes(texto);
-        });
-
-        return parcial?.value || '';
-    }
-
-    function datosPagoDesdeFila(row) {
-        const razonSocial = limpiarTexto(row.dataset.razonSocial || '');
-        const transportistaIdSugerido = buscarTransportistaPorNombre(razonSocial);
-
-        return {
-            uid: uid(),
-
-            codigo: 'COMISION',
-
-            suscripcion_proveedor_id: row.dataset.proveedorId || '',
-            proveedor_label: limpiarTexto(row.dataset.label || ''),
-            razon_social: razonSocial,
-            rut: limpiarTexto(row.dataset.rut || ''),
-
-            suscripcion_transportista_id: transportistaIdSugerido,
-            transportista_label: '',
-
-            punto_1: '',
-            origen_gasto: 'Suscripciones',
-            punto_2: '',
-            servicio: 'Reparto fin de semana',
-            costo: '',
-            observacion: '',
-        };
-    }
-
-    function guardarValoresEditados() {
-        if (!seleccionadosBody) {
+        if (!pago.suscripcion_proveedor_id) {
             return;
         }
 
-        seleccionadosBody.querySelectorAll('[data-comision-masiva-pago]').forEach(function (row) {
-            const pagoUid = row.dataset.uid;
-
-            if (!pagoUid) {
-                return;
-            }
-
-            const index = pagos.findIndex(function (pago) {
-                return pago.uid === pagoUid;
-            });
-
-            if (index < 0) {
-                return;
-            }
-
-            const item = pagos[index];
-
-            const transportistaSelect = row.querySelector('[data-comision-masiva-transportista]');
-
-            item.suscripcion_transportista_id = transportistaSelect?.value || '';
-            item.transportista_label = optionLabel(transportistaSelect);
-
-            item.punto_1 = limpiarTexto(row.querySelector('[data-comision-masiva-punto-1]')?.value || '');
-            item.origen_gasto = 'Suscripciones';
-            item.punto_2 = limpiarTexto(row.querySelector('[data-comision-masiva-punto-2]')?.value || '');
-            item.servicio = limpiarTexto(row.querySelector('[data-comision-masiva-servicio]')?.value || 'Reparto fin de semana') || 'Reparto fin de semana';
-            item.costo = row.querySelector('[data-comision-masiva-costo]')?.value || '';
-            item.observacion = limpiarTexto(row.querySelector('[data-comision-masiva-observacion]')?.value || '');
-
-            pagos[index] = item;
-        });
-    }
-
-    function agregarPago(row) {
-        guardarValoresEditados();
-
-        pagos.push(datosPagoDesdeFila(row));
+        pagos.push(pago);
 
         ocultarError();
         renderizarPagos();
     }
 
     function quitarPago(pagoUid) {
-        guardarValoresEditados();
+        guardarTransportistasEditados();
 
         pagos = pagos.filter(function (pago) {
             return pago.uid !== pagoUid;
@@ -263,6 +409,26 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
         renderizarPagos();
     }
 
+    function reiniciarModal() {
+        pagos = [];
+
+        if (montoInput) {
+            montoInput.value = '';
+        }
+
+        if (observacionGeneralInput) {
+            observacionGeneralInput.value = '';
+        }
+
+        if (buscadorInput) {
+            buscadorInput.value = '';
+        }
+
+        ocultarError();
+        aplicarBusqueda();
+        renderizarPagos();
+    }
+
     function renderizarPagos() {
         if (!seleccionadosBody) {
             return;
@@ -273,13 +439,13 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
         if (pagos.length === 0) {
             seleccionadosBody.innerHTML = `
                 <tr data-comision-masiva-empty>
-                    <td colspan="8" class="text-muted text-center">
-                        No hay pagos agregados.
+                    <td colspan="5" class="text-muted text-center">
+                        No hay pagos adicionales preparados.
                     </td>
                 </tr>
             `;
 
-            actualizarContador();
+            actualizarResumen();
             return;
         }
 
@@ -292,7 +458,11 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
             row.innerHTML = `
                 <td>
                     <div class="fw-semibold">
-                        ${escaparHtml(item.razon_social || item.proveedor_label || 'Proveedor')}
+                        ${escaparHtml(
+                            item.razon_social
+                            || item.proveedor_label
+                            || 'Proveedor'
+                        )}
                     </div>
 
                     <div class="small text-muted">
@@ -305,59 +475,24 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
                         class="form-select form-select-sm"
                         data-comision-masiva-transportista
                     >
-                        ${transportistaTemplate?.innerHTML || '<option value="">Seleccionar transportista...</option>'}
+                        ${
+                            transportistaTemplate?.innerHTML
+                            || '<option value="">Seleccionar transportista...</option>'
+                        }
                     </select>
                 </td>
 
-                <td>
-                    <input
-                        type="text"
-                        class="form-control form-control-sm"
-                        value="${escaparHtml(item.punto_1 || '')}"
-                        placeholder="Ej: LA DEHESA"
-                        data-comision-masiva-punto-1
-                    >
+                <td
+                    class="text-end fw-semibold"
+                    data-comision-masiva-monto-fila
+                >
+                    ${formatearCLP(montoComun())}
                 </td>
 
-                <td>
-                    <input
-                        type="text"
-                        class="form-control form-control-sm"
-                        value="${escaparHtml(item.punto_2 || '')}"
-                        placeholder="Ej: LA DEHESA"
-                        data-comision-masiva-punto-2
-                    >
-                </td>
-
-                <td>
-                    <input
-                        type="text"
-                        class="form-control form-control-sm"
-                        value="${escaparHtml(item.servicio || 'Reparto fin de semana')}"
-                        placeholder="Reparto fin de semana"
-                        data-comision-masiva-servicio
-                    >
-                </td>
-
-                <td>
-                    <input
-                        type="number"
-                        class="form-control form-control-sm text-end"
-                        min="0"
-                        value="${escaparHtml(item.costo || '')}"
-                        placeholder="0"
-                        data-comision-masiva-costo
-                    >
-                </td>
-
-                <td>
-                    <input
-                        type="text"
-                        class="form-control form-control-sm"
-                        value="${escaparHtml(item.observacion || '')}"
-                        placeholder="Observación opcional"
-                        data-comision-masiva-observacion
-                    >
+                <td data-comision-masiva-observacion-fila>
+                    ${escaparHtml(
+                        observacionGeneral() || '—'
+                    )}
                 </td>
 
                 <td class="text-center">
@@ -374,92 +509,119 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
 
             seleccionadosBody.appendChild(row);
 
-            const transportistaSelect = row.querySelector('[data-comision-masiva-transportista]');
+            const transportistaSelect = row.querySelector(
+                '[data-comision-masiva-transportista]'
+            );
 
             if (transportistaSelect) {
-                transportistaSelect.value = item.suscripcion_transportista_id || '';
+                transportistaSelect.value =
+                    item.suscripcion_transportista_id || '';
 
-                item.transportista_label = optionLabel(transportistaSelect);
+                item.transportista_label =
+                    optionLabel(transportistaSelect);
             }
         });
 
-        actualizarContador();
+        actualizarResumen();
     }
 
     function construirComisiones() {
-        guardarValoresEditados();
+        guardarTransportistasEditados();
+
+        const monto = montoComun();
+        const observacion = observacionGeneral();
 
         return pagos.map(function (item) {
-            const costo = entero(item.costo);
-
             return {
+                /*
+                 * Esta clave identifica el pago temporalmente.
+                 * Permite diferenciar pagos repetidos para el mismo proveedor.
+                 */
                 clave_control: [
                     'COMISION',
                     item.suscripcion_proveedor_id || '',
                     item.suscripcion_transportista_id || '',
-                    item.punto_1 || '',
-                    item.punto_2 || '',
-                    item.servicio || '',
-                    costo === null ? '' : costo,
-                    item.observacion || '',
-                    item.uid || '',
+                    monto,
+                    observacion,
+                    item.uid,
                 ].join('|'),
 
                 codigo: 'COMISION',
 
-                suscripcion_proveedor_id: item.suscripcion_proveedor_id || '',
-                suscripcion_transportista_id: item.suscripcion_transportista_id || '',
+                suscripcion_proveedor_id:
+                    item.suscripcion_proveedor_id || '',
 
-                proveedor_label: item.proveedor_label || '',
-                transportista_label: item.transportista_label || '',
+                suscripcion_transportista_id:
+                    item.suscripcion_transportista_id || '',
 
-                punto_1: item.punto_1 || '',
-                origen_gasto: item.origen_gasto || 'Suscripciones',
-                punto_2: item.punto_2 || '',
-                servicio: item.servicio || 'Reparto fin de semana',
+                proveedor_label:
+                    item.proveedor_label || '',
 
-                costo: costo === null ? '' : costo,
-                observacion: item.observacion || '',
+                transportista_label:
+                    item.transportista_label || '',
+
+                punto_1: '',
+                origen_gasto: 'Suscripciones',
+                punto_2: '',
+                servicio: 'Reparto fin de semana',
+
+                costo: monto,
+                observacion: observacion,
             };
         });
     }
 
     function validarComisiones(comisiones) {
+        const monto = montoComun();
+
+        if (monto <= 0) {
+            return 'Ingresa un monto por pago adicional mayor a 0.';
+        }
+
         if (comisiones.length === 0) {
             return 'Agrega al menos un pago adicional.';
         }
 
-        const sinTransportista = comisiones.find(function (comision) {
-            return !comision.suscripcion_transportista_id;
-        });
+        const sinProveedor = comisiones.find(
+            function (comision) {
+                return !comision.suscripcion_proveedor_id;
+            }
+        );
+
+        if (sinProveedor) {
+            return 'Todos los pagos adicionales deben tener proveedor.';
+        }
+
+        const sinTransportista = comisiones.find(
+            function (comision) {
+                return !comision.suscripcion_transportista_id;
+            }
+        );
 
         if (sinTransportista) {
             return 'Todos los pagos adicionales deben tener transportista.';
         }
 
-        const sinMonto = comisiones.find(function (comision) {
-            return comision.costo === '' || comision.costo === null || comision.costo === undefined;
-        });
+        const montoInvalido = comisiones.find(
+            function (comision) {
+                const costo = entero(comision.costo);
 
-        if (sinMonto) {
-            return 'Todos los pagos adicionales deben tener monto.';
-        }
-
-        const montoInvalido = comisiones.find(function (comision) {
-            const costo = entero(comision.costo);
-
-            return costo === null || costo < 0;
-        });
+                return costo === null || costo <= 0;
+            }
+        );
 
         if (montoInvalido) {
-            return 'Todos los pagos adicionales deben tener un monto válido.';
+            return 'Todos los pagos adicionales deben tener un monto válido mayor a 0.';
         }
 
         return '';
     }
 
     function cerrarModal() {
-        if (window.jQuery && typeof window.jQuery(modal).modal === 'function') {
+        if (
+            window.jQuery
+            && typeof window.jQuery(modal).modal === 'function'
+        ) {
             window.jQuery(modal).modal('hide');
             return;
         }
@@ -470,9 +632,11 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
 
         document.body.classList.remove('modal-open');
 
-        document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
-            backdrop.remove();
-        });
+        document
+            .querySelectorAll('.modal-backdrop')
+            .forEach(function (backdrop) {
+                backdrop.remove();
+            });
     }
 
     function confirmarComisiones() {
@@ -486,98 +650,171 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
             return;
         }
 
-        if (typeof comisionesApi.agregarComisionesMasivas === 'function') {
-            const resultado = comisionesApi.agregarComisionesMasivas(comisiones);
+        if (
+            typeof comisionesApi.agregarComisionesMasivas
+            === 'function'
+        ) {
+            const resultado =
+                comisionesApi.agregarComisionesMasivas(
+                    comisiones
+                );
 
-            if ((resultado?.agregados ?? comisiones.length) > 0) {
-                limpiarPagos();
+            const agregados =
+                resultado?.agregados ?? comisiones.length;
+
+            const duplicados =
+                resultado?.duplicados ?? 0;
+
+            if (agregados > 0) {
+                reiniciarModal();
                 cerrarModal();
                 return;
             }
 
-            if ((resultado?.duplicados ?? 0) > 0) {
-                mostrarError(`Se omitieron ${resultado.duplicados} pago(s) adicional(es) porque ya estaban agregados en el resumen.`);
+            if (duplicados > 0) {
+                mostrarError(
+                    `Se omitieron ${duplicados} pago(s) adicional(es) porque fueron considerados duplicados.`
+                );
+
+                return;
             }
+
+            mostrarError(
+                'No fue posible agregar los pagos adicionales al resumen.'
+            );
 
             return;
         }
 
-        document.dispatchEvent(new CustomEvent('suscripciones:comisiones-masivas', {
-            detail: {
-                comisiones,
-            },
-        }));
+        document.dispatchEvent(
+            new CustomEvent(
+                'suscripciones:comisiones-masivas',
+                {
+                    detail: {
+                        comisiones,
+                    },
+                }
+            )
+        );
 
-        limpiarPagos();
+        reiniciarModal();
         cerrarModal();
     }
 
     function registrarEventos() {
+        if (montoInput) {
+            montoInput.addEventListener(
+                'input',
+                function () {
+                    ocultarError();
+                    actualizarDatosComunesEnFilas();
+                }
+            );
+        }
+
+        if (observacionGeneralInput) {
+            observacionGeneralInput.addEventListener(
+                'input',
+                function () {
+                    ocultarError();
+                    actualizarDatosComunesEnFilas();
+                }
+            );
+        }
+
         if (buscarBtn) {
-            buscarBtn.addEventListener('click', aplicarBusqueda);
+            buscarBtn.addEventListener(
+                'click',
+                aplicarBusqueda
+            );
         }
 
         if (limpiarBusquedaBtn) {
-            limpiarBusquedaBtn.addEventListener('click', limpiarBusqueda);
+            limpiarBusquedaBtn.addEventListener(
+                'click',
+                limpiarBusqueda
+            );
         }
 
         if (buscadorInput) {
-            buscadorInput.addEventListener('input', aplicarBusqueda);
+            buscadorInput.addEventListener(
+                'input',
+                aplicarBusqueda
+            );
 
-            buscadorInput.addEventListener('keydown', function (event) {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    aplicarBusqueda();
+            buscadorInput.addEventListener(
+                'keydown',
+                function (event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        aplicarBusqueda();
+                    }
                 }
-            });
+            );
         }
 
         if (proveedoresBody) {
-            proveedoresBody.addEventListener('click', function (event) {
-                const button = event.target.closest('[data-comision-masiva-agregar-pago]');
+            proveedoresBody.addEventListener(
+                'click',
+                function (event) {
+                    const button = event.target.closest(
+                        '[data-comision-masiva-agregar-pago]'
+                    );
 
-                if (!button) {
-                    return;
+                    if (!button) {
+                        return;
+                    }
+
+                    const row = button.closest(
+                        '[data-comision-masiva-proveedor]'
+                    );
+
+                    if (!row) {
+                        return;
+                    }
+
+                    agregarPago(row);
                 }
-
-                const row = button.closest('[data-comision-masiva-proveedor]');
-
-                if (!row) {
-                    return;
-                }
-
-                agregarPago(row);
-            });
+            );
         }
 
         if (seleccionadosBody) {
-            seleccionadosBody.addEventListener('click', function (event) {
-                const button = event.target.closest('[data-comision-masiva-quitar]');
+            seleccionadosBody.addEventListener(
+                'click',
+                function (event) {
+                    const button = event.target.closest(
+                        '[data-comision-masiva-quitar]'
+                    );
 
-                if (!button) {
-                    return;
+                    if (!button) {
+                        return;
+                    }
+
+                    quitarPago(button.dataset.uid);
                 }
+            );
 
-                quitarPago(button.dataset.uid);
-            });
-
-            seleccionadosBody.addEventListener('input', function () {
-                guardarValoresEditados();
-                ocultarError();
-            });
-
-            seleccionadosBody.addEventListener('change', function () {
-                guardarValoresEditados();
-                ocultarError();
-            });
+            seleccionadosBody.addEventListener(
+                'change',
+                function () {
+                    guardarTransportistasEditados();
+                    ocultarError();
+                }
+            );
         }
 
         if (limpiarSeleccionBtn) {
-            limpiarSeleccionBtn.addEventListener('click', limpiarPagos);
+            limpiarSeleccionBtn.addEventListener(
+                'click',
+                limpiarPagos
+            );
         }
 
         if (confirmarBtn) {
-            confirmarBtn.addEventListener('click', confirmarComisiones);
+            confirmarBtn.addEventListener(
+                'click',
+                confirmarComisiones
+            );
         }
     }
 
