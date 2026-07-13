@@ -20,9 +20,6 @@ use Illuminate\Http\Request;
 class SuscripcionLiquidacionDetalleController extends Controller
 {
 
-
-
-
     public function index( Request $request, SuscripcionLiquidacionResumenService $resumenService, SuscripcionAjusteMensualService $ajusteMensualService) 
     {
         $proveedor = trim((string) $request->input('proveedor'));
@@ -270,10 +267,6 @@ class SuscripcionLiquidacionDetalleController extends Controller
         ]);
     }
 
-
-
-
-
     public function create()
     {
         $asignaciones = Asignaciones::with([
@@ -390,10 +383,6 @@ class SuscripcionLiquidacionDetalleController extends Controller
             ->route('suscripciones.liquidacion-detalles.index')
             ->with('success', 'Inasistencia actualizada y total recalculado correctamente.');
     }
-
-
-
-
 
     public function show( SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService, SuscripcionPrefacturaAgrupacionService $agrupacionService, SuscripcionAjusteMensualService $ajusteMensualService) 
     {
@@ -590,9 +579,6 @@ class SuscripcionLiquidacionDetalleController extends Controller
         ));
     }
 
-
-
-
     public function pdf(SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService, SuscripcionPrefacturaAgrupacionService $agrupacionService, SuscripcionPrefacturaOcService $ocService, SuscripcionAjusteMensualService $ajusteMensualService) 
     {
         $detalle->load([
@@ -732,9 +718,6 @@ class SuscripcionLiquidacionDetalleController extends Controller
         return $pdf->stream($nombreArchivo);
     }
 
-
-
-
     public function pdfMasivo(Request $request, SuscripcionPrefacturaZipService $zipService, SuscripcionAjusteMensualService $ajusteMensualService) 
     {
         $request->validate([
@@ -834,8 +817,6 @@ class SuscripcionLiquidacionDetalleController extends Controller
             ->download($resultado['zip_path'], $resultado['zip_file_name']);
     }
 
-
-
     public function generarMes(Request $request, SuscripcionGeneracionMensualService $generacionMensualService)
     {
         $request->validate([
@@ -882,9 +863,6 @@ class SuscripcionLiquidacionDetalleController extends Controller
             ->with('success', $mensaje);
     }
 
-
-
-
     public function opvPuntos(Asignaciones $asignacion)
     {
         $asignacion->load([
@@ -907,11 +885,6 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'opvPuntos'
         ));
     }
-
-
-
-
-
 
     private function calcularDetalleMensual(Asignaciones $asignacion, int $anio, int $mes, int $qInasistencia = 0): array
     {
@@ -960,19 +933,10 @@ class SuscripcionLiquidacionDetalleController extends Controller
         ];
     }
 
-
-
-
-
     private function esCodigoValorFijo(string $codigo): bool
     {
         return str_ends_with(mb_strtoupper(trim($codigo)), '.COM');
     }
-
-
-
-
-
 
     private function contarFinesDeSemanaDelMes(int $anio, int $mes): int
     {
@@ -1003,10 +967,5 @@ class SuscripcionLiquidacionDetalleController extends Controller
             || $servicio === 'OPV'
             || $origenGasto === 'OPV';
     }
-
-
-
-
-
 
 }

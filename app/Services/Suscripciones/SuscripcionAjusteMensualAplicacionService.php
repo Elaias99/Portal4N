@@ -219,8 +219,6 @@ class SuscripcionAjusteMensualAplicacionService
         return $payload;
     }
 
-
-
     private function payloadLineaAdicional(SuscripcionAjusteMensual $ajuste, Asignaciones $asignacion): array 
     {
         $tipo = $this->normalizarTipo($ajuste->tipo_ajuste);
@@ -254,12 +252,6 @@ class SuscripcionAjusteMensualAplicacionService
             'total' => $total,
         ];
     }
-
-
-
-
-
-
 
     private function calcularCantidadDesdeAjuste(SuscripcionAjusteMensual $ajuste,SuscripcionLiquidacionDetalle $detalle): int 
     {

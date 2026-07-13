@@ -17,9 +17,6 @@ use Illuminate\Support\Facades\DB;
 class SuscripcionComisionMensualController extends Controller
 {
 
-
-
-
     public function create(Request $request)
     {
         $anio = (int) $request->input('anio', now()->year);
@@ -97,10 +94,6 @@ class SuscripcionComisionMensualController extends Controller
             'conceptosPagoVariable'
         ));
     }
-
-
-
-
 
     public function store(Request $request, SuscripcionGeneracionMensualService $generacionMensualService, SuscripcionAjusteMensualRegistroService $ajusteMensualRegistroService, SuscripcionAjusteMensualAplicacionService $ajusteMensualAplicacionService) 
     {
@@ -436,12 +429,6 @@ class SuscripcionComisionMensualController extends Controller
             ])
             ->with('success', $mensaje);
     }
-
-
-
-
-
-
 
     private function validarAjustesMensualesFormulario(array $ajustes): array
     {

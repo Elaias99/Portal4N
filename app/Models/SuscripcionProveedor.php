@@ -11,7 +11,7 @@ class SuscripcionProveedor extends Model
 
     protected $table = 'suscripcion_proveedores';
 
-    protected $fillable = ['cobranza_compra_id', 'tipo', 'detalle_documento','detalle_impuesto', 'final'];
+    protected $fillable = ['cobranza_compra_id', 'tipo', 'detalle_documento','detalle_impuesto', 'final','correo'];
 
 
     public function cobranzaCompra()
