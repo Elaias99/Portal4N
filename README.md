@@ -1,66 +1,174 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
-
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <img
+    src="./public/logos/zotFGi6QzfrFPtZkzL2y8CeX4hLxMh0IP0L9ggTc.png"
+    alt="Logo 4N"
+    width="240"
+  >
 </p>
 
-# Portal4N - Sistema de Recursos Humanos
+<h1 align="center">Portal4N</h1>
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+<p align="center">
+  Plataforma interna de gestión administrativa y operativa de 4N.
+</p>
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Descripción
 
-## Learning Laravel
+**Portal4N** es una plataforma web desarrollada para centralizar y apoyar distintos procesos administrativos y operativos de la empresa.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+El sistema permite gestionar información, documentos, solicitudes, operaciones mensuales y procesos internos desde una sola aplicación, manteniendo control, trazabilidad y acceso según los permisos de cada usuario.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## Módulos principales
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Portal4N contempla funcionalidades relacionadas con:
 
-## Laravel Sponsors
+- Gestión de usuarios, roles y permisos.
+- Recursos humanos y trabajadores.
+- Compras y cobranzas.
+- Ventas y cuentas por cobrar.
+- Gestión de proveedores.
+- Honorarios y documentación financiera.
+- Reclamos y seguimiento administrativo.
+- Generación de documentos y reportes.
+- Importación y exportación de archivos Excel.
+- Suscripciones, liquidaciones y prefacturación.
+- Procesos administrativos y operativos internos.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Tecnologías
 
-### Premium Partners
+### Backend
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+- PHP 8.2
+- Laravel 11
+- MySQL
+- Blade
+- Livewire
+- Spatie Laravel Permission
 
-## Contributing
+### Frontend
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- JavaScript
+- Vite
+- Bootstrap
+- Tailwind CSS
+- React en interfaces específicas
+- Axios
+- Leaflet
 
-## Code of Conduct
+### Documentos y archivos
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+- Laravel Excel
+- PhpSpreadsheet
+- DomPDF
+- FPDF
+- FPDI
 
-## Security Vulnerabilities
+## Requisitos
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Para ejecutar el proyecto localmente se necesita:
 
-## License
+- PHP 8.2 o superior
+- Composer
+- Node.js y npm
+- MySQL
+- Servidor web local o entorno compatible con Laravel
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Instalación local
+
+Clonar el repositorio:
+
+```bash
+git clone https://github.com/Elaias99/Portal4N.git
+cd Portal4N
+```
+
+Instalar las dependencias de PHP:
+
+```bash
+composer install
+```
+
+Instalar las dependencias del frontend:
+
+```bash
+npm install
+```
+
+Crear el archivo de configuración local:
+
+```bash
+cp .env.example .env
+```
+
+En Windows PowerShell también puede utilizarse:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Generar la clave de Laravel:
+
+```bash
+php artisan key:generate
+```
+
+Configurar en `.env` la conexión correspondiente a la base de datos.
+
+Ejecutar las migraciones cuando corresponda:
+
+```bash
+php artisan migrate
+```
+
+Iniciar la aplicación:
+
+```bash
+php artisan serve
+```
+
+En otra terminal, iniciar Vite:
+
+```bash
+npm run dev
+```
+
+## Laravel Brain
+
+El proyecto incorpora Laravel Brain como dependencia de desarrollo para analizar y visualizar su arquitectura.
+
+Para actualizar el análisis:
+
+```bash
+php artisan brain:scan
+```
+
+Con el servidor local iniciado, el visor se encuentra normalmente en:
+
+```text
+http://localhost:8000/_laravel-brain
+```
+
+Laravel Brain es una herramienta exclusiva para desarrollo y no debe exponerse en producción.
+
+## Seguridad
+
+Los siguientes elementos no deben almacenarse en el repositorio:
+
+- Archivos `.env`.
+- Credenciales o claves privadas.
+- Copias de bases de datos.
+- Archivos cargados por usuarios.
+- Registros de producción.
+- Resultados locales generados por Laravel Brain.
+
+La configuración real de cada entorno debe mantenerse fuera del control de versiones.
+
+## Estado del proyecto
+
+Portal4N se encuentra en desarrollo y mejora continua. Sus módulos evolucionan de acuerdo con los requerimientos administrativos y operativos de la empresa.
+
+## Uso
+
+Sistema desarrollado para uso interno de **4N**.
