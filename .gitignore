@@ -11,3 +11,5 @@ public/reclamos_fotos/
 .phpunit.result.cache
 .env
 .env.*
+!.env.example
+/storage/app/laravel-brain/
