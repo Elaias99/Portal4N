@@ -1151,76 +1151,178 @@ class DocumentoCompraController extends Controller
             'documentos_financieros_cruce' => 'nullable|array',
             'documentos_financieros_cruce.*' => 'integer|exists:documentos_financieros,id',
         ], [
-            'fecha_cruce.before_or_equal' => 'La fecha del cruce no debe sobrepasar la fecha actual.',
-            'fecha_cruce.required' => 'La fecha del cruce es obligatoria.',
-            'documentos_financieros_cruce.*.exists' => 'Uno de los documentos seleccionados no es válido.',
+            'fecha_cruce.before_or_equal' =>
+                'La fecha del cruce no debe sobrepasar la fecha actual.',
+
+            'fecha_cruce.required' =>
+                'La fecha del cruce es obligatoria.',
+
+            'documentos_financieros_cruce.*.exists' =>
+                'Uno de los documentos seleccionados no es válido.',
         ]);
 
-        $documento->loadMissing('cobranzaCompra', 'cobranzaClienteAsociada');
-
-        if (!$documento->cobranza_compra_id) {
-            return back()
-                ->withErrors(['cobranza_compra_id' => 'El documento no tiene una cobranza de compra asociada.'])
-                ->withInput();
-        }
-
-        $saldoPendienteCompra = $documento->saldo_pendiente;
-
-        $documentosSeleccionadosIds = collect($request->input('documentos_financieros_cruce', []))
+        /*
+        |--------------------------------------------------------------------------
+        | IDs de documentos CxC seleccionados
+        |--------------------------------------------------------------------------
+        | Se eliminan valores vacíos y duplicados, manteniendo el orden recibido.
+        |--------------------------------------------------------------------------
+        */
+        $documentosSeleccionadosIds = collect(
+            $request->input('documentos_financieros_cruce', [])
+        )
             ->filter()
+            ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
-
-        $datosAnteriores = [
-            'saldo_pendiente' => $saldoPendienteCompra,
-            'estado' => $documento->estado,
-        ];
 
         try {
             DB::transaction(function () use (
                 $request,
                 $documento,
-                $saldoPendienteCompra,
-                $documentosSeleccionadosIds,
-                $datosAnteriores
+                $documentosSeleccionadosIds
             ) {
+                /*
+                |--------------------------------------------------------------------------
+                | Bloquear documento de compra
+                |--------------------------------------------------------------------------
+                | Se vuelve a consultar dentro de la transacción para trabajar con el
+                | saldo más reciente y evitar que dos operaciones utilicen el mismo
+                | saldo simultáneamente.
+                |--------------------------------------------------------------------------
+                */
+                $documentoCompra = DocumentoCompra::with([
+                        'cobranzaCompra',
+                    ])
+                    ->lockForUpdate()
+                    ->findOrFail($documento->id);
+
+                if (!$documentoCompra->cobranza_compra_id) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'cobranza_compra_id' =>
+                            'El documento no tiene una cobranza de compra asociada.',
+                    ]);
+                }
+
+                $saldoPendienteCompra = (int) $documentoCompra->saldo_pendiente;
+
+                if ($saldoPendienteCompra <= 0) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'monto' =>
+                            'El documento de compra no tiene saldo pendiente disponible para cruzar.',
+                    ]);
+                }
+
+                $datosAnteriores = [
+                    'saldo_pendiente' => $saldoPendienteCompra,
+                    'estado' => $documentoCompra->estado,
+                ];
+
                 $detalleCrucesFinancieros = collect();
 
                 /*
-                * CASO 1:
-                * Vienen documentos financieros seleccionados desde CxC.
-                * Se crea UNA FILA en cruces POR CADA documento seleccionado.
+                |--------------------------------------------------------------------------
+                | CASO 1: Cruce entre CxP y documentos seleccionados de CxC
+                |--------------------------------------------------------------------------
+                | El objetivo es cubrir el saldo del documento de compra utilizando
+                | los documentos CxC seleccionados.
+                |
+                | Cada documento CxC aporta como máximo:
+                |
+                | min(
+                |     saldo restante de CxP,
+                |     saldo disponible del documento CxC
+                | )
+                |--------------------------------------------------------------------------
                 */
                 if ($documentosSeleccionadosIds->isNotEmpty()) {
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Conservar el orden de selección
+                    |--------------------------------------------------------------------------
+                    */
+                    $ordenSeleccion = $documentosSeleccionadosIds->flip();
+
                     $documentosFinancierosSeleccionados = DocumentoFinanciero::with([
                             'empresa',
                             'tipoDocumento',
                             'cobranza',
                         ])
                         ->whereIn('id', $documentosSeleccionadosIds)
-                        ->where('rut_cliente', $documento->rut_proveedor)
+                        ->where('rut_cliente', $documentoCompra->rut_proveedor)
                         ->whereNotIn('tipo_documento_id', [61, 56])
-                        ->get();
+                        ->lockForUpdate()
+                        ->get()
+                        ->sortBy(function ($docFinanciero) use ($ordenSeleccion) {
+                            return $ordenSeleccion->get(
+                                (int) $docFinanciero->id,
+                                PHP_INT_MAX
+                            );
+                        })
+                        ->values();
 
-                    if ($documentosFinancierosSeleccionados->count() !== $documentosSeleccionadosIds->count()) {
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Validar que todos los documentos correspondan al mismo cliente
+                    |--------------------------------------------------------------------------
+                    */
+                    if (
+                        $documentosFinancierosSeleccionados->count()
+                        !== $documentosSeleccionadosIds->count()
+                    ) {
                         throw \Illuminate\Validation\ValidationException::withMessages([
-                            'documentos_financieros_cruce' => 'Uno o más documentos seleccionados no corresponden al cliente asociado.',
+                            'documentos_financieros_cruce' =>
+                                'Uno o más documentos seleccionados no corresponden al cliente asociado.',
                         ]);
                     }
 
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Distribuir automáticamente el saldo de CxP
+                    |--------------------------------------------------------------------------
+                    */
+                    $saldoRestanteCompra = $saldoPendienteCompra;
+
                     foreach ($documentosFinancierosSeleccionados as $docFinanciero) {
+                        /*
+                        |------------------------------------------------------------------
+                        | La compra ya quedó completamente cubierta
+                        |------------------------------------------------------------------
+                        */
+                        if ($saldoRestanteCompra <= 0) {
+                            break;
+                        }
+
                         if (!$docFinanciero->cobranza_id) {
                             throw \Illuminate\Validation\ValidationException::withMessages([
-                                'documentos_financieros_cruce' => "El documento financiero folio {$docFinanciero->folio} no tiene cobranza asociada.",
+                                'documentos_financieros_cruce' =>
+                                    "El documento financiero folio {$docFinanciero->folio} no tiene cobranza asociada.",
                             ]);
                         }
 
-                        $montoDocumento = (int) $docFinanciero->saldo_pendiente;
+                        $saldoPendienteFinanciero = (int) $docFinanciero->saldo_pendiente;
+
+                        /*
+                        |------------------------------------------------------------------
+                        | Si el documento quedó sin saldo por otra operación, se omite
+                        |------------------------------------------------------------------
+                        */
+                        if ($saldoPendienteFinanciero <= 0) {
+                            continue;
+                        }
+
+                        /*
+                        |------------------------------------------------------------------
+                        | Monto que realmente aportará este documento
+                        |------------------------------------------------------------------
+                        */
+                        $montoDocumento = min(
+                            $saldoRestanteCompra,
+                            $saldoPendienteFinanciero
+                        );
 
                         if ($montoDocumento <= 0) {
-                            throw \Illuminate\Validation\ValidationException::withMessages([
-                                'documentos_financieros_cruce' => "El documento financiero folio {$docFinanciero->folio} no tiene saldo pendiente disponible.",
-                            ]);
+                            continue;
                         }
 
                         $detalleCrucesFinancieros->push([
@@ -1231,115 +1333,216 @@ class DocumentoCompraController extends Controller
                             'rut_cliente' => $docFinanciero->rut_cliente,
                             'razon_social' => $docFinanciero->razon_social,
                             'cobranza_id' => $docFinanciero->cobranza_id,
+
+                            'saldo_anterior_cxc' => $saldoPendienteFinanciero,
                             'monto_cruzado' => $montoDocumento,
+                            'saldo_resultante_cxc' => max(
+                                $saldoPendienteFinanciero - $montoDocumento,
+                                0
+                            ),
                         ]);
+
+                        /*
+                        |------------------------------------------------------------------
+                        | Reducir lo que todavía falta cubrir del documento CxP
+                        |------------------------------------------------------------------
+                        */
+                        $saldoRestanteCompra -= $montoDocumento;
                     }
 
-                    $montoCruceTotal = (int) $detalleCrucesFinancieros->sum('monto_cruzado');
+                    $montoCruceTotal = (int) $detalleCrucesFinancieros
+                        ->sum('monto_cruzado');
 
                     if ($montoCruceTotal <= 0) {
                         throw \Illuminate\Validation\ValidationException::withMessages([
-                            'monto' => 'El monto del cruce debe ser mayor a cero.',
+                            'documentos_financieros_cruce' =>
+                                'Los documentos seleccionados no tienen saldo pendiente disponible para cruzar.',
                         ]);
                     }
 
-                    if ($montoCruceTotal > $saldoPendienteCompra) {
-                        throw \Illuminate\Validation\ValidationException::withMessages([
-                            'monto' => 'El total seleccionado no puede ser mayor al saldo pendiente actual del documento de compra.',
-                        ]);
-                    }
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Crear un registro de cruce por cada documento CxC utilizado
+                    |--------------------------------------------------------------------------
+                    */
+                    $documentosFinancierosPorId = $documentosFinancierosSeleccionados
+                        ->keyBy('id');
 
-                    foreach ($documentosFinancierosSeleccionados as $docFinanciero) {
-                        $detalle = $detalleCrucesFinancieros
-                            ->firstWhere('id', $docFinanciero->id);
+                    foreach ($detalleCrucesFinancieros as $detalle) {
+                        $docFinanciero = $documentosFinancierosPorId->get(
+                            $detalle['id']
+                        );
+
+                        if (!$docFinanciero) {
+                            throw new \RuntimeException(
+                                'No fue posible recuperar uno de los documentos financieros seleccionados.'
+                            );
+                        }
 
                         $montoDocumento = (int) $detalle['monto_cruzado'];
 
-                        $cruce = $documento->cruces()->create([
+                        $cruce = $documentoCompra->cruces()->create([
                             'documento_financiero_id' => $docFinanciero->id,
                             'cobranza_id' => $docFinanciero->cobranza_id,
-                            'cobranza_compra_id' => $documento->cobranza_compra_id,
+                            'cobranza_compra_id' => $documentoCompra->cobranza_compra_id,
                             'monto' => $montoDocumento,
                             'fecha_cruce' => $request->fecha_cruce,
                         ]);
 
+                        /*
+                        |--------------------------------------------------------------------------
+                        | Recalcular saldo y estado del documento CxC
+                        |--------------------------------------------------------------------------
+                        */
                         $docFinanciero->recalcularSaldoPendiente();
+                        $docFinanciero->refresh();
 
-                        $docFinanciero->update([
-                            'status' => 'Cruce',
-                            'fecha_estado_manual' => now(),
-                        ]);
+                        if (
+                            method_exists(
+                                $docFinanciero,
+                                'sincronizarEstadosDesdeMovimientos'
+                            )
+                        ) {
+                            $docFinanciero->sincronizarEstadosDesdeMovimientos();
+                            $docFinanciero->refresh();
+                        } else {
+                            $docFinanciero->update([
+                                'status' => 'Cruce',
+                                'fecha_estado_manual' => now(),
+                            ]);
 
+                            $docFinanciero->refresh();
+                        }
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | Registrar trazabilidad en CxC
+                        |--------------------------------------------------------------------------
+                        */
                         MovimientoDocumento::create([
                             'documento_financiero_id' => $docFinanciero->id,
                             'user_id' => Auth::id(),
                             'tipo_movimiento' => 'Cruce registrado desde CxP',
-                            'descripcion' => "Se registró un cruce de {$montoDocumento} el {$request->fecha_cruce} contra el documento de compra folio {$documento->folio}.",
+
+                            'descripcion' =>
+                                "Se registró un cruce de {$montoDocumento} " .
+                                "el {$request->fecha_cruce} contra el documento " .
+                                "de compra folio {$documentoCompra->folio}.",
+
+                            'datos_anteriores' => [
+                                'saldo_pendiente' =>
+                                    $detalle['saldo_anterior_cxc'],
+                            ],
+
                             'datos_nuevos' => [
                                 'cruce_id' => $cruce->id,
                                 'monto' => $montoDocumento,
                                 'fecha_cruce' => $request->fecha_cruce,
-                                'documento_compra_id' => $documento->id,
-                                'documento_compra_folio' => $documento->folio,
-                                'cobranza_compra_id' => $documento->cobranza_compra_id,
-                                'cobranza_compra_razon_social' => $documento->cobranzaCompra?->razon_social,
-                                'nuevo_saldo' => $docFinanciero->saldo_pendiente,
+
+                                'documento_compra_id' => $documentoCompra->id,
+                                'documento_compra_folio' => $documentoCompra->folio,
+
+                                'cobranza_compra_id' =>
+                                    $documentoCompra->cobranza_compra_id,
+
+                                'cobranza_compra_razon_social' =>
+                                    $documentoCompra->cobranzaCompra?->razon_social,
+
+                                'nuevo_saldo' =>
+                                    (int) $docFinanciero->saldo_pendiente,
                             ],
                         ]);
                     }
                 }
 
                 /*
-                * CASO 2:
-                * No vienen documentos financieros seleccionados.
-                * Mantiene el comportamiento manual anterior.
+                |--------------------------------------------------------------------------
+                | CASO 2: Cruce manual sin documento financiero seleccionado
+                |--------------------------------------------------------------------------
+                | Se mantiene el comportamiento anterior.
+                |--------------------------------------------------------------------------
                 */
                 else {
                     $montoCruceTotal = (int) $request->monto;
 
                     if ($montoCruceTotal <= 0) {
                         throw \Illuminate\Validation\ValidationException::withMessages([
-                            'monto' => 'El monto del cruce debe ser mayor a cero.',
+                            'monto' =>
+                                'El monto del cruce debe ser mayor a cero.',
                         ]);
                     }
 
                     if ($montoCruceTotal > $saldoPendienteCompra) {
                         throw \Illuminate\Validation\ValidationException::withMessages([
-                            'monto' => 'El cruce no puede ser mayor al saldo pendiente actual.',
+                            'monto' =>
+                                'El cruce no puede ser mayor al saldo pendiente actual.',
                         ]);
                     }
 
-                    $documento->cruces()->create([
+                    $documentoCompra->cruces()->create([
                         'monto' => $montoCruceTotal,
                         'fecha_cruce' => $request->fecha_cruce,
-                        'cobranza_compra_id' => $documento->cobranza_compra_id,
+                        'cobranza_compra_id' =>
+                            $documentoCompra->cobranza_compra_id,
                     ]);
                 }
 
-                $documento->recalcularSaldoPendiente();
+                /*
+                |--------------------------------------------------------------------------
+                | Recalcular documento de compra
+                |--------------------------------------------------------------------------
+                */
+                $documentoCompra->recalcularSaldoPendiente();
+                $documentoCompra->refresh();
 
-                $documento->update([
+                $documentoCompra->update([
                     'estado' => 'Cruce',
                     'fecha_estado_manual' => now(),
                 ]);
 
+                $documentoCompra->refresh();
+
+                /*
+                |--------------------------------------------------------------------------
+                | Registrar trazabilidad en CxP
+                |--------------------------------------------------------------------------
+                */
                 MovimientoCompra::create([
-                    'documento_compra_id' => $documento->id,
+                    'documento_compra_id' => $documentoCompra->id,
                     'usuario_id' => Auth::id(),
                     'estado_anterior' => $datosAnteriores['estado'],
                     'nuevo_estado' => 'Cruce',
                     'fecha_cambio' => now(),
                     'tipo_movimiento' => 'Registro de cruce',
-                    'descripcion' => "Se registró un cruce de {$montoCruceTotal} el {$request->fecha_cruce} con la cobranza de compra asociada {$documento->cobranzaCompra?->razon_social}.",
+
+                    'descripcion' =>
+                        "Se registró un cruce de {$montoCruceTotal} " .
+                        "el {$request->fecha_cruce} con la cobranza de compra " .
+                        "asociada {$documentoCompra->cobranzaCompra?->razon_social}.",
+
                     'datos_anteriores' => $datosAnteriores,
+
                     'datos_nuevos' => [
                         'monto' => $montoCruceTotal,
                         'fecha_cruce' => $request->fecha_cruce,
-                        'cobranza_compra_id' => $documento->cobranza_compra_id,
-                        'cobranza_compra_razon_social' => $documento->cobranzaCompra?->razon_social,
-                        'documentos_financieros_cruce' => $detalleCrucesFinancieros->values(),
+
+                        'cobranza_compra_id' =>
+                            $documentoCompra->cobranza_compra_id,
+
+                        'cobranza_compra_razon_social' =>
+                            $documentoCompra->cobranzaCompra?->razon_social,
+
+                        'documentos_financieros_cruce' =>
+                            $detalleCrucesFinancieros->values()->all(),
+
                         'saldo_anterior' => $saldoPendienteCompra,
-                        'nuevo_saldo' => $documento->saldo_pendiente,
+                        'nuevo_saldo' =>
+                            (int) $documentoCompra->saldo_pendiente,
+
+                        'tipo_resultado' =>
+                            $documentoCompra->saldo_pendiente <= 0
+                                ? 'Cruce completo'
+                                : 'Cruce parcial',
                     ],
                 ]);
             });
@@ -1349,11 +1552,17 @@ class DocumentoCompraController extends Controller
             report($e);
 
             return back()
-                ->withErrors(['cruce' => 'Ocurrió un error al registrar el cruce.'])
+                ->withErrors([
+                    'cruce' =>
+                        'Ocurrió un error al registrar el cruce.',
+                ])
                 ->withInput();
         }
 
-        return back()->with('success', 'Cruce registrado correctamente.');
+        return back()->with(
+            'success',
+            'Cruce registrado correctamente.'
+        );
     }
 
 
