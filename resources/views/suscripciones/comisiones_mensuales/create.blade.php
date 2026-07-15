@@ -810,89 +810,128 @@
 
 
 
-        {{-- COMISIONES --}}
-        {{-- PAGOS ADICIONALES --}}
-        <div class="card mb-4">
-            <button
-                type="button"
-                class="card-header w-100 border-0 bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 text-start"
-                data-suscripcion-toggle="#panel-comisiones-mensuales"
-                aria-expanded="false"
-            >
-                <span>
-                    <strong>Pagos adicionales del mes</strong>
-                    <span class="small text-muted ms-2">
-                        Agrega pagos adicionales sólo si corresponde para este periodo.
-                    </span>
+    {{-- COMISIONES --}}
+    {{-- PAGOS ADICIONALES --}}
+    <div class="card mb-4">
+        <button
+            type="button"
+            class="card-header w-100 border-0 bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 text-start"
+            data-suscripcion-toggle="#panel-comisiones-mensuales"
+            aria-expanded="false"
+        >
+            <span>
+                <strong>Pagos adicionales del mes</strong>
+
+                <span class="small text-muted ms-2">
+                    Agrega pagos adicionales sólo si corresponde para este periodo.
                 </span>
+            </span>
 
-                <span data-suscripcion-toggle-icon>⌄</span>
-            </button>
+            <span data-suscripcion-toggle-icon>⌄</span>
+        </button>
 
-
-            
+        {{-- CONTENIDO DEL ACORDEÓN --}}
+        <div
+            id="panel-comisiones-mensuales"
+            class="card-body d-none"
+        >
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-            <div>
-                <div class="small text-muted mb-1">
-                    Los pagos adicionales del mes se agregan exclusivamente desde la carga masiva.
+                <div>
+                    <div class="small text-muted mb-1">
+                        Los pagos adicionales del mes se agregan exclusivamente
+                        desde la carga masiva.
+                    </div>
+
+                    <div class="small text-muted">
+                        Cada pago utiliza una tarifa y una cantidad.
+                        El total se calcula multiplicando tarifa × cantidad.
+                    </div>
                 </div>
 
-                <div class="small text-muted">
-                    Cada pago agregado quedará en el resumen inferior antes de generar el mes completo.
-                </div>
+                <button
+                    type="button"
+                    id="btn-abrir-comisiones-masivas"
+                    class="btn btn-outline-primary btn-sm"
+                    data-toggle="modal"
+                    data-target="#modal-comisiones-masivas"
+                >
+                    Carga masiva de pagos adicionales
+                </button>
             </div>
 
-            <button
-                type="button"
-                id="btn-abrir-comisiones-masivas"
-                class="btn btn-outline-primary btn-sm"
-                data-toggle="modal"
-                data-target="#modal-comisiones-masivas"
-            >
-                Carga masiva de pagos adicionales
-            </button>
+            {{-- INPUTS OCULTOS GENERADOS POR EL JS --}}
+            <div id="comisiones-hidden-container"></div>
+
+            {{-- RESUMEN DE PAGOS AGREGADOS --}}
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle mb-2">
+                    <thead>
+                        <tr>
+                            <th>
+                                Proveedor
+                            </th>
+
+                            <th>
+                                Transportista
+                            </th>
+
+                            <th class="text-end">
+                                Tarifa
+                            </th>
+
+                            <th class="text-end">
+                                Cantidad
+                            </th>
+
+                            <th class="text-end">
+                                Total
+                            </th>
+
+                            <th>
+                                Observación
+                            </th>
+
+                            <th class="text-center">
+                                Acción
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="comisiones-resumen-body">
+                        <tr>
+                            <td
+                                colspan="7"
+                                class="text-muted text-center"
+                            >
+                                No hay pagos adicionales agregados para este periodo.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="small text-muted mt-3">
+                Pagos adicionales agregados:
+
+                <strong id="comisiones-cantidad">
+                    0
+                </strong>
+
+                <span class="mx-1">|</span>
+
+                Total estimado:
+
+                <strong id="comisiones-total">
+                    $0
+                </strong>
+            </div>
         </div>
-
-        <div id="comisiones-hidden-container"></div>
-
-        <div class="table-responsive">
-            <table class="table table-sm table-bordered align-middle mb-2">
-                <thead>
-                    <tr>
-                        <th>Proveedor</th>
-                        <th>Transportista</th>
-                        <th>Punto</th>
-                        <th>Servicio</th>
-                        <th class="text-end">Monto</th>
-                        <th>Observación</th>
-                        <th class="text-center">Acción</th>
-                    </tr>
-                </thead>
-
-                <tbody id="comisiones-resumen-body">
-                    <tr>
-                        <td colspan="7" class="text-muted text-center">
-                            No hay pagos adicionales agregados para este periodo.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="small text-muted mt-3">
-            Pagos adicionales agregados:
-            <strong id="comisiones-cantidad">0</strong>
-            <span class="mx-1">|</span>
-            Total estimado:
-            <strong id="comisiones-total">$0</strong>
-        </div>
+    </div>
 
 
 
 
-
-        </div>
-        @include('suscripciones.comisiones_mensuales.partials.modal-comisiones-masivas')
+     @include('suscripciones.comisiones_mensuales.partials.modal-comisiones-masivas')
 
 
 

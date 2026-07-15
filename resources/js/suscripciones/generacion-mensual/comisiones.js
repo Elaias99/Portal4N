@@ -76,7 +76,21 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
     }
 
     function normalizarComision(comision) {
-        const costo = parseInt(comision.costo || 0, 10);
+        const costo = parseInt(
+            comision.costo || 0,
+            10
+        );
+
+        const cantidad = parseInt(
+            comision.cantidad ?? 1,
+            10
+        );
+
+        const costoNormalizado =
+            Number.isNaN(costo) ? 0 : costo;
+
+        const cantidadNormalizada =
+            Number.isNaN(cantidad) ? 0 : cantidad;
 
         return {
             codigo:
@@ -90,10 +104,14 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
                 comision.suscripcion_transportista_id || '',
 
             proveedor_label:
-                limpiarTexto(comision.proveedor_label || '—'),
+                limpiarTexto(
+                    comision.proveedor_label || '—'
+                ),
 
             transportista_label:
-                limpiarTexto(comision.transportista_label || '—'),
+                limpiarTexto(
+                    comision.transportista_label || '—'
+                ),
 
             punto_1:
                 limpiarTexto(comision.punto_1 || ''),
@@ -111,8 +129,24 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
                     comision.servicio || 'Reparto fin de semana'
                 ) || 'Reparto fin de semana',
 
+            /*
+            * Tarifa unitaria.
+            */
             costo:
-                Number.isNaN(costo) ? 0 : costo,
+                costoNormalizado,
+
+            /*
+            * Cantidad individual del proveedor.
+            */
+            cantidad:
+                cantidadNormalizada,
+
+            /*
+            * Se utiliza para mostrar el resumen.
+            * El backend vuelve a calcularlo de forma segura.
+            */
+            total:
+                costoNormalizado * cantidadNormalizada,
 
             observacion:
                 limpiarTexto(comision.observacion || ''),
@@ -133,7 +167,7 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
             c.resumenBody.innerHTML = `
                 <tr>
                     <td colspan="7" class="text-muted text-center">
-                        No hay comisiones agregadas para este periodo.
+                        No hay pagos adicionales agregados para este periodo.
                     </td>
                 </tr>
             `;
@@ -143,17 +177,40 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
             }
 
             if (c.totalTexto) {
-                c.totalTexto.textContent = formatearCLP(0);
+                c.totalTexto.textContent =
+                    formatearCLP(0);
             }
 
             return;
         }
 
-        let total = 0;
+        let totalGeneral = 0;
 
         comisiones.forEach(function (comision, index) {
-            total += parseInt(comision.costo || 0, 10);
+            const tarifa = parseInt(
+                comision.costo || 0,
+                10
+            );
 
+            const cantidad = parseInt(
+                comision.cantidad || 0,
+                10
+            );
+
+            const tarifaValida =
+                Number.isNaN(tarifa) ? 0 : tarifa;
+
+            const cantidadValida =
+                Number.isNaN(cantidad) ? 0 : cantidad;
+
+            const totalComision =
+                tarifaValida * cantidadValida;
+
+            totalGeneral += totalComision;
+
+            /*
+            * Datos enviados al backend.
+            */
             agregarHidden(
                 `comisiones[${index}][codigo]`,
                 comision.codigo || 'COMISION',
@@ -169,6 +226,22 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
             agregarHidden(
                 `comisiones[${index}][suscripcion_transportista_id]`,
                 comision.suscripcion_transportista_id,
+                c.hiddenContainer
+            );
+
+            /*
+            * Las etiquetas permiten reconstruir visualmente
+            * el resumen cuando Laravel devuelve withInput().
+            */
+            agregarHidden(
+                `comisiones[${index}][proveedor_label]`,
+                comision.proveedor_label,
+                c.hiddenContainer
+            );
+
+            agregarHidden(
+                `comisiones[${index}][transportista_label]`,
+                comision.transportista_label,
                 c.hiddenContainer
             );
 
@@ -196,12 +269,28 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
                 c.hiddenContainer
             );
 
+            /*
+            * costo representa la tarifa.
+            */
             agregarHidden(
                 `comisiones[${index}][costo]`,
-                comision.costo,
+                tarifaValida,
                 c.hiddenContainer
             );
 
+            /*
+            * Cantidad individual del pago.
+            */
+            agregarHidden(
+                `comisiones[${index}][cantidad]`,
+                cantidadValida,
+                c.hiddenContainer
+            );
+
+            /*
+            * No enviamos total.
+            * El controlador calcula tarifa × cantidad.
+            */
             agregarHidden(
                 `comisiones[${index}][observacion]`,
                 comision.observacion,
@@ -212,27 +301,33 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
 
             row.innerHTML = `
                 <td>
-                    ${escaparHtml(comision.proveedor_label)}
+                    ${escaparHtml(
+                        comision.proveedor_label || '—'
+                    )}
                 </td>
 
                 <td>
-                    ${escaparHtml(comision.transportista_label)}
-                </td>
-
-                <td>
-                    ${escaparHtml(comision.punto_1 || '—')}
-                </td>
-
-                <td>
-                    ${escaparHtml(comision.servicio || '—')}
+                    ${escaparHtml(
+                        comision.transportista_label || '—'
+                    )}
                 </td>
 
                 <td class="text-end">
-                    ${formatearCLP(comision.costo)}
+                    ${formatearCLP(tarifaValida)}
+                </td>
+
+                <td class="text-end">
+                    ${cantidadValida}
+                </td>
+
+                <td class="text-end fw-semibold">
+                    ${formatearCLP(totalComision)}
                 </td>
 
                 <td>
-                    ${escaparHtml(comision.observacion || '—')}
+                    ${escaparHtml(
+                        comision.observacion || '—'
+                    )}
                 </td>
 
                 <td class="text-center">
@@ -257,7 +352,8 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
         }
 
         if (c.totalTexto) {
-            c.totalTexto.textContent = formatearCLP(total);
+            c.totalTexto.textContent =
+                formatearCLP(totalGeneral);
         }
     }
 
@@ -285,8 +381,8 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
             return;
         }
 
-        if (Number.isNaN(costo) || costo < 0) {
-            alert('Ingresa un costo válido para la comisión.');
+        if (Number.isNaN(costo) || costo <= 0) {
+            alert('Ingresa una tarifa válida mayor a 0.');
             return;
         }
 
@@ -321,6 +417,11 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
 
             costo,
 
+            /*
+            * Compatibilidad con el formulario manual antiguo.
+            */
+            cantidad: 1,
+
             observacion:
                 limpiarTexto(c.observacionInput?.value),
         });
@@ -351,12 +452,21 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
             const comisionNormalizada =
                 normalizarComision(comision);
 
+
+
+
             if (
                 !comisionNormalizada.suscripcion_proveedor_id
                 || !comisionNormalizada.suscripcion_transportista_id
+                || comisionNormalizada.costo <= 0
+                || comisionNormalizada.cantidad <= 0
             ) {
                 return;
             }
+
+
+
+
 
             /*
              * Cada elemento del arreglo representa un pago independiente.
@@ -401,17 +511,36 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
                     suscripcion_transportista_id:
                         comision.suscripcion_transportista_id,
 
+
+
+
+
+
+
                     proveedor_label:
-                        labelPorValor(
-                            c.proveedorSelect,
-                            comision.suscripcion_proveedor_id
+                        limpiarTexto(
+                            comision.proveedor_label
+                            || labelPorValor(
+                                c.proveedorSelect,
+                                comision.suscripcion_proveedor_id
+                            )
                         ),
 
                     transportista_label:
-                        labelPorValor(
-                            c.transportistaSelect,
-                            comision.suscripcion_transportista_id
+                        limpiarTexto(
+                            comision.transportista_label
+                            || labelPorValor(
+                                c.transportistaSelect,
+                                comision.suscripcion_transportista_id
+                            )
                         ),
+
+
+
+
+
+
+
 
                     punto_1:
                         limpiarTexto(comision.punto_1 || ''),
@@ -431,8 +560,13 @@ export function inicializarComisiones(dom, comisionesIniciales = []) {
                             || 'Reparto fin de semana'
                         ),
 
+
+
                     costo:
                         parseInt(comision.costo || 0, 10),
+
+                    cantidad:
+                        parseInt(comision.cantidad ?? 1, 10),
 
                     observacion:
                         limpiarTexto(

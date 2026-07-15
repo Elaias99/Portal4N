@@ -8,7 +8,10 @@
     y lo agrega al flujo central de comisiones[].
 
     Reglas:
-    - Se define un monto común para los pagos preparados en esta carga.
+    - Se define una tarifa común para los pagos preparados en esta carga.
+    - Se define una observación común, por ejemplo: Maquilado.
+    - Cada pago preparado tendrá una cantidad individual.
+    - El total de cada pago corresponde a tarifa × cantidad.
     - Cada clic en "Agregar pago" crea un registro independiente.
     - Un mismo proveedor puede recibir más de un pago adicional.
     - El transportista puede revisarse o corregirse por cada pago.
@@ -40,8 +43,8 @@
                     </h5>
 
                     <div class="small text-muted">
-                        Define un monto común y agrega los pagos adicionales
-                        que correspondan para este periodo.
+                        Define una observación y una tarifa común.
+                        Luego agrega los proveedores e ingresa la cantidad correspondiente a cada pago.
                     </div>
                 </div>
 
@@ -59,11 +62,19 @@
 
                 <div class="alert alert-info small mb-4">
                     <strong>Importante:</strong>
-                    el monto ingresado se aplicará a cada pago preparado.
-                    Puedes agregar al mismo proveedor más de una vez si debe recibir
-                    más de un pago adicional durante el periodo.
-                    Cada clic en <strong>Agregar pago</strong> creará un registro independiente
-                    dentro de <code>comisiones[]</code>.
+                    la tarifa y la observación se aplicarán a todos los pagos preparados
+                    en esta carga.
+
+                    Después de agregar un proveedor, deberás ingresar su
+                    <strong>cantidad</strong> en la sección
+                    <strong>Revisar pagos preparados</strong>.
+
+                    El total de cada pago se calculará multiplicando
+                    <strong>tarifa × cantidad</strong>.
+
+                    Puedes agregar al mismo proveedor más de una vez, ya que cada clic en
+                    <strong>Agregar pago</strong> crea un registro independiente dentro de
+                    <code>comisiones[]</code>.
                 </div>
 
                 {{-- TEMPLATE DE TRANSPORTISTAS PARA EL JS --}}
@@ -91,22 +102,45 @@
                 <div class="border rounded p-3 mb-4">
                     <div class="mb-3">
                         <h6 class="mb-1">
-                            1. Definir pago adicional
+                            1. Definir datos comunes
                         </h6>
 
                         <div class="small text-muted">
-                            El monto y la observación se aplicarán a cada pago que prepares
-                            en las siguientes secciones.
+                            La observación y la tarifa se aplicarán a cada proveedor
+                            agregado durante esta carga.
                         </div>
                     </div>
 
                     <div class="row g-3 align-items-end">
+
+                        <div class="col-md-8">
+                            <label
+                                for="comision-masiva-observacion-general"
+                                class="form-label"
+                            >
+                                Observación general opcional
+                            </label>
+
+                            <input
+                                type="text"
+                                id="comision-masiva-observacion-general"
+                                class="form-control"
+                                placeholder="Ej: Maquilado"
+                                autocomplete="off"
+                            >
+
+                            <div class="form-text">
+                                La misma observación se aplicará a todos los pagos
+                                preparados en esta carga.
+                            </div>
+                        </div>
+
                         <div class="col-md-4">
                             <label
                                 for="comision-masiva-monto"
                                 class="form-label"
                             >
-                                Monto por pago adicional
+                                Tarifa unitaria
                             </label>
 
                             <div class="input-group">
@@ -126,28 +160,8 @@
                             </div>
 
                             <div class="form-text">
-                                Este monto se repetirá en cada pago preparado.
-                            </div>
-                        </div>
-
-                        <div class="col-md-8">
-                            <label
-                                for="comision-masiva-observacion-general"
-                                class="form-label"
-                            >
-                                Observación general opcional
-                            </label>
-
-                            <input
-                                type="text"
-                                id="comision-masiva-observacion-general"
-                                class="form-control"
-                                placeholder="Ej: Pago adicional correspondiente al periodo"
-                                autocomplete="off"
-                            >
-
-                            <div class="form-text">
-                                La misma observación se aplicará a todos los pagos de esta carga.
+                                Esta tarifa se multiplicará por la cantidad
+                                ingresada para cada proveedor.
                             </div>
                         </div>
                     </div>
@@ -165,13 +179,17 @@
 
                             <div class="small text-muted">
                                 Busca por razón social, RUT o tipo de documento.
-                                Presiona <strong>Agregar pago</strong> por cada registro que necesites crear.
-                                Puedes presionar el botón varias veces para el mismo proveedor.
+
+                                Presiona <strong>Agregar pago</strong> por cada registro
+                                que necesites preparar.
+
+                                La cantidad se ingresará posteriormente en la sección de revisión.
                             </div>
                         </div>
 
                         <div class="small text-muted">
                             Pagos preparados:
+
                             <strong id="comision-masiva-seleccionados-contador">
                                 0
                             </strong>
@@ -191,7 +209,7 @@
                                 type="text"
                                 id="comision-masiva-buscador"
                                 class="form-control"
-                                placeholder="Ej: ROMOLO, LORENZA, 12328835-1, FACTURA..."
+                                placeholder="Ej: ALEJANDRO, 15736181-3, FACTURA..."
                                 autocomplete="off"
                             >
                         </div>
@@ -233,16 +251,8 @@
                                         Proveedor / RUT
                                     </th>
 
-                                    <th style="width: 150px;">
+                                    <th style="width: 180px;">
                                         Tipo documento
-                                    </th>
-
-                                    <th style="width: 230px;">
-                                        Detalle
-                                    </th>
-
-                                    <th style="width: 150px;">
-                                        Final
                                     </th>
                                 </tr>
                             </thead>
@@ -276,12 +286,6 @@
                                             . $rutCliente
                                             . ' | '
                                             . $tipoDocumento
-                                        );
-
-                                        $detalleLabel = trim(
-                                            ($detalleDocumento ?: 'Sin detalle documento')
-                                            . ' | '
-                                            . ($detalleImpuesto ?: 'Sin detalle impuesto')
                                         );
 
                                         $textoBusqueda = mb_strtoupper(trim(
@@ -339,19 +343,11 @@
                                         <td>
                                             {{ $tipoDocumento }}
                                         </td>
-
-                                        <td>
-                                            {{ $detalleLabel }}
-                                        </td>
-
-                                        <td>
-                                            {{ $final ?: '—' }}
-                                        </td>
                                     </tr>
                                 @empty
                                     <tr>
                                         <td
-                                            colspan="5"
+                                            colspan="3"
                                             class="text-muted text-center"
                                         >
                                             No hay proveedores disponibles para
@@ -376,8 +372,9 @@
 
                             <div class="small text-muted">
                                 Cada fila representa un pago adicional independiente.
-                                Un proveedor puede aparecer más de una vez.
-                                Revisa el transportista relacionado antes de confirmar.
+
+                                Revisa el transportista e ingresa la cantidad correspondiente
+                                para calcular el total del proveedor.
                             </div>
                         </div>
 
@@ -392,7 +389,7 @@
 
                     <div
                         class="table-responsive"
-                        style="max-height: 320px; overflow-y: auto;"
+                        style="max-height: 360px; overflow-y: auto;"
                     >
                         <table class="table table-sm table-bordered align-middle mb-2">
                             <thead class="table-light">
@@ -406,13 +403,27 @@
                                     </th>
 
                                     <th
-                                        style="width: 150px;"
+                                        style="min-width: 125px;"
                                         class="text-end"
                                     >
-                                        Monto
+                                        Tarifa
                                     </th>
 
-                                    <th style="min-width: 200px;">
+                                    <th
+                                        style="min-width: 120px;"
+                                        class="text-center"
+                                    >
+                                        Cantidad
+                                    </th>
+
+                                    <th
+                                        style="min-width: 135px;"
+                                        class="text-end"
+                                    >
+                                        Total
+                                    </th>
+
+                                    <th style="min-width: 190px;">
                                         Observación
                                     </th>
 
@@ -428,7 +439,7 @@
                             <tbody id="comision-masiva-seleccionados-body">
                                 <tr data-comision-masiva-empty>
                                     <td
-                                        colspan="5"
+                                        colspan="7"
                                         class="text-muted text-center"
                                     >
                                         No hay pagos adicionales preparados.
@@ -457,7 +468,7 @@
                         <div class="col-md-4">
                             <div class="border rounded bg-light p-3 h-100">
                                 <div class="small text-muted">
-                                    Monto por pago
+                                    Tarifa unitaria
                                 </div>
 
                                 <div

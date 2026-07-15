@@ -254,41 +254,111 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
                 row.dataset.rut || ''
             ),
 
+
             suscripcion_transportista_id:
                 buscarTransportistaPorNombre(razonSocial),
 
             transportista_label: '',
+
+            /*
+            * La cantidad se completa después,
+            * en la sección Revisar pagos preparados.
+            */
+            cantidad: '',
+
         };
     }
 
+
+
+
     function actualizarResumen() {
-        const cantidad = pagos.length;
-        const monto = montoComun();
-        const total = cantidad * monto;
+        const pagosPreparados = pagos.length;
+        const tarifa = montoComun();
+
+        const total = pagos.reduce(function (acumulado, pago) {
+            const cantidad = entero(pago.cantidad);
+
+            if (cantidad === null || cantidad <= 0) {
+                return acumulado;
+            }
+
+            return acumulado + (tarifa * cantidad);
+        }, 0);
 
         if (contadorSeleccionados) {
-            contadorSeleccionados.textContent = String(cantidad);
+            contadorSeleccionados.textContent =
+                String(pagosPreparados);
         }
 
         if (resumenCantidad) {
-            resumenCantidad.textContent = String(cantidad);
+            resumenCantidad.textContent =
+                String(pagosPreparados);
         }
 
         if (montoPreview) {
-            montoPreview.textContent = formatearCLP(monto);
+            montoPreview.textContent =
+                formatearCLP(tarifa);
         }
 
         if (totalPreview) {
-            totalPreview.textContent = formatearCLP(total);
+            totalPreview.textContent =
+                formatearCLP(total);
         }
     }
+
+
+
+    function actualizarTotalesFilas() {
+        if (!seleccionadosBody) {
+            actualizarResumen();
+            return;
+        }
+
+        const tarifa = montoComun();
+
+        seleccionadosBody
+            .querySelectorAll('[data-comision-masiva-pago]')
+            .forEach(function (row) {
+                const pagoUid = row.dataset.uid;
+
+                const pago = pagos.find(function (item) {
+                    return item.uid === pagoUid;
+                });
+
+                if (!pago) {
+                    return;
+                }
+
+                const cantidad = entero(pago.cantidad);
+
+                const total = cantidad !== null && cantidad > 0
+                    ? tarifa * cantidad
+                    : 0;
+
+                const totalFila = row.querySelector(
+                    '[data-comision-masiva-total-fila]'
+                );
+
+                if (totalFila) {
+                    totalFila.textContent =
+                        formatearCLP(total);
+                }
+            });
+
+        actualizarResumen();
+    }
+
+
+
+
 
     function actualizarDatosComunesEnFilas() {
         if (!seleccionadosBody) {
             return;
         }
 
-        const monto = montoComun();
+        const tarifa = montoComun();
         const observacion = observacionGeneral();
 
         seleccionadosBody
@@ -296,7 +366,8 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
                 '[data-comision-masiva-monto-fila]'
             )
             .forEach(function (elemento) {
-                elemento.textContent = formatearCLP(monto);
+                elemento.textContent =
+                    formatearCLP(tarifa);
             });
 
         seleccionadosBody
@@ -304,13 +375,22 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
                 '[data-comision-masiva-observacion-fila]'
             )
             .forEach(function (elemento) {
-                elemento.textContent = observacion || '—';
+                elemento.textContent =
+                    observacion || '—';
             });
 
-        actualizarResumen();
+        actualizarTotalesFilas();
     }
 
-    function guardarTransportistasEditados() {
+
+
+
+
+
+
+
+
+    function guardarDatosEditados() {
         if (!seleccionadosBody) {
             return;
         }
@@ -338,13 +418,31 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
                     '[data-comision-masiva-transportista]'
                 );
 
+                const cantidadInput = row.querySelector(
+                    '[data-comision-masiva-cantidad]'
+                );
+
                 pagos[index].suscripcion_transportista_id =
                     transportistaSelect?.value || '';
 
                 pagos[index].transportista_label =
                     optionLabel(transportistaSelect);
+
+                const cantidad = entero(
+                    cantidadInput?.value || ''
+                );
+
+                pagos[index].cantidad =
+                    cantidad === null ? '' : cantidad;
             });
     }
+
+
+
+
+
+
+
 
     function aplicarBusqueda() {
         const termino = normalizarTexto(
@@ -377,7 +475,7 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
     }
 
     function agregarPago(row) {
-        guardarTransportistasEditados();
+        guardarDatosEditados();
 
         const pago = datosPagoDesdeFila(row);
 
@@ -392,7 +490,7 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
     }
 
     function quitarPago(pagoUid) {
-        guardarTransportistasEditados();
+        guardarDatosEditados();
 
         pagos = pagos.filter(function (pago) {
             return pago.uid !== pagoUid;
@@ -439,7 +537,7 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
         if (pagos.length === 0) {
             seleccionadosBody.innerHTML = `
                 <tr data-comision-masiva-empty>
-                    <td colspan="5" class="text-muted text-center">
+                    <td colspan="7" class="text-muted text-center">
                         No hay pagos adicionales preparados.
                     </td>
                 </tr>
@@ -451,6 +549,13 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
 
         pagos.forEach(function (item) {
             const row = document.createElement('tr');
+
+            const cantidad = entero(item.cantidad);
+
+            const totalFila =
+                cantidad !== null && cantidad > 0
+                    ? montoComun() * cantidad
+                    : 0;
 
             row.dataset.comisionMasivaPago = '1';
             row.dataset.uid = item.uid;
@@ -489,6 +594,26 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
                     ${formatearCLP(montoComun())}
                 </td>
 
+                <td>
+                    <input
+                        type="number"
+                        class="form-control form-control-sm text-center"
+                        min="1"
+                        step="1"
+                        value="${escaparHtml(item.cantidad ?? '')}"
+                        placeholder="Ej: 10"
+                        autocomplete="off"
+                        data-comision-masiva-cantidad
+                    >
+                </td>
+
+                <td
+                    class="text-end fw-semibold"
+                    data-comision-masiva-total-fila
+                >
+                    ${formatearCLP(totalFila)}
+                </td>
+
                 <td data-comision-masiva-observacion-fila>
                     ${escaparHtml(
                         observacionGeneral() || '—'
@@ -522,26 +647,28 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
             }
         });
 
-        actualizarResumen();
+        actualizarTotalesFilas();
     }
 
-    function construirComisiones() {
-        guardarTransportistasEditados();
 
-        const monto = montoComun();
+
+
+    function construirComisiones() {
+        guardarDatosEditados();
+
+        const tarifa = montoComun();
         const observacion = observacionGeneral();
 
         return pagos.map(function (item) {
+            const cantidad = entero(item.cantidad);
+
             return {
-                /*
-                 * Esta clave identifica el pago temporalmente.
-                 * Permite diferenciar pagos repetidos para el mismo proveedor.
-                 */
                 clave_control: [
                     'COMISION',
                     item.suscripcion_proveedor_id || '',
                     item.suscripcion_transportista_id || '',
-                    monto,
+                    tarifa,
+                    cantidad ?? '',
                     observacion,
                     item.uid,
                 ].join('|'),
@@ -565,17 +692,30 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
                 punto_2: '',
                 servicio: 'Reparto fin de semana',
 
-                costo: monto,
-                observacion: observacion,
+                /*
+                * costo representa la tarifa unitaria.
+                */
+                costo: tarifa,
+
+                /*
+                * Cantidad individual del pago.
+                */
+                cantidad:
+                    cantidad === null ? 0 : cantidad,
+
+                observacion,
             };
         });
     }
 
-    function validarComisiones(comisiones) {
-        const monto = montoComun();
 
-        if (monto <= 0) {
-            return 'Ingresa un monto por pago adicional mayor a 0.';
+
+
+    function validarComisiones(comisiones) {
+        const tarifa = montoComun();
+
+        if (tarifa <= 0) {
+            return 'Ingresa una tarifa unitaria mayor a 0.';
         }
 
         if (comisiones.length === 0) {
@@ -602,7 +742,7 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
             return 'Todos los pagos adicionales deben tener transportista.';
         }
 
-        const montoInvalido = comisiones.find(
+        const tarifaInvalida = comisiones.find(
             function (comision) {
                 const costo = entero(comision.costo);
 
@@ -610,12 +750,27 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
             }
         );
 
-        if (montoInvalido) {
-            return 'Todos los pagos adicionales deben tener un monto válido mayor a 0.';
+        if (tarifaInvalida) {
+            return 'Todos los pagos adicionales deben tener una tarifa válida mayor a 0.';
+        }
+
+        const cantidadInvalida = comisiones.find(
+            function (comision) {
+                const cantidad = entero(comision.cantidad);
+
+                return cantidad === null || cantidad <= 0;
+            }
+        );
+
+        if (cantidadInvalida) {
+            return 'Ingresa una cantidad mayor a 0 para todos los pagos preparados.';
         }
 
         return '';
     }
+
+
+
 
     function cerrarModal() {
         if (
@@ -794,11 +949,46 @@ export function inicializarComisionesMasivas(dom, comisionesApi = {}) {
                 }
             );
 
+            /*
+            * Recalcular inmediatamente cuando cambia
+            * la cantidad de una fila.
+            */
+            seleccionadosBody.addEventListener(
+                'input',
+                function (event) {
+                    if (
+                        !event.target.matches(
+                            '[data-comision-masiva-cantidad]'
+                        )
+                    ) {
+                        return;
+                    }
+
+                    guardarDatosEditados();
+                    ocultarError();
+                    actualizarTotalesFilas();
+                }
+            );
+
+            /*
+            * Guardar cambios del transportista
+            * y también de la cantidad al abandonar el input.
+            */
             seleccionadosBody.addEventListener(
                 'change',
-                function () {
-                    guardarTransportistasEditados();
+                function (event) {
+                    if (
+                        !event.target.matches(
+                            '[data-comision-masiva-transportista], '
+                            + '[data-comision-masiva-cantidad]'
+                        )
+                    ) {
+                        return;
+                    }
+
+                    guardarDatosEditados();
                     ocultarError();
+                    actualizarTotalesFilas();
                 }
             );
         }
