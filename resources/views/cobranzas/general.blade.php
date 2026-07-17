@@ -8,13 +8,20 @@
 
     {{-- ====== CABECERA ====== --}}
     <div class="panel-finanzas-header text-center mb-5">
-        <span class="panel-finanzas-header__eyebrow">Área de Finanzas</span>
-        <h2 class="fw-bold mb-2">Módulo Finanzas</h2>
+        <span class="panel-finanzas-header__eyebrow">
+            Área de Finanzas
+        </span>
+
+        <h2 class="fw-bold mb-2">
+            Módulo Finanzas
+        </h2>
+
         <p class="text-muted mb-0">
             Panel central de gestión — Documentos, abonos, cruces y movimientos
         </p>
     </div>
 
+    {{-- ====== COMPRAS PROGRAMADAS PARA HOY ====== --}}
     @if($comprasProgramadasHoy->isNotEmpty())
         <section class="panel-operativo-card panel-operativo-card--warning mb-4">
             <div class="panel-operativo-card__head">
@@ -28,7 +35,11 @@
                     </h5>
 
                     <p class="panel-operativo-card__text mb-0">
-                        Hay <strong>{{ $comprasProgramadasHoy->count() }}</strong> documento(s) de compra con próximo pago definido para hoy.
+                        Hay
+                        <strong>
+                            {{ $comprasProgramadasHoy->count() }}
+                        </strong>
+                        documento(s) de compra con próximo pago definido para hoy.
                     </p>
                 </div>
 
@@ -37,18 +48,21 @@
                         {{ $comprasProgramadasHoy->count() }} programado(s)
                     </span>
 
-                    <button type="button"
-                            class="btn btn-sm btn-success rounded-pill px-3"
-                            id="btn-pagar-compras-programadas-hoy">
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-success rounded-pill px-3"
+                        id="btn-pagar-compras-programadas-hoy"
+                    >
                         Pagar seleccionadas
                     </button>
 
-                    <button type="button"
-                            class="btn btn-sm btn-outline-danger rounded-pill px-3"
-                            id="btn-eliminar-compras-programadas-hoy">
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                        id="btn-eliminar-compras-programadas-hoy"
+                    >
                         Quitar programación
                     </button>
-
                 </div>
             </div>
 
@@ -57,35 +71,59 @@
                     <table class="table table-finanzas panel-programados-table mb-0">
                         <thead>
                             <tr>
-                                <th class="text-center" style="width:40px;">
-                                    <input type="checkbox" id="check-all-compras-programadas-hoy">
+                                <th
+                                    class="text-center"
+                                    style="width: 40px;"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        id="check-all-compras-programadas-hoy"
+                                    >
                                 </th>
-                                <th>Empresa</th>
-                                <th>Proveedor</th>
-                                <th>Folio</th>
-                                <th>Fecha programada</th>
-                                <th class="text-end">Saldo</th>
+
+                                <th>
+                                    Empresa
+                                </th>
+
+                                <th>
+                                    Proveedor
+                                </th>
+
+                                <th>
+                                    Folio
+                                </th>
+
+                                <th>
+                                    Fecha programada
+                                </th>
+
+                                <th class="text-end">
+                                    Saldo
+                                </th>
                             </tr>
                         </thead>
+
                         <tbody>
                             @foreach($comprasProgramadasHoy as $programado)
+                                @php
+                                    $d = $programado->documentoCompra;
+                                @endphp
 
-
-                                @php $d = $programado->documentoCompra; @endphp
                                 @if($d)
                                     @php
-                                        $formaPagoCompra = trim((string) optional($d->cobranzaCompra)->forma_pago);
-                                        $esPortalProveedor = mb_strtolower($formaPagoCompra) === 'portal proveedor';
+                                        $formaPagoCompra = trim(
+                                            (string) optional($d->cobranzaCompra)->forma_pago
+                                        );
+
+                                        $esPortalProveedor =
+                                            mb_strtolower($formaPagoCompra)
+                                            === 'portal proveedor';
                                     @endphp
 
                                     <tr>
-
-
-
-
-
                                         <td class="text-center">
-                                            <input type="checkbox"
+                                            <input
+                                                type="checkbox"
                                                 class="chk-compra-programada-hoy"
                                                 value="{{ $d->id }}"
                                                 data-id="{{ $d->id }}"
@@ -95,12 +133,18 @@
                                                 data-rut="{{ $d->rut_proveedor }}"
                                                 data-saldo="{{ $d->saldo_pendiente ?? 0 }}"
                                                 data-forma-pago="{{ $formaPagoCompra }}"
-                                                data-omitido-banco="{{ $esPortalProveedor ? 1 : 0 }}">
-                                                
+                                                data-omitido-banco="{{ $esPortalProveedor ? 1 : 0 }}"
+                                            >
                                         </td>
-                                        <td>{{ $d->empresa->Nombre ?? '-' }}</td>
+
                                         <td>
-                                            <div>{{ $d->razon_social }}</div>
+                                            {{ $d->empresa->Nombre ?? '-' }}
+                                        </td>
+
+                                        <td>
+                                            <div>
+                                                {{ $d->razon_social }}
+                                            </div>
 
                                             @if($esPortalProveedor)
                                                 <div class="small text-muted mt-1">
@@ -110,19 +154,29 @@
                                                 </div>
                                             @endif
                                         </td>
+
                                         <td>
-                                            <a href="{{ route('finanzas_compras.show', $d->id) }}"
-                                            class="panel-table-link">
+                                            <a
+                                                href="{{ route('finanzas_compras.show', $d->id) }}"
+                                                class="panel-table-link"
+                                            >
                                                 {{ $d->folio }}
                                             </a>
                                         </td>
+
                                         <td>
                                             <span class="panel-soft-chip panel-soft-chip--date">
                                                 {{ $programado->fecha_programada?->format('d-m-Y') }}
                                             </span>
                                         </td>
+
                                         <td class="text-end fw-semibold">
-                                            ${{ number_format($d->saldo_pendiente ?? 0, 0, ',', '.') }}
+                                            ${{ number_format(
+                                                $d->saldo_pendiente ?? 0,
+                                                0,
+                                                ',',
+                                                '.'
+                                            ) }}
                                         </td>
                                     </tr>
                                 @endif
@@ -132,9 +186,9 @@
                 </div>
             </div>
         </section>
-
     @endif
 
+    {{-- ====== COMPRAS PROGRAMADAS ATRASADAS ====== --}}
     @if($comprasProgramadasAtrasadas->isNotEmpty())
         <section class="panel-operativo-card panel-operativo-card--danger mb-4">
             <div class="panel-operativo-card__head">
@@ -148,7 +202,11 @@
                     </h5>
 
                     <p class="panel-operativo-card__text mb-0">
-                        Hay <strong>{{ $comprasProgramadasAtrasadas->count() }}</strong> documento(s) con fecha programada vencida.
+                        Hay
+                        <strong>
+                            {{ $comprasProgramadasAtrasadas->count() }}
+                        </strong>
+                        documento(s) con fecha programada vencida.
                     </p>
                 </div>
 
@@ -157,18 +215,21 @@
                         {{ $comprasProgramadasAtrasadas->count() }} pendiente(s)
                     </span>
 
-                    <button type="button"
-                            class="btn btn-sm btn-success rounded-pill px-3"
-                            id="btn-pagar-compras-programadas-atrasadas">
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-success rounded-pill px-3"
+                        id="btn-pagar-compras-programadas-atrasadas"
+                    >
                         Pagar seleccionadas
                     </button>
 
-                    <button type="button"
-                            class="btn btn-sm btn-outline-danger rounded-pill px-3"
-                            id="btn-eliminar-compras-programadas-atrasadas">
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                        id="btn-eliminar-compras-programadas-atrasadas"
+                    >
                         Quitar programación
                     </button>
-
                 </div>
             </div>
 
@@ -177,31 +238,59 @@
                     <table class="table table-finanzas panel-programados-table mb-0">
                         <thead>
                             <tr>
-                                <th class="text-center" style="width:40px;">
-                                    <input type="checkbox" id="check-all-compras-programadas-atrasadas">
+                                <th
+                                    class="text-center"
+                                    style="width: 40px;"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        id="check-all-compras-programadas-atrasadas"
+                                    >
                                 </th>
-                                <th>Empresa</th>
-                                <th>Proveedor</th>
-                                <th>Folio</th>
-                                <th>Fecha programada</th>
-                                <th class="text-end">Saldo</th>
+
+                                <th>
+                                    Empresa
+                                </th>
+
+                                <th>
+                                    Proveedor
+                                </th>
+
+                                <th>
+                                    Folio
+                                </th>
+
+                                <th>
+                                    Fecha programada
+                                </th>
+
+                                <th class="text-end">
+                                    Saldo
+                                </th>
                             </tr>
                         </thead>
+
                         <tbody>
                             @foreach($comprasProgramadasAtrasadas as $programado)
+                                @php
+                                    $d = $programado->documentoCompra;
+                                @endphp
 
+                                @if($d)
+                                    @php
+                                        $formaPagoCompra = trim(
+                                            (string) optional($d->cobranzaCompra)->forma_pago
+                                        );
 
+                                        $esPortalProveedor =
+                                            mb_strtolower($formaPagoCompra)
+                                            === 'portal proveedor';
+                                    @endphp
 
-                                    @php $d = $programado->documentoCompra; @endphp
-                                    @if($d)
-                                        @php
-                                            $formaPagoCompra = trim((string) optional($d->cobranzaCompra)->forma_pago);
-                                            $esPortalProveedor = mb_strtolower($formaPagoCompra) === 'portal proveedor';
-                                        @endphp
-
-                                        <tr>
+                                    <tr>
                                         <td class="text-center">
-                                            <input type="checkbox"
+                                            <input
+                                                type="checkbox"
                                                 class="chk-compra-programada-atrasada"
                                                 value="{{ $d->id }}"
                                                 data-id="{{ $d->id }}"
@@ -211,11 +300,18 @@
                                                 data-rut="{{ $d->rut_proveedor }}"
                                                 data-saldo="{{ $d->saldo_pendiente ?? 0 }}"
                                                 data-forma-pago="{{ $formaPagoCompra }}"
-                                                data-omitido-banco="{{ $esPortalProveedor ? 1 : 0 }}">
+                                                data-omitido-banco="{{ $esPortalProveedor ? 1 : 0 }}"
+                                            >
                                         </td>
-                                        <td>{{ $d->empresa->Nombre ?? '-' }}</td>
+
                                         <td>
-                                            <div>{{ $d->razon_social }}</div>
+                                            {{ $d->empresa->Nombre ?? '-' }}
+                                        </td>
+
+                                        <td>
+                                            <div>
+                                                {{ $d->razon_social }}
+                                            </div>
 
                                             @if($esPortalProveedor)
                                                 <div class="small text-muted mt-1">
@@ -225,19 +321,29 @@
                                                 </div>
                                             @endif
                                         </td>
+
                                         <td>
-                                            <a href="{{ route('finanzas_compras.show', $d->id) }}"
-                                            class="panel-table-link">
+                                            <a
+                                                href="{{ route('finanzas_compras.show', $d->id) }}"
+                                                class="panel-table-link"
+                                            >
                                                 {{ $d->folio }}
                                             </a>
                                         </td>
+
                                         <td>
                                             <span class="panel-soft-chip panel-soft-chip--danger-date">
                                                 {{ $programado->fecha_programada?->format('d-m-Y') }}
                                             </span>
                                         </td>
+
                                         <td class="text-end fw-semibold">
-                                            ${{ number_format($d->saldo_pendiente ?? 0, 0, ',', '.') }}
+                                            ${{ number_format(
+                                                $d->saldo_pendiente ?? 0,
+                                                0,
+                                                ',',
+                                                '.'
+                                            ) }}
                                         </td>
                                     </tr>
                                 @endif
@@ -249,10 +355,12 @@
         </section>
     @endif
 
-
-    <form method="POST"
+    {{-- ====== FORMULARIO PARA QUITAR PROGRAMACIONES ====== --}}
+    <form
+        method="POST"
         action="{{ route('finanzas_compras.pago-programado.destroy.masivo') }}"
-        id="form-eliminar-programados-compras">
+        id="form-eliminar-programados-compras"
+    >
         @csrf
         @method('DELETE')
 
@@ -263,65 +371,142 @@
     <section class="panel-accesos-directos mb-4">
         <div class="row justify-content-center g-4">
 
-            <div class="col-12 col-md-6 col-xl-4">
-                <a href="{{ route('cobranzas.documentos') }}"
-                   class="panel-link-card panel-link-card--secondary">
+            {{-- CUENTAS POR COBRAR --}}
+            <div class="col-12 col-md-6 col-xl-3">
+                <a
+                    href="{{ route('cobranzas.documentos') }}"
+                    class="panel-link-card panel-link-card--secondary"
+                >
                     <div class="panel-link-card__top">
-                        <span class="panel-soft-chip panel-soft-chip--neutral">Cobranza activa</span>
-                        <span class="panel-link-card__hint">Entrar</span>
+                        <span class="panel-soft-chip panel-soft-chip--neutral">
+                            Cobranza activa
+                        </span>
+
+                        <span class="panel-link-card__hint">
+                            Entrar
+                        </span>
                     </div>
 
                     <div class="panel-link-card__body">
-                        <h5 class="panel-link-card__title">Cuentas por Cobrar</h5>
+                        <h5 class="panel-link-card__title">
+                            Cuentas por Cobrar
+                        </h5>
+
                         <p class="panel-link-card__text">
-                            Gestión de facturas, notas de crédito y seguimiento operativo de cobranza.
+                            Gestión de facturas, notas de crédito y seguimiento
+                            operativo de cobranza.
                         </p>
                     </div>
 
                     <div class="panel-link-card__footer">
-                        <span class="panel-link-card__cta">Abrir módulo</span>
+                        <span class="panel-link-card__cta">
+                            Abrir módulo
+                        </span>
                     </div>
                 </a>
             </div>
 
-            <div class="col-12 col-md-6 col-xl-4">
-                <a href="{{ route('finanzas_compras.index') }}"
-                   class="panel-link-card panel-link-card--primary">
+            {{-- CUENTAS POR PAGAR --}}
+            <div class="col-12 col-md-6 col-xl-3">
+                <a
+                    href="{{ route('finanzas_compras.index') }}"
+                    class="panel-link-card panel-link-card--primary"
+                >
                     <div class="panel-link-card__top">
-                        <span class="panel-soft-chip panel-soft-chip--date">Operación compras</span>
-                        <span class="panel-link-card__hint">Entrar</span>
+                        <span class="panel-soft-chip panel-soft-chip--date">
+                            Operación compras
+                        </span>
+
+                        <span class="panel-link-card__hint">
+                            Entrar
+                        </span>
                     </div>
 
                     <div class="panel-link-card__body">
-                        <h5 class="panel-link-card__title">Cuentas por Pagar</h5>
+                        <h5 class="panel-link-card__title">
+                            Cuentas por Pagar
+                        </h5>
+
                         <p class="panel-link-card__text">
-                            Gestión de facturas de compras, pagos, referencias y control de proveedores.
+                            Gestión de facturas de compras, pagos, referencias
+                            y control de proveedores.
                         </p>
                     </div>
 
                     <div class="panel-link-card__footer">
-                        <span class="panel-link-card__cta">Abrir módulo</span>
+                        <span class="panel-link-card__cta">
+                            Abrir módulo
+                        </span>
                     </div>
                 </a>
             </div>
 
-            <div class="col-12 col-md-6 col-xl-4">
-                <a href="{{ route('boleta.mensual.panel') }}"
-                   class="panel-link-card panel-link-card--secondary">
+            {{-- HONORARIOS POR PAGAR --}}
+            <div class="col-12 col-md-6 col-xl-3">
+                <a
+                    href="{{ route('boleta.mensual.panel') }}"
+                    class="panel-link-card panel-link-card--secondary"
+                >
                     <div class="panel-link-card__top">
-                        <span class="panel-soft-chip panel-soft-chip--neutral">Operación honorarios</span>
-                        <span class="panel-link-card__hint">Entrar</span>
+                        <span class="panel-soft-chip panel-soft-chip--neutral">
+                            Operación honorarios
+                        </span>
+
+                        <span class="panel-link-card__hint">
+                            Entrar
+                        </span>
                     </div>
 
                     <div class="panel-link-card__body">
-                        <h5 class="panel-link-card__title">Honorarios por Pagar</h5>
+                        <h5 class="panel-link-card__title">
+                            Honorarios por Pagar
+                        </h5>
+
                         <p class="panel-link-card__text">
-                            Revisión de boletas de honorarios, próximos pagos, movimientos y operación mensual.
+                            Revisión de boletas de honorarios, próximos pagos,
+                            movimientos y operación mensual.
                         </p>
                     </div>
 
                     <div class="panel-link-card__footer">
-                        <span class="panel-link-card__cta">Abrir módulo</span>
+                        <span class="panel-link-card__cta">
+                            Abrir módulo
+                        </span>
+                    </div>
+                </a>
+            </div>
+
+            {{-- SUSCRIPCIONES --}}
+            <div class="col-12 col-md-6 col-xl-3">
+                <a
+                    href="{{ route('suscripciones.liquidacion-detalles.index') }}"
+                    class="panel-link-card panel-link-card--secondary"
+                >
+                    <div class="panel-link-card__top">
+                        <span class="panel-soft-chip panel-soft-chip--neutral">
+                            Operación suscripciones
+                        </span>
+
+                        <span class="panel-link-card__hint">
+                            Entrar
+                        </span>
+                    </div>
+
+                    <div class="panel-link-card__body">
+                        <h5 class="panel-link-card__title">
+                            Suscripciones
+                        </h5>
+
+                        <p class="panel-link-card__text">
+                            Generación mensual, revisión de liquidaciones y
+                            pre-facturación de proveedores de suscripciones.
+                        </p>
+                    </div>
+
+                    <div class="panel-link-card__footer">
+                        <span class="panel-link-card__cta">
+                            Abrir módulo
+                        </span>
                     </div>
                 </a>
             </div>
@@ -330,11 +515,14 @@
     </section>
 
     <footer class="text-center mt-5">
-        <small class="text-muted">© 4NLogística — Área de Finanzas</small>
+        <small class="text-muted">
+            © 4NLogística — Área de Finanzas
+        </small>
     </footer>
 </div>
 
 @include('cobranzas.modal_pago_compras_programadas')
+
 @vite('resources/js/finanzas_general.js')
 @vite('resources/js/finanzas_general_pagos_programados.js')
 

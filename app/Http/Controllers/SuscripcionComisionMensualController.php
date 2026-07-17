@@ -95,12 +95,8 @@ class SuscripcionComisionMensualController extends Controller
         ));
     }
 
-    public function store(
-        Request $request,
-        SuscripcionGeneracionMensualService $generacionMensualService,
-        SuscripcionAjusteMensualRegistroService $ajusteMensualRegistroService,
-        SuscripcionAjusteMensualAplicacionService $ajusteMensualAplicacionService
-    ) {
+    public function store( Request $request, SuscripcionGeneracionMensualService $generacionMensualService, SuscripcionAjusteMensualRegistroService $ajusteMensualRegistroService, SuscripcionAjusteMensualAplicacionService $ajusteMensualAplicacionService) 
+    {
         $data = $request->validate([
             'anio' => 'required|integer|min:2020|max:2100',
             'mes' => 'required|integer|min:1|max:12',

@@ -155,8 +155,23 @@
 
     @endphp
 
-    <div class="d-flex justify-content-center align-items-center mb-4">
-        <h1 class="mb-0">Liquidaciones de Suscripciones</h1>
+    <div class="row align-items-center g-2 mb-4">
+        <div class="col-12 col-md-4 text-center text-md-start">
+            <a
+                href="{{ route('cobranzas.general') }}"
+                class="btn btn-outline-secondary btn-sm"
+            >
+                ← Volver al panel de Finanzas
+            </a>
+        </div>
+
+        <div class="col-12 col-md-4 text-center">
+            <h1 class="mb-0">
+                Liquidaciones de Suscripciones
+            </h1>
+        </div>
+
+        <div class="d-none d-md-block col-md-4"></div>
     </div>
 
     <div class="row g-3 align-items-stretch mb-3">

@@ -6,6 +6,9 @@ use App\Models\SuscripcionLiquidacionDetalle;
 
 class SuscripcionPrefacturaOcService
 {
+
+
+
     public function generarOC(int $anio, int $mes, int $suscripcionProveedorId): string
     {
         $proveedoresOrdenados = SuscripcionLiquidacionDetalle::query()
@@ -38,4 +41,14 @@ class SuscripcionPrefacturaOcService
             . str_pad((string) $mes, 2, '0', STR_PAD_LEFT)
             . $correlativo;
     }
+
+
+
+
+
+
+    
 }
+
+
+
