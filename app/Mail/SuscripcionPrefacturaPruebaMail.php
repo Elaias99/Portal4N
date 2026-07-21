@@ -89,7 +89,7 @@ class SuscripcionPrefacturaPruebaMail extends Mailable
 
         return $this
             ->from(
-                'proveedores@4nlogistica.cl',
+                'eliascorrea@4nlogistica.cl',
                 '4N Logística - Suscripciones'
             )
             ->subject($asunto)
