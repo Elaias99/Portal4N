@@ -336,29 +336,63 @@
             </div>
         </div>
 
-        {{-- Descargar ZIP --}}
+
+
+
+
+
+
+        {{-- Descargar ZIP y enviar pre-facturas --}}
         <div class="col-12 col-lg-3">
             <div class="card h-100">
                 <div class="card-body d-flex flex-column">
                     <div class="text-center mb-3">
-                        <div class="fw-semibold">Descargar pre-facturas PDF</div>
+                        <div class="fw-semibold">Pre-facturas PDF</div>
+
                         <div class="small text-muted mt-1">
-                            Genera un ZIP con una pre-factura PDF por proveedor.
+                            Descarga, revisa o envía las pre-facturas del período.
                         </div>
                     </div>
 
-                    <form method="POST"
-                          action="{{ route('suscripciones.liquidacion-detalles.pdf-masivo') }}"
-                          class="mt-auto"
-                          data-long-loader="300000">
+                    <form
+                        method="POST"
+                        action="{{ route('suscripciones.liquidacion-detalles.pdf-masivo') }}"
+                        class="mt-auto"
+                        data-long-loader="300000"
+                    >
                         @csrf
 
-                        <input type="hidden" name="proveedor_pdf" value="{{ $proveedorFiltro }}">
-                        <input type="hidden" name="rut_pdf" value="{{ $rutFiltro }}">
-                        <input type="hidden" name="tipo_pdf" value="{{ $tipoFiltro }}">
+                        <input
+                            type="hidden"
+                            name="proveedor_pdf"
+                            value="{{ $proveedorFiltro }}"
+                        >
+
+                        <input
+                            type="hidden"
+                            name="rut_pdf"
+                            value="{{ $rutFiltro }}"
+                        >
+
+                        <input
+                            type="hidden"
+                            name="tipo_pdf"
+                            value="{{ $tipoFiltro }}"
+                        >
+
+                        {{-- Sólo se completa al confirmar el envío real --}}
+                        <input
+                            type="hidden"
+                            name="confirmacion_envio"
+                            id="confirmacion_envio_real"
+                            value=""
+                        >
 
                         <div class="mb-2">
-                            <label class="form-label small text-muted">Año PDF</label>
+                            <label class="form-label small text-muted">
+                                Año PDF
+                            </label>
+
                             <input
                                 type="number"
                                 name="anio_pdf"
@@ -371,24 +405,119 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label small text-muted">Mes PDF</label>
-                            <select name="mes_pdf" class="form-select form-select-sm" required>
+                            <label class="form-label small text-muted">
+                                Mes PDF
+                            </label>
+
+                            <select
+                                name="mes_pdf"
+                                class="form-select form-select-sm"
+                                required
+                            >
                                 @foreach($meses as $numero => $nombre)
-                                    <option value="{{ $numero }}"
-                                        {{ (int) request('mes', 4) === $numero ? 'selected' : '' }}>
+                                    <option
+                                        value="{{ $numero }}"
+                                        {{ (int) request('mes', 4) === $numero ? 'selected' : '' }}
+                                    >
                                         {{ $nombre }}
                                     </option>
                                 @endforeach
                             </select>
                         </div>
 
-                        <button type="submit" class="btn btn-secondary btn-sm w-100">
+                        {{-- Descargar ZIP --}}
+                        <button
+                            type="submit"
+                            class="btn btn-secondary btn-sm w-100"
+                        >
                             Descargar ZIP de pre-facturas
                         </button>
+
+                        {{-- Revisar correos sin enviar --}}
+                        <button
+                            type="submit"
+                            class="btn btn-outline-primary btn-sm w-100 mt-2"
+                            formaction="{{ route(
+                                'suscripciones.liquidacion-detalles.revisar-destinatarios'
+                            ) }}"
+                        >
+                            Revisar destinatarios
+                        </button>
+
+                        {{-- Envío controlado a Gmail --}}
+                        <button
+                            type="submit"
+                            class="btn btn-primary btn-sm w-100 mt-2"
+                            formaction="{{ route(
+                                'suscripciones.liquidacion-detalles.enviar-correos-prueba-masivo'
+                            ) }}"
+                            onclick="
+                                document.getElementById('confirmacion_envio_real').value = '';
+
+                                return confirm(
+                                    '¿Enviar una copia de cada pre-factura seleccionada únicamente a eliascorreap@gmail.com?'
+                                );
+                            "
+                        >
+                            Enviar pre-facturas de prueba
+                        </button>
+
+                        <div class="small text-muted text-center mt-2">
+                            La prueba se dirige únicamente a eliascorreap@gmail.com.
+                        </div>
+
+                        <hr class="my-3">
+
+                        {{-- Envío real a proveedores --}}
+                        <button
+                            type="submit"
+                            class="btn btn-danger btn-sm w-100"
+                            formaction="{{ route(
+                                'suscripciones.liquidacion-detalles.enviar-correos-reales-masivo'
+                            ) }}"
+                            onclick="
+                                const confirmacion = prompt(
+                                    'ATENCIÓN: este envío llegará a los proveedores reales.\n\nEscribe ENVIAR para continuar:'
+                                );
+
+                                if (confirmacion !== 'ENVIAR') {
+                                    document.getElementById('confirmacion_envio_real').value = '';
+
+                                    alert(
+                                        'Envío cancelado. Debes escribir exactamente ENVIAR.'
+                                    );
+
+                                    return false;
+                                }
+
+                                document.getElementById('confirmacion_envio_real').value = 'ENVIAR';
+
+                                return confirm(
+                                    'CONFIRMACIÓN FINAL:\n\n¿Enviar las pre-facturas seleccionadas a los correos reales de los proveedores, con copia a Finanzas y Luis de la Barra?'
+                                );
+                            "
+                        >
+                            Enviar pre-facturas a proveedores
+                        </button>
+
+                        <div class="small text-danger text-center mt-2">
+                            Envío real al correo registrado de cada proveedor.
+                            Se enviará copia a finanzas@4nlogistica.cl y
+                            luisdelabarra@4nlogistica.cl.
+                        </div>
                     </form>
                 </div>
             </div>
         </div>
+
+
+
+
+
+
+
+
+
 
     </div>
 

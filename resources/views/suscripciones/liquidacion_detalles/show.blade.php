@@ -136,18 +136,45 @@
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <strong>Detalle de servicios</strong>
 
-                <div class="d-flex align-items-center gap-3">
-                    <a href="{{ route('suscripciones.liquidacion-detalles.pdf', $grupo['detalle_id'] ?? $detalle->id) }}"
-                       class="btn btn-danger btn-sm"
-                       target="_blank">
+
+
+
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <a href="{{ route(
+                            'suscripciones.liquidacion-detalles.pdf',
+                            $grupo['detalle_id'] ?? $detalle->id
+                        ) }}"
+                    class="btn btn-danger btn-sm"
+                    target="_blank">
                         Generar PDF
                     </a>
+
+                    <form action="{{ route(
+                            'suscripciones.liquidacion-detalles.enviar-correo-prueba',
+                            $grupo['detalle_id'] ?? $detalle->id
+                        ) }}"
+                        method="POST"
+                        class="d-inline"
+                        onsubmit="return confirm(
+                            '¿Enviar esta pre-factura de prueba únicamente a eliascorreap@gmail.com?'
+                        );">
+
+                        @csrf
+
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            Enviar correo de prueba
+                        </button>
+                    </form>
 
                     <span class="small text-muted">
                         Grupo:
                         <strong class="text-dark">{{ $grupoLabel }}</strong>
                     </span>
                 </div>
+
+
+
+
             </div>
 
             <div class="card-body">

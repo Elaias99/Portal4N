@@ -15,7 +15,12 @@ use App\Services\Suscripciones\SuscripcionPrefacturaAgrupacionService;
 use App\Services\Suscripciones\SuscripcionGeneracionMensualService;
 use App\Services\Suscripciones\SuscripcionPrefacturaOcService;
 use App\Services\Suscripciones\SuscripcionAjusteMensualService;
+use App\Services\Suscripciones\SuscripcionPrefacturaPdfService;
+use App\Services\Suscripciones\SuscripcionPrefacturaEnvioService;
 use Illuminate\Http\Request;
+
+use App\Mail\SuscripcionPrefacturaPruebaMail;
+use Illuminate\Support\Facades\Mail;
 
 class SuscripcionLiquidacionDetalleController extends Controller
 {
@@ -579,144 +584,81 @@ class SuscripcionLiquidacionDetalleController extends Controller
         ));
     }
 
-    public function pdf(SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService, SuscripcionPrefacturaAgrupacionService $agrupacionService, SuscripcionPrefacturaOcService $ocService, SuscripcionAjusteMensualService $ajusteMensualService) 
-    {
-        $detalle->load([
-            'asignacion.suscripcionProveedor.cobranzaCompra',
-            'asignacion.suscripcionProveedor.cobranzaCompra.banco',
-            'asignacion.suscripcionProveedor.cobranzaCompra.tipoCuenta',
-            'asignacion.transportista',
-            'asignacion.opvPuntos',
-        ]);
-
-        /*
-        * El PDF debe usar el mismo proveedor efectivo que la vista show.
-        * Ejemplo:
-        * - Asignación base LOTA: Carlos Calfucura
-        * - Junio 2026: ajuste FACTURACION a Victor Cornejo
-        * - El PDF debe salir a nombre de Victor Cornejo.
-        */
-        $proveedorPrefactura = $ajusteMensualService->proveedorFacturacionParaDetalle($detalle);
-        $suscripcionProveedorId = $proveedorPrefactura?->id;
-
-        if (!$suscripcionProveedorId) {
-            abort(404, 'No se encontró el proveedor de suscripción asociado.');
+    public function pdf(
+        SuscripcionLiquidacionDetalle $detalle,
+        SuscripcionPrefacturaPdfService $pdfService
+    ) {
+        try {
+            $resultado = $pdfService->generarDesdeDetalle($detalle);
+        } catch (\RuntimeException $e) {
+            abort(404, $e->getMessage());
         }
 
-        $grupoPrefactura = $agrupacionService->grupoDesdeDetalle($detalle);
-        $grupoPrefacturaLabel = $agrupacionService->etiquetaGrupo($grupoPrefactura);
-
-        /*
-        * Igual que en show(), se traen los detalles del periodo y luego se filtran
-        * por proveedor efectivo, porque puede existir cambio de facturación mensual.
-        */
-        $detallesProveedor = SuscripcionLiquidacionDetalle::with([
-            'asignacion.suscripcionProveedor.cobranzaCompra',
-            'asignacion.suscripcionProveedor.cobranzaCompra.banco',
-            'asignacion.suscripcionProveedor.cobranzaCompra.tipoCuenta',
-            'asignacion.transportista',
-            'asignacion.opvPuntos',
-            'asignacion.cantidadesMensuales',
-        ])
-            ->where('anio', $detalle->anio)
-            ->where('mes', $detalle->mes)
-            ->orderBy('codigo')
-            ->get()
-            ->filter(function ($item) use (
-                $suscripcionProveedorId,
-                $grupoPrefactura,
-                $agrupacionService,
-                $ajusteMensualService
-            ) {
-                $proveedorItem = $ajusteMensualService->proveedorFacturacionParaDetalle($item);
-
-                if ((int) $proveedorItem?->id !== (int) $suscripcionProveedorId) {
-                    return false;
-                }
-
-                $grupoItem = $agrupacionService->grupoDesdeDetalle($item);
-
-                return $agrupacionService->claveGrupo($grupoItem)
-                    === $agrupacionService->claveGrupo($grupoPrefactura);
-            })
-            ->values();
-
-        if ($detallesProveedor->isEmpty()) {
-            abort(404, 'No se encontraron detalles para la pre-factura solicitada.');
-        }
-
-        $calculosDetalle = $resumenService->calcularPorDetalles($detallesProveedor);
-
-        /*
-        * Encabezado, datos de pago, tipo documento y nombre de archivo:
-        * todos deben salir desde el proveedor efectivo.
-        */
-        $proveedor = $proveedorPrefactura;
-        $cobranzaCompra = $proveedor?->cobranzaCompra;
-
-        $ocPrefactura = $ocService->generarOC(
-            (int) $detalle->anio,
-            (int) $detalle->mes,
-            (int) $suscripcionProveedorId
+        return $resultado['pdf']->stream(
+            $resultado['nombre_archivo']
         );
-
-        $totalBruto = $detallesProveedor->sum('total');
-        $totalImpuesto = $calculosDetalle->sum('total_impuesto');
-        $totalLiquido = $calculosDetalle->sum('liquido');
-
-        $meses = [
-            1 => 'Enero',
-            2 => 'Febrero',
-            3 => 'Marzo',
-            4 => 'Abril',
-            5 => 'Mayo',
-            6 => 'Junio',
-            7 => 'Julio',
-            8 => 'Agosto',
-            9 => 'Septiembre',
-            10 => 'Octubre',
-            11 => 'Noviembre',
-            12 => 'Diciembre',
-        ];
-
-        $nombreProveedor = $cobranzaCompra?->razon_social ?? 'Proveedor';
-        $tipo = $proveedor?->tipo ?? 'DOC';
-
-        $nombreArchivoProveedor = str_replace(
-            ' ',
-            '_',
-            preg_replace('/[^A-Za-z0-9\s]/', '', $nombreProveedor)
-        );
-
-        $grupoArchivo = '';
-
-        if ($grupoPrefactura !== null) {
-            $grupoArchivo = '_' . str_replace(
-                ' ',
-                '_',
-                preg_replace('/[^A-Za-z0-9\s._-]/', '', $grupoPrefacturaLabel)
-            );
-        }
-
-        $nombreArchivo = "PreFactura_Susc_{$tipo}_{$nombreArchivoProveedor}{$grupoArchivo}_{$detalle->anio}_{$detalle->mes}.pdf";
-
-        $pdf = Pdf::loadView('suscripciones.liquidacion_detalles.pdf', [
-            'detalle' => $detalle,
-            'detallesProveedor' => $detallesProveedor,
-            'calculosDetalle' => $calculosDetalle,
-            'proveedor' => $proveedor,
-            'cobranzaCompra' => $cobranzaCompra,
-            'totalBruto' => $totalBruto,
-            'totalImpuesto' => $totalImpuesto,
-            'totalLiquido' => $totalLiquido,
-            'meses' => $meses,
-            'grupoPrefactura' => $grupoPrefactura,
-            'grupoPrefacturaLabel' => $grupoPrefacturaLabel,
-            'ocPrefactura' => $ocPrefactura,
-        ])->setPaper('letter', 'portrait');
-
-        return $pdf->stream($nombreArchivo);
     }
+
+
+    public function enviarCorreoPrueba(
+        SuscripcionLiquidacionDetalle $detalle,
+        SuscripcionPrefacturaPdfService $pdfService
+    ) {
+        try {
+            $resultado = $pdfService->generarDesdeDetalle($detalle);
+
+            $cobranzaCompra = $resultado['cobranza_compra'];
+
+            Mail::to('eliascorreap@gmail.com')->send(
+                new SuscripcionPrefacturaPruebaMail(
+                    contenidoPdf: $resultado['pdf']->output(),
+                    nombreArchivo: $resultado['nombre_archivo'],
+
+                    nombreProveedor: (string) (
+                        $cobranzaCompra?->razon_social ?? 'Proveedor'
+                    ),
+
+                    rutProveedor: (string) (
+                        $cobranzaCompra?->rut_cliente ?? '—'
+                    ),
+
+                    mesNombre: $resultado['mes_nombre'],
+                    anio: $resultado['anio'],
+                    oc: $resultado['oc'],
+
+                    totalLiquido: (float) $resultado['total_liquido'],
+
+                    correoProveedorReal:
+                        $resultado['correo_proveedor'] !== ''
+                            ? $resultado['correo_proveedor']
+                            : null,
+
+                    grupoPrefacturaLabel:
+                        $resultado['grupo_prefactura_label']
+                )
+            );
+
+            return back()->with(
+                'success',
+                'Correo de prueba enviado correctamente a eliascorreap@gmail.com.'
+            );
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->withErrors([
+                'correo_prefactura' =>
+                    'No se pudo enviar el correo de prueba: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+
+
+
+
+
+
+
 
     public function pdfMasivo(Request $request, SuscripcionPrefacturaZipService $zipService, SuscripcionAjusteMensualService $ajusteMensualService) 
     {
@@ -816,6 +758,439 @@ class SuscripcionLiquidacionDetalleController extends Controller
         return response()
             ->download($resultado['zip_path'], $resultado['zip_file_name']);
     }
+
+
+
+    public function enviarCorreosPruebaMasivo(
+        Request $request,
+        SuscripcionPrefacturaEnvioService $envioService,
+        SuscripcionAjusteMensualService $ajusteMensualService
+    ) {
+        $request->validate([
+            'anio_pdf' => 'required|integer|min:2020|max:2100',
+            'mes_pdf' => 'required|integer|min:1|max:12',
+            'proveedor_pdf' => 'nullable|string',
+            'rut_pdf' => 'nullable|string',
+            'tipo_pdf' => 'nullable|string',
+        ]);
+
+        $anio = (int) $request->anio_pdf;
+        $mes = (int) $request->mes_pdf;
+
+        $proveedorFiltro = trim((string) $request->proveedor_pdf);
+        $rutFiltro = trim((string) $request->rut_pdf);
+        $tipoFiltro = trim((string) $request->tipo_pdf);
+
+        /*
+        * Se aplica la misma selección utilizada por el ZIP.
+        * El proveedor puede ser el proveedor base o uno efectivo
+        * definido mediante un ajuste mensual.
+        */
+        $detallesBase = SuscripcionLiquidacionDetalle::with([
+            'asignacion.suscripcionProveedor.cobranzaCompra',
+            'asignacion.suscripcionProveedor.cobranzaCompra.banco',
+            'asignacion.suscripcionProveedor.cobranzaCompra.tipoCuenta',
+            'asignacion.transportista',
+            'asignacion.opvPuntos',
+            'asignacion.cantidadesMensuales',
+        ])
+            ->where('anio', $anio)
+            ->where('mes', $mes)
+            ->orderBy('codigo')
+            ->get()
+            ->filter(function ($detalle) use (
+                $proveedorFiltro,
+                $rutFiltro,
+                $tipoFiltro,
+                $ajusteMensualService
+            ) {
+                $proveedorEfectivo = $ajusteMensualService
+                    ->proveedorFacturacionParaDetalle($detalle);
+
+                $cobranzaCompra = $proveedorEfectivo?->cobranzaCompra;
+
+                if (!$proveedorEfectivo) {
+                    return false;
+                }
+
+                if ($proveedorFiltro !== '') {
+                    $razonSocial = mb_strtoupper(
+                        trim((string) $cobranzaCompra?->razon_social)
+                    );
+
+                    $filtro = mb_strtoupper($proveedorFiltro);
+
+                    if (!str_contains($razonSocial, $filtro)) {
+                        return false;
+                    }
+                }
+
+                if ($rutFiltro !== '') {
+                    $rutCliente = mb_strtoupper(
+                        trim((string) $cobranzaCompra?->rut_cliente)
+                    );
+
+                    $filtro = mb_strtoupper($rutFiltro);
+
+                    if (!str_contains($rutCliente, $filtro)) {
+                        return false;
+                    }
+                }
+
+                if ($tipoFiltro !== '') {
+                    $tipoDocumento = mb_strtoupper(
+                        trim((string) (
+                            $ajusteMensualService
+                                ->tipoDocumentoParaDetalle($detalle)
+                            ?? $proveedorEfectivo->tipo
+                        ))
+                    );
+
+                    $filtro = mb_strtoupper(trim($tipoFiltro));
+
+                    if ($tipoDocumento !== $filtro) {
+                        return false;
+                    }
+                }
+
+                return true;
+            })
+            ->values();
+
+        if ($detallesBase->isEmpty()) {
+            return back()->withErrors([
+                'correo_masivo' =>
+                    'No existen pre-facturas para realizar el envío de prueba con los filtros seleccionados.',
+            ]);
+        }
+
+        try {
+            /*
+            * Protección de prueba:
+            * todos los correos se envían exclusivamente a tu Gmail.
+            */
+            $resultado = $envioService->enviarPruebasDesdeDetalles(
+                $detallesBase,
+                'eliascorreap@gmail.com'
+            );
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->withErrors([
+                'correo_masivo' =>
+                    'No se pudo ejecutar el envío masivo de prueba: '
+                    . $e->getMessage(),
+            ]);
+        }
+
+        $mensaje = 'Envío masivo de prueba finalizado. '
+            . 'Correos enviados: '
+            . $resultado['enviados']
+            . '. Fallidos: '
+            . $resultado['fallidos']
+            . '. Todos fueron dirigidos exclusivamente a '
+            . $resultado['destino_prueba']
+            . '.';
+
+        return back()->with('success', $mensaje);
+    }
+
+
+
+    public function enviarCorreosRealesMasivo(
+        Request $request,
+        SuscripcionPrefacturaEnvioService $envioService,
+        SuscripcionAjusteMensualService $ajusteMensualService
+    ) {
+        $request->validate([
+            'anio_pdf' => 'required|integer|min:2020|max:2100',
+            'mes_pdf' => 'required|integer|min:1|max:12',
+            'proveedor_pdf' => 'nullable|string',
+            'rut_pdf' => 'nullable|string',
+            'tipo_pdf' => 'nullable|string',
+
+            /*
+            * Protección adicional:
+            * el formulario real deberá enviar exactamente la palabra ENVIAR.
+            */
+            'confirmacion_envio' => 'required|in:ENVIAR',
+        ], [
+            'confirmacion_envio.required' =>
+                'Debes confirmar expresamente el envío real.',
+
+            'confirmacion_envio.in' =>
+                'La confirmación del envío real no es válida.',
+        ]);
+
+        $anio = (int) $request->anio_pdf;
+        $mes = (int) $request->mes_pdf;
+
+        $proveedorFiltro = trim((string) $request->proveedor_pdf);
+        $rutFiltro = trim((string) $request->rut_pdf);
+        $tipoFiltro = trim((string) $request->tipo_pdf);
+
+        /*
+        * Se obtiene exactamente el mismo conjunto de detalles utilizado
+        * para el ZIP, la revisión y el envío masivo de prueba.
+        */
+        $detallesBase = SuscripcionLiquidacionDetalle::with([
+            'asignacion.suscripcionProveedor.cobranzaCompra',
+            'asignacion.suscripcionProveedor.cobranzaCompra.banco',
+            'asignacion.suscripcionProveedor.cobranzaCompra.tipoCuenta',
+            'asignacion.transportista',
+            'asignacion.opvPuntos',
+            'asignacion.cantidadesMensuales',
+        ])
+            ->where('anio', $anio)
+            ->where('mes', $mes)
+            ->orderBy('codigo')
+            ->get()
+            ->filter(function ($detalle) use (
+                $proveedorFiltro,
+                $rutFiltro,
+                $tipoFiltro,
+                $ajusteMensualService
+            ) {
+                $proveedorEfectivo = $ajusteMensualService
+                    ->proveedorFacturacionParaDetalle($detalle);
+
+                $cobranzaCompra = $proveedorEfectivo?->cobranzaCompra;
+
+                if (!$proveedorEfectivo) {
+                    return false;
+                }
+
+                if ($proveedorFiltro !== '') {
+                    $razonSocial = mb_strtoupper(
+                        trim((string) $cobranzaCompra?->razon_social)
+                    );
+
+                    if (!str_contains(
+                        $razonSocial,
+                        mb_strtoupper($proveedorFiltro)
+                    )) {
+                        return false;
+                    }
+                }
+
+                if ($rutFiltro !== '') {
+                    $rutCliente = mb_strtoupper(
+                        trim((string) $cobranzaCompra?->rut_cliente)
+                    );
+
+                    if (!str_contains(
+                        $rutCliente,
+                        mb_strtoupper($rutFiltro)
+                    )) {
+                        return false;
+                    }
+                }
+
+                if ($tipoFiltro !== '') {
+                    $tipoDocumento = mb_strtoupper(
+                        trim((string) (
+                            $ajusteMensualService
+                                ->tipoDocumentoParaDetalle($detalle)
+                            ?? $proveedorEfectivo->tipo
+                        ))
+                    );
+
+                    if (
+                        $tipoDocumento
+                        !== mb_strtoupper(trim($tipoFiltro))
+                    ) {
+                        return false;
+                    }
+                }
+
+                return true;
+            })
+            ->values();
+
+        if ($detallesBase->isEmpty()) {
+            return back()->withErrors([
+                'correo_real' =>
+                    'No existen pre-facturas para enviar con los filtros seleccionados.',
+            ]);
+        }
+
+        try {
+            $resultado = $envioService
+                ->enviarRealesDesdeDetalles($detallesBase);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->withErrors([
+                'correo_real' =>
+                    'No se pudo ejecutar el envío real: '
+                    . $e->getMessage(),
+            ]);
+        }
+
+        $mensaje = 'Envío real finalizado. '
+            . 'Pre-facturas enviadas: '
+            . $resultado['enviados']
+            . '. Omitidas: '
+            . $resultado['omitidos']
+            . '. Fallidas: '
+            . $resultado['fallidos']
+            . '. Se envió copia a finanzas@4nlogistica.cl '
+            . 'y luisdelabarra@4nlogistica.cl.';
+
+        if (
+            $resultado['omitidos'] > 0
+            || $resultado['fallidos'] > 0
+        ) {
+            return back()->with('info', $mensaje);
+        }
+
+        return back()->with('success', $mensaje);
+    }
+
+
+
+
+
+
+
+
+
+
+    public function revisarDestinatarios(
+        Request $request,
+        SuscripcionPrefacturaEnvioService $envioService,
+        SuscripcionAjusteMensualService $ajusteMensualService
+    ) {
+        $request->validate([
+            'anio_pdf' => 'required|integer|min:2020|max:2100',
+            'mes_pdf' => 'required|integer|min:1|max:12',
+            'proveedor_pdf' => 'nullable|string',
+            'rut_pdf' => 'nullable|string',
+            'tipo_pdf' => 'nullable|string',
+        ]);
+
+        $anio = (int) $request->anio_pdf;
+        $mes = (int) $request->mes_pdf;
+
+        $proveedorFiltro = trim((string) $request->proveedor_pdf);
+        $rutFiltro = trim((string) $request->rut_pdf);
+        $tipoFiltro = trim((string) $request->tipo_pdf);
+
+        $detallesBase = SuscripcionLiquidacionDetalle::with([
+            'asignacion.suscripcionProveedor.cobranzaCompra',
+            'asignacion.suscripcionProveedor.cobranzaCompra.banco',
+            'asignacion.suscripcionProveedor.cobranzaCompra.tipoCuenta',
+            'asignacion.transportista',
+            'asignacion.opvPuntos',
+            'asignacion.cantidadesMensuales',
+        ])
+            ->where('anio', $anio)
+            ->where('mes', $mes)
+            ->orderBy('codigo')
+            ->get()
+            ->filter(function ($detalle) use (
+                $proveedorFiltro,
+                $rutFiltro,
+                $tipoFiltro,
+                $ajusteMensualService
+            ) {
+                $proveedorEfectivo = $ajusteMensualService
+                    ->proveedorFacturacionParaDetalle($detalle);
+
+                $cobranzaCompra = $proveedorEfectivo?->cobranzaCompra;
+
+                if (!$proveedorEfectivo) {
+                    return false;
+                }
+
+                if ($proveedorFiltro !== '') {
+                    $razonSocial = mb_strtoupper(
+                        trim((string) $cobranzaCompra?->razon_social)
+                    );
+
+                    if (!str_contains(
+                        $razonSocial,
+                        mb_strtoupper($proveedorFiltro)
+                    )) {
+                        return false;
+                    }
+                }
+
+                if ($rutFiltro !== '') {
+                    $rutCliente = mb_strtoupper(
+                        trim((string) $cobranzaCompra?->rut_cliente)
+                    );
+
+                    if (!str_contains(
+                        $rutCliente,
+                        mb_strtoupper($rutFiltro)
+                    )) {
+                        return false;
+                    }
+                }
+
+                if ($tipoFiltro !== '') {
+                    $tipoDocumento = mb_strtoupper(
+                        trim((string) (
+                            $ajusteMensualService
+                                ->tipoDocumentoParaDetalle($detalle)
+                            ?? $proveedorEfectivo->tipo
+                        ))
+                    );
+
+                    if (
+                        $tipoDocumento
+                        !== mb_strtoupper(trim($tipoFiltro))
+                    ) {
+                        return false;
+                    }
+                }
+
+                return true;
+            })
+            ->values();
+
+        if ($detallesBase->isEmpty()) {
+            return back()->withErrors([
+                'revision_correos' =>
+                    'No existen pre-facturas para revisar con los filtros seleccionados.',
+            ]);
+        }
+
+        $revision = $envioService
+            ->prepararRevisionDesdeDetalles($detallesBase);
+
+        $meses = [
+            1 => 'Enero',
+            2 => 'Febrero',
+            3 => 'Marzo',
+            4 => 'Abril',
+            5 => 'Mayo',
+            6 => 'Junio',
+            7 => 'Julio',
+            8 => 'Agosto',
+            9 => 'Septiembre',
+            10 => 'Octubre',
+            11 => 'Noviembre',
+            12 => 'Diciembre',
+        ];
+
+        return view(
+            'suscripciones.liquidacion_detalles.revision_correos',
+            [
+                'revision' => $revision,
+                'anio' => $anio,
+                'mes' => $mes,
+                'mesNombre' => $meses[$mes] ?? $mes,
+
+                'proveedorFiltro' => $proveedorFiltro,
+                'rutFiltro' => $rutFiltro,
+                'tipoFiltro' => $tipoFiltro,
+            ]
+        );
+    }
+
+
 
     public function generarMes(Request $request, SuscripcionGeneracionMensualService $generacionMensualService)
     {

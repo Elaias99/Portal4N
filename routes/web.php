@@ -1160,8 +1160,26 @@ Route::middleware('auth')
         Route::get('/liquidacion-detalles/{detalle}/pdf', [SuscripcionLiquidacionDetalleController::class, 'pdf'])
             ->name('liquidacion-detalles.pdf');
 
+        Route::post('/liquidacion-detalles/{detalle}/enviar-correo-prueba', [SuscripcionLiquidacionDetalleController::class, 'enviarCorreoPrueba'])
+            ->name('liquidacion-detalles.enviar-correo-prueba');
+
         Route::post('/liquidacion-detalles/pdf-masivo', [SuscripcionLiquidacionDetalleController::class, 'pdfMasivo'])
             ->name('liquidacion-detalles.pdf-masivo');
+
+        Route::post(
+            '/liquidacion-detalles/enviar-correos-prueba-masivo',
+            [SuscripcionLiquidacionDetalleController::class, 'enviarCorreosPruebaMasivo']
+        )->name('liquidacion-detalles.enviar-correos-prueba-masivo');
+
+        Route::post(
+            '/liquidacion-detalles/revisar-destinatarios',
+            [SuscripcionLiquidacionDetalleController::class, 'revisarDestinatarios']
+        )->name('liquidacion-detalles.revisar-destinatarios');
+
+        Route::post(
+            '/liquidacion-detalles/enviar-correos-reales-masivo',
+            [SuscripcionLiquidacionDetalleController::class, 'enviarCorreosRealesMasivo']
+        )->name('liquidacion-detalles.enviar-correos-reales-masivo');
 
         Route::get('/liquidacion-detalles/opv-puntos/{asignacion}', [SuscripcionLiquidacionDetalleController::class, 'opvPuntos'])
             ->name('liquidacion-detalles.opv-puntos');
