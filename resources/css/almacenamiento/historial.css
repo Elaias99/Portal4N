@@ -1,0 +1,785 @@
+/*
+|--------------------------------------------------------------------------
+| Historial del inventario de bodega
+|--------------------------------------------------------------------------
+| Estilos exclusivos para:
+| resources/views/almacenamiento/historial/index.blade.php
+|--------------------------------------------------------------------------
+*/
+
+.almacenamiento-historial {
+    --historial-primary: #168f93;
+    --historial-primary-dark: #107579;
+    --historial-primary-soft: #e8f7f7;
+
+    --historial-background: #f6f8fa;
+    --historial-surface: #ffffff;
+    --historial-surface-soft: #f8fafc;
+
+    --historial-border: #dde4ea;
+    --historial-border-soft: #edf1f4;
+
+    --historial-text: #172033;
+    --historial-text-secondary: #64748b;
+    --historial-text-muted: #94a3b8;
+
+    --historial-success: #15803d;
+    --historial-success-soft: #dcfce7;
+    --historial-success-border: #bbf7d0;
+
+    --historial-danger: #b91c1c;
+    --historial-danger-soft: #fee2e2;
+    --historial-danger-border: #fecaca;
+
+    --historial-radius-sm: 8px;
+    --historial-radius-md: 12px;
+    --historial-radius-lg: 16px;
+
+    --historial-shadow:
+        0 8px 24px rgba(15, 23, 42, 0.06);
+
+    max-width: 1240px;
+    padding-top: 1.5rem;
+    padding-bottom: 3rem;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Mensajes
+|--------------------------------------------------------------------------
+*/
+
+.almacenamiento-historial > .alert {
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--historial-success-border);
+    border-radius: var(--historial-radius-md);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Encabezado principal
+|--------------------------------------------------------------------------
+*/
+
+.almacenamiento-historial__header {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    padding: 1.4rem 1.5rem;
+    background: var(--historial-surface);
+    border: 1px solid var(--historial-border);
+    border-radius: var(--historial-radius-lg);
+    box-shadow: var(--historial-shadow);
+}
+
+.almacenamiento-historial__header::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 5px;
+    background: var(--historial-primary);
+    content: "";
+}
+
+.almacenamiento-historial__header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+}
+
+.almacenamiento-historial__header-information {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.almacenamiento-historial__header-symbol {
+    display: flex;
+    flex: 0 0 54px;
+    align-items: center;
+    justify-content: center;
+    width: 54px;
+    height: 54px;
+    color: var(--historial-primary-dark);
+    background: var(--historial-primary-soft);
+    border: 1px solid #c8ecec;
+    border-radius: 14px;
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.almacenamiento-historial__eyebrow {
+    margin: 0 0 0.2rem;
+    color: var(--historial-primary-dark);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.almacenamiento-historial__title {
+    margin: 0;
+    color: var(--historial-text);
+    font-size: clamp(1.55rem, 3vw, 2rem);
+    font-weight: 750;
+    line-height: 1.2;
+}
+
+.almacenamiento-historial__description {
+    max-width: 680px;
+    margin: 0.35rem 0 0;
+    color: var(--historial-text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.almacenamiento-historial__header-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.almacenamiento-historial__header-actions .btn {
+    min-width: 155px;
+    padding: 0.65rem 1rem;
+    border-radius: 9px;
+    font-size: 0.86rem;
+    font-weight: 650;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Panel de filtros
+|--------------------------------------------------------------------------
+*/
+
+.almacenamiento-historial__filters {
+    margin-bottom: 1rem;
+    padding: 1.25rem;
+    background: var(--historial-surface);
+    border: 1px solid var(--historial-border);
+    border-radius: var(--historial-radius-md);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+.almacenamiento-historial__filters-header {
+    margin-bottom: 1rem;
+}
+
+.almacenamiento-historial__filters-eyebrow {
+    margin: 0 0 0.15rem;
+    color: var(--historial-primary-dark);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.almacenamiento-historial__filters-title {
+    margin: 0;
+    color: var(--historial-text);
+    font-size: 1.05rem;
+    font-weight: 750;
+}
+
+.almacenamiento-historial__filters-description {
+    margin: 0.25rem 0 0;
+    color: var(--historial-text-secondary);
+    font-size: 0.84rem;
+}
+
+.almacenamiento-historial__filter-form {
+    display: grid;
+    grid-template-columns:
+        minmax(150px, 190px)
+        minmax(170px, 230px)
+        minmax(260px, 1fr);
+    align-items: end;
+    gap: 1rem;
+}
+
+.almacenamiento-historial__filter-field {
+    min-width: 0;
+}
+
+.almacenamiento-historial__filter-field .form-label {
+    margin-bottom: 0.4rem;
+    color: var(--historial-text);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.almacenamiento-historial__filter-field .form-select {
+    min-height: 42px;
+    color: var(--historial-text);
+    background-color: var(--historial-surface-soft);
+    border-color: var(--historial-border);
+    border-radius: var(--historial-radius-sm);
+    font-size: 0.86rem;
+}
+
+.almacenamiento-historial__filter-field .form-select:focus {
+    background-color: var(--historial-surface);
+    border-color: var(--historial-primary);
+    box-shadow: 0 0 0 0.2rem rgba(22, 143, 147, 0.12);
+}
+
+.almacenamiento-historial__filter-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.65rem;
+}
+
+.almacenamiento-historial__filter-actions .btn {
+    min-height: 42px;
+    padding: 0.6rem 1rem;
+    border-radius: var(--historial-radius-sm);
+    font-size: 0.82rem;
+    font-weight: 650;
+    white-space: nowrap;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Panel principal
+|--------------------------------------------------------------------------
+*/
+
+.almacenamiento-historial__panel {
+    overflow: hidden;
+    background: var(--historial-surface);
+    border: 1px solid var(--historial-border);
+    border-radius: var(--historial-radius-lg);
+    box-shadow: var(--historial-shadow);
+}
+
+.almacenamiento-historial__panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    padding: 1.15rem 1.25rem;
+    background: var(--historial-surface);
+    border-bottom: 1px solid var(--historial-border);
+}
+
+.almacenamiento-historial__panel-eyebrow {
+    margin: 0 0 0.15rem;
+    color: var(--historial-primary-dark);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.almacenamiento-historial__panel-title {
+    margin: 0;
+    color: var(--historial-text);
+    font-size: 1.12rem;
+    font-weight: 750;
+}
+
+.almacenamiento-historial__panel-description {
+    margin: 0.28rem 0 0;
+    color: var(--historial-text-secondary);
+    font-size: 0.84rem;
+}
+
+.almacenamiento-historial__panel-description strong {
+    color: var(--historial-text);
+    font-weight: 750;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Identificador del período
+|--------------------------------------------------------------------------
+*/
+
+.almacenamiento-historial__period {
+    display: grid;
+    flex: 0 0 auto;
+    min-width: 105px;
+    padding: 0.7rem 0.9rem;
+    background: var(--historial-primary-soft);
+    border: 1px solid #c8ecec;
+    border-radius: var(--historial-radius-md);
+    text-align: center;
+}
+
+.almacenamiento-historial__period-label {
+    color: var(--historial-primary-dark);
+    font-size: 0.67rem;
+    font-weight: 700;
+    letter-spacing: 0.055em;
+    text-transform: uppercase;
+}
+
+.almacenamiento-historial__period-value {
+    margin-top: 0.1rem;
+    color: var(--historial-text);
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Tabla del historial
+|--------------------------------------------------------------------------
+*/
+
+.almacenamiento-historial__panel .table-responsive {
+    overflow-x: auto;
+}
+
+.almacenamiento-historial__table {
+    min-width: 760px;
+    margin-bottom: 0;
+}
+
+.almacenamiento-historial__table thead th {
+    padding: 0.85rem 1rem;
+    color: #526174;
+    background: var(--historial-surface-soft);
+    border-top: 0;
+    border-bottom: 1px solid var(--historial-border);
+    font-size: 0.7rem;
+    font-weight: 750;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.almacenamiento-historial__table tbody td {
+    padding: 1rem;
+    color: var(--historial-text);
+    background: var(--historial-surface);
+    border-color: var(--historial-border-soft);
+    vertical-align: middle;
+}
+
+.almacenamiento-historial__table tbody tr {
+    transition: background-color 160ms ease;
+}
+
+.almacenamiento-historial__table tbody tr:hover td {
+    background: #fbfdfd;
+}
+
+.almacenamiento-historial__table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Fecha
+|--------------------------------------------------------------------------
+*/
+
+.almacenamiento-historial__date {
+    display: grid;
+    min-width: 110px;
+}
+
+.almacenamiento-historial__date strong {
+    color: var(--historial-text);
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.almacenamiento-historial__date span {
+    margin-top: 0.15rem;
+    color: var(--historial-text-muted);
+    font-size: 0.75rem;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Producto
+|--------------------------------------------------------------------------
+*/
+
+.almacenamiento-historial__product {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 210px;
+}
+
+.almacenamiento-historial__product-symbol {
+    display: flex;
+    flex: 0 0 42px;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    color: var(--historial-primary-dark);
+    background: var(--historial-primary-soft);
+    border: 1px solid #d1eeee;
+    border-radius: 11px;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.almacenamiento-historial__product-name {
+    display: block;
+    max-width: 270px;
+    overflow: hidden;
+    color: var(--historial-text);
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.almacenamiento-historial__product-detail {
+    display: block;
+    margin-top: 0.18rem;
+    color: var(--historial-text-muted);
+    font-size: 0.73rem;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| ID original
+|--------------------------------------------------------------------------
+*/
+
+.almacenamiento-historial__reference {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    padding: 0.32rem 0.65rem;
+    color: #526174;
+    background: var(--historial-surface-soft);
+    border: 1px solid var(--historial-border);
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Estado de la operación
+|--------------------------------------------------------------------------
+*/
+
+.almacenamiento-historial__status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 94px;
+    padding: 0.38rem 0.75rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.035em;
+}
+
+.almacenamiento-historial__status--created {
+    color: var(--historial-success);
+    background: var(--historial-success-soft);
+    border-color: var(--historial-success-border);
+}
+
+.almacenamiento-historial__status--deleted {
+    color: var(--historial-danger);
+    background: var(--historial-danger-soft);
+    border-color: var(--historial-danger-border);
+}
+
+.almacenamiento-historial__status-detail {
+    display: block;
+    margin-top: 0.32rem;
+    color: var(--historial-text-secondary);
+    font-size: 0.7rem;
+    white-space: nowrap;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Estado sin movimientos
+|--------------------------------------------------------------------------
+*/
+
+.almacenamiento-historial__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4rem 1.5rem;
+    text-align: center;
+}
+
+.almacenamiento-historial__empty-symbol {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 1rem;
+    color: var(--historial-primary-dark);
+    background: var(--historial-primary-soft);
+    border: 1px solid #ceecec;
+    border-radius: 17px;
+    font-size: 1.3rem;
+    font-weight: 800;
+}
+
+.almacenamiento-historial__empty-title {
+    margin: 0;
+    color: var(--historial-text);
+    font-size: 1.15rem;
+    font-weight: 750;
+}
+
+.almacenamiento-historial__empty-description {
+    max-width: 500px;
+    margin: 0.5rem auto 1.25rem;
+    color: var(--historial-text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.6;
+}
+
+.almacenamiento-historial__empty .btn {
+    padding: 0.6rem 1rem;
+    border-radius: var(--historial-radius-sm);
+    font-size: 0.84rem;
+    font-weight: 650;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Paginación
+|--------------------------------------------------------------------------
+*/
+
+.almacenamiento-historial__pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: var(--historial-surface-soft);
+    border-top: 1px solid var(--historial-border);
+}
+
+.almacenamiento-historial__pagination-detail {
+    color: var(--historial-text-secondary);
+    font-size: 0.8rem;
+}
+
+.almacenamiento-historial__pagination-detail strong {
+    color: var(--historial-text);
+    font-weight: 700;
+}
+
+.almacenamiento-historial__pagination .pagination {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.2rem;
+    margin-bottom: 0;
+}
+
+.almacenamiento-historial__pagination .page-link {
+    min-width: 35px;
+    color: var(--historial-primary-dark);
+    background: var(--historial-surface);
+    border-color: var(--historial-border);
+    border-radius: 7px;
+    font-size: 0.78rem;
+    text-align: center;
+}
+
+.almacenamiento-historial__pagination .page-link:hover {
+    color: #ffffff;
+    background: var(--historial-primary);
+    border-color: var(--historial-primary);
+}
+
+.almacenamiento-historial__pagination .page-item.active .page-link {
+    color: #ffffff;
+    background: var(--historial-primary);
+    border-color: var(--historial-primary);
+}
+
+.almacenamiento-historial__pagination .page-item.disabled .page-link {
+    color: var(--historial-text-muted);
+    background: var(--historial-surface-soft);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Tablets
+|--------------------------------------------------------------------------
+*/
+
+@media (max-width: 991.98px) {
+    .almacenamiento-historial {
+        padding-top: 1.1rem;
+    }
+
+    .almacenamiento-historial__header-content {
+        align-items: flex-start;
+    }
+
+    .almacenamiento-historial__filter-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .almacenamiento-historial__filter-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Teléfonos
+|--------------------------------------------------------------------------
+*/
+
+@media (max-width: 767.98px) {
+    .almacenamiento-historial {
+        padding-right: 0.75rem;
+        padding-left: 0.75rem;
+    }
+
+    .almacenamiento-historial__header {
+        padding: 1.2rem 1rem 1.2rem 1.15rem;
+    }
+
+    .almacenamiento-historial__header-content {
+        flex-direction: column;
+    }
+
+    .almacenamiento-historial__header-information {
+        align-items: flex-start;
+    }
+
+    .almacenamiento-historial__header-symbol {
+        flex-basis: 46px;
+        width: 46px;
+        height: 46px;
+    }
+
+    .almacenamiento-historial__description {
+        font-size: 0.85rem;
+    }
+
+    .almacenamiento-historial__header-actions {
+        width: 100%;
+    }
+
+    .almacenamiento-historial__header-actions .btn {
+        width: 100%;
+    }
+
+    .almacenamiento-historial__filters {
+        padding: 1rem;
+    }
+
+    .almacenamiento-historial__filter-form {
+        grid-template-columns: 1fr;
+    }
+
+    .almacenamiento-historial__filter-actions {
+        grid-column: auto;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .almacenamiento-historial__filter-actions .btn {
+        width: 100%;
+    }
+
+    .almacenamiento-historial__panel-header {
+        align-items: flex-start;
+        padding: 1rem;
+    }
+
+    .almacenamiento-historial__period {
+        min-width: 95px;
+    }
+
+    .almacenamiento-historial__pagination {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .almacenamiento-historial__pagination .pagination {
+        justify-content: flex-start;
+    }
+
+    .almacenamiento-historial__empty {
+        padding: 3rem 1rem;
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Pantallas pequeñas
+|--------------------------------------------------------------------------
+*/
+
+@media (max-width: 480px) {
+    .almacenamiento-historial__header-information {
+        display: block;
+    }
+
+    .almacenamiento-historial__header-symbol {
+        margin-bottom: 0.75rem;
+    }
+
+    .almacenamiento-historial__panel-header {
+        flex-direction: column;
+    }
+
+    .almacenamiento-historial__period {
+        width: 100%;
+    }
+
+    .almacenamiento-historial__pagination-detail {
+        line-height: 1.5;
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Reducción de movimiento
+|--------------------------------------------------------------------------
+*/
+
+@media (prefers-reduced-motion: reduce) {
+    .almacenamiento-historial *,
+    .almacenamiento-historial *::before,
+    .almacenamiento-historial *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}

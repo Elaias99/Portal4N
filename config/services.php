@@ -25,6 +25,14 @@ return [
         'tenant_id' => env('MICROSOFT_TENANT_ID'),
     ],
 
+    'onedrive' => [
+        'tenant_id' => env('MICROSOFT_ONEDRIVE_TENANT_ID'),
+        'client_id' => env('MICROSOFT_ONEDRIVE_CLIENT_ID'),
+        'client_secret' => env('MICROSOFT_ONEDRIVE_CLIENT_SECRET'),
+        'drive_id' => env('MICROSOFT_ONEDRIVE_DRIVE_ID'),
+        'folder_id' => env('MICROSOFT_ONEDRIVE_FOLDER_ID'),
+    ],
+
     'tracking' => [
         'base_url' => env('TRACKING_API_BASE_URL', 'https://admin.4nortes.app/api/v1/tracking'),
         'token' => env('TRACKING_API_TOKEN'),

@@ -17,6 +17,7 @@ use App\Services\Suscripciones\SuscripcionPrefacturaOcService;
 use App\Services\Suscripciones\SuscripcionAjusteMensualService;
 use App\Services\Suscripciones\SuscripcionPrefacturaPdfService;
 use App\Services\Suscripciones\SuscripcionPrefacturaEnvioService;
+use App\Services\Suscripciones\SuscripcionOneDriveService;
 use Illuminate\Http\Request;
 
 use App\Mail\SuscripcionPrefacturaPruebaMail;
@@ -660,8 +661,12 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function pdfMasivo(Request $request, SuscripcionPrefacturaZipService $zipService, SuscripcionAjusteMensualService $ajusteMensualService) 
-    {
+    public function pdfMasivo(
+        Request $request,
+        SuscripcionPrefacturaZipService $zipService,
+        SuscripcionOneDriveService $oneDriveService,
+        SuscripcionAjusteMensualService $ajusteMensualService
+    ) {
         $request->validate([
             'anio_pdf' => 'required|integer|min:2020|max:2100',
             'mes_pdf' => 'required|integer|min:1|max:12',
@@ -672,14 +677,15 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
         $anio = (int) $request->anio_pdf;
         $mes = (int) $request->mes_pdf;
+
         $proveedorFiltro = trim((string) $request->proveedor_pdf);
         $rutFiltro = trim((string) $request->rut_pdf);
         $tipoFiltro = trim((string) $request->tipo_pdf);
 
         /*
-        * Importante:
-        * No filtramos por proveedor base en SQL, porque una línea puede pertenecer
-        * a otro proveedor efectivo por ajuste mensual.
+        * No se filtra por proveedor base directamente en SQL,
+        * porque una línea puede pertenecer a otro proveedor efectivo
+        * mediante un ajuste mensual.
         */
         $detallesBase = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
@@ -699,7 +705,9 @@ class SuscripcionLiquidacionDetalleController extends Controller
                 $tipoFiltro,
                 $ajusteMensualService
             ) {
-                $proveedorEfectivo = $ajusteMensualService->proveedorFacturacionParaDetalle($detalle);
+                $proveedorEfectivo = $ajusteMensualService
+                    ->proveedorFacturacionParaDetalle($detalle);
+
                 $cobranzaCompra = $proveedorEfectivo?->cobranzaCompra;
 
                 if (!$proveedorEfectivo) {
@@ -707,7 +715,10 @@ class SuscripcionLiquidacionDetalleController extends Controller
                 }
 
                 if ($proveedorFiltro !== '') {
-                    $razonSocial = mb_strtoupper(trim((string) $cobranzaCompra?->razon_social));
+                    $razonSocial = mb_strtoupper(
+                        trim((string) $cobranzaCompra?->razon_social)
+                    );
+
                     $filtro = mb_strtoupper($proveedorFiltro);
 
                     if (!str_contains($razonSocial, $filtro)) {
@@ -716,7 +727,10 @@ class SuscripcionLiquidacionDetalleController extends Controller
                 }
 
                 if ($rutFiltro !== '') {
-                    $rutCliente = mb_strtoupper(trim((string) $cobranzaCompra?->rut_cliente));
+                    $rutCliente = mb_strtoupper(
+                        trim((string) $cobranzaCompra?->rut_cliente)
+                    );
+
                     $filtro = mb_strtoupper($rutFiltro);
 
                     if (!str_contains($rutCliente, $filtro)) {
@@ -725,10 +739,13 @@ class SuscripcionLiquidacionDetalleController extends Controller
                 }
 
                 if ($tipoFiltro !== '') {
-                    $tipoDocumento = mb_strtoupper(trim((string) (
-                        $ajusteMensualService->tipoDocumentoParaDetalle($detalle)
-                        ?? $proveedorEfectivo?->tipo
-                    )));
+                    $tipoDocumento = mb_strtoupper(
+                        trim((string) (
+                            $ajusteMensualService
+                                ->tipoDocumentoParaDetalle($detalle)
+                            ?? $proveedorEfectivo->tipo
+                        ))
+                    );
 
                     $filtro = mb_strtoupper(trim($tipoFiltro));
 
@@ -743,22 +760,47 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
         if ($detallesBase->isEmpty()) {
             return back()->withErrors([
-                'pdf_masivo' => 'No existen detalles para generar PDFs con los filtros seleccionados.',
+                'pdf_masivo' =>
+                    'No existen detalles para generar PDFs con los filtros seleccionados.',
             ]);
         }
 
         try {
-            $resultado = $zipService->generarDesdeDetalles($detallesBase, $anio, $mes);
+            /*
+            * Primero se genera el ZIP local utilizando el flujo existente.
+            */
+            $resultado = $zipService->generarDesdeDetalles(
+                $detallesBase,
+                $anio,
+                $mes
+            );
+
+            /*
+            * Después se guarda una copia del mismo ZIP en la carpeta
+            * Portal4N - Suscripciones de OneDrive.
+            */
+            $oneDriveService->subirZip(
+                $resultado['zip_path'],
+                $resultado['zip_file_name']
+            );
         } catch (\Throwable $e) {
+            report($e);
+
             return back()->withErrors([
-                'pdf_masivo' => $e->getMessage(),
+                'pdf_masivo' =>
+                    'No se pudo generar o guardar el ZIP en OneDrive: '
+                    . $e->getMessage(),
             ]);
         }
 
-        return response()
-            ->download($resultado['zip_path'], $resultado['zip_file_name']);
+        /*
+        * Finalmente se mantiene la descarga habitual en el computador.
+        */
+        return response()->download(
+            $resultado['zip_path'],
+            $resultado['zip_file_name']
+        );
     }
-
 
 
     public function enviarCorreosPruebaMasivo(

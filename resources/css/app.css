@@ -1,3 +1,6 @@
+@import './almacenamiento/index.css';
+@import './almacenamiento/historial.css';
+
 .navbar-brand {
     display: flex;
     align-items: center; /* Asegura que el logo y los textos estén alineados verticalmente */

@@ -5,6 +5,7 @@
 
   {{-- Título + toolbar --}}
   <div class="d-flex align-items-center justify-content-between mb-3">
+
     <div>
       <h1 class="h4 mb-0">Listado de Equipos</h1>
       <small class="text-muted">
@@ -14,11 +15,14 @@
         Inventario general · {{ $total }} en total
       </small>
     </div>
+
+    
     <div class="d-flex gap-2">
       <a href="{{ route('equipos.create') }}" class="btn btn-primary">
         ➕ Agregar equipo
       </a>
     </div>
+
   </div>
 
   {{-- Flash feedback --}}

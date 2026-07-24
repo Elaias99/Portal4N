@@ -282,7 +282,7 @@
         </tr>
         <tr>
             <td class="left">DIRECCION</td>
-            <td>AV PDTE FREI MONTALVA 9215 - QUILICURA</td>
+            <td>Galvarino 8481 - QUILICURA</td>
         </tr>
         <tr>
             <td class="left">CORREO</td>

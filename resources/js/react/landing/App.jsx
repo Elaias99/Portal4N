@@ -1225,7 +1225,7 @@ export default function FourNLogisticaWebsite( { initialTracking = "" }) {
                       <MapPin className="mt-1 h-5 w-5 text-[#5CBABC]" />
                       <div>
                         <div className="font-semibold text-[#231F21]">Dirección</div>
-                        <div className="text-sm text-[#231F21]/68">Galvarino 9440-A Quilicura, Santiago</div>
+                        <div className="text-sm text-[#231F21]/68">Galvarino 8481 Quilicura, Santiago</div>
                       </div>
                     </div>
                   </div>
@@ -1426,10 +1426,10 @@ export default function FourNLogisticaWebsite( { initialTracking = "" }) {
                     <span>Acceso trabajadores</span>
                   </a>
 
-                  <div className="flex items-start gap-3">
+                  {/* <div className="flex items-start gap-3">
                     <MessageSquareMore className="mt-1 h-4 w-4 shrink-0 text-[#B0FFF8]" />
                     <span>Espacio preparado para integrar redes sociales oficiales</span>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>

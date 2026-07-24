@@ -28,6 +28,8 @@ use App\Http\Controllers\ExportacionController;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\ManifiestoController;
 use App\Http\Controllers\EquipoController;
+use App\Http\Controllers\AlmacenamientoBodegaController;
+use App\Http\Controllers\AlmacenamientoBodegaHistorialController;
 use App\Http\Controllers\CotizadorController;
 use App\Http\Controllers\CobranzaController;
 use App\Http\Controllers\CobranzaCompraController;
@@ -255,7 +257,12 @@ Route::resource('regions', 'App\Http\Controllers\RegionController')->middleware(
 Route::resource('tipo_vestimentas', 'App\Http\Controllers\TipoVestimentaController')->middleware('auth');
 Route::resource('tallas', 'App\Http\Controllers\TallaController')->middleware('auth');
 Route::resource('hijos', 'App\Http\Controllers\HijoController')->middleware('auth');
-Route::resource('equipos', EquipoController::class);
+Route::resource('equipos', EquipoController::class)->middleware('auth');
+Route::get('/almacenamiento/historial', [AlmacenamientoBodegaHistorialController::class, 'index'])->name('almacenamiento.historial.index');
+Route::resource('almacenamiento', AlmacenamientoBodegaController::class)->middleware('auth');
+
+
+
 
 
 
