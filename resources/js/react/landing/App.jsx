@@ -1410,7 +1410,7 @@ export default function FourNLogisticaWebsite( { initialTracking = "" }) {
                 <div className="mt-5 space-y-4 text-sm text-white/70">
                   <div className="flex items-start gap-3">
                     <MapPin className="mt-1 h-4 w-4 shrink-0 text-[#B0FFF8]" />
-                    <span>Galvarino 9440-A Quilicura, Santiago</span>
+                    <span>Galvarino 8481 Quilicura, Santiago</span>
                   </div>
 
                   <div className="flex items-start gap-3">
