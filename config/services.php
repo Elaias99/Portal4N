@@ -26,6 +26,8 @@ return [
     ],
 
     'onedrive' => [
+        'enabled' => env('ONEDRIVE_ENABLED', true),
+
         'tenant_id' => env('MICROSOFT_ONEDRIVE_TENANT_ID'),
         'client_id' => env('MICROSOFT_ONEDRIVE_CLIENT_ID'),
         'client_secret' => env('MICROSOFT_ONEDRIVE_CLIENT_SECRET'),

@@ -13,16 +13,21 @@ class SuscripcionOneDriveService
     private string $clientSecret;
     private string $driveId;
     private string $folderId;
+    private bool $enabled;
 
     public function __construct()
     {
+        $this->enabled = (bool) config('services.onedrive.enabled', true);
+
         $this->tenantId = (string) config('services.onedrive.tenant_id');
         $this->clientId = (string) config('services.onedrive.client_id');
         $this->clientSecret = (string) config('services.onedrive.client_secret');
         $this->driveId = (string) config('services.onedrive.drive_id');
         $this->folderId = (string) config('services.onedrive.folder_id');
 
-        $this->validarConfiguracion();
+        if ($this->enabled) {
+            $this->validarConfiguracion();
+        }
     }
 
     /**
@@ -50,6 +55,21 @@ class SuscripcionOneDriveService
                 'El archivo ZIP está vacío o no se pudo determinar su tamaño.'
             );
         }
+
+
+        /*
+        * En entornos de pruebas se conserva la generación local del ZIP,
+        * pero no se realiza ninguna conexión con Microsoft Graph.
+        */
+        if (!$this->enabled) {
+            return [
+                'id' => null,
+                'name' => $zipFileName,
+                'size' => (int) $tamano,
+                'web_url' => null,
+            ];
+        }
+
 
         /*
          * La carga directa de Microsoft Graph admite archivos
