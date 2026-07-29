@@ -8,99 +8,275 @@ use App\Models\SuscripcionProveedor;
 use App\Models\SuscripcionTransportista;
 use App\Models\SuscripcionCantidadMensual;
 use App\Models\SuscripcionConceptoPagoVariable;
+use App\Models\SuscripcionZona;
+use App\Models\SuscripcionZonaDiaOperativo;
 use App\Services\Suscripciones\SuscripcionGeneracionMensualService;
 use App\Services\Suscripciones\SuscripcionAjusteMensualAplicacionService;
 use App\Services\Suscripciones\SuscripcionAjusteMensualRegistroService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 class SuscripcionComisionMensualController extends Controller
 {
 
     public function create(Request $request)
     {
-        $anio = (int) $request->input('anio', now()->year);
-        $mes = (int) $request->input('mes', now()->month);
+        $anio = (int) $request->input(
+            'anio',
+            now()->year
+        );
 
-        $proveedores = SuscripcionProveedor::with('cobranzaCompra')
+        $mes = (int) $request->input(
+            'mes',
+            now()->month
+        );
+
+        /*
+        * Zonas activas que participarán en la matriz mensual.
+        */
+        $zonas = SuscripcionZona::query()
+            ->where('activo', true)
+            ->orderBy('numero_zona')
+            ->get();
+
+        /*
+        * Sábados y domingos correspondientes al período.
+        */
+        $fechasFinSemana = $this->obtenerFechasFinSemana(
+            $anio,
+            $mes
+        );
+
+        /*
+        * Estados previamente guardados para las zonas y fechas
+        * del período seleccionado.
+        */
+        $diasOperativosGuardados =
+            SuscripcionZonaDiaOperativo::query()
+                ->whereIn(
+                    'suscripcion_zona_id',
+                    $zonas->pluck('id')
+                )
+                ->whereIn(
+                    'fecha',
+                    $fechasFinSemana->all()
+                )
+                ->get()
+                ->keyBy(function (
+                    SuscripcionZonaDiaOperativo $diaOperativo
+                ) {
+                    return
+                        $diaOperativo->suscripcion_zona_id
+                        . '|'
+                        . $diaOperativo->fecha->format('Y-m-d');
+                });
+
+        /*
+        * Estructura preparada para el formulario.
+        *
+        * Si todavía no existe un registro para una zona y fecha,
+        * se muestra marcado por defecto.
+        */
+        $calendarioZonas = $zonas->map(
+            function (SuscripcionZona $zona) use (
+                $fechasFinSemana,
+                $diasOperativosGuardados
+            ) {
+                $dias = $fechasFinSemana->map(
+                    function (string $fecha) use (
+                        $zona,
+                        $diasOperativosGuardados
+                    ) {
+                        $clave =
+                            $zona->id
+                            . '|'
+                            . $fecha;
+
+                        $registro =
+                            $diasOperativosGuardados->get($clave);
+
+                        return [
+                            'fecha' => $fecha,
+
+                            'hubo_despacho' => $registro
+                                ? (bool) $registro->hubo_despacho
+                                : true,
+
+                            'observacion' =>
+                                $registro?->observacion,
+
+                            'guardado' =>
+                                $registro !== null,
+                        ];
+                    }
+                );
+
+                return [
+                    'id' => $zona->id,
+                    'numero_zona' => $zona->numero_zona,
+                    'despacho' => $zona->despacho,
+                    'dias' => $dias,
+                ];
+            }
+        );
+
+        /*
+        * Permite distinguir entre:
+        *
+        * - un período todavía no configurado;
+        * - un período completamente configurado;
+        * - un período con información incompleta.
+        */
+        $totalCombinacionesEsperadas =
+            $zonas->count()
+            * $fechasFinSemana->count();
+
+        $totalCombinacionesGuardadas =
+            $diasOperativosGuardados->count();
+
+        $calendarioZonasConfigurado =
+            $totalCombinacionesEsperadas > 0
+            && $totalCombinacionesGuardadas
+                === $totalCombinacionesEsperadas;
+
+        $calendarioZonasIncompleto =
+            $totalCombinacionesGuardadas > 0
+            && $totalCombinacionesGuardadas
+                < $totalCombinacionesEsperadas;
+
+        $proveedores = SuscripcionProveedor::with(
+            'cobranzaCompra'
+        )
             ->whereHas('cobranzaCompra')
             ->get()
-            ->sortBy(fn ($proveedor) => $proveedor->cobranzaCompra?->razon_social)
+            ->sortBy(
+                fn ($proveedor) =>
+                    $proveedor->cobranzaCompra?->razon_social
+            )
             ->values();
 
-        $transportistas = SuscripcionTransportista::query()
-            ->orderBy('nombre_transportista')
-            ->get();
+        $transportistas =
+            SuscripcionTransportista::query()
+                ->orderBy('nombre_transportista')
+                ->get();
 
-        /*
-        * Cantidades variables del mes.
-        *
-        * Por ahora dejamos esta sección estrictamente limitada a asignaciones
-        * configuradas como VARIABLE, por ejemplo LOTA.
-        */
-        $asignacionesCantidadMensual = Asignaciones::with([
-            'suscripcionProveedor.cobranzaCompra',
-            'transportista',
-        ])
-            ->where('tipo_asignacion', 'VARIABLE')
-            ->orderBy('codigo')
-            ->get();
-
-        /*
-        * Asignaciones disponibles para novedades mensuales.
-        *
-        * No se permiten comisiones ni contenedores técnicos como asignación base.
-        */
-        $asignacionesAjustesMensuales = Asignaciones::with([
-            'suscripcionProveedor.cobranzaCompra',
-            'transportista',
-        ])
-            ->whereNotIn('tipo_asignacion', [
-                'COMISION',
-                'CONTENEDOR_AJUSTE',
+        $asignacionesCantidadMensual =
+            Asignaciones::with([
+                'suscripcionProveedor.cobranzaCompra',
+                'transportista',
             ])
-            ->orderBy('codigo')
-            ->get();
+                ->where('tipo_asignacion', 'VARIABLE')
+                ->orderBy('codigo')
+                ->get();
 
-        /*
-        * Pagos fijos mensuales automáticos.
-        */
-        $asignacionesFijasMensuales = Asignaciones::with([
-            'suscripcionProveedor.cobranzaCompra',
-            'transportista',
-        ])
-            ->where('tipo_asignacion', 'FIJO_MENSUAL')
-            ->orderBy('codigo')
-            ->get();
+        $asignacionesAjustesMensuales =
+            Asignaciones::with([
+                'suscripcionProveedor.cobranzaCompra',
+                'transportista',
+            ])
+                ->whereNotIn('tipo_asignacion', [
+                    'COMISION',
+                    'CONTENEDOR_AJUSTE',
+                ])
+                ->orderBy('codigo')
+                ->get();
 
-        /*
-        * Catálogo de conceptos para pago variable:
-        * Compaginado, primera vuelta, segunda vuelta, etc.
-        */
-        $conceptosPagoVariable = SuscripcionConceptoPagoVariable::query()
-            ->where('activo', true)
-            ->orderBy('orden')
-            ->orderBy('nombre')
-            ->get();
+        $asignacionesFijasMensuales =
+            Asignaciones::with([
+                'suscripcionProveedor.cobranzaCompra',
+                'transportista',
+            ])
+                ->where(
+                    'tipo_asignacion',
+                    'FIJO_MENSUAL'
+                )
+                ->orderBy('codigo')
+                ->get();
 
-        return view('suscripciones.comisiones_mensuales.create', compact(
-            'anio',
-            'mes',
-            'proveedores',
-            'transportistas',
-            'asignacionesCantidadMensual',
-            'asignacionesAjustesMensuales',
-            'asignacionesFijasMensuales',
-            'conceptosPagoVariable'
-        ));
+        $conceptosPagoVariable =
+            SuscripcionConceptoPagoVariable::query()
+                ->where('activo', true)
+                ->orderBy('orden')
+                ->orderBy('nombre')
+                ->get();
+
+        return view(
+            'suscripciones.comisiones_mensuales.create',
+            compact(
+                'anio',
+                'mes',
+
+                'zonas',
+                'fechasFinSemana',
+                'calendarioZonas',
+                'calendarioZonasConfigurado',
+                'calendarioZonasIncompleto',
+
+                'proveedores',
+                'transportistas',
+                'asignacionesCantidadMensual',
+                'asignacionesAjustesMensuales',
+                'asignacionesFijasMensuales',
+                'conceptosPagoVariable'
+            )
+        );
     }
 
-    public function store( Request $request, SuscripcionGeneracionMensualService $generacionMensualService, SuscripcionAjusteMensualRegistroService $ajusteMensualRegistroService, SuscripcionAjusteMensualAplicacionService $ajusteMensualAplicacionService) 
+
+
+    public function store(Request $request, SuscripcionGeneracionMensualService $generacionMensualService, SuscripcionAjusteMensualRegistroService $ajusteMensualRegistroService, SuscripcionAjusteMensualAplicacionService $ajusteMensualAplicacionService) 
     {
         $data = $request->validate([
-            'anio' => 'required|integer|min:2020|max:2100',
-            'mes' => 'required|integer|min:1|max:12',
+            'anio' => [
+                'required',
+                'integer',
+                'min:2020',
+                'max:2100',
+            ],
+            'mes' => [
+                'required',
+                'integer',
+                'min:1',
+                'max:12',
+            ],
 
+            /*
+            * Calendario operativo de las zonas.
+            *
+            * Cada elemento representa una combinación:
+            *
+            * zona + fecha de fin de semana.
+            */
+            'zonas_operativas' => [
+                'required',
+                'array',
+                'min:1',
+            ],
+            'zonas_operativas.*.suscripcion_zona_id' => [
+                'required',
+                'integer',
+                'exists:suscripcion_zonas,id',
+            ],
+            'zonas_operativas.*.fecha' => [
+                'required',
+                'date_format:Y-m-d',
+            ],
+            'zonas_operativas.*.hubo_despacho' => [
+                'required',
+                'boolean',
+            ],
+            'zonas_operativas.*.observacion' => [
+                'nullable',
+                'string',
+                'max:500',
+            ],
+
+            /*
+            * Cantidad variable mensual.
+            */
             'cantidad_mensual_asignacion_id' => [
                 'nullable',
                 'required_with:cantidad_mensual_cantidad',
@@ -122,8 +298,8 @@ class SuscripcionComisionMensualController extends Controller
             * Pagos adicionales.
             *
             * costo representa la tarifa unitaria.
-            * cantidad representa las unidades informadas para ese proveedor.
-            * total se calcula en el backend: tarifa × cantidad.
+            * cantidad representa las unidades informadas.
+            * total se calcula en el backend.
             */
             'comisiones' => [
                 'nullable',
@@ -173,6 +349,9 @@ class SuscripcionComisionMensualController extends Controller
                 'max:1000',
             ],
 
+            /*
+            * Novedades y ajustes mensuales.
+            */
             'ajustes_mensuales' => [
                 'nullable',
                 'array',
@@ -303,10 +482,51 @@ class SuscripcionComisionMensualController extends Controller
         $anio = (int) $data['anio'];
         $mes = (int) $data['mes'];
 
+        /*
+        * Normalizar el calendario zonal recibido.
+        */
+        $zonasOperativas = collect(
+            $data['zonas_operativas'] ?? []
+        )
+            ->map(function (array $diaOperativo) {
+                $observacion = isset($diaOperativo['observacion'])
+                    ? trim((string) $diaOperativo['observacion'])
+                    : null;
+
+                return [
+                    'suscripcion_zona_id' => (int) $diaOperativo[
+                        'suscripcion_zona_id'
+                    ],
+
+                    'fecha' => $diaOperativo['fecha'],
+
+                    'hubo_despacho' => (bool) (
+                        (int) $diaOperativo['hubo_despacho']
+                    ),
+
+                    'observacion' => $observacion !== ''
+                        ? $observacion
+                        : null,
+                ];
+            })
+            ->values();
+
+        /*
+        * Verificar que el formulario haya enviado exactamente:
+        *
+        * zonas activas × sábados y domingos del período.
+        */
+        $this->validarCalendarioZonas(
+            $zonasOperativas,
+            $anio,
+            $mes
+        );
+
         $codigoComision = 'COMISION';
 
-        $comisiones = collect($data['comisiones'] ?? [])
-            ->values();
+        $comisiones = collect(
+            $data['comisiones'] ?? []
+        )->values();
 
         $ajustesMensuales = collect(
             $data['ajustes_mensuales'] ?? []
@@ -318,17 +538,18 @@ class SuscripcionComisionMensualController extends Controller
 
         /*
         * Validar que no exista previamente la cantidad variable
-        * para la misma asignación y periodo.
+        * para la misma asignación y período.
         */
         if ($debeGuardarCantidadMensual) {
-            $existeCantidadMensual = SuscripcionCantidadMensual::query()
-                ->where(
-                    'suscripcion_asignacion_id',
-                    $data['cantidad_mensual_asignacion_id']
-                )
-                ->where('anio', $anio)
-                ->where('mes', $mes)
-                ->exists();
+            $existeCantidadMensual =
+                SuscripcionCantidadMensual::query()
+                    ->where(
+                        'suscripcion_asignacion_id',
+                        $data['cantidad_mensual_asignacion_id']
+                    )
+                    ->where('anio', $anio)
+                    ->where('mes', $mes)
+                    ->exists();
 
             if ($existeCantidadMensual) {
                 return back()
@@ -351,7 +572,8 @@ class SuscripcionComisionMensualController extends Controller
 
             if (
                 !$asignacionCantidadMensual
-                || $asignacionCantidadMensual->tipo_asignacion !== 'VARIABLE'
+                || $asignacionCantidadMensual->tipo_asignacion
+                    !== 'VARIABLE'
             ) {
                 return back()
                     ->withInput()
@@ -363,11 +585,12 @@ class SuscripcionComisionMensualController extends Controller
         }
 
         /*
-        * Validaciones específicas para novedades mensuales.
+        * Validaciones específicas de las novedades mensuales.
         */
-        $erroresAjustes = $this->validarAjustesMensualesFormulario(
-            $ajustesMensuales->all()
-        );
+        $erroresAjustes =
+            $this->validarAjustesMensualesFormulario(
+                $ajustesMensuales->all()
+            );
 
         if (!empty($erroresAjustes)) {
             return back()
@@ -376,11 +599,8 @@ class SuscripcionComisionMensualController extends Controller
         }
 
         /*
-        * No se valida duplicidad entre pagos adicionales.
-        *
-        * Cada posición de comisiones[] representa un pago independiente,
-        * incluso cuando proveedor, transportista, tarifa, cantidad,
-        * servicio y observación sean exactamente iguales.
+        * Guardar el calendario zonal, la cantidad variable
+        * y los pagos adicionales.
         */
         DB::transaction(function () use (
             $data,
@@ -388,8 +608,44 @@ class SuscripcionComisionMensualController extends Controller
             $mes,
             $codigoComision,
             $debeGuardarCantidadMensual,
-            $comisiones
+            $comisiones,
+            $zonasOperativas
         ) {
+            /*
+            * Guardar explícitamente todas las combinaciones
+            * de zona y fecha.
+            *
+            * Esto incluye:
+            *
+            * hubo_despacho = true
+            * hubo_despacho = false
+            */
+            foreach ($zonasOperativas as $diaOperativo) {
+                SuscripcionZonaDiaOperativo::query()
+                    ->updateOrCreate(
+                        [
+                            'suscripcion_zona_id' =>
+                                $diaOperativo[
+                                    'suscripcion_zona_id'
+                                ],
+
+                            'fecha' =>
+                                $diaOperativo['fecha'],
+                        ],
+                        [
+                            'hubo_despacho' =>
+                                $diaOperativo[
+                                    'hubo_despacho'
+                                ],
+
+                            'observacion' =>
+                                $diaOperativo[
+                                    'observacion'
+                                ],
+                        ]
+                    );
+            }
+
             /*
             * Guardar cantidad variable mensual.
             */
@@ -400,6 +656,7 @@ class SuscripcionComisionMensualController extends Controller
 
                 $codigoCantidad = $asignacionCantidad->codigo;
                 $costoCantidad = (int) $asignacionCantidad->costo;
+
                 $cantidadMensual =
                     (int) $data['cantidad_mensual_cantidad'];
 
@@ -426,9 +683,8 @@ class SuscripcionComisionMensualController extends Controller
             /*
             * Guardar pagos adicionales.
             *
-            * Se crea una asignación técnica independiente por cada pago.
-            * Esto permite registrar más de un pago para el mismo proveedor,
-            * incluso con datos completamente iguales.
+            * Cada posición de comisiones[] representa un pago
+            * independiente, aunque sus datos sean iguales.
             */
             foreach ($comisiones as $comision) {
                 $tarifaComision =
@@ -461,15 +717,21 @@ class SuscripcionComisionMensualController extends Controller
                 /*
                 * Asignación técnica del pago adicional.
                 *
-                * costo almacena la tarifa unitaria,
-                * no el total calculado.
+                * No se asigna zona porque COMISION no depende
+                * del calendario zonal.
                 */
                 $asignacionComision = Asignaciones::create([
                     'suscripcion_proveedor_id' =>
-                        (int) $comision['suscripcion_proveedor_id'],
+                        (int) $comision[
+                            'suscripcion_proveedor_id'
+                        ],
 
                     'suscripcion_transportista_id' =>
-                        (int) $comision['suscripcion_transportista_id'],
+                        (int) $comision[
+                            'suscripcion_transportista_id'
+                        ],
+
+                    'suscripcion_zona_id' => null,
 
                     'punto_1' =>
                         $comision['punto_1'] ?? null,
@@ -503,11 +765,6 @@ class SuscripcionComisionMensualController extends Controller
 
                 /*
                 * Registro mensual del pago adicional.
-                *
-                * Ejemplo:
-                * tarifa = 5.000
-                * cantidad = 10
-                * total = 50.000
                 */
                 SuscripcionComisionMensual::create([
                     'suscripcion_asignacion_id' =>
@@ -555,15 +812,19 @@ class SuscripcionComisionMensualController extends Controller
         */
         if ($ajustesMensuales->isNotEmpty()) {
             $resultadoRegistroAjustes =
-                $ajusteMensualRegistroService->guardarDesdeFormulario(
-                    $ajustesMensuales->all(),
-                    $anio,
-                    $mes
-                );
+                $ajusteMensualRegistroService
+                    ->guardarDesdeFormulario(
+                        $ajustesMensuales->all(),
+                        $anio,
+                        $mes
+                    );
         }
 
         /*
         * Generar detalles mensuales.
+        *
+        * El calendario ya se encuentra guardado antes de llegar
+        * a esta operación.
         */
         $resultado = $generacionMensualService->generar(
             $anio,
@@ -580,132 +841,139 @@ class SuscripcionComisionMensualController extends Controller
             );
 
         $mensaje =
-            "Datos registrados correctamente. "
-            . "Mes generado correctamente. "
+            'Datos registrados correctamente. '
+            . 'Calendario zonal guardado: '
+            . $zonasOperativas->count()
+            . ' combinaciones zona-fecha. '
+            . 'Mes generado correctamente. '
             . "Creados: {$resultado['creados']}.";
 
         if ($comisiones->count() > 0) {
             $mensaje .=
-                " Pagos adicionales registrados previamente: "
+                ' Pagos adicionales registrados previamente: '
                 . "{$comisiones->count()}.";
         }
 
         if (($resultado['cantidades_creadas'] ?? 0) > 0) {
             $mensaje .=
-                " Cantidades variables agregadas: "
+                ' Cantidades variables agregadas: '
                 . "{$resultado['cantidades_creadas']}.";
         }
 
         if (($resultado['comisiones_creadas'] ?? 0) > 0) {
             $mensaje .=
-                " Pagos adicionales agregados: "
+                ' Pagos adicionales agregados: '
                 . "{$resultado['comisiones_creadas']}.";
         }
 
         if (($resultadoRegistroAjustes['recibidos'] ?? 0) > 0) {
             $mensaje .=
-                " Novedades mensuales recibidas: "
+                ' Novedades mensuales recibidas: '
                 . "{$resultadoRegistroAjustes['recibidos']}.";
 
             if (($resultadoRegistroAjustes['creados'] ?? 0) > 0) {
                 $mensaje .=
-                    " Ajustes creados: "
+                    ' Ajustes creados: '
                     . "{$resultadoRegistroAjustes['creados']}.";
             }
 
             if (($resultadoRegistroAjustes['actualizados'] ?? 0) > 0) {
                 $mensaje .=
-                    " Ajustes actualizados: "
+                    ' Ajustes actualizados: '
                     . "{$resultadoRegistroAjustes['actualizados']}.";
             }
 
             if (
-                ($resultadoRegistroAjustes['asignaciones_creadas'] ?? 0)
-                > 0
+                ($resultadoRegistroAjustes[
+                    'asignaciones_creadas'
+                ] ?? 0) > 0
             ) {
                 $mensaje .=
-                    " Asignaciones contenedoras creadas: "
+                    ' Asignaciones contenedoras creadas: '
                     . "{$resultadoRegistroAjustes['asignaciones_creadas']}.";
             }
 
             if (
-                ($resultadoRegistroAjustes['asignaciones_reutilizadas'] ?? 0)
-                > 0
+                ($resultadoRegistroAjustes[
+                    'asignaciones_reutilizadas'
+                ] ?? 0) > 0
             ) {
                 $mensaje .=
-                    " Asignaciones contenedoras reutilizadas: "
+                    ' Asignaciones contenedoras reutilizadas: '
                     . "{$resultadoRegistroAjustes['asignaciones_reutilizadas']}.";
             }
 
             if (($resultadoRegistroAjustes['omitidos'] ?? 0) > 0) {
                 $mensaje .=
-                    " Novedades omitidas: "
+                    ' Novedades omitidas: '
                     . "{$resultadoRegistroAjustes['omitidos']}.";
             }
         }
 
         if (($resultado['duplicados'] ?? 0) > 0) {
             $mensaje .=
-                " Registros ya existentes no duplicados: "
+                ' Registros ya existentes no duplicados: '
                 . "{$resultado['duplicados']}.";
         }
 
         if (($resultado['cantidades_duplicadas'] ?? 0) > 0) {
             $mensaje .=
-                " Cantidades variables ya existentes no duplicadas: "
+                ' Cantidades variables ya existentes no duplicadas: '
                 . "{$resultado['cantidades_duplicadas']}.";
         }
 
         if (($resultado['comisiones_duplicadas'] ?? 0) > 0) {
             $mensaje .=
-                " Pagos adicionales ya generados no duplicados: "
+                ' Pagos adicionales ya generados no duplicados: '
                 . "{$resultado['comisiones_duplicadas']}.";
         }
 
         if (($resultadoAjustes['ajustes_procesados'] ?? 0) > 0) {
             $mensaje .=
-                " Ajustes mensuales procesados: "
+                ' Ajustes mensuales procesados: '
                 . "{$resultadoAjustes['ajustes_procesados']}.";
 
             if (($resultadoAjustes['detalles_actualizados'] ?? 0) > 0) {
                 $mensaje .=
-                    " Detalles actualizados por ajustes: "
+                    ' Detalles actualizados por ajustes: '
                     . "{$resultadoAjustes['detalles_actualizados']}.";
             }
 
             if (
-                ($resultadoAjustes['lineas_adicionales_creadas'] ?? 0)
-                > 0
+                ($resultadoAjustes[
+                    'lineas_adicionales_creadas'
+                ] ?? 0) > 0
             ) {
                 $mensaje .=
-                    " Líneas adicionales creadas: "
+                    ' Líneas adicionales creadas: '
                     . "{$resultadoAjustes['lineas_adicionales_creadas']}.";
             }
 
             if (
-                ($resultadoAjustes['lineas_adicionales_actualizadas'] ?? 0)
-                > 0
+                ($resultadoAjustes[
+                    'lineas_adicionales_actualizadas'
+                ] ?? 0) > 0
             ) {
                 $mensaje .=
-                    " Líneas adicionales actualizadas: "
+                    ' Líneas adicionales actualizadas: '
                     . "{$resultadoAjustes['lineas_adicionales_actualizadas']}.";
             }
 
             if (($resultadoAjustes['facturacion_registrada'] ?? 0) > 0) {
                 $mensaje .=
-                    " Ajustes de facturación considerados: "
+                    ' Ajustes de facturación considerados: '
                     . "{$resultadoAjustes['facturacion_registrada']}.";
             }
 
             if (($resultadoAjustes['sin_detalle'] ?? 0) > 0) {
                 $mensaje .=
-                    " Ajustes sin detalle mensual asociado: "
+                    ' Ajustes sin detalle mensual asociado: '
                     . "{$resultadoAjustes['sin_detalle']}.";
             }
 
             if (($resultadoAjustes['ignorados'] ?? 0) > 0) {
                 $mensaje .=
-                    " Ajustes ignorados por compatibilidad: "
+                    ' Ajustes ignorados por compatibilidad: '
                     . "{$resultadoAjustes['ignorados']}.";
             }
         }
@@ -732,6 +1000,9 @@ class SuscripcionComisionMensualController extends Controller
             )
             ->with('success', $mensaje);
     }
+
+
+
 
     private function validarAjustesMensualesFormulario(array $ajustes): array
     {
@@ -823,6 +1094,99 @@ class SuscripcionComisionMensualController extends Controller
         }
 
         return $errores;
+    }
+
+    private function obtenerFechasFinSemana(int $anio, int $mes): Collection 
+    {
+        $fecha = CarbonImmutable::create(
+            $anio,
+            $mes,
+            1
+        )->startOfMonth();
+
+        $fechaFin = $fecha->endOfMonth();
+
+        $fechas = collect();
+
+        while ($fecha->lessThanOrEqualTo($fechaFin)) {
+            if ($fecha->isSaturday() || $fecha->isSunday()) {
+                $fechas->push($fecha->toDateString());
+            }
+
+            $fecha = $fecha->addDay();
+        }
+
+        return $fechas;
+    }
+
+
+
+    private function validarCalendarioZonas( Collection $zonasOperativas, int $anio, int $mes): void 
+    {
+        $zonasActivasIds = SuscripcionZona::query()
+            ->where('activo', true)
+            ->orderBy('id')
+            ->pluck('id')
+            ->map(fn ($zonaId) => (int) $zonaId)
+            ->values();
+
+        $fechasEsperadas = $this->obtenerFechasFinSemana(
+            $anio,
+            $mes
+        );
+
+        $clavesEsperadas = collect();
+
+        foreach ($zonasActivasIds as $zonaId) {
+            foreach ($fechasEsperadas as $fecha) {
+                $clavesEsperadas->push(
+                    $zonaId . '|' . $fecha
+                );
+            }
+        }
+
+        $clavesRecibidas = $zonasOperativas
+            ->map(function (array $diaOperativo) {
+                return
+                    $diaOperativo['suscripcion_zona_id']
+                    . '|'
+                    . $diaOperativo['fecha'];
+            })
+            ->values();
+
+        /*
+        * Impedir que una misma combinación zona-fecha
+        * sea enviada más de una vez.
+        */
+        if ($clavesRecibidas->duplicates()->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'zonas_operativas' =>
+                    'El calendario contiene combinaciones de zona y fecha duplicadas.',
+            ]);
+        }
+
+        /*
+        * La información recibida debe coincidir exactamente con:
+        *
+        * zonas activas × sábados y domingos del período.
+        */
+        $clavesEsperadasOrdenadas = $clavesEsperadas
+            ->sort()
+            ->values();
+
+        $clavesRecibidasOrdenadas = $clavesRecibidas
+            ->sort()
+            ->values();
+
+        if (
+            $clavesEsperadasOrdenadas->all()
+            !== $clavesRecibidasOrdenadas->all()
+        ) {
+            throw ValidationException::withMessages([
+                'zonas_operativas' =>
+                    'El calendario de zonas está incompleto o contiene zonas o fechas que no corresponden al período seleccionado.',
+            ]);
+        }
     }
 
 

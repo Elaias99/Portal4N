@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Asignaciones extends Model
 {
@@ -11,7 +12,7 @@ class Asignaciones extends Model
 
     protected $table = 'suscripcion_asignaciones';
 
-    protected $fillable = ['suscripcion_proveedor_id','suscripcion_transportista_id','punto_1','punto_2','origen_gasto','codigo','servicio','costo','grupo_prefactura','generar_automaticamente','tipo_asignacion'];
+    protected $fillable = ['suscripcion_proveedor_id','suscripcion_transportista_id','punto_1','punto_2','origen_gasto','codigo','servicio','costo','grupo_prefactura','generar_automaticamente','tipo_asignacion','suscripcion_zona_id',];
 
 
     public function suscripcionProveedor()
@@ -47,6 +48,14 @@ class Asignaciones extends Model
     public function ajustesMensuales()
     {
         return $this->hasMany(SuscripcionAjusteMensual::class, 'suscripcion_asignacion_id');
+    }
+
+    public function zona(): BelongsTo
+    {
+        return $this->belongsTo(
+            SuscripcionZona::class,
+            'suscripcion_zona_id'
+        );
     }
 
 

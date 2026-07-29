@@ -107,6 +107,57 @@
             </div>
         </div>
 
+
+
+        {{-- ZONAS DE DISTRIBUCIÓN --}}
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                            <strong>Zonas de distribución</strong>
+
+                            @if($calendarioZonasConfigurado ?? false)
+                                <span class="badge badge-success">
+                                    Configurado
+                                </span>
+                            @elseif($calendarioZonasIncompleto ?? false)
+                                <span class="badge badge-warning">
+                                    Incompleto
+                                </span>
+                            @else
+                                <span class="badge badge-secondary">
+                                    Pendiente de guardar
+                                </span>
+                            @endif
+                        </div>
+
+                        <div class="small text-muted">
+                            Revisa qué sábados y domingos tuvo despacho cada zona
+                            durante
+                            <strong>
+                                {{ $meses[(int) $mes] ?? $mes }}
+                                {{ $anio }}
+                            </strong>.
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn btn-outline-primary"
+                        data-toggle="modal"
+                        data-target="#modal-zonas-distribucion"
+                    >
+                        Configurar zonas
+                    </button>
+                </div>
+            </div>
+        </div>
+        @include('suscripciones.comisiones_mensuales.partials.modal-zonas-distribucion')
+
+
+
+
         {{-- CANTIDADES VARIABLES --}}
         @if($asignacionesCantidadMensual->isNotEmpty())
             <div class="card mb-4">
