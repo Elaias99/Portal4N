@@ -7,6 +7,7 @@ use App\Models\SuscripcionComisionMensual;
 use App\Models\SuscripcionProveedor;
 use App\Models\SuscripcionTransportista;
 use App\Models\SuscripcionCantidadMensual;
+use App\Models\SuscripcionLiquidacionDetalle;
 use App\Models\SuscripcionConceptoPagoVariable;
 use App\Models\SuscripcionZona;
 use App\Models\SuscripcionZonaDiaOperativo;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
 
 class SuscripcionComisionMensualController extends Controller
 {
@@ -123,6 +125,13 @@ class SuscripcionComisionMensualController extends Controller
             }
         );
 
+        // Periodos
+
+        $periodoYaGenerado = SuscripcionLiquidacionDetalle::query()
+            ->where('anio', $anio)
+            ->where('mes', $mes)
+            ->exists();
+
         /*
         * Permite distinguir entre:
         *
@@ -220,7 +229,8 @@ class SuscripcionComisionMensualController extends Controller
                 'asignacionesCantidadMensual',
                 'asignacionesAjustesMensuales',
                 'asignacionesFijasMensuales',
-                'conceptosPagoVariable'
+                'conceptosPagoVariable',
+                'periodoYaGenerado'
             )
         );
     }
@@ -229,6 +239,7 @@ class SuscripcionComisionMensualController extends Controller
 
     public function store(Request $request, SuscripcionGeneracionMensualService $generacionMensualService, SuscripcionAjusteMensualRegistroService $ajusteMensualRegistroService, SuscripcionAjusteMensualAplicacionService $ajusteMensualAplicacionService) 
     {
+
         $data = $request->validate([
             'anio' => [
                 'required',
@@ -1012,6 +1023,7 @@ class SuscripcionComisionMensualController extends Controller
             $numero = $index + 1;
             $tipo = mb_strtoupper(trim((string) ($ajuste['tipo_ajuste'] ?? '')));
             $tipo = str_replace([' ', '-'], '_', $tipo);
+
 
             if ($tipo === '') {
                 $errores["ajustes_mensuales.$index.tipo_ajuste"] = "La novedad mensual #{$numero} no tiene tipo de ajuste.";
