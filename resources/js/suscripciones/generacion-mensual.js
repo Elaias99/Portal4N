@@ -44,4 +44,53 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
+
+    const formularioGeneracion = document.getElementById(
+        'form-generacion-mensual'
+    );
+
+    const botonGeneracion = document.getElementById(
+        'btn-generar-mes-completo'
+    );
+
+    if (formularioGeneracion && botonGeneracion) {
+        let formularioEnviado = false;
+
+        const textoOriginal = botonGeneracion.textContent.trim();
+
+        formularioGeneracion.addEventListener('submit', (event) => {
+            if (formularioEnviado) {
+                event.preventDefault();
+                return;
+            }
+
+            formularioEnviado = true;
+
+            botonGeneracion.disabled = true;
+            botonGeneracion.setAttribute('aria-busy', 'true');
+
+            botonGeneracion.innerHTML = `
+                <span
+                    class="spinner-border spinner-border-sm me-2"
+                    aria-hidden="true"
+                ></span>
+                Guardando y generando...
+            `;
+        });
+
+        /*
+        * Algunos navegadores restauran la página desde su memoria al volver atrás.
+        * En ese caso se habilita nuevamente el formulario.
+        */
+        window.addEventListener('pageshow', () => {
+            formularioEnviado = false;
+
+            botonGeneracion.disabled = false;
+            botonGeneracion.removeAttribute('aria-busy');
+            botonGeneracion.textContent = textoOriginal;
+        });
+    }
+
+
+
 });

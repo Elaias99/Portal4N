@@ -62,15 +62,23 @@ export function inicializarInasistenciasMasivas(dom, ajustesMensualesApi = {}) {
     function obtenerDatosFila(row) {
         return {
             suscripcion_asignacion_id: row.dataset.asignacionId || '',
+            zona_id: row.dataset.zonaId || '',
+
             label: limpiarTexto(row.dataset.label || ''),
             codigo: limpiarTexto(row.dataset.codigo || ''),
             costo: row.dataset.costo || '',
             punto_1: limpiarTexto(row.dataset.punto1 || ''),
-            origen_gasto: limpiarTexto(row.dataset.origenGasto || 'Suscripciones'),
+            origen_gasto: limpiarTexto(
+                row.dataset.origenGasto || 'Suscripciones'
+            ),
             punto_2: limpiarTexto(row.dataset.punto2 || ''),
             servicio: limpiarTexto(row.dataset.servicio || ''),
-            grupo_prefactura: limpiarTexto(row.dataset.grupoPrefactura || ''),
-            tipo_asignacion: limpiarTexto(row.dataset.tipoAsignacion || ''),
+            grupo_prefactura: limpiarTexto(
+                row.dataset.grupoPrefactura || ''
+            ),
+            tipo_asignacion: limpiarTexto(
+                row.dataset.tipoAsignacion || ''
+            ),
             q_inasistencia: '',
             observacion: '',
         };
@@ -113,6 +121,92 @@ export function inicializarInasistenciasMasivas(dom, ajustesMensualesApi = {}) {
         });
     }
 
+
+    function formatearFechaCalendario(fecha) {
+        const partes = String(fecha || '').split('-');
+
+        if (partes.length !== 3) {
+            return fecha || '';
+        }
+
+        const [anio, mes, dia] = partes;
+
+        return `${dia}/${mes}/${anio}`;
+    }
+
+    function obtenerEstadoZona(zonaId) {
+        if (!zonaId) {
+            return {
+                numero: '',
+                fechasSinDespacho: [],
+            };
+        }
+
+        const checkboxes = Array.from(
+            document.querySelectorAll(
+                '[data-zona-operativa-checkbox]'
+            )
+        ).filter(function (checkbox) {
+            return String(checkbox.dataset.zonaId || '')
+                === String(zonaId);
+        });
+
+        const primerCheckbox = checkboxes[0] || null;
+
+        const fechasSinDespacho = checkboxes
+            .filter(function (checkbox) {
+                return !checkbox.checked;
+            })
+            .map(function (checkbox) {
+                return checkbox.dataset.fecha || '';
+            })
+            .filter(Boolean)
+            .sort()
+            .map(formatearFechaCalendario);
+
+        return {
+            numero: primerCheckbox?.dataset.zonaNumero || '',
+            fechasSinDespacho: fechasSinDespacho,
+        };
+    }
+
+    function construirAvisoZona(item) {
+        const estadoZona = obtenerEstadoZona(item.zona_id);
+
+        if (estadoZona.fechasSinDespacho.length === 0) {
+            return '';
+        }
+
+        const zonaTexto = estadoZona.numero
+            ? `Zona ${estadoZona.numero}`
+            : 'la zona de esta ruta';
+
+        const fechasTexto = estadoZona.fechasSinDespacho.join(', ');
+
+        return `
+            <div class="alert alert-warning small mt-2 mb-0 py-2 px-3">
+                <strong>Atención:</strong>
+                esta ruta pertenece a
+                <strong>${escaparHtml(zonaTexto)}</strong>.
+
+                <div class="mt-1">
+                    Fechas ya descontadas por falta de distribución:
+                    <strong>${escaparHtml(fechasTexto)}</strong>.
+                </div>
+
+                <div class="mt-1">
+                    No incluyas nuevamente estas fechas en
+                    <strong>Q inasistencia</strong>.
+                    Registra solamente inasistencias ocurridas en días
+                    donde sí hubo distribución.
+                </div>
+            </div>
+        `;
+    }
+
+
+
+
     function renderizarSeleccionadas() {
         if (!seleccionadasBody) {
             return;
@@ -134,6 +228,7 @@ export function inicializarInasistenciasMasivas(dom, ajustesMensualesApi = {}) {
         }
 
         seleccionadas.forEach(function (item) {
+            const avisoZona = construirAvisoZona(item);
             const row = document.createElement('tr');
 
             row.dataset.inasistenciaMasivaSeleccionada = '1';
@@ -141,8 +236,15 @@ export function inicializarInasistenciasMasivas(dom, ajustesMensualesApi = {}) {
 
             row.innerHTML = `
                 <td>
-                    <div class="fw-semibold">${escaparHtml(item.codigo || 'Sin código')}</div>
-                    <div class="small text-muted">${escaparHtml(item.label || '—')}</div>
+                    <div class="fw-semibold">
+                        ${escaparHtml(item.codigo || 'Sin código')}
+                    </div>
+
+                    <div class="small text-muted">
+                        ${escaparHtml(item.label || '—')}
+                    </div>
+
+                    ${avisoZona}
                 </td>
 
                 <td>
@@ -154,6 +256,17 @@ export function inicializarInasistenciasMasivas(dom, ajustesMensualesApi = {}) {
                         placeholder="Ej: 1"
                         data-inasistencia-masiva-q
                     >
+
+                    ${
+                        avisoZona
+                            ? `
+                                <div class="form-text text-warning">
+                                    No cuentes nuevamente las fechas sin
+                                    distribución indicadas en la advertencia.
+                                </div>
+                            `
+                            : ''
+                    }
                 </td>
 
                 <td>
@@ -171,13 +284,14 @@ export function inicializarInasistenciasMasivas(dom, ajustesMensualesApi = {}) {
                         type="button"
                         class="btn btn-outline-danger btn-sm"
                         data-inasistencia-masiva-quitar
-                        data-asignacion-id="${escaparHtml(item.suscripcion_asignacion_id)}"
+                        data-asignacion-id="${
+                            escaparHtml(item.suscripcion_asignacion_id)
+                        }"
                     >
                         ×
                     </button>
                 </td>
             `;
-
             seleccionadasBody.appendChild(row);
         });
 

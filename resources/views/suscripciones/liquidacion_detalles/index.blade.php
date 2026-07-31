@@ -176,6 +176,9 @@
 
     <div class="row g-3 align-items-stretch mb-3">
 
+
+
+
         {{-- Generar mes completo --}}
         <div class="col-12 col-lg-3">
             <div class="card h-100">
@@ -193,13 +196,17 @@
 
                         <input type="hidden" name="proveedor_actual" value="{{ $proveedorFiltro }}">
 
+
+
+
                         <div class="mb-2">
                             <label class="form-label small text-muted">Año</label>
+
                             <input
                                 type="number"
                                 name="anio"
                                 class="form-control form-control-sm"
-                                value="{{ request('anio', 2026) }}"
+                                value="{{ request('anio', now()->year) }}"
                                 min="2020"
                                 max="2100"
                                 required
@@ -208,15 +215,28 @@
 
                         <div class="mb-3">
                             <label class="form-label small text-muted">Mes</label>
-                            <select name="mes" class="form-select form-select-sm" required>
-                                @foreach($meses as $numero => $nombre)
-                                    <option value="{{ $numero }}"
-                                        {{ (int) request('mes', 5) === $numero ? 'selected' : '' }}>
-                                        {{ $nombre }}
+
+                            <select
+                                name="mes"
+                                class="form-select form-select-sm"
+                                required
+                            >
+                                @foreach ($meses as $numeroMes => $nombreMes)
+                                    <option
+                                        value="{{ $numeroMes }}"
+                                        @selected(
+                                            (int) request('mes', now()->month) === (int) $numeroMes
+                                        )
+                                    >
+                                        {{ $nombreMes }}
                                     </option>
                                 @endforeach
                             </select>
                         </div>
+
+
+
+
 
                         <button type="submit" class="btn btn-secondary btn-sm w-100">
                             Continuar generación
@@ -228,6 +248,12 @@
                 </div>
             </div>
         </div>
+
+
+
+
+
+
 
         {{-- Filtros --}}
         <div class="col-12 col-lg-6">

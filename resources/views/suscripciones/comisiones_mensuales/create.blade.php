@@ -52,6 +52,22 @@
         </div>
     @endif
 
+
+
+    @if ($periodoYaGenerado)
+        <div class="alert alert-warning">
+            <strong>Este período ya contiene liquidaciones generadas.</strong>
+
+            <div class="mt-1">
+                Volver a preparar este mes no recalculará automáticamente los
+                detalles existentes y podría duplicar pagos adicionales.
+            </div>
+        </div>
+    @endif
+
+
+
+
     <div class="alert alert-info">
         <strong>Flujo recomendado:</strong> primero define el periodo, revisa los pagos fijos automáticos,
         luego registra cantidades variables como LOTA, después agrega sólo las novedades reales del mes,
@@ -68,8 +84,19 @@
     <form id="form-generacion-mensual" method="POST" action="{{ route('suscripciones.comisiones-mensuales.store') }}" data-long-loader>
         @csrf
 
+
+        <input type="hidden" name="anio" value="{{ old('anio', $anio) }}">
+        <input type="hidden" name="mes" value="{{ old('mes', $mes) }}">
+
+        <div class="alert alert-light border mb-4">
+            <strong>Período a generar:</strong>
+            {{ $meses[(int) $mes] ?? $mes }} de {{ $anio }}
+        </div>
+
+
+
         {{-- PERIODO --}}
-        <div class="card mb-4">
+        {{-- <div class="card mb-4">
             <div class="card-header">
                 <strong>Periodo a generar</strong>
             </div>
@@ -105,7 +132,13 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </div> --}}
+
+
+
+
+
+        
 
 
 
@@ -988,11 +1021,19 @@
 
 
 
-        <div class="d-flex justify-content-end align-items-center mb-4">
-            <button type="submit" class="btn btn-primary">
-                Guardar datos y generar mes completo
-            </button>
-        </div>
+    <div class="d-flex justify-content-end align-items-center mb-4">
+        <button
+            type="submit"
+            id="btn-generar-mes-completo"
+            class="btn btn-primary"
+            @disabled($periodoYaGenerado)
+        >
+            Guardar datos y generar mes completo
+        </button>
+    </div>
+
+
+
     </form>
 </div>
 

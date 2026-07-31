@@ -36,8 +36,15 @@
 
                 <div class="alert alert-warning small mb-3">
                     <strong>Importante:</strong>
-                    usa esta opción para registrar días no realizados en rutas habituales del mes.
-                    Las rutas seleccionadas se descontarán del cálculo del periodo.
+
+                    registra en <strong>Q inasistencia</strong> solamente los días en que la
+                    ruta no fue realizada, pero su zona sí tuvo distribución.
+
+                    <div class="mt-1">
+                        Los días sin distribución de la zona ya se descuentan automáticamente
+                        mediante el calendario zonal. No deben incluirse nuevamente como
+                        inasistencia.
+                    </div>
                 </div>
 
 
@@ -146,6 +153,7 @@
                                         data-inasistencia-masiva-ruta
                                         data-busqueda="{{ $textoBusqueda }}"
                                         data-asignacion-id="{{ $asignacion->id }}"
+                                        data-zona-id="{{ $asignacion->suscripcion_zona_id }}"
                                         data-label="{{ $asignacionLabel }}"
                                         data-codigo="{{ $asignacion->codigo }}"
                                         data-costo="{{ (int) $asignacion->costo }}"
