@@ -78,11 +78,15 @@ class SuscripcionLiquidacionDetalleController extends Controller
         * - La asignación base puede ser de José Luis.
         * - Pero en mayo puede facturar Manuel Hernández.
         */
-        $detallesFiltrados = $query
+        $detalles = $query
             ->orderBy('anio', 'desc')
             ->orderBy('mes', 'desc')
             ->orderBy('codigo')
-            ->get()
+            ->get();
+
+        $ajusteMensualService->precargarParaDetalles($detalles);
+
+        $detallesFiltrados = $detalles
             ->filter(function ($detalle) use ($proveedor, $rut, $tipo, $ajusteMensualService) {
                 $proveedorPrefactura = $ajusteMensualService->proveedorFacturacionParaDetalle($detalle);
                 $cobranzaCompra = $proveedorPrefactura?->cobranzaCompra;
@@ -397,6 +401,8 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'asignacion.transportista',
         ]);
 
+        $ajusteMensualService->precargarParaDetalles([$detalle]);
+
         /*
         * Ahora el proveedor de la pre-factura puede venir desde el ajuste mensual.
         * Ejemplo:
@@ -418,7 +424,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
         * Ahora se traen los detalles del periodo y se filtran por proveedor efectivo
         * de pre-factura, considerando ajustes mensuales.
         */
-        $detallesProveedor = SuscripcionLiquidacionDetalle::with([
+        $detallesPeriodo = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.transportista',
             'asignacion.opvPuntos',
@@ -427,7 +433,11 @@ class SuscripcionLiquidacionDetalleController extends Controller
             ->where('anio', $detalle->anio)
             ->where('mes', $detalle->mes)
             ->orderBy('codigo')
-            ->get()
+            ->get();
+
+        $ajusteMensualService->precargarParaDetalles($detallesPeriodo);
+
+        $detallesProveedor = $detallesPeriodo
             ->filter(function ($item) use ($suscripcionProveedorId, $ajusteMensualService) {
                 $proveedorItem = $ajusteMensualService->proveedorFacturacionParaDetalle($item);
 
@@ -496,7 +506,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
         * Esto permite que mayo aparezca bajo Manuel si existe ajuste,
         * y que abril siga bajo José Luis si no tiene ajuste.
         */
-        $detallesAnioProveedor = SuscripcionLiquidacionDetalle::with([
+        $detallesAnio = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.transportista',
             'asignacion.cantidadesMensuales',
@@ -504,7 +514,11 @@ class SuscripcionLiquidacionDetalleController extends Controller
             ->where('anio', $detalle->anio)
             ->orderBy('mes')
             ->orderBy('codigo')
-            ->get()
+            ->get();
+
+        $ajusteMensualService->precargarParaDetalles($detallesAnio);
+
+        $detallesAnioProveedor = $detallesAnio
             ->filter(function ($item) use ($suscripcionProveedorId, $ajusteMensualService) {
                 $proveedorItem = $ajusteMensualService->proveedorFacturacionParaDetalle($item);
 
@@ -687,7 +701,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
         * porque una línea puede pertenecer a otro proveedor efectivo
         * mediante un ajuste mensual.
         */
-        $detallesBase = SuscripcionLiquidacionDetalle::with([
+        $detallesPeriodo = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.suscripcionProveedor.cobranzaCompra.banco',
             'asignacion.suscripcionProveedor.cobranzaCompra.tipoCuenta',
@@ -698,7 +712,11 @@ class SuscripcionLiquidacionDetalleController extends Controller
             ->where('anio', $anio)
             ->where('mes', $mes)
             ->orderBy('codigo')
-            ->get()
+            ->get();
+
+        $ajusteMensualService->precargarParaDetalles($detallesPeriodo);
+
+        $detallesBase = $detallesPeriodo
             ->filter(function ($detalle) use (
                 $proveedorFiltro,
                 $rutFiltro,
@@ -828,7 +846,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
         * El proveedor puede ser el proveedor base o uno efectivo
         * definido mediante un ajuste mensual.
         */
-        $detallesBase = SuscripcionLiquidacionDetalle::with([
+        $detallesPeriodo = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.suscripcionProveedor.cobranzaCompra.banco',
             'asignacion.suscripcionProveedor.cobranzaCompra.tipoCuenta',
@@ -839,7 +857,11 @@ class SuscripcionLiquidacionDetalleController extends Controller
             ->where('anio', $anio)
             ->where('mes', $mes)
             ->orderBy('codigo')
-            ->get()
+            ->get();
+
+        $ajusteMensualService->precargarParaDetalles($detallesPeriodo);
+
+        $detallesBase = $detallesPeriodo
             ->filter(function ($detalle) use (
                 $proveedorFiltro,
                 $rutFiltro,
@@ -975,7 +997,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
         * Se obtiene exactamente el mismo conjunto de detalles utilizado
         * para el ZIP, la revisión y el envío masivo de prueba.
         */
-        $detallesBase = SuscripcionLiquidacionDetalle::with([
+        $detallesPeriodo = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.suscripcionProveedor.cobranzaCompra.banco',
             'asignacion.suscripcionProveedor.cobranzaCompra.tipoCuenta',
@@ -986,7 +1008,11 @@ class SuscripcionLiquidacionDetalleController extends Controller
             ->where('anio', $anio)
             ->where('mes', $mes)
             ->orderBy('codigo')
-            ->get()
+            ->get();
+
+        $ajusteMensualService->precargarParaDetalles($detallesPeriodo);
+
+        $detallesBase = $detallesPeriodo
             ->filter(function ($detalle) use (
                 $proveedorFiltro,
                 $rutFiltro,
@@ -1118,7 +1144,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
         $rutFiltro = trim((string) $request->rut_pdf);
         $tipoFiltro = trim((string) $request->tipo_pdf);
 
-        $detallesBase = SuscripcionLiquidacionDetalle::with([
+        $detallesPeriodo = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.suscripcionProveedor.cobranzaCompra.banco',
             'asignacion.suscripcionProveedor.cobranzaCompra.tipoCuenta',
@@ -1129,7 +1155,11 @@ class SuscripcionLiquidacionDetalleController extends Controller
             ->where('anio', $anio)
             ->where('mes', $mes)
             ->orderBy('codigo')
-            ->get()
+            ->get();
+
+        $ajusteMensualService->precargarParaDetalles($detallesPeriodo);
+
+        $detallesBase = $detallesPeriodo
             ->filter(function ($detalle) use (
                 $proveedorFiltro,
                 $rutFiltro,

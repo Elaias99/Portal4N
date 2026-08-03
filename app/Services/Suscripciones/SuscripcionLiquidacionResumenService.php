@@ -12,7 +12,11 @@ class SuscripcionLiquidacionResumenService
 
     public function calcularPorDetalles(iterable $detalles): Collection
     {
-        return collect($detalles)
+        $detalles = collect($detalles);
+
+        $this->ajusteMensualService->precargarParaDetalles($detalles);
+
+        return $detalles
             ->mapWithKeys(function ($detalle) {
                 $ajuste = $this->ajusteMensualService->resolverParaDetalle($detalle);
 

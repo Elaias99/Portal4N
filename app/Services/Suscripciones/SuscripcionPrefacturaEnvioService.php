@@ -27,6 +27,8 @@ class SuscripcionPrefacturaEnvioService
     public function prepararRevisionDesdeDetalles(
         Collection $detallesBase
     ): array {
+        $this->ajusteMensualService->precargarParaDetalles($detallesBase);
+
         $detallesConProveedor = $detallesBase
             ->filter(function ($detalle) {
                 return $this->ajusteMensualService
@@ -172,6 +174,8 @@ class SuscripcionPrefacturaEnvioService
                 'El correo configurado para las pruebas no es válido.'
             );
         }
+
+        $this->ajusteMensualService->precargarParaDetalles($detallesBase);
 
         /*
          * Se consideran únicamente detalles que tengan un proveedor
@@ -356,6 +360,8 @@ class SuscripcionPrefacturaEnvioService
             'luisdelabarra@4nlogistica.cl',
             'proveedores@4nlogistica.cl',
         ];
+
+        $this->ajusteMensualService->precargarParaDetalles($detallesBase);
 
         $detallesConProveedor = $detallesBase
             ->filter(function ($detalle) {

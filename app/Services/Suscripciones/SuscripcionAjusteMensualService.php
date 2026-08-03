@@ -10,6 +10,75 @@ class SuscripcionAjusteMensualService
 {
     private array $cache = [];
 
+    public function precargarParaDetalles(iterable $detalles): void
+    {
+        $clavesPendientes = collect($detalles)
+            ->filter(fn ($detalle) => $detalle->suscripcion_asignacion_id)
+            ->map(function ($detalle) {
+                $asignacionId = (int) $detalle->suscripcion_asignacion_id;
+                $anio = (int) $detalle->anio;
+                $mes = (int) $detalle->mes;
+
+                return [
+                    'cache_key' => $this->cacheKey($asignacionId, $anio, $mes),
+                    'suscripcion_asignacion_id' => $asignacionId,
+                    'anio' => $anio,
+                    'mes' => $mes,
+                ];
+            })
+            ->unique('cache_key')
+            ->reject(fn (array $clave) => array_key_exists($clave['cache_key'], $this->cache))
+            ->values();
+
+        if ($clavesPendientes->isEmpty()) {
+            return;
+        }
+
+        $periodos = $clavesPendientes
+            ->map(fn (array $clave) => [
+                'anio' => $clave['anio'],
+                'mes' => $clave['mes'],
+            ])
+            ->unique(fn (array $periodo) => $periodo['anio'] . '_' . $periodo['mes'])
+            ->values();
+
+        $ajustesPorClave = SuscripcionAjusteMensual::with([
+                'asignacion.suscripcionProveedor.cobranzaCompra',
+                'asignacion.transportista',
+                'proveedorFacturacion.cobranzaCompra',
+                'transportistaOverride',
+            ])
+            ->whereIn(
+                'suscripcion_asignacion_id',
+                $clavesPendientes->pluck('suscripcion_asignacion_id')->unique()->all()
+            )
+            ->where('activo', true)
+            ->where(function ($query) use ($periodos) {
+                foreach ($periodos as $periodo) {
+                    $query->orWhere(function ($periodoQuery) use ($periodo) {
+                        $periodoQuery
+                            ->where('anio', $periodo['anio'])
+                            ->where('mes', $periodo['mes']);
+                    });
+                }
+            })
+            ->orderBy('id')
+            ->get()
+            ->keyBy(function (SuscripcionAjusteMensual $ajuste) {
+                return $this->cacheKey(
+                    (int) $ajuste->suscripcion_asignacion_id,
+                    (int) $ajuste->anio,
+                    (int) $ajuste->mes
+                );
+            });
+
+        foreach ($clavesPendientes as $clave) {
+            $this->cache[$clave['cache_key']] = $ajustesPorClave->get(
+                $clave['cache_key']
+            );
+        }
+    }
+
     public function resolverParaDetalle(SuscripcionLiquidacionDetalle $detalle): ?SuscripcionAjusteMensual
     {
         if (!$detalle->suscripcion_asignacion_id) {
@@ -34,7 +103,7 @@ class SuscripcionAjusteMensualService
 
     public function resolverParaAsignacion(int $suscripcionAsignacionId, int $anio, int $mes): ?SuscripcionAjusteMensual
     {
-        $cacheKey = $suscripcionAsignacionId . '_' . $anio . '_' . $mes;
+        $cacheKey = $this->cacheKey($suscripcionAsignacionId, $anio, $mes);
 
         if (array_key_exists($cacheKey, $this->cache)) {
             return $this->cache[$cacheKey];
@@ -55,6 +124,11 @@ class SuscripcionAjusteMensualService
         $this->cache[$cacheKey] = $ajuste;
 
         return $ajuste;
+    }
+
+    private function cacheKey(int $suscripcionAsignacionId, int $anio, int $mes): string
+    {
+        return $suscripcionAsignacionId . '_' . $anio . '_' . $mes;
     }
 
     public function tieneAjuste(SuscripcionLiquidacionDetalle $detalle): bool

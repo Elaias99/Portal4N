@@ -23,6 +23,8 @@ export default defineConfig({
                 'resources/css/panel-finanzas.css',
                 'resources/css/cuentas-cobrar.css',
                 'resources/css/boleta_mensual.css',
+                'resources/css/suscripciones_liquidaciones.css',
+                'resources/css/suscripciones_generacion_mensual.css',
                 'resources/css/finanzas_compras.css',
                 'resources/js/react/suscripciones/opv-puntos/opv-puntos.css',
                 'resources/sass/app.scss',

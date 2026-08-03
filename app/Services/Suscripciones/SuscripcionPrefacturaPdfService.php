@@ -27,6 +27,8 @@ class SuscripcionPrefacturaPdfService
             'asignacion.cantidadesMensuales',
         ]);
 
+        $this->ajusteMensualService->precargarParaDetalles([$detalle]);
+
         /*
          * La pre-factura debe utilizar al proveedor efectivo del período.
          *
@@ -68,7 +70,7 @@ class SuscripcionPrefacturaPdfService
          * - mes;
          * - grupo de pre-factura.
          */
-        $detallesProveedor = SuscripcionLiquidacionDetalle::with([
+        $detallesPeriodo = SuscripcionLiquidacionDetalle::with([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.suscripcionProveedor.cobranzaCompra.banco',
             'asignacion.suscripcionProveedor.cobranzaCompra.tipoCuenta',
@@ -79,7 +81,11 @@ class SuscripcionPrefacturaPdfService
             ->where('anio', $detalle->anio)
             ->where('mes', $detalle->mes)
             ->orderBy('codigo')
-            ->get()
+            ->get();
+
+        $this->ajusteMensualService->precargarParaDetalles($detallesPeriodo);
+
+        $detallesProveedor = $detallesPeriodo
             ->filter(function ($item) use (
                 $suscripcionProveedorId,
                 $grupoPrefactura

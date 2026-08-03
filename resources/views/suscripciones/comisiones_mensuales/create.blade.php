@@ -1,7 +1,9 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container">
+@vite('resources/css/suscripciones_generacion_mensual.css')
+
+<div class="container sgm-page">
 
     @php
         $meses = [
@@ -24,10 +26,11 @@
         $conceptosPagoVariable = $conceptosPagoVariable ?? collect();
     @endphp
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="sgm-page-header">
         <div>
-            <h1 class="mb-1">Preparar generación mensual</h1>
-            <div class="small text-muted">
+            <div class="sgm-eyebrow">Suscripciones</div>
+            <h1>Preparar generación mensual</h1>
+            <div class="sgm-page-subtitle">
                 Define las cantidades variables, novedades mensuales y comisiones antes de generar el mes completo.
             </div>
         </div>
@@ -35,13 +38,13 @@
         <a href="{{ route('suscripciones.liquidacion-detalles.index', [
             'anio' => $anio,
             'mes' => $mes,
-        ]) }}" class="link-secondary text-decoration-none">
-            ← Volver
+        ]) }}" class="sgm-back-link">
+            Volver a liquidaciones
         </a>
     </div>
 
     @if ($errors->any())
-        <div class="alert alert-danger">
+        <div class="alert alert-danger sgm-notice sgm-notice-danger">
             <strong>Revisa los datos ingresados.</strong>
 
             <ul class="mb-0 mt-2">
@@ -55,7 +58,7 @@
 
 
     @if ($periodoYaGenerado)
-        <div class="alert alert-warning">
+        <div class="alert alert-warning sgm-notice sgm-notice-warning">
             <strong>Este período ya contiene liquidaciones generadas.</strong>
 
             <div class="mt-1">
@@ -68,7 +71,7 @@
 
 
 
-    <div class="alert alert-info">
+    <div class="alert alert-info sgm-notice sgm-workflow-note">
         <strong>Flujo recomendado:</strong> primero define el periodo, revisa los pagos fijos automáticos,
         luego registra cantidades variables como LOTA, después agrega sólo las novedades reales del mes,
         registra comisiones si corresponde y finalmente presiona
@@ -81,16 +84,16 @@
         </div>
     </div>
 
-    <form id="form-generacion-mensual" method="POST" action="{{ route('suscripciones.comisiones-mensuales.store') }}" data-long-loader>
+    <form id="form-generacion-mensual" class="sgm-form" method="POST" action="{{ route('suscripciones.comisiones-mensuales.store') }}" data-long-loader>
         @csrf
 
 
         <input type="hidden" name="anio" value="{{ old('anio', $anio) }}">
         <input type="hidden" name="mes" value="{{ old('mes', $mes) }}">
 
-        <div class="alert alert-light border mb-4">
-            <strong>Período a generar:</strong>
-            {{ $meses[(int) $mes] ?? $mes }} de {{ $anio }}
+        <div class="sgm-period" aria-label="Periodo seleccionado">
+            <span class="sgm-period-label">Periodo a generar</span>
+            <strong class="sgm-period-value">{{ $meses[(int) $mes] ?? $mes }} de {{ $anio }}</strong>
         </div>
 
 
@@ -143,12 +146,13 @@
 
 
         {{-- ZONAS DE DISTRIBUCIÓN --}}
-        <div class="card mb-4">
-            <div class="card-body">
+        <div class="card mb-4 sgm-section sgm-zone-section">
+            <div class="card-body sgm-section-body">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                     <div>
-                        <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
-                            <strong>Zonas de distribución</strong>
+                        <div class="sgm-section-kicker">Paso 1</div>
+                        <div class="d-flex align-items-center flex-wrap gap-2 mb-1 sgm-section-title-row">
+                            <strong class="sgm-section-title">Zonas de distribución</strong>
 
                             @if($calendarioZonasConfigurado ?? false)
                                 <span class="badge badge-success">
@@ -165,7 +169,7 @@
                             @endif
                         </div>
 
-                        <div class="small text-muted">
+                        <div class="sgm-section-description">
                             Revisa qué sábados y domingos tuvo despacho cada zona
                             durante
                             <strong>
@@ -177,7 +181,7 @@
 
                     <button
                         type="button"
-                        class="btn btn-outline-primary"
+                        class="btn btn-outline-primary sgm-secondary-action"
                         data-toggle="modal"
                         data-target="#modal-zonas-distribucion"
                     >
@@ -193,25 +197,30 @@
 
         {{-- CANTIDADES VARIABLES --}}
         @if($asignacionesCantidadMensual->isNotEmpty())
-            <div class="card mb-4">
+            <div class="card mb-4 sgm-section">
                 <button
                     type="button"
-                    class="card-header w-100 border-0 bg-light d-flex justify-content-between align-items-center text-start"
+                    class="card-header w-100 border-0 d-flex justify-content-between align-items-center text-start sgm-section-toggle"
                     data-suscripcion-toggle="#panel-cantidades-variables"
                     aria-expanded="false"
                 >
-                    <span>
-                        <strong>Cantidades variables del mes</strong>
-                        <span class="small text-muted ms-2">
+                    <span class="sgm-section-heading-copy">
+                        <span class="sgm-section-kicker">Paso 2</span>
+                        <strong class="sgm-section-title">Cantidades variables del mes</strong>
+                        <span class="sgm-section-description">
                             LOTA u otras cantidades informadas manualmente.
                         </span>
                     </span>
 
-                    <span data-suscripcion-toggle-icon>⌄</span>
+                    <span class="sgm-toggle-copy" aria-hidden="true">
+                        <span class="sgm-toggle-copy-closed">Mostrar contenido</span>
+                        <span class="sgm-toggle-copy-open">Ocultar contenido</span>
+                    </span>
+                    <span class="d-none" data-suscripcion-toggle-icon aria-hidden="true"></span>
                 </button>
 
-                <div id="panel-cantidades-variables" class="card-body d-none">
-                    <div class="alert alert-light border small mb-3">
+                <div id="panel-cantidades-variables" class="card-body d-none sgm-section-content">
+                    <div class="alert alert-light border small mb-3 sgm-inline-note">
                         <strong>Usa esta sección sólo para cantidades variables.</strong>
                         Ejemplo: LOTA se calcula por cantidad informada del mes, no por fines de semana.
                         No cargues aquí reemplazos, fijos mensuales, comisiones ni pagos variables.
@@ -301,25 +310,30 @@
         @endif
 
         {{-- NOVEDADES MENSUALES --}}
-        <div class="card mb-4">
+        <div class="card mb-4 sgm-section">
             <button
                 type="button"
-                class="card-header w-100 border-0 bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 text-start"
+                class="card-header w-100 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2 text-start sgm-section-toggle"
                 data-suscripcion-toggle="#panel-novedades-mensuales"
                 aria-expanded="false"
             >
-                <span>
-                    <strong>Novedades mensuales</strong>
-                    <span class="small text-muted ms-2">
+                <span class="sgm-section-heading-copy">
+                    <span class="sgm-section-kicker">Paso 3</span>
+                    <strong class="sgm-section-title">Novedades mensuales</strong>
+                    <span class="sgm-section-description">
                         Inasistencias, cambios de facturación/reemplazos, nuevas rutas o pagos variables.
                     </span>
                 </span>
 
-                <span data-suscripcion-toggle-icon>⌄</span>
+                <span class="sgm-toggle-copy" aria-hidden="true">
+                    <span class="sgm-toggle-copy-closed">Mostrar contenido</span>
+                    <span class="sgm-toggle-copy-open">Ocultar contenido</span>
+                </span>
+                <span class="d-none" data-suscripcion-toggle-icon aria-hidden="true"></span>
             </button>
 
-            <div id="panel-novedades-mensuales" class="card-body d-none">
-                <div class="alert alert-warning small mb-3">
+            <div id="panel-novedades-mensuales" class="card-body d-none sgm-section-content">
+                <div class="alert alert-warning small mb-3 sgm-inline-note sgm-inline-note-warning">
                     <strong>Usa este bloque sólo para excepciones del periodo.</strong>
                     No reemplaza la sección de cantidades variables. Por ejemplo, LOTA se carga arriba con su cantidad mensual
                     y aquí sólo se registra si cambia proveedor facturador, documento o transportista efectivo.
@@ -327,7 +341,7 @@
                     como una línea propia con <strong>tarifa</strong>, no como comisión ni como cantidad de ruta.
                 </div>
 
-                <div class="border rounded p-3 mb-3">
+                <div class="border rounded p-3 mb-3 sgm-entry-panel">
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label for="ajuste_tipo_ajuste" class="form-label">Tipo de novedad</label>
@@ -852,7 +866,7 @@
                 <div id="ajustes-hidden-container"></div>
 
                 <div class="table-responsive">
-                    <table class="table table-sm table-bordered align-middle mb-2">
+                    <table class="table table-sm table-bordered align-middle mb-2 sgm-table">
                         <thead>
                             <tr>
                                 <th>Tipo</th>
@@ -875,7 +889,7 @@
                     </table>
                 </div>
 
-                <div class="small text-muted mt-3">
+                <div class="small text-muted mt-3 sgm-summary-line">
                     Novedades agregadas:
                     <strong id="ajustes-cantidad">0</strong>
                     <span class="mx-1">|</span>
@@ -896,28 +910,33 @@
 
     {{-- COMISIONES --}}
     {{-- PAGOS ADICIONALES --}}
-    <div class="card mb-4">
+    <div class="card mb-4 sgm-section">
         <button
             type="button"
-            class="card-header w-100 border-0 bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 text-start"
+            class="card-header w-100 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2 text-start sgm-section-toggle"
             data-suscripcion-toggle="#panel-comisiones-mensuales"
             aria-expanded="false"
         >
-            <span>
-                <strong>Pagos adicionales del mes</strong>
+            <span class="sgm-section-heading-copy">
+                <span class="sgm-section-kicker">Paso 4</span>
+                <strong class="sgm-section-title">Pagos adicionales del mes</strong>
 
-                <span class="small text-muted ms-2">
+                <span class="sgm-section-description">
                     Agrega pagos adicionales sólo si corresponde para este periodo.
                 </span>
             </span>
 
-            <span data-suscripcion-toggle-icon>⌄</span>
+            <span class="sgm-toggle-copy" aria-hidden="true">
+                <span class="sgm-toggle-copy-closed">Mostrar contenido</span>
+                <span class="sgm-toggle-copy-open">Ocultar contenido</span>
+            </span>
+            <span class="d-none" data-suscripcion-toggle-icon aria-hidden="true"></span>
         </button>
 
         {{-- CONTENIDO DEL ACORDEÓN --}}
         <div
             id="panel-comisiones-mensuales"
-            class="card-body d-none"
+            class="card-body d-none sgm-section-content"
         >
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                 <div>
@@ -935,7 +954,7 @@
                 <button
                     type="button"
                     id="btn-abrir-comisiones-masivas"
-                    class="btn btn-outline-primary btn-sm"
+                    class="btn btn-outline-primary btn-sm sgm-secondary-action"
                     data-toggle="modal"
                     data-target="#modal-comisiones-masivas"
                 >
@@ -948,7 +967,7 @@
 
             {{-- RESUMEN DE PAGOS AGREGADOS --}}
             <div class="table-responsive">
-                <table class="table table-sm table-bordered align-middle mb-2">
+                <table class="table table-sm table-bordered align-middle mb-2 sgm-table">
                     <thead>
                         <tr>
                             <th>
@@ -994,7 +1013,7 @@
                 </table>
             </div>
 
-            <div class="small text-muted mt-3">
+            <div class="small text-muted mt-3 sgm-summary-line">
                 Pagos adicionales agregados:
 
                 <strong id="comisiones-cantidad">
@@ -1021,11 +1040,15 @@
 
 
 
-    <div class="d-flex justify-content-end align-items-center mb-4">
+    <div class="sgm-submit-panel">
+        <div class="sgm-submit-copy">
+            <strong>Revisa la información antes de continuar</strong>
+            <span>Al generar el mes se crearán las liquidaciones con los datos registrados en este formulario.</span>
+        </div>
         <button
             type="submit"
             id="btn-generar-mes-completo"
-            class="btn btn-primary"
+            class="btn btn-primary sgm-primary-action"
             @disabled($periodoYaGenerado)
         >
             Guardar datos y generar mes completo

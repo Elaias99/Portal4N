@@ -1,25 +1,99 @@
 @extends('layouts.app')
 
-@vite('resources/css/boleta_mensual.css')
+@vite('resources/css/suscripciones_liquidaciones.css')
 
 @section('content')
-<div class="container-fluid py-3 hm">
+@php
+    $meses = $meses ?? [
+        1 => 'Enero',
+        2 => 'Febrero',
+        3 => 'Marzo',
+        4 => 'Abril',
+        5 => 'Mayo',
+        6 => 'Junio',
+        7 => 'Julio',
+        8 => 'Agosto',
+        9 => 'Septiembre',
+        10 => 'Octubre',
+        11 => 'Noviembre',
+        12 => 'Diciembre',
+    ];
+
+    $proveedorFiltro = $proveedor ?? request('proveedor');
+    $rutFiltro = $rut ?? request('rut');
+    $tipoFiltro = $tipo ?? request('tipo');
+    $anioFiltro = $anio ?? request('anio');
+    $mesFiltro = $mes ?? request('mes');
+
+    $tiposDocumento = $tiposDocumento ?? collect(['FACTURA', 'BOLETA', 'DOCUMENTO']);
+
+    $filtrosActivos = $filtrosActivos ?? collect([
+        $proveedorFiltro,
+        $rutFiltro,
+        $tipoFiltro,
+        $anioFiltro,
+        $mesFiltro,
+    ])->filter(fn ($valor) => $valor !== null && $valor !== '')->count();
+
+    $resumenPorTipo = $resumenPorTipo ?? [];
+
+    $resumenVacio = [
+        'label' => '',
+        'cantidad' => 0,
+        'neto_bruto' => 0,
+        'total_impuesto' => 0,
+        'total_final' => 0,
+    ];
+
+    $resumenBoletas = $resumenPorTipo['BOLETA'] ?? array_merge($resumenVacio, ['label' => 'Boletas']);
+    $resumenFacturas = $resumenPorTipo['FACTURA'] ?? array_merge($resumenVacio, ['label' => 'Facturas']);
+    $resumenDocumentos = $resumenPorTipo['DOCUMENTO'] ?? array_merge($resumenVacio, ['label' => 'Documentos']);
+    $resumenTotalGeneral = $resumenPorTipo['TOTAL'] ?? array_merge($resumenVacio, ['label' => 'Total general']);
+
+    $buscarValorTipoDocumento = function (string $clave) use ($tiposDocumento) {
+        return collect($tiposDocumento)
+            ->first(function ($tipoDocumento) use ($clave) {
+                return str_contains(
+                    mb_strtoupper(trim((string) $tipoDocumento)),
+                    $clave
+                );
+            }) ?? $clave;
+    };
+
+    $tipoDocumentoValue = $buscarValorTipoDocumento('DOCUMENTO');
+    $tipoBoletaValue = $buscarValorTipoDocumento('BOLETA');
+    $tipoFacturaValue = $buscarValorTipoDocumento('FACTURA');
+
+    $tipoSeleccionado = function ($valor) use ($tipoFiltro) {
+        return mb_strtoupper(trim((string) $tipoFiltro)) === mb_strtoupper(trim((string) $valor));
+    };
+@endphp
+
+<div class="sl-page">
+    <header class="sl-page-header">
+        <a href="{{ route('cobranzas.general') }}" class="sl-back-link">
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+            <span>Volver al panel de Finanzas</span>
+        </a>
+
+        <h1 class="sl-page-title">Liquidaciones de Suscripciones</h1>
+    </header>
 
     @if(session('success'))
-        <div class="alert alert-success">
+        <div class="alert alert-success sl-alert" role="status">
             {{ session('success') }}
         </div>
     @endif
 
     @if(session('info'))
-        <div class="alert alert-info">
+        <div class="alert alert-info sl-alert" role="status">
             {{ session('info') }}
         </div>
     @endif
 
     @if($errors->any())
-        <div class="alert alert-danger">
-            <ul class="mb-0">
+        <div class="alert alert-danger sl-alert" role="alert">
+            <ul class="mb-0 ps-3">
                 @foreach($errors->all() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
@@ -27,585 +101,348 @@
         </div>
     @endif
 
-    @php
-        $meses = $meses ?? [
-            1 => 'Enero',
-            2 => 'Febrero',
-            3 => 'Marzo',
-            4 => 'Abril',
-            5 => 'Mayo',
-            6 => 'Junio',
-            7 => 'Julio',
-            8 => 'Agosto',
-            9 => 'Septiembre',
-            10 => 'Octubre',
-            11 => 'Noviembre',
-            12 => 'Diciembre',
-        ];
+    <section class="sl-workspace" aria-label="Operaciones de liquidaciones">
+        <div class="sl-workspace-section sl-workspace-generate">
+            <div class="sl-section-head">
+                <h2 class="sl-section-title">Generar mes completo</h2>
+            </div>
 
-        $proveedorFiltro = $proveedor ?? request('proveedor');
-        $rutFiltro = $rut ?? request('rut');
-        $tipoFiltro = $tipo ?? request('tipo');
-        $anioFiltro = $anio ?? request('anio');
-        $mesFiltro = $mes ?? request('mes');
-
-        $tiposDocumento = $tiposDocumento ?? collect(['FACTURA', 'BOLETA', 'DOCUMENTO']);
-
-        $filtrosActivos = $filtrosActivos ?? collect([
-            $proveedorFiltro,
-            $rutFiltro,
-            $tipoFiltro,
-            $anioFiltro,
-            $mesFiltro,
-        ])->filter(fn($v) => $v !== null && $v !== '')->count();
-
-        $resumenPorTipo = $resumenPorTipo ?? [
-            'BOLETA' => [
-                'label' => 'Boletas',
-                'cantidad' => 0,
-                'neto_bruto' => 0,
-                'total_impuesto' => 0,
-                'total_final' => 0,
-            ],
-            'FACTURA' => [
-                'label' => 'Facturas',
-                'cantidad' => 0,
-                'neto_bruto' => 0,
-                'total_impuesto' => 0,
-                'total_final' => 0,
-            ],
-        ];
-
-        $resumenBoletas = $resumenPorTipo['BOLETA'] ?? [
-            'label' => 'Boletas',
-            'cantidad' => 0,
-            'neto_bruto' => 0,
-            'total_impuesto' => 0,
-            'total_final' => 0,
-        ];
-
-
-        $contadorTipoDocumento = [
-            'BOLETA' => (int) ($resumenBoletas['cantidad'] ?? 0),
-            'FACTURA' => (int) ($resumenFacturas['cantidad'] ?? 0),
-            'DOCUMENTO' => (int) ($resumenDocumentos['cantidad'] ?? 0),
-        ];
-
-        $labelTipoDocumento = function ($tipoDocumento) use ($contadorTipoDocumento) {
-            $tipoNormalizado = mb_strtoupper(trim((string) $tipoDocumento));
-
-            if (str_contains($tipoNormalizado, 'BOLETA')) {
-                return 'Boleta Honorario(' . number_format($contadorTipoDocumento['BOLETA'], 0, ',', '.') . ')';
-            }
-
-            if (str_contains($tipoNormalizado, 'FACTURA')) {
-                return 'Factura(' . number_format($contadorTipoDocumento['FACTURA'], 0, ',', '.') . ')';
-            }
-
-            if (str_contains($tipoNormalizado, 'DOCUMENTO')) {
-                return 'Documento(' . number_format($contadorTipoDocumento['DOCUMENTO'], 0, ',', '.') . ')';
-            }
-
-            return $tipoDocumento;
-        };
-
-        $resumenFacturas = $resumenPorTipo['FACTURA'] ?? [
-            'label' => 'Facturas',
-            'cantidad' => 0,
-            'neto_bruto' => 0,
-            'total_impuesto' => 0,
-            'total_final' => 0,
-        ];
-
-        $resumenDocumentos = $resumenPorTipo['DOCUMENTO'] ?? [
-            'label' => 'Documentos',
-            'cantidad' => 0,
-            'neto_bruto' => 0,
-            'total_impuesto' => 0,
-            'total_final' => 0,
-        ];
-
-        $resumenTotalGeneral = $resumenPorTipo['TOTAL'] ?? [
-            'label' => 'Total general',
-            'cantidad' => 0,
-            'neto_bruto' => 0,
-            'total_impuesto' => 0,
-            'total_final' => 0,
-        ];
-
-        $buscarValorTipoDocumento = function (string $clave) use ($tiposDocumento) {
-            return collect($tiposDocumento)
-                ->first(function ($tipoDocumento) use ($clave) {
-                    return str_contains(
-                        mb_strtoupper(trim((string) $tipoDocumento)),
-                        $clave
-                    );
-                }) ?? $clave;
-        };
-
-        $tipoDocumentoValue = $buscarValorTipoDocumento('DOCUMENTO');
-        $tipoBoletaValue = $buscarValorTipoDocumento('BOLETA');
-        $tipoFacturaValue = $buscarValorTipoDocumento('FACTURA');
-
-        $tipoSeleccionado = function ($valor) use ($tipoFiltro) {
-            return mb_strtoupper(trim((string) $tipoFiltro)) === mb_strtoupper(trim((string) $valor));
-        };
-
-
-
-    @endphp
-
-    <div class="row align-items-center g-2 mb-4">
-        <div class="col-12 col-md-4 text-center text-md-start">
-            <a
-                href="{{ route('cobranzas.general') }}"
-                class="btn btn-outline-secondary btn-sm"
+            <form
+                method="GET"
+                action="{{ route('suscripciones.comisiones-mensuales.create') }}"
+                class="sl-generate-form"
             >
-                ← Volver al panel de Finanzas
-            </a>
-        </div>
+                <input type="hidden" name="proveedor_actual" value="{{ $proveedorFiltro }}">
 
-        <div class="col-12 col-md-4 text-center">
-            <h1 class="mb-0">
-                Liquidaciones de Suscripciones
-            </h1>
-        </div>
-
-        <div class="d-none d-md-block col-md-4"></div>
-    </div>
-
-    <div class="row g-3 align-items-stretch mb-3">
-
-
-
-
-        {{-- Generar mes completo --}}
-        <div class="col-12 col-lg-3">
-            <div class="card h-100">
-                <div class="card-body d-flex flex-column">
-                    <div class="text-center mb-3">
-                        <div class="fw-semibold">Generar mes completo</div>
-                        <div class="small text-muted mt-1">
-                            Crea las líneas mensuales desde las asignaciones existentes.
-                        </div>
-                    </div>
-
-                    <form method="GET"
-                        action="{{ route('suscripciones.comisiones-mensuales.create') }}"
-                        class="mt-auto">
-
-                        <input type="hidden" name="proveedor_actual" value="{{ $proveedorFiltro }}">
-
-
-
-
-                        <div class="mb-2">
-                            <label class="form-label small text-muted">Año</label>
-
-                            <input
-                                type="number"
-                                name="anio"
-                                class="form-control form-control-sm"
-                                value="{{ request('anio', now()->year) }}"
-                                min="2020"
-                                max="2100"
-                                required
-                            >
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label small text-muted">Mes</label>
-
-                            <select
-                                name="mes"
-                                class="form-select form-select-sm"
-                                required
-                            >
-                                @foreach ($meses as $numeroMes => $nombreMes)
-                                    <option
-                                        value="{{ $numeroMes }}"
-                                        @selected(
-                                            (int) request('mes', now()->month) === (int) $numeroMes
-                                        )
-                                    >
-                                        {{ $nombreMes }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-
-
-
-
-                        <button type="submit" class="btn btn-secondary btn-sm w-100">
-                            Continuar generación
-                        </button>
-                    </form>
-
-
-
-                </div>
-            </div>
-        </div>
-
-
-
-
-
-
-
-        {{-- Filtros --}}
-        <div class="col-12 col-lg-6">
-            <div class="card h-100">
-                <div class="card-body d-flex flex-column">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="fw-semibold">Filtros de búsqueda</div>
-
-                        @if($filtrosActivos)
-                            <span class="small text-muted">
-                                {{ $filtrosActivos }} activo(s)
-                            </span>
-                        @endif
-                    </div>
-
-                    <form method="GET"
-                          action="{{ route('suscripciones.liquidacion-detalles.index') }}"
-                          class="d-flex flex-column flex-grow-1">
-                        <div class="row g-3 align-items-end">
-
-                            <div class="col-12 col-md-6">
-                                <label class="form-label small text-muted">Proveedor</label>
-                                <input
-                                    type="text"
-                                    name="proveedor"
-                                    class="form-control form-control-sm"
-                                    placeholder="Ej: ANDRES FERNANDO MUÑOZ"
-                                    value="{{ $proveedorFiltro }}"
-                                >
-                            </div>
-
-                            <div class="col-12 col-md-6">
-                                <label class="form-label small text-muted">RUT</label>
-                                <input
-                                    type="text"
-                                    name="rut"
-                                    class="form-control form-control-sm"
-                                    placeholder="Ej: 10513948-9"
-                                    value="{{ $rutFiltro }}"
-                                >
-                            </div>
-
-                            <div class="col-12 col-md-4">
-                                <label class="form-label small text-muted">Tipo documento</label>
-                                <select name="tipo" class="form-select form-select-sm">
-                                    <option value="">Todos</option>
-
-                                    <option value="{{ $tipoDocumentoValue }}"
-                                        {{ $tipoSeleccionado($tipoDocumentoValue) ? 'selected' : '' }}>
-                                        Documento({{ number_format($resumenDocumentos['cantidad'], 0, ',', '.') }})
-                                    </option>
-
-                                    <option value="{{ $tipoBoletaValue }}"
-                                        {{ $tipoSeleccionado($tipoBoletaValue) ? 'selected' : '' }}>
-                                        Boleta Honorario({{ number_format($resumenBoletas['cantidad'], 0, ',', '.') }})
-                                    </option>
-
-                                    <option value="{{ $tipoFacturaValue }}"
-                                        {{ $tipoSeleccionado($tipoFacturaValue) ? 'selected' : '' }}>
-                                        Factura({{ number_format($resumenFacturas['cantidad'], 0, ',', '.') }})
-                                    </option>
-                                </select>
-                            </div>
-
-                            <div class="col-6 col-md-4">
-                                <label class="form-label small text-muted">Año</label>
-                                <input
-                                    type="number"
-                                    name="anio"
-                                    class="form-control form-control-sm"
-                                    placeholder="2026"
-                                    value="{{ $anioFiltro }}"
-                                    min="2020"
-                                    max="2100"
-                                >
-                            </div>
-
-                            <div class="col-6 col-md-4">
-                                <label class="form-label small text-muted">Mes</label>
-                                <select name="mes" class="form-select form-select-sm">
-                                    <option value="">Todos</option>
-
-                                    @foreach($meses as $numero => $nombre)
-                                        <option value="{{ $numero }}"
-                                            {{ (int) $mesFiltro === $numero ? 'selected' : '' }}>
-                                            {{ $nombre }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                        </div>
-
-                        <div class="d-flex justify-content-end gap-2 mt-auto pt-3">
-                            <a href="{{ route('suscripciones.liquidacion-detalles.index') }}"
-                               class="btn btn-outline-secondary btn-sm">
-                                Limpiar
-                            </a>
-
-                            <button type="submit" class="btn btn-secondary btn-sm">
-                                Buscar
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-
-
-
-
-
-
-        {{-- Descargar ZIP y enviar pre-facturas --}}
-        <div class="col-12 col-lg-3">
-            <div class="card h-100">
-                <div class="card-body d-flex flex-column">
-                    <div class="text-center mb-3">
-                        <div class="fw-semibold">Pre-facturas PDF</div>
-
-                        <div class="small text-muted mt-1">
-                            Descarga, revisa o envía las pre-facturas del período.
-                        </div>
-                    </div>
-
-                    <form
-                        method="POST"
-                        action="{{ route('suscripciones.liquidacion-detalles.pdf-masivo') }}"
-                        class="mt-auto"
-                        data-long-loader="300000"
-                    >
-                        @csrf
-
+                <div class="sl-fields-2">
+                    <div class="sl-field">
+                        <label for="sl-generar-anio">Año</label>
                         <input
-                            type="hidden"
-                            name="proveedor_pdf"
+                            id="sl-generar-anio"
+                            type="number"
+                            name="anio"
+                            class="form-control form-control-sm"
+                            value="{{ request('anio', now()->year) }}"
+                            min="2020"
+                            max="2100"
+                            required
+                        >
+                    </div>
+
+                    <div class="sl-field">
+                        <label for="sl-generar-mes">Mes</label>
+                        <select
+                            id="sl-generar-mes"
+                            name="mes"
+                            class="form-select form-select-sm"
+                            required
+                        >
+                            @foreach ($meses as $numeroMes => $nombreMes)
+                                <option
+                                    value="{{ $numeroMes }}"
+                                    @selected((int) request('mes', now()->month) === (int) $numeroMes)
+                                >
+                                    {{ $nombreMes }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn sl-btn sl-btn-primary">
+                    <i class="fa-solid fa-play" aria-hidden="true"></i>
+                    <span>Continuar generación</span>
+                </button>
+            </form>
+        </div>
+
+        <div class="sl-workspace-section sl-workspace-filters">
+            <div class="sl-section-head">
+                <h2 class="sl-section-title">Filtros de búsqueda</h2>
+
+                @if($filtrosActivos)
+                    <span class="sl-section-meta">
+                        {{ $filtrosActivos }} {{ $filtrosActivos === 1 ? 'filtro activo' : 'filtros activos' }}
+                    </span>
+                @endif
+            </div>
+
+            <form
+                method="GET"
+                action="{{ route('suscripciones.liquidacion-detalles.index') }}"
+            >
+                <div class="sl-filter-grid">
+                    <div class="sl-field sl-filter-provider">
+                        <label for="sl-filtro-proveedor">Proveedor</label>
+                        <input
+                            id="sl-filtro-proveedor"
+                            type="text"
+                            name="proveedor"
+                            class="form-control form-control-sm"
+                            placeholder="Ej: ANDRES FERNANDO MUÑOZ"
                             value="{{ $proveedorFiltro }}"
                         >
+                    </div>
 
+                    <div class="sl-field sl-filter-rut">
+                        <label for="sl-filtro-rut">RUT</label>
                         <input
-                            type="hidden"
-                            name="rut_pdf"
+                            id="sl-filtro-rut"
+                            type="text"
+                            name="rut"
+                            class="form-control form-control-sm"
+                            placeholder="Ej: 10513948-9"
                             value="{{ $rutFiltro }}"
                         >
+                    </div>
 
-                        <input
-                            type="hidden"
-                            name="tipo_pdf"
-                            value="{{ $tipoFiltro }}"
-                        >
-
-                        {{-- Sólo se completa al confirmar el envío real --}}
-                        <input
-                            type="hidden"
-                            name="confirmacion_envio"
-                            id="confirmacion_envio_real"
-                            value=""
-                        >
-
-                        <div class="mb-2">
-                            <label class="form-label small text-muted">
-                                Año PDF
-                            </label>
-
-                            <input
-                                type="number"
-                                name="anio_pdf"
-                                class="form-control form-control-sm"
-                                value="{{ request('anio', 2026) }}"
-                                min="2020"
-                                max="2100"
-                                required
+                    <div class="sl-field sl-filter-type">
+                        <label for="sl-filtro-tipo">Tipo documento</label>
+                        <select id="sl-filtro-tipo" name="tipo" class="form-select form-select-sm">
+                            <option value="">Todos</option>
+                            <option
+                                value="{{ $tipoDocumentoValue }}"
+                                {{ $tipoSeleccionado($tipoDocumentoValue) ? 'selected' : '' }}
                             >
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label small text-muted">
-                                Mes PDF
-                            </label>
-
-                            <select
-                                name="mes_pdf"
-                                class="form-select form-select-sm"
-                                required
+                                Documento ({{ number_format($resumenDocumentos['cantidad'], 0, ',', '.') }})
+                            </option>
+                            <option
+                                value="{{ $tipoBoletaValue }}"
+                                {{ $tipoSeleccionado($tipoBoletaValue) ? 'selected' : '' }}
                             >
-                                @foreach($meses as $numero => $nombre)
-                                    <option
-                                        value="{{ $numero }}"
-                                        {{ (int) request('mes', 4) === $numero ? 'selected' : '' }}
-                                    >
-                                        {{ $nombre }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
+                                Boleta Honorario ({{ number_format($resumenBoletas['cantidad'], 0, ',', '.') }})
+                            </option>
+                            <option
+                                value="{{ $tipoFacturaValue }}"
+                                {{ $tipoSeleccionado($tipoFacturaValue) ? 'selected' : '' }}
+                            >
+                                Factura ({{ number_format($resumenFacturas['cantidad'], 0, ',', '.') }})
+                            </option>
+                        </select>
+                    </div>
 
-                        {{-- Descargar ZIP --}}
-                        <button
-                            type="submit"
-                            class="btn btn-secondary btn-sm w-100"
+                    <div class="sl-field sl-filter-year">
+                        <label for="sl-filtro-anio">Año</label>
+                        <input
+                            id="sl-filtro-anio"
+                            type="number"
+                            name="anio"
+                            class="form-control form-control-sm"
+                            placeholder="2026"
+                            value="{{ $anioFiltro }}"
+                            min="2020"
+                            max="2100"
                         >
-                            Descargar ZIP de pre-facturas
-                        </button>
+                    </div>
 
-                        {{-- Revisar correos sin enviar --}}
-                        <button
-                            type="submit"
-                            class="btn btn-outline-primary btn-sm w-100 mt-2"
-                            formaction="{{ route(
-                                'suscripciones.liquidacion-detalles.revisar-destinatarios'
-                            ) }}"
+                    <div class="sl-field sl-filter-month">
+                        <label for="sl-filtro-mes">Mes</label>
+                        <select id="sl-filtro-mes" name="mes" class="form-select form-select-sm">
+                            <option value="">Todos</option>
+                            @foreach($meses as $numero => $nombre)
+                                <option value="{{ $numero }}" {{ (int) $mesFiltro === $numero ? 'selected' : '' }}>
+                                    {{ $nombre }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <div class="sl-button-row">
+                    <a
+                        href="{{ route('suscripciones.liquidacion-detalles.index') }}"
+                        class="btn sl-btn sl-btn-muted"
+                    >
+                        Limpiar
+                    </a>
+
+                    <button type="submit" class="btn sl-btn sl-btn-primary">
+                        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                        <span>Buscar</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="sl-workspace-section sl-workspace-documents">
+            <div class="sl-section-head">
+                <h2 class="sl-section-title">Pre-facturas PDF</h2>
+            </div>
+
+            <form
+                method="POST"
+                action="{{ route('suscripciones.liquidacion-detalles.pdf-masivo') }}"
+                class="sl-document-form"
+                data-long-loader="300000"
+            >
+                @csrf
+
+                <input type="hidden" name="proveedor_pdf" value="{{ $proveedorFiltro }}">
+                <input type="hidden" name="rut_pdf" value="{{ $rutFiltro }}">
+                <input type="hidden" name="tipo_pdf" value="{{ $tipoFiltro }}">
+                <input type="hidden" name="confirmacion_envio" id="confirmacion_envio_real" value="">
+
+                <div class="sl-fields-2">
+                    <div class="sl-field">
+                        <label for="sl-pdf-anio">Año PDF</label>
+                        <input
+                            id="sl-pdf-anio"
+                            type="number"
+                            name="anio_pdf"
+                            class="form-control form-control-sm"
+                            value="{{ request('anio', 2026) }}"
+                            min="2020"
+                            max="2100"
+                            required
                         >
-                            Revisar destinatarios
-                        </button>
+                    </div>
 
-                        {{-- Envío controlado a Gmail --}}
-                        <button
-                            type="submit"
-                            class="btn btn-primary btn-sm w-100 mt-2"
-                            formaction="{{ route(
-                                'suscripciones.liquidacion-detalles.enviar-correos-prueba-masivo'
-                            ) }}"
-                            onclick="
+                    <div class="sl-field">
+                        <label for="sl-pdf-mes">Mes PDF</label>
+                        <select
+                            id="sl-pdf-mes"
+                            name="mes_pdf"
+                            class="form-select form-select-sm"
+                            required
+                        >
+                            @foreach($meses as $numero => $nombre)
+                                <option value="{{ $numero }}" {{ (int) request('mes', 4) === $numero ? 'selected' : '' }}>
+                                    {{ $nombre }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <div class="sl-document-actions">
+                    <button type="submit" class="btn sl-btn sl-btn-outline">
+                        <i class="fa-solid fa-file-zipper" aria-hidden="true"></i>
+                        <span>Descargar ZIP de pre-facturas</span>
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn sl-btn sl-btn-outline"
+                        formaction="{{ route('suscripciones.liquidacion-detalles.revisar-destinatarios') }}"
+                    >
+                        <i class="fa-regular fa-envelope-open" aria-hidden="true"></i>
+                        <span>Revisar destinatarios</span>
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn sl-btn sl-btn-outline"
+                        formaction="{{ route('suscripciones.liquidacion-detalles.enviar-correos-prueba-masivo') }}"
+                        onclick="
+                            document.getElementById('confirmacion_envio_real').value = '';
+
+                            return confirm(
+                                '¿Enviar una copia de cada pre-factura seleccionada únicamente a eliascorreap@gmail.com?'
+                            );
+                        "
+                    >
+                        <i class="fa-regular fa-paper-plane" aria-hidden="true"></i>
+                        <span>Enviar pre-facturas de prueba</span>
+                    </button>
+
+                    <p class="sl-helper">
+                        La prueba se dirige únicamente a eliascorreap@gmail.com.
+                    </p>
+                </div>
+
+                <div class="sl-danger-zone">
+                    <button
+                        type="submit"
+                        class="btn sl-btn sl-btn-danger w-100"
+                        formaction="{{ route('suscripciones.liquidacion-detalles.enviar-correos-reales-masivo') }}"
+                        onclick="
+                            const confirmacion = prompt(
+                                'ATENCIÓN: este envío llegará a los proveedores reales.\n\nEscribe ENVIAR para continuar:'
+                            );
+
+                            if (confirmacion !== 'ENVIAR') {
                                 document.getElementById('confirmacion_envio_real').value = '';
 
-                                return confirm(
-                                    '¿Enviar una copia de cada pre-factura seleccionada únicamente a eliascorreap@gmail.com?'
-                                );
-                            "
-                        >
-                            Enviar pre-facturas de prueba
-                        </button>
+                                alert('Envío cancelado. Debes escribir exactamente ENVIAR.');
 
-                        <div class="small text-muted text-center mt-2">
-                            La prueba se dirige únicamente a eliascorreap@gmail.com.
-                        </div>
+                                return false;
+                            }
 
-                        <hr class="my-3">
+                            document.getElementById('confirmacion_envio_real').value = 'ENVIAR';
 
-                        {{-- Envío real a proveedores --}}
-                        <button
-                            type="submit"
-                            class="btn btn-danger btn-sm w-100"
-                            formaction="{{ route(
-                                'suscripciones.liquidacion-detalles.enviar-correos-reales-masivo'
-                            ) }}"
-                            onclick="
-                                const confirmacion = prompt(
-                                    'ATENCIÓN: este envío llegará a los proveedores reales.\n\nEscribe ENVIAR para continuar:'
-                                );
+                            return confirm(
+                                'CONFIRMACIÓN FINAL:\n\n¿Enviar las pre-facturas seleccionadas a los correos reales de los proveedores, con copia a Finanzas y Luis de la Barra?'
+                            );
+                        "
+                    >
+                        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                        <span>Enviar pre-facturas a proveedores</span>
+                    </button>
 
-                                if (confirmacion !== 'ENVIAR') {
-                                    document.getElementById('confirmacion_envio_real').value = '';
-
-                                    alert(
-                                        'Envío cancelado. Debes escribir exactamente ENVIAR.'
-                                    );
-
-                                    return false;
-                                }
-
-                                document.getElementById('confirmacion_envio_real').value = 'ENVIAR';
-
-                                return confirm(
-                                    'CONFIRMACIÓN FINAL:\n\n¿Enviar las pre-facturas seleccionadas a los correos reales de los proveedores, con copia a Finanzas y Luis de la Barra?'
-                                );
-                            "
-                        >
-                            Enviar pre-facturas a proveedores
-                        </button>
-
-                        <div class="small text-danger text-center mt-2">
-                            Envío real al correo registrado de cada proveedor.
-                            Se enviará copia a finanzas@4nlogistica.cl y
-                            luisdelabarra@4nlogistica.cl.
-                        </div>
-                    </form>
+                    <p class="sl-danger-note">
+                        Envío real al correo registrado de cada proveedor, con copia a Finanzas y Luis de la Barra.
+                    </p>
                 </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="sl-summary" aria-label="Resumen de liquidaciones">
+        <div class="sl-summary-item">
+            <span class="sl-summary-label">Pre-facturas encontradas</span>
+            <div class="sl-summary-line">
+                <strong class="sl-summary-count">{{ number_format($cantidadRegistros ?? $prefacturas->total(), 0, ',', '.') }}</strong>
+                <span class="sl-summary-amount">
+                    ${{ number_format($resumenTotalGeneral['neto_bruto'], 0, ',', '.') }}
+                </span>
             </div>
         </div>
 
-
-
-
-
-
-
-
-
-
-    </div>
-
-
-    {{-- Resumen suave --}}
-    <div class="border rounded px-3 py-2 mb-3">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 small text-muted">
-            <div>
-                Pre-facturas encontradas:
-                <strong class="text-dark">{{ $cantidadRegistros ?? $prefacturas->total() }}</strong>
-            </div>
-
-            <div>
-                Total general:
-                <strong class="text-dark">${{ number_format($resumenTotalGeneral['total_final'], 0, ',', '.') }}</strong>
+        <div class="sl-summary-item">
+            <span class="sl-summary-label">Boletas</span>
+            <div class="sl-summary-line">
+                <strong class="sl-summary-count">{{ number_format($resumenBoletas['cantidad'], 0, ',', '.') }}</strong>
+                <span class="sl-summary-amount">
+                    ${{ number_format($resumenBoletas['total_final'], 0, ',', '.') }}
+                </span>
             </div>
         </div>
 
-        <div class="mt-2 pt-2 border-top small text-muted">
-            <div class="row g-2">
-                <div class="col-12 col-lg-3">
-                    <strong class="text-dark">Boletas:</strong>
-                    {{ number_format($resumenBoletas['cantidad'], 0, ',', '.') }}
-                    <span class="mx-1">|</span>
-                    Final:
-                    <strong class="text-dark">${{ number_format($resumenBoletas['total_final'], 0, ',', '.') }}</strong>
-                </div>
-
-                <div class="col-12 col-lg-3">
-                    <strong class="text-dark">Facturas:</strong>
-                    {{ number_format($resumenFacturas['cantidad'], 0, ',', '.') }}
-                    <span class="mx-1">|</span>
-                    Final:
-                    <strong class="text-dark">${{ number_format($resumenFacturas['total_final'], 0, ',', '.') }}</strong>
-                </div>
-
-                <div class="col-12 col-lg-3">
-                    <strong class="text-dark">Documentos:</strong>
-                    {{ number_format($resumenDocumentos['cantidad'], 0, ',', '.') }}
-                    <span class="mx-1">|</span>
-                    Final:
-                    <strong class="text-dark">${{ number_format($resumenDocumentos['total_final'], 0, ',', '.') }}</strong>
-                </div>
-
-                <div class="col-12 col-lg-3 text-lg-end">
-                    <strong class="text-dark">Total:</strong>
-                    {{ number_format($resumenTotalGeneral['cantidad'], 0, ',', '.') }}
-                    <span class="mx-1">|</span>
-                    Final:
-                    <strong class="text-dark">${{ number_format($resumenTotalGeneral['total_final'], 0, ',', '.') }}</strong>
-                </div>
+        <div class="sl-summary-item">
+            <span class="sl-summary-label">Facturas</span>
+            <div class="sl-summary-line">
+                <strong class="sl-summary-count">{{ number_format($resumenFacturas['cantidad'], 0, ',', '.') }}</strong>
+                <span class="sl-summary-amount">
+                    ${{ number_format($resumenFacturas['total_final'], 0, ',', '.') }}
+                </span>
             </div>
         </div>
-    </div>
 
-    {{-- Tabla --}}
-    <div class="hm-table-wrap">
+        <div class="sl-summary-item">
+            <span class="sl-summary-label">Documentos</span>
+            <div class="sl-summary-line">
+                <strong class="sl-summary-count">{{ number_format($resumenDocumentos['cantidad'], 0, ',', '.') }}</strong>
+                <span class="sl-summary-amount">
+                    ${{ number_format($resumenDocumentos['total_final'], 0, ',', '.') }}
+                </span>
+            </div>
+        </div>
+
+        <div class="sl-summary-item sl-summary-total">
+            <span class="sl-summary-label">Total general</span>
+            <div class="sl-summary-line">
+                <strong class="sl-summary-count">{{ number_format($resumenTotalGeneral['cantidad'], 0, ',', '.') }}</strong>
+                <span class="sl-summary-amount">
+                    ${{ number_format($resumenTotalGeneral['total_final'], 0, ',', '.') }}
+                </span>
+            </div>
+        </div>
+    </section>
+
+    <section class="sl-table-region" aria-label="Detalle de pre-facturas">
         @if($prefacturas->isEmpty())
-            <div class="p-3">
-                <p class="text-muted mb-0">
-                    No hay pre-facturas registradas para los filtros seleccionados.
-                </p>
+            <div class="sl-empty">
+                No hay pre-facturas registradas para los filtros seleccionados.
             </div>
         @else
             <x-finanzas.plain-table>
@@ -613,7 +450,7 @@
                     <tr>
                         <th>Año</th>
                         <th>Mes</th>
-                        <th class="text-center">Proveedor</th>
+                        <th>Proveedor</th>
                         <th>RUT</th>
                         <th>Tipo</th>
                         <th class="text-end">Neto/Bruto</th>
@@ -625,38 +462,29 @@
                 <tbody>
                     @foreach($prefacturas as $prefactura)
                         <tr>
-                            <td class="hm-nowrap">
-                                {{ $prefactura['anio'] }}
-                            </td>
-
-                            <td class="hm-nowrap">
-                                {{ $prefactura['mes_nombre'] }}
-                            </td>
-
-                            <td class="text-center">
-                                <a href="{{ route('suscripciones.liquidacion-detalles.show', $prefactura['detalle_id']) }}"
-                                   class="fw-semibold text-decoration-none text-reset">
+                            <td class="text-nowrap">{{ $prefactura['anio'] }}</td>
+                            <td class="text-nowrap">{{ $prefactura['mes_nombre'] }}</td>
+                            <td>
+                                <a
+                                    href="{{ route('suscripciones.liquidacion-detalles.show', $prefactura['detalle_id']) }}"
+                                    class="sl-provider-link"
+                                >
                                     {{ $prefactura['proveedor'] }}
                                 </a>
                             </td>
-
-                            <td class="hm-nowrap">
-                                {{ $prefactura['rut'] }}
+                            <td class="text-nowrap">{{ $prefactura['rut'] }}</td>
+                            <td>
+                                <span class="sl-doc-type">
+                                    {{ $prefactura['tipo'] === 'BOLETA' ? 'Boleta Honorario' : $prefactura['tipo'] }}
+                                </span>
                             </td>
-
-                            <td class="hm-nowrap">
-                                {{ $prefactura['tipo'] === 'BOLETA' ? 'Boleta Honorario' : $prefactura['tipo'] }}
-                            </td>
-
-                            <td class="hm-nowrap text-end fw-semibold">
+                            <td class="text-end sl-money">
                                 ${{ number_format($prefactura['neto_bruto'], 0, ',', '.') }}
                             </td>
-
-                            <td class="hm-nowrap text-end">
+                            <td class="text-end sl-money">
                                 ${{ number_format($prefactura['total_impuesto'], 1, ',', '.') }}
                             </td>
-
-                            <td class="hm-nowrap text-end fw-semibold" title="{{ $prefactura['final'] }}">
+                            <td class="text-end sl-money sl-money-final" title="{{ $prefactura['final'] }}">
                                 ${{ number_format($prefactura['total_final'], 0, ',', '.') }}
                             </td>
                         </tr>
@@ -664,11 +492,10 @@
                 </tbody>
             </x-finanzas.plain-table>
 
-            <div class="py-3 d-flex justify-content-center">
+            <div class="sl-pagination">
                 {{ $prefacturas->appends(request()->query())->links('pagination::bootstrap-4') }}
             </div>
         @endif
-    </div>
-
+    </section>
 </div>
 @endsection

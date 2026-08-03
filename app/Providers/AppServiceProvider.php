@@ -6,6 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
 use App\Models\Banco;
 use App\Models\TipoCuenta;
+use App\Services\Suscripciones\SuscripcionAjusteMensualService;
 use Carbon\Carbon;
 
 
@@ -16,7 +17,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        /*
+         * El listado, los resúmenes y los servicios de PDF/ZIP resuelven los
+         * mismos ajustes varias veces durante una solicitud. Compartir esta
+         * instancia mantiene un único caché por ciclo HTTP o job.
+         */
+        $this->app->scoped(
+            SuscripcionAjusteMensualService::class,
+            fn () => new SuscripcionAjusteMensualService()
+        );
     }
 
     /**

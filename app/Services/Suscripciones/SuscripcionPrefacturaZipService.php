@@ -20,6 +20,8 @@ class SuscripcionPrefacturaZipService
         @set_time_limit(0);
         ini_set('memory_limit', '1024M');
 
+        $this->ajusteMensualService->precargarParaDetalles($detallesBase);
+
         $baseDir = storage_path('app/temp_prefacturas');
         $zipDir = $baseDir . DIRECTORY_SEPARATOR . 'zips';
         $pdfDir = $baseDir . DIRECTORY_SEPARATOR . 'pdfs';
