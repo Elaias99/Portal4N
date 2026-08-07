@@ -82,6 +82,22 @@ IDENTIFICACIÓN
                 @enderror
             </div>
         </div>
+
+        <div class="col-md-12">
+            <div class="{{ $fieldMarginClass }}">
+                <label for="{{ $formIdPrefix }}_correo_suscripciones" class="form-label">Correo</label>
+                <input
+                    type="email"
+                    name="correo_suscripciones"
+                    id="{{ $formIdPrefix }}_correo_suscripciones"
+                    class="form-control @error('correo_suscripciones') is-invalid @enderror"
+                    value="{{ old('correo_suscripciones', $cobranzaCompra->correo_suscripciones ?? '') }}"
+                >
+                @error('correo_suscripciones')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+        </div>
     </div>
 </div>
 

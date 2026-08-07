@@ -117,6 +117,7 @@ class PagosMasivosDocumentoCompraExport implements
         // CORREO BENEFICIARIO
         // =========================
         $correoBeneficiario = $this->resolverCorreoBeneficiario(
+            $cobranza->correo_suscripciones ?? null,
             $cobranza->responsable ?? null
         );
 
@@ -150,8 +151,17 @@ class PagosMasivosDocumentoCompraExport implements
         ];
     }
 
-    private function resolverCorreoBeneficiario(?string $responsable): ?string
+    private function resolverCorreoBeneficiario(
+        ?string $correoSuscripciones,
+        ?string $responsable
+    ): ?string
     {
+        $correoSuscripciones = trim((string) $correoSuscripciones);
+
+        if ($correoSuscripciones !== '') {
+            return $correoSuscripciones;
+        }
+
         if (!$responsable) {
             return null;
         }

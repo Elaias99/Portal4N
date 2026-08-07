@@ -12,7 +12,7 @@ class CobranzaCompra extends Model
     protected $table = 'cobranza_compras';
 
     protected $fillable = ['rut_cliente', 'razon_social', 'servicio', 'creditos'  ,'tipo','facturacion','forma_pago','zona',
-                            'importancia', 'responsable', 'nombre_cuenta', 'rut_cuenta', 'numero_cuenta','banco_id', 'tipo_cuenta_id'];
+                            'importancia', 'responsable', 'nombre_cuenta', 'rut_cuenta', 'numero_cuenta','banco_id', 'tipo_cuenta_id', 'correo_suscripciones'];
 
 
     // Una cobranza de compras → pertenece a un banco

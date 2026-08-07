@@ -62,6 +62,7 @@ class HonorariosPagoMasivoExport implements
         );
 
         $correoBeneficiario = $this->resolverCorreoBeneficiario(
+            $cobranza?->correo_suscripciones,
             $cobranza?->responsable
         );
 
@@ -93,8 +94,17 @@ class HonorariosPagoMasivoExport implements
         ];
     }
 
-    private function resolverCorreoBeneficiario(?string $responsable): ?string
+    private function resolverCorreoBeneficiario(
+        ?string $correoSuscripciones,
+        ?string $responsable
+    ): ?string
     {
+        $correoSuscripciones = trim((string) $correoSuscripciones);
+
+        if ($correoSuscripciones !== '') {
+            return $correoSuscripciones;
+        }
+
         if (!$responsable) {
             return null;
         }
