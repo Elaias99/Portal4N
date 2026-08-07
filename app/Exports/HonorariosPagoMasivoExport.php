@@ -18,6 +18,8 @@ class HonorariosPagoMasivoExport implements
     ShouldAutoSize,
     WithStyles
 {
+    private const MONTO_MAXIMO_POR_TRANSFERENCIA = 7000000;
+
     protected Collection $honorarios;
 
     public function __construct(Collection $honorarios)
@@ -77,7 +79,7 @@ class HonorariosPagoMasivoExport implements
         $glosaPago = "Pago Honorarios {$fechaPagoFormateada}";
         $glosaFolio = "Pago Folio N {$honorario->folio}";
 
-        return [
+        $fila = [
             $cuentaOrigen,         // A Cuenta origen
             $moneda,               // B Moneda origen
             $cuentaDestino,        // C Cuenta destino
@@ -92,6 +94,31 @@ class HonorariosPagoMasivoExport implements
             $glosaPago,            // L Glosa cartola originador
             $glosaFolio,           // M Glosa cartola beneficiario
         ];
+
+        return $this->dividirFilaPorMonto($fila, $monto);
+    }
+
+    private function dividirFilaPorMonto(array $fila, int $monto): array
+    {
+        if ($monto <= self::MONTO_MAXIMO_POR_TRANSFERENCIA) {
+            return [$fila];
+        }
+
+        $filas = [];
+        $montoRestante = $monto;
+
+        while ($montoRestante > 0) {
+            $filaDividida = $fila;
+            $filaDividida[7] = min(
+                $montoRestante,
+                self::MONTO_MAXIMO_POR_TRANSFERENCIA
+            );
+
+            $filas[] = $filaDividida;
+            $montoRestante -= $filaDividida[7];
+        }
+
+        return $filas;
     }
 
     private function resolverCorreoBeneficiario(

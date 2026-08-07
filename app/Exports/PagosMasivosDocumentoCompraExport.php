@@ -19,6 +19,8 @@ class PagosMasivosDocumentoCompraExport implements
     ShouldAutoSize,
     WithStyles
 {
+    private const MONTO_MAXIMO_POR_TRANSFERENCIA = 7000000;
+
     protected Collection $operaciones;
 
     /**
@@ -58,7 +60,7 @@ class PagosMasivosDocumentoCompraExport implements
     }
 
     /**
-     * Mapeo: 1 fila = 1 operación (pago o abono)
+     * Una operación puede generar varias filas si supera el límite bancario.
      */
     public function map($op): array
     {
@@ -134,7 +136,7 @@ class PagosMasivosDocumentoCompraExport implements
         $glosaPago  = "Pago Proveedores {$fechaPagoFormateada}";
         $glosaFolio = "Pago Folio N {$documento->folio}";
 
-        return [
+        $fila = [
             $cuentaOrigen,        // Cuenta origen
             $moneda,              // Moneda origen
             $cuentaDestino,       // Cuenta destino
@@ -149,6 +151,31 @@ class PagosMasivosDocumentoCompraExport implements
             $glosaPago,           // Glosa cartola originador
             $glosaFolio,          // Glosa cartola beneficiario
         ];
+
+        return $this->dividirFilaPorMonto($fila, $monto);
+    }
+
+    private function dividirFilaPorMonto(array $fila, int $monto): array
+    {
+        if ($monto <= self::MONTO_MAXIMO_POR_TRANSFERENCIA) {
+            return [$fila];
+        }
+
+        $filas = [];
+        $montoRestante = $monto;
+
+        while ($montoRestante > 0) {
+            $filaDividida = $fila;
+            $filaDividida[7] = min(
+                $montoRestante,
+                self::MONTO_MAXIMO_POR_TRANSFERENCIA
+            );
+
+            $filas[] = $filaDividida;
+            $montoRestante -= $filaDividida[7];
+        }
+
+        return $filas;
     }
 
     private function resolverCorreoBeneficiario(
