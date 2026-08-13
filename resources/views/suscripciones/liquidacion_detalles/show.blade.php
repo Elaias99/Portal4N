@@ -209,6 +209,38 @@
                                     $origenGasto = mb_strtoupper(trim((string) ($item->asignacion?->origen_gasto ?? '')));
                                     $tipoAsignacion = mb_strtoupper(trim((string) ($item->asignacion?->tipo_asignacion ?? '')));
 
+                                    $esExcepcionFacturacionTecnica =
+                                        $tipoAsignacion === 'EXCEPCION_FACTURACION';
+
+                                    /*
+                                    * Excepciones donde ESTA asignación es la ruta original.
+                                    *
+                                    * Ejemplo:
+                                    * Benito / BH.01 -> 25/07 -> Sanrey.
+                                    */
+                                    $excepcionesOrigenItem =
+                                        $excepcionesFacturacionPorAsignacion
+                                            ->get(
+                                                $item->suscripcion_asignacion_id,
+                                                collect()
+                                            );
+
+                                    /*
+                                    * Excepciones representadas por ESTA línea técnica receptora.
+                                    *
+                                    * Ejemplo:
+                                    * Sanrey / BH.01 <- 25/07 <- Benito.
+                                    */
+                                    $excepcionesReceptorItem =
+                                        $excepcionesFacturacionPorDetalleReceptor
+                                            ->get(
+                                                $item->id,
+                                                collect()
+                                            );
+
+                                    $qReasignada =
+                                        $excepcionesOrigenItem->count();
+
                                     $esContenedorAjuste = $tipoAsignacion === 'CONTENEDOR_AJUSTE';
 
                                     $esPagoVariable = $esContenedorAjuste
@@ -252,6 +284,12 @@
                                         /
                                         {{ $item->asignacion?->servicio ?? '—' }}
                                         ({{ $item->codigo }})
+
+                                        @if($esExcepcionFacturacionTecnica)
+                                            <small class="text-primary d-block mt-1">
+                                                Pago correspondiente a una ejecución reasignada.
+                                            </small>
+                                        @endif
 
                                         @if($esPagoVariable)
                                             <small class="text-muted d-block mt-1">
@@ -329,15 +367,86 @@
                                             <small class="text-muted d-block">
                                                 Mensual
                                             </small>
-                                        @else
-                                            {{ $item->q_calendario }} fines de semana
+                                        @elseif($esExcepcionFacturacionTecnica)
+                                            <strong>Ejecución reasignada</strong>
 
-                                            @if($item->q_inasistencia > 0)
-                                                <small class="text-muted d-block">
-                                                    - {{ $item->q_inasistencia }} inasistencia{{ $item->q_inasistencia === 1 ? '' : 's' }}
+                                            @forelse($excepcionesReceptorItem as $excepcion)
+                                                @php
+                                                    $proveedorOrigen =
+                                                        $excepcion
+                                                            ->asignacion
+                                                            ?->suscripcionProveedor
+                                                            ?->cobranzaCompra
+                                                            ?->razon_social
+                                                        ?? 'Proveedor original';
+                                                @endphp
+
+                                                <small class="text-muted d-block mt-1">
+                                                    {{ $excepcion->fecha?->format('d/m/Y') ?? '—' }}
                                                 </small>
+
+                                                <small class="text-muted d-block">
+                                                    Desde: {{ $proveedorOrigen }}
+                                                </small>
+                                            @empty
+                                                <small class="text-muted d-block mt-1">
+                                                    {{ $item->cantidad }}
+                                                    ejecución{{ (int) $item->cantidad === 1 ? '' : 'es' }}
+                                                </small>
+                                            @endforelse
+
+
+
+                                            @else
+                                                {{ $item->q_calendario }} fines de semana
+
+                                                @if($item->q_inasistencia > 0)
+                                                    <small class="text-muted d-block">
+                                                        - {{ $item->q_inasistencia }}
+                                                        inasistencia{{ (int) $item->q_inasistencia === 1 ? '' : 's' }}
+                                                    </small>
+                                                @endif
+
+                                                @if($qReasignada > 0)
+                                                    @foreach($excepcionesOrigenItem as $excepcion)
+                                                        @php
+                                                            $proveedorDestino =
+                                                                $excepcion
+                                                                    ->proveedorFacturacion
+                                                                    ?->cobranzaCompra
+                                                                    ?->razon_social
+                                                                ?? 'Proveedor receptor';
+
+                                                            $transportistaDestino =
+                                                                $excepcion
+                                                                    ->transportistaOverride
+                                                                    ?->nombre_transportista;
+                                                        @endphp
+
+                                                        <small class="text-primary d-block mt-1">
+                                                            - 1 ejecución reasignada
+                                                        </small>
+
+                                                        <small class="text-muted d-block">
+                                                            {{ $excepcion->fecha?->format('d/m/Y') ?? '—' }}
+                                                            →
+                                                            {{ $proveedorDestino }}
+                                                        </small>
+
+                                                        @if($transportistaDestino)
+                                                            <small class="text-muted d-block">
+                                                                Transportista:
+                                                                {{ $transportistaDestino }}
+                                                            </small>
+                                                        @endif
+                                                    @endforeach
+                                                @endif
                                             @endif
-                                        @endif
+
+
+
+
+
                                     </td>
 
                                     <td class="text-end">

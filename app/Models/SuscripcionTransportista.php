@@ -18,6 +18,14 @@ class SuscripcionTransportista extends Model
         return $this->hasMany(Asignaciones::class, 'suscripcion_transportista_id');
     }
 
+    public function excepcionesFacturacionOverride()
+    {
+        return $this->hasMany(
+            SuscripcionExcepcionFacturacion::class,
+            'suscripcion_transportista_override_id'
+        );
+    }
+
 
 
 }

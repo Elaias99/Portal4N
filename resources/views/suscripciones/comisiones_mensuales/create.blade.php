@@ -1062,8 +1062,23 @@
 
 <script>
     window.suscripcionesGeneracionMensual = {
-        comisionesIniciales: @json(collect(old('comisiones', []))->values()->all()),
-        ajustesIniciales: @json(collect(old('ajustes_mensuales', []))->values()->all()),
+        comisionesIniciales: @json(
+            collect(old('comisiones', []))
+                ->values()
+                ->all()
+        ),
+
+        ajustesIniciales: @json(
+            collect(old('ajustes_mensuales', []))
+                ->values()
+                ->all()
+        ),
+
+        excepcionesFacturacionIniciales: @json(
+            collect(old('excepciones_facturacion', []))
+                ->values()
+                ->all()
+        ),
     };
 </script>
 

@@ -14,6 +14,8 @@ use App\Models\SuscripcionZonaDiaOperativo;
 use App\Services\Suscripciones\SuscripcionGeneracionMensualService;
 use App\Services\Suscripciones\SuscripcionAjusteMensualAplicacionService;
 use App\Services\Suscripciones\SuscripcionAjusteMensualRegistroService;
+use App\Services\Suscripciones\SuscripcionExcepcionFacturacionRegistroService;
+use App\Services\Suscripciones\SuscripcionExcepcionFacturacionAplicacionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\CarbonImmutable;
@@ -125,12 +127,14 @@ class SuscripcionComisionMensualController extends Controller
             }
         );
 
-        // Periodos
-
-        $periodoYaGenerado = SuscripcionLiquidacionDetalle::query()
-            ->where('anio', $anio)
-            ->where('mes', $mes)
-            ->exists();
+        /*
+        * Período.
+        */
+        $periodoYaGenerado =
+            SuscripcionLiquidacionDetalle::query()
+                ->where('anio', $anio)
+                ->where('mes', $mes)
+                ->exists();
 
         /*
         * Permite distinguir entre:
@@ -156,43 +160,75 @@ class SuscripcionComisionMensualController extends Controller
             && $totalCombinacionesGuardadas
                 < $totalCombinacionesEsperadas;
 
-        $proveedores = SuscripcionProveedor::with(
-            'cobranzaCompra'
-        )
-            ->whereHas('cobranzaCompra')
-            ->get()
-            ->sortBy(
-                fn ($proveedor) =>
-                    $proveedor->cobranzaCompra?->razon_social
+        /*
+        * Proveedores disponibles.
+        */
+        $proveedores =
+            SuscripcionProveedor::with(
+                'cobranzaCompra'
             )
-            ->values();
+                ->whereHas('cobranzaCompra')
+                ->get()
+                ->sortBy(
+                    fn ($proveedor) =>
+                        $proveedor->cobranzaCompra?->razon_social
+                )
+                ->values();
 
+        /*
+        * Transportistas disponibles.
+        */
         $transportistas =
             SuscripcionTransportista::query()
                 ->orderBy('nombre_transportista')
                 ->get();
 
+        /*
+        * Cantidades variables mensuales.
+        */
         $asignacionesCantidadMensual =
             Asignaciones::with([
                 'suscripcionProveedor.cobranzaCompra',
                 'transportista',
             ])
-                ->where('tipo_asignacion', 'VARIABLE')
+                ->where(
+                    'tipo_asignacion',
+                    'VARIABLE'
+                )
                 ->orderBy('codigo')
                 ->get();
 
+        /*
+        * Asignaciones disponibles para novedades mensuales.
+        *
+        * Se excluyen todas las asignaciones técnicas:
+        *
+        * - COMISION
+        * - CONTENEDOR_AJUSTE
+        * - EXCEPCION_FACTURACION
+        *
+        * EXCEPCION_FACTURACION se genera internamente cuando una
+        * ejecución puntual es trasladada a otro proveedor.
+        */
         $asignacionesAjustesMensuales =
             Asignaciones::with([
                 'suscripcionProveedor.cobranzaCompra',
                 'transportista',
             ])
-                ->whereNotIn('tipo_asignacion', [
-                    'COMISION',
-                    'CONTENEDOR_AJUSTE',
-                ])
+                ->whereNotIn(
+                    'tipo_asignacion',
+                    [
+                        'COMISION',
+                        'CONTENEDOR_AJUSTE',
+                        'EXCEPCION_FACTURACION',
+                    ]
+                )
                 ->orderBy('codigo')
                 ->get();
 
+        /*
+        * Asignaciones fijas mensuales.
+        */
         $asignacionesFijasMensuales =
             Asignaciones::with([
                 'suscripcionProveedor.cobranzaCompra',
@@ -205,6 +241,9 @@ class SuscripcionComisionMensualController extends Controller
                 ->orderBy('codigo')
                 ->get();
 
+        /*
+        * Conceptos configurados para pagos variables.
+        */
         $conceptosPagoVariable =
             SuscripcionConceptoPagoVariable::query()
                 ->where('activo', true)
@@ -226,9 +265,11 @@ class SuscripcionComisionMensualController extends Controller
 
                 'proveedores',
                 'transportistas',
+
                 'asignacionesCantidadMensual',
                 'asignacionesAjustesMensuales',
                 'asignacionesFijasMensuales',
+
                 'conceptosPagoVariable',
                 'periodoYaGenerado'
             )
@@ -237,9 +278,14 @@ class SuscripcionComisionMensualController extends Controller
 
 
 
-    public function store(Request $request, SuscripcionGeneracionMensualService $generacionMensualService, SuscripcionAjusteMensualRegistroService $ajusteMensualRegistroService, SuscripcionAjusteMensualAplicacionService $ajusteMensualAplicacionService) 
-    {
-
+    public function store(
+        Request $request,
+        SuscripcionGeneracionMensualService $generacionMensualService,
+        SuscripcionAjusteMensualRegistroService $ajusteMensualRegistroService,
+        SuscripcionAjusteMensualAplicacionService $ajusteMensualAplicacionService,
+        SuscripcionExcepcionFacturacionRegistroService $excepcionFacturacionRegistroService,
+        SuscripcionExcepcionFacturacionAplicacionService $excepcionFacturacionAplicacionService
+    ) {
         $data = $request->validate([
             'anio' => [
                 'required',
@@ -247,6 +293,7 @@ class SuscripcionComisionMensualController extends Controller
                 'min:2020',
                 'max:2100',
             ],
+
             'mes' => [
                 'required',
                 'integer',
@@ -256,29 +303,29 @@ class SuscripcionComisionMensualController extends Controller
 
             /*
             * Calendario operativo de las zonas.
-            *
-            * Cada elemento representa una combinación:
-            *
-            * zona + fecha de fin de semana.
             */
             'zonas_operativas' => [
                 'required',
                 'array',
                 'min:1',
             ],
+
             'zonas_operativas.*.suscripcion_zona_id' => [
                 'required',
                 'integer',
                 'exists:suscripcion_zonas,id',
             ],
+
             'zonas_operativas.*.fecha' => [
                 'required',
                 'date_format:Y-m-d',
             ],
+
             'zonas_operativas.*.hubo_despacho' => [
                 'required',
                 'boolean',
             ],
+
             'zonas_operativas.*.observacion' => [
                 'nullable',
                 'string',
@@ -293,12 +340,14 @@ class SuscripcionComisionMensualController extends Controller
                 'required_with:cantidad_mensual_cantidad',
                 'exists:suscripcion_asignaciones,id',
             ],
+
             'cantidad_mensual_cantidad' => [
                 'nullable',
                 'required_with:cantidad_mensual_asignacion_id',
                 'integer',
                 'min:1',
             ],
+
             'cantidad_mensual_observacion' => [
                 'nullable',
                 'string',
@@ -307,53 +356,58 @@ class SuscripcionComisionMensualController extends Controller
 
             /*
             * Pagos adicionales.
-            *
-            * costo representa la tarifa unitaria.
-            * cantidad representa las unidades informadas.
-            * total se calcula en el backend.
             */
             'comisiones' => [
                 'nullable',
                 'array',
             ],
+
             'comisiones.*.suscripcion_proveedor_id' => [
                 'required',
                 'exists:suscripcion_proveedores,id',
             ],
+
             'comisiones.*.suscripcion_transportista_id' => [
                 'required',
                 'exists:suscripcion_transportistas,id',
             ],
+
             'comisiones.*.punto_1' => [
                 'nullable',
                 'string',
                 'max:255',
             ],
+
             'comisiones.*.origen_gasto' => [
                 'nullable',
                 'string',
                 'max:255',
             ],
+
             'comisiones.*.punto_2' => [
                 'nullable',
                 'string',
                 'max:255',
             ],
+
             'comisiones.*.servicio' => [
                 'nullable',
                 'string',
                 'max:255',
             ],
+
             'comisiones.*.costo' => [
                 'required',
                 'integer',
                 'min:1',
             ],
+
             'comisiones.*.cantidad' => [
                 'required',
                 'integer',
                 'min:1',
             ],
+
             'comisiones.*.observacion' => [
                 'nullable',
                 'string',
@@ -367,15 +421,18 @@ class SuscripcionComisionMensualController extends Controller
                 'nullable',
                 'array',
             ],
+
             'ajustes_mensuales.*.tipo_ajuste' => [
                 'required',
                 'string',
                 'max:50',
             ],
+
             'ajustes_mensuales.*.concepto_pago_variable_id' => [
                 'nullable',
                 'exists:suscripcion_conceptos_pago_variable,id',
             ],
+
             'ajustes_mensuales.*.concepto_pago_variable_manual' => [
                 'nullable',
                 'string',
@@ -386,10 +443,12 @@ class SuscripcionComisionMensualController extends Controller
                 'nullable',
                 'exists:suscripcion_asignaciones,id',
             ],
+
             'ajustes_mensuales.*.suscripcion_proveedor_id' => [
                 'nullable',
                 'exists:suscripcion_proveedores,id',
             ],
+
             'ajustes_mensuales.*.suscripcion_transportista_id' => [
                 'nullable',
                 'exists:suscripcion_transportistas,id',
@@ -399,6 +458,7 @@ class SuscripcionComisionMensualController extends Controller
                 'nullable',
                 'exists:suscripcion_proveedores,id',
             ],
+
             'ajustes_mensuales.*.suscripcion_transportista_override_id' => [
                 'nullable',
                 'exists:suscripcion_transportistas,id',
@@ -409,21 +469,25 @@ class SuscripcionComisionMensualController extends Controller
                 'string',
                 'max:255',
             ],
+
             'ajustes_mensuales.*.origen_gasto' => [
                 'nullable',
                 'string',
                 'max:255',
             ],
+
             'ajustes_mensuales.*.punto_2' => [
                 'nullable',
                 'string',
                 'max:255',
             ],
+
             'ajustes_mensuales.*.codigo' => [
                 'nullable',
                 'string',
                 'max:255',
             ],
+
             'ajustes_mensuales.*.servicio' => [
                 'nullable',
                 'string',
@@ -435,16 +499,19 @@ class SuscripcionComisionMensualController extends Controller
                 'string',
                 'max:255',
             ],
+
             'ajustes_mensuales.*.detalle_documento' => [
                 'nullable',
                 'string',
                 'max:255',
             ],
+
             'ajustes_mensuales.*.detalle_impuesto' => [
                 'nullable',
                 'string',
                 'max:255',
             ],
+
             'ajustes_mensuales.*.final' => [
                 'nullable',
                 'string',
@@ -462,21 +529,25 @@ class SuscripcionComisionMensualController extends Controller
                 'integer',
                 'min:0',
             ],
+
             'ajustes_mensuales.*.q_calendario' => [
                 'nullable',
                 'integer',
                 'min:0',
             ],
+
             'ajustes_mensuales.*.q_inasistencia' => [
                 'nullable',
                 'integer',
                 'min:0',
             ],
+
             'ajustes_mensuales.*.cantidad' => [
                 'nullable',
                 'integer',
                 'min:0',
             ],
+
             'ajustes_mensuales.*.total' => [
                 'nullable',
                 'integer',
@@ -488,44 +559,125 @@ class SuscripcionComisionMensualController extends Controller
                 'string',
                 'max:1000',
             ],
+
+            /*
+            * Excepciones de facturación por fecha.
+            *
+            * Representan una ejecución puntual de una ruta
+            * cuya facturación cambia únicamente para una fecha.
+            */
+            'excepciones_facturacion' => [
+                'nullable',
+                'array',
+            ],
+
+            'excepciones_facturacion.*.suscripcion_asignacion_id' => [
+                'required',
+                'integer',
+                'exists:suscripcion_asignaciones,id',
+            ],
+
+            'excepciones_facturacion.*.fecha' => [
+                'required',
+                'date_format:Y-m-d',
+            ],
+
+            'excepciones_facturacion.*.suscripcion_proveedor_facturacion_id' => [
+                'required',
+                'integer',
+                'exists:suscripcion_proveedores,id',
+            ],
+
+            'excepciones_facturacion.*.suscripcion_transportista_override_id' => [
+                'nullable',
+                'integer',
+                'exists:suscripcion_transportistas,id',
+            ],
+
+            /*
+            * NULL significa utilizar el costo habitual
+            * de la asignación original.
+            */
+            'excepciones_facturacion.*.costo' => [
+                'nullable',
+                'integer',
+                'min:0',
+            ],
+
+            'excepciones_facturacion.*.tipo_documento' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'excepciones_facturacion.*.detalle_documento' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'excepciones_facturacion.*.detalle_impuesto' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'excepciones_facturacion.*.final' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'excepciones_facturacion.*.observacion' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
         ]);
 
         $anio = (int) $data['anio'];
         $mes = (int) $data['mes'];
 
         /*
-        * Normalizar el calendario zonal recibido.
+        * Normalizar calendario zonal.
         */
         $zonasOperativas = collect(
             $data['zonas_operativas'] ?? []
         )
             ->map(function (array $diaOperativo) {
-                $observacion = isset($diaOperativo['observacion'])
-                    ? trim((string) $diaOperativo['observacion'])
-                    : null;
+                $observacion =
+                    isset($diaOperativo['observacion'])
+                        ? trim(
+                            (string)
+                            $diaOperativo['observacion']
+                        )
+                        : null;
 
                 return [
-                    'suscripcion_zona_id' => (int) $diaOperativo[
-                        'suscripcion_zona_id'
-                    ],
+                    'suscripcion_zona_id' =>
+                        (int) $diaOperativo[
+                            'suscripcion_zona_id'
+                        ],
 
-                    'fecha' => $diaOperativo['fecha'],
+                    'fecha' =>
+                        $diaOperativo['fecha'],
 
-                    'hubo_despacho' => (bool) (
-                        (int) $diaOperativo['hubo_despacho']
-                    ),
+                    'hubo_despacho' =>
+                        (bool) (
+                            (int)
+                            $diaOperativo['hubo_despacho']
+                        ),
 
-                    'observacion' => $observacion !== ''
-                        ? $observacion
-                        : null,
+                    'observacion' =>
+                        $observacion !== ''
+                            ? $observacion
+                            : null,
                 ];
             })
             ->values();
 
         /*
-        * Verificar que el formulario haya enviado exactamente:
-        *
-        * zonas activas × sábados y domingos del período.
+        * Verificar matriz completa de zonas × fechas.
         */
         $this->validarCalendarioZonas(
             $zonasOperativas,
@@ -543,20 +695,32 @@ class SuscripcionComisionMensualController extends Controller
             $data['ajustes_mensuales'] ?? []
         )->values();
 
+        /*
+        * Excepciones por fecha.
+        */
+        $excepcionesFacturacion = collect(
+            $data['excepciones_facturacion'] ?? []
+        )->values();
+
         $debeGuardarCantidadMensual =
-            !empty($data['cantidad_mensual_asignacion_id'])
-            && !empty($data['cantidad_mensual_cantidad']);
+            !empty(
+                $data['cantidad_mensual_asignacion_id']
+            )
+            && !empty(
+                $data['cantidad_mensual_cantidad']
+            );
 
         /*
-        * Validar que no exista previamente la cantidad variable
-        * para la misma asignación y período.
+        * Validar cantidad variable duplicada.
         */
         if ($debeGuardarCantidadMensual) {
             $existeCantidadMensual =
                 SuscripcionCantidadMensual::query()
                     ->where(
                         'suscripcion_asignacion_id',
-                        $data['cantidad_mensual_asignacion_id']
+                        $data[
+                            'cantidad_mensual_asignacion_id'
+                        ]
                     )
                     ->where('anio', $anio)
                     ->where('mes', $mes)
@@ -573,18 +737,20 @@ class SuscripcionComisionMensualController extends Controller
         }
 
         /*
-        * Confirmar que la asignación seleccionada corresponda
-        * efectivamente a una cantidad variable.
+        * Confirmar tipo VARIABLE.
         */
         if ($debeGuardarCantidadMensual) {
-            $asignacionCantidadMensual = Asignaciones::find(
-                $data['cantidad_mensual_asignacion_id']
-            );
+            $asignacionCantidadMensual =
+                Asignaciones::find(
+                    $data[
+                        'cantidad_mensual_asignacion_id'
+                    ]
+                );
 
             if (
                 !$asignacionCantidadMensual
-                || $asignacionCantidadMensual->tipo_asignacion
-                    !== 'VARIABLE'
+                || $asignacionCantidadMensual
+                    ->tipo_asignacion !== 'VARIABLE'
             ) {
                 return back()
                     ->withInput()
@@ -596,7 +762,7 @@ class SuscripcionComisionMensualController extends Controller
         }
 
         /*
-        * Validaciones específicas de las novedades mensuales.
+        * Validaciones específicas de ajustes mensuales.
         */
         $erroresAjustes =
             $this->validarAjustesMensualesFormulario(
@@ -610,8 +776,8 @@ class SuscripcionComisionMensualController extends Controller
         }
 
         /*
-        * Guardar el calendario zonal, la cantidad variable
-        * y los pagos adicionales.
+        * Guardar calendario, cantidad variable
+        * y pagos adicionales.
         */
         DB::transaction(function () use (
             $data,
@@ -623,13 +789,7 @@ class SuscripcionComisionMensualController extends Controller
             $zonasOperativas
         ) {
             /*
-            * Guardar explícitamente todas las combinaciones
-            * de zona y fecha.
-            *
-            * Esto incluye:
-            *
-            * hubo_despacho = true
-            * hubo_despacho = false
+            * Calendario zonal.
             */
             foreach ($zonasOperativas as $diaOperativo) {
                 SuscripcionZonaDiaOperativo::query()
@@ -658,44 +818,62 @@ class SuscripcionComisionMensualController extends Controller
             }
 
             /*
-            * Guardar cantidad variable mensual.
+            * Cantidad variable mensual.
             */
             if ($debeGuardarCantidadMensual) {
-                $asignacionCantidad = Asignaciones::findOrFail(
-                    $data['cantidad_mensual_asignacion_id']
-                );
+                $asignacionCantidad =
+                    Asignaciones::findOrFail(
+                        $data[
+                            'cantidad_mensual_asignacion_id'
+                        ]
+                    );
 
-                $codigoCantidad = $asignacionCantidad->codigo;
-                $costoCantidad = (int) $asignacionCantidad->costo;
+                $codigoCantidad =
+                    $asignacionCantidad->codigo;
+
+                $costoCantidad =
+                    (int) $asignacionCantidad->costo;
 
                 $cantidadMensual =
-                    (int) $data['cantidad_mensual_cantidad'];
+                    (int) $data[
+                        'cantidad_mensual_cantidad'
+                    ];
 
                 $totalCantidad =
-                    $costoCantidad * $cantidadMensual;
+                    $costoCantidad
+                    * $cantidadMensual;
 
                 SuscripcionCantidadMensual::create([
                     'suscripcion_asignacion_id' =>
                         $asignacionCantidad->id,
 
-                    'anio' => $anio,
-                    'mes' => $mes,
-                    'codigo' => $codigoCantidad,
-                    'costo' => $costoCantidad,
-                    'cantidad' => $cantidadMensual,
-                    'total' => $totalCantidad,
+                    'anio' =>
+                        $anio,
+
+                    'mes' =>
+                        $mes,
+
+                    'codigo' =>
+                        $codigoCantidad,
+
+                    'costo' =>
+                        $costoCantidad,
+
+                    'cantidad' =>
+                        $cantidadMensual,
+
+                    'total' =>
+                        $totalCantidad,
 
                     'observacion' =>
-                        $data['cantidad_mensual_observacion']
-                        ?? null,
+                        $data[
+                            'cantidad_mensual_observacion'
+                        ] ?? null,
                 ]);
             }
 
             /*
-            * Guardar pagos adicionales.
-            *
-            * Cada posición de comisiones[] representa un pago
-            * independiente, aunque sus datos sean iguales.
+            * Pagos adicionales.
             */
             foreach ($comisiones as $comision) {
                 $tarifaComision =
@@ -705,74 +883,90 @@ class SuscripcionComisionMensualController extends Controller
                     (int) $comision['cantidad'];
 
                 $totalComision =
-                    $tarifaComision * $cantidadComision;
+                    $tarifaComision
+                    * $cantidadComision;
 
                 /*
-                * Recuperar un grupo de prefactura relacionado
-                * con el proveedor y transportista.
+                * Recuperar grupo de prefactura relacionado.
                 */
-                $grupoPrefactura = Asignaciones::query()
-                    ->where(
-                        'suscripcion_proveedor_id',
-                        $comision['suscripcion_proveedor_id']
-                    )
-                    ->where(
-                        'suscripcion_transportista_id',
-                        $comision['suscripcion_transportista_id']
-                    )
-                    ->whereNotNull('grupo_prefactura')
-                    ->whereRaw("TRIM(grupo_prefactura) <> ''")
-                    ->orderBy('id')
-                    ->value('grupo_prefactura');
+                $grupoPrefactura =
+                    Asignaciones::query()
+                        ->where(
+                            'suscripcion_proveedor_id',
+                            $comision[
+                                'suscripcion_proveedor_id'
+                            ]
+                        )
+                        ->where(
+                            'suscripcion_transportista_id',
+                            $comision[
+                                'suscripcion_transportista_id'
+                            ]
+                        )
+                        ->whereNotNull(
+                            'grupo_prefactura'
+                        )
+                        ->whereRaw(
+                            "TRIM(grupo_prefactura) <> ''"
+                        )
+                        ->orderBy('id')
+                        ->value(
+                            'grupo_prefactura'
+                        );
 
                 /*
                 * Asignación técnica del pago adicional.
-                *
-                * No se asigna zona porque COMISION no depende
-                * del calendario zonal.
                 */
-                $asignacionComision = Asignaciones::create([
-                    'suscripcion_proveedor_id' =>
-                        (int) $comision[
-                            'suscripcion_proveedor_id'
-                        ],
+                $asignacionComision =
+                    Asignaciones::create([
+                        'suscripcion_proveedor_id' =>
+                            (int) $comision[
+                                'suscripcion_proveedor_id'
+                            ],
 
-                    'suscripcion_transportista_id' =>
-                        (int) $comision[
-                            'suscripcion_transportista_id'
-                        ],
+                        'suscripcion_transportista_id' =>
+                            (int) $comision[
+                                'suscripcion_transportista_id'
+                            ],
 
-                    'suscripcion_zona_id' => null,
+                        'suscripcion_zona_id' =>
+                            null,
 
-                    'punto_1' =>
-                        $comision['punto_1'] ?? null,
+                        'punto_1' =>
+                            $comision[
+                                'punto_1'
+                            ] ?? null,
 
-                    'origen_gasto' =>
-                        $comision['origen_gasto']
-                        ?? 'Suscripciones',
+                        'origen_gasto' =>
+                            $comision[
+                                'origen_gasto'
+                            ] ?? 'Suscripciones',
 
-                    'punto_2' =>
-                        $comision['punto_2'] ?? null,
+                        'punto_2' =>
+                            $comision[
+                                'punto_2'
+                            ] ?? null,
 
-                    'codigo' =>
-                        $codigoComision,
+                        'codigo' =>
+                            $codigoComision,
 
-                    'servicio' =>
-                        $comision['servicio']
-                        ?? 'Reparto fin de semana',
+                        'servicio' =>
+                            $comision[
+                                'servicio'
+                            ] ?? 'Reparto fin de semana',
 
-                    'costo' =>
-                        $tarifaComision,
+                        'costo' =>
+                            $tarifaComision,
 
-                    'grupo_prefactura' =>
-                        $grupoPrefactura,
+                        'grupo_prefactura' =>
+                            $grupoPrefactura,
 
-                    'generar_automaticamente' =>
-                        0,
+                        'generar_automaticamente' =>
+                            0,
 
-                    'tipo_asignacion' =>
-                        'COMISION',
-                ]);
+                        'tipo_asignacion' =>
+                            'COMISION',
+                    ]);
 
                 /*
                 * Registro mensual del pago adicional.
@@ -800,14 +994,15 @@ class SuscripcionComisionMensualController extends Controller
                         $totalComision,
 
                     'observacion' =>
-                        $comision['observacion']
-                        ?? null,
+                        $comision[
+                            'observacion'
+                        ] ?? null,
                 ]);
             }
         });
 
         /*
-        * Resultado inicial del registro de novedades.
+        * Resultado inicial registro de ajustes.
         */
         $resultadoRegistroAjustes = [
             'recibidos' => 0,
@@ -832,25 +1027,67 @@ class SuscripcionComisionMensualController extends Controller
         }
 
         /*
-        * Generar detalles mensuales.
-        *
-        * El calendario ya se encuentra guardado antes de llegar
-        * a esta operación.
+        * Resultado inicial registro de excepciones.
         */
-        $resultado = $generacionMensualService->generar(
-            $anio,
-            $mes
-        );
+        $resultadoExcepcionesFacturacion = [
+            'recibidas' => 0,
+            'creadas' => 0,
+            'actualizadas' => 0,
+            'sin_cambios' => 0,
+            'omitidas' => 0,
+        ];
 
         /*
-        * Aplicar novedades sobre los detalles generados.
+        * Registrar excepciones de facturación por fecha.
         */
-        $resultadoAjustes =
-            $ajusteMensualAplicacionService->aplicarPeriodo(
+        if ($excepcionesFacturacion->isNotEmpty()) {
+            $resultadoExcepcionesFacturacion =
+                $excepcionFacturacionRegistroService
+                    ->guardarDesdeFormulario(
+                        $excepcionesFacturacion->all(),
+                        $anio,
+                        $mes
+                    );
+        }
+
+        /*
+        * Generar liquidación mensual base.
+        */
+        $resultado =
+            $generacionMensualService->generar(
                 $anio,
                 $mes
             );
 
+        /*
+        * Aplicar novedades mensuales normales.
+        */
+        $resultadoAjustes =
+            $ajusteMensualAplicacionService
+                ->aplicarPeriodo(
+                    $anio,
+                    $mes
+                );
+
+        /*
+        * Aplicar excepciones de facturación por fecha.
+        *
+        * Se ejecutan después de los ajustes mensuales porque
+        * representan una regla más específica:
+        *
+        * "esta ejecución concreta de esta fecha pertenece
+        * a otro proveedor".
+        */
+        $resultadoAplicacionExcepciones =
+            $excepcionFacturacionAplicacionService
+                ->aplicarPeriodo(
+                    $anio,
+                    $mes
+                );
+
+        /*
+        * Construir mensaje final.
+        */
         $mensaje =
             'Datos registrados correctamente. '
             . 'Calendario zonal guardado: '
@@ -859,36 +1096,68 @@ class SuscripcionComisionMensualController extends Controller
             . 'Mes generado correctamente. '
             . "Creados: {$resultado['creados']}.";
 
+        /*
+        * Pagos adicionales ingresados.
+        */
         if ($comisiones->count() > 0) {
             $mensaje .=
                 ' Pagos adicionales registrados previamente: '
                 . "{$comisiones->count()}.";
         }
 
-        if (($resultado['cantidades_creadas'] ?? 0) > 0) {
+        /*
+        * Cantidades variables.
+        */
+        if (
+            ($resultado[
+                'cantidades_creadas'
+            ] ?? 0) > 0
+        ) {
             $mensaje .=
                 ' Cantidades variables agregadas: '
                 . "{$resultado['cantidades_creadas']}.";
         }
 
-        if (($resultado['comisiones_creadas'] ?? 0) > 0) {
+        /*
+        * Pagos adicionales generados.
+        */
+        if (
+            ($resultado[
+                'comisiones_creadas'
+            ] ?? 0) > 0
+        ) {
             $mensaje .=
                 ' Pagos adicionales agregados: '
                 . "{$resultado['comisiones_creadas']}.";
         }
 
-        if (($resultadoRegistroAjustes['recibidos'] ?? 0) > 0) {
+        /*
+        * Registro de ajustes mensuales.
+        */
+        if (
+            ($resultadoRegistroAjustes[
+                'recibidos'
+            ] ?? 0) > 0
+        ) {
             $mensaje .=
                 ' Novedades mensuales recibidas: '
                 . "{$resultadoRegistroAjustes['recibidos']}.";
 
-            if (($resultadoRegistroAjustes['creados'] ?? 0) > 0) {
+            if (
+                ($resultadoRegistroAjustes[
+                    'creados'
+                ] ?? 0) > 0
+            ) {
                 $mensaje .=
                     ' Ajustes creados: '
                     . "{$resultadoRegistroAjustes['creados']}.";
             }
 
-            if (($resultadoRegistroAjustes['actualizados'] ?? 0) > 0) {
+            if (
+                ($resultadoRegistroAjustes[
+                    'actualizados'
+                ] ?? 0) > 0
+            ) {
                 $mensaje .=
                     ' Ajustes actualizados: '
                     . "{$resultadoRegistroAjustes['actualizados']}.";
@@ -914,37 +1183,205 @@ class SuscripcionComisionMensualController extends Controller
                     . "{$resultadoRegistroAjustes['asignaciones_reutilizadas']}.";
             }
 
-            if (($resultadoRegistroAjustes['omitidos'] ?? 0) > 0) {
+            if (
+                ($resultadoRegistroAjustes[
+                    'omitidos'
+                ] ?? 0) > 0
+            ) {
                 $mensaje .=
                     ' Novedades omitidas: '
                     . "{$resultadoRegistroAjustes['omitidos']}.";
             }
         }
 
-        if (($resultado['duplicados'] ?? 0) > 0) {
+        /*
+        * Registro de excepciones por fecha.
+        */
+        if (
+            ($resultadoExcepcionesFacturacion[
+                'recibidas'
+            ] ?? 0) > 0
+        ) {
+            $mensaje .=
+                ' Excepciones de facturación por fecha recibidas: '
+                . "{$resultadoExcepcionesFacturacion['recibidas']}.";
+
+            if (
+                ($resultadoExcepcionesFacturacion[
+                    'creadas'
+                ] ?? 0) > 0
+            ) {
+                $mensaje .=
+                    ' Excepciones creadas: '
+                    . "{$resultadoExcepcionesFacturacion['creadas']}.";
+            }
+
+            if (
+                ($resultadoExcepcionesFacturacion[
+                    'actualizadas'
+                ] ?? 0) > 0
+            ) {
+                $mensaje .=
+                    ' Excepciones actualizadas: '
+                    . "{$resultadoExcepcionesFacturacion['actualizadas']}.";
+            }
+
+            if (
+                ($resultadoExcepcionesFacturacion[
+                    'sin_cambios'
+                ] ?? 0) > 0
+            ) {
+                $mensaje .=
+                    ' Excepciones sin cambios: '
+                    . "{$resultadoExcepcionesFacturacion['sin_cambios']}.";
+            }
+
+            if (
+                ($resultadoExcepcionesFacturacion[
+                    'omitidas'
+                ] ?? 0) > 0
+            ) {
+                $mensaje .=
+                    ' Excepciones omitidas: '
+                    . "{$resultadoExcepcionesFacturacion['omitidas']}.";
+            }
+        }
+
+        /*
+        * Aplicación real de excepciones.
+        */
+        if (
+            ($resultadoAplicacionExcepciones[
+                'excepciones_procesadas'
+            ] ?? 0) > 0
+        ) {
+            $mensaje .=
+                ' Excepciones por fecha aplicadas: '
+                . "{$resultadoAplicacionExcepciones['excepciones_procesadas']}.";
+
+            if (
+                ($resultadoAplicacionExcepciones[
+                    'detalles_origen_actualizados'
+                ] ?? 0) > 0
+            ) {
+                $mensaje .=
+                    ' Liquidaciones de origen actualizadas: '
+                    . "{$resultadoAplicacionExcepciones['detalles_origen_actualizados']}.";
+            }
+
+            if (
+                ($resultadoAplicacionExcepciones[
+                    'detalles_receptor_creados'
+                ] ?? 0) > 0
+            ) {
+                $mensaje .=
+                    ' Liquidaciones receptoras creadas: '
+                    . "{$resultadoAplicacionExcepciones['detalles_receptor_creados']}.";
+            }
+
+            if (
+                ($resultadoAplicacionExcepciones[
+                    'detalles_receptor_actualizados'
+                ] ?? 0) > 0
+            ) {
+                $mensaje .=
+                    ' Liquidaciones receptoras actualizadas: '
+                    . "{$resultadoAplicacionExcepciones['detalles_receptor_actualizados']}.";
+            }
+
+            if (
+                ($resultadoAplicacionExcepciones[
+                    'asignaciones_tecnicas_creadas'
+                ] ?? 0) > 0
+            ) {
+                $mensaje .=
+                    ' Asignaciones técnicas de excepción creadas: '
+                    . "{$resultadoAplicacionExcepciones['asignaciones_tecnicas_creadas']}.";
+            }
+
+            if (
+                ($resultadoAplicacionExcepciones[
+                    'asignaciones_tecnicas_reutilizadas'
+                ] ?? 0) > 0
+            ) {
+                $mensaje .=
+                    ' Asignaciones técnicas de excepción reutilizadas: '
+                    . "{$resultadoAplicacionExcepciones['asignaciones_tecnicas_reutilizadas']}.";
+            }
+
+            if (
+                ($resultadoAplicacionExcepciones[
+                    'sin_detalle_origen'
+                ] ?? 0) > 0
+            ) {
+                $mensaje .=
+                    ' Excepciones sin liquidación de origen: '
+                    . "{$resultadoAplicacionExcepciones['sin_detalle_origen']}.";
+            }
+        }
+
+        /*
+        * Detalles técnicos eliminados porque dejaron
+        * de corresponder a excepciones activas.
+        */
+        if (
+            ($resultadoAplicacionExcepciones[
+                'detalles_receptor_eliminados'
+            ] ?? 0) > 0
+        ) {
+            $mensaje .=
+                ' Liquidaciones receptoras obsoletas eliminadas: '
+                . "{$resultadoAplicacionExcepciones['detalles_receptor_eliminados']}.";
+        }
+
+        /*
+        * Duplicados de generación.
+        */
+        if (
+            ($resultado['duplicados'] ?? 0) > 0
+        ) {
             $mensaje .=
                 ' Registros ya existentes no duplicados: '
                 . "{$resultado['duplicados']}.";
         }
 
-        if (($resultado['cantidades_duplicadas'] ?? 0) > 0) {
+        if (
+            ($resultado[
+                'cantidades_duplicadas'
+            ] ?? 0) > 0
+        ) {
             $mensaje .=
                 ' Cantidades variables ya existentes no duplicadas: '
                 . "{$resultado['cantidades_duplicadas']}.";
         }
 
-        if (($resultado['comisiones_duplicadas'] ?? 0) > 0) {
+        if (
+            ($resultado[
+                'comisiones_duplicadas'
+            ] ?? 0) > 0
+        ) {
             $mensaje .=
                 ' Pagos adicionales ya generados no duplicados: '
                 . "{$resultado['comisiones_duplicadas']}.";
         }
 
-        if (($resultadoAjustes['ajustes_procesados'] ?? 0) > 0) {
+        /*
+        * Aplicación de ajustes mensuales.
+        */
+        if (
+            ($resultadoAjustes[
+                'ajustes_procesados'
+            ] ?? 0) > 0
+        ) {
             $mensaje .=
                 ' Ajustes mensuales procesados: '
                 . "{$resultadoAjustes['ajustes_procesados']}.";
 
-            if (($resultadoAjustes['detalles_actualizados'] ?? 0) > 0) {
+            if (
+                ($resultadoAjustes[
+                    'detalles_actualizados'
+                ] ?? 0) > 0
+            ) {
                 $mensaje .=
                     ' Detalles actualizados por ajustes: '
                     . "{$resultadoAjustes['detalles_actualizados']}.";
@@ -970,32 +1407,53 @@ class SuscripcionComisionMensualController extends Controller
                     . "{$resultadoAjustes['lineas_adicionales_actualizadas']}.";
             }
 
-            if (($resultadoAjustes['facturacion_registrada'] ?? 0) > 0) {
+            if (
+                ($resultadoAjustes[
+                    'facturacion_registrada'
+                ] ?? 0) > 0
+            ) {
                 $mensaje .=
                     ' Ajustes de facturación considerados: '
                     . "{$resultadoAjustes['facturacion_registrada']}.";
             }
 
-            if (($resultadoAjustes['sin_detalle'] ?? 0) > 0) {
+            if (
+                ($resultadoAjustes[
+                    'sin_detalle'
+                ] ?? 0) > 0
+            ) {
                 $mensaje .=
                     ' Ajustes sin detalle mensual asociado: '
                     . "{$resultadoAjustes['sin_detalle']}.";
             }
 
-            if (($resultadoAjustes['ignorados'] ?? 0) > 0) {
+            if (
+                ($resultadoAjustes[
+                    'ignorados'
+                ] ?? 0) > 0
+            ) {
                 $mensaje .=
                     ' Ajustes ignorados por compatibilidad: '
                     . "{$resultadoAjustes['ignorados']}.";
             }
         }
 
-        if ($resultado['opv_sin_rutas']->isNotEmpty()) {
+        /*
+        * Rutas OPV sin configuración.
+        */
+        if (
+            $resultado[
+                'opv_sin_rutas'
+            ]->isNotEmpty()
+        ) {
             $mensaje .=
                 ' No se generaron las siguientes rutas OPV '
                 . 'porque no tienen locales OPV asignados: ';
 
             $mensaje .=
-                $resultado['opv_sin_rutas']
+                $resultado[
+                    'opv_sin_rutas'
+                ]
                     ->unique()
                     ->implode('; ')
                 . '.';
@@ -1009,8 +1467,14 @@ class SuscripcionComisionMensualController extends Controller
                     'mes' => $mes,
                 ]
             )
-            ->with('success', $mensaje);
+            ->with(
+                'success',
+                $mensaje
+            );
     }
+
+
+
 
 
 
@@ -1021,92 +1485,344 @@ class SuscripcionComisionMensualController extends Controller
 
         foreach ($ajustes as $index => $ajuste) {
             $numero = $index + 1;
-            $tipo = mb_strtoupper(trim((string) ($ajuste['tipo_ajuste'] ?? '')));
-            $tipo = str_replace([' ', '-'], '_', $tipo);
 
+            $tipo = mb_strtoupper(
+                trim(
+                    (string) (
+                        $ajuste['tipo_ajuste'] ?? ''
+                    )
+                )
+            );
 
+            $tipo = str_replace(
+                [' ', '-'],
+                '_',
+                $tipo
+            );
+
+            /*
+            * Validar que exista tipo de novedad.
+            */
             if ($tipo === '') {
-                $errores["ajustes_mensuales.$index.tipo_ajuste"] = "La novedad mensual #{$numero} no tiene tipo de ajuste.";
+                $errores[
+                    "ajustes_mensuales.$index.tipo_ajuste"
+                ] =
+                    "La novedad mensual #{$numero} no tiene tipo de ajuste.";
+
                 continue;
             }
 
-            if (!in_array($tipo, [
-                'INASISTENCIA',
-                'FACTURACION',
-                'LINEA_ADICIONAL',
-                'PAGO_VARIABLE',
-                'PAGO_ADICIONAL', // compatibilidad temporal con formularios antiguos
-                'REEMPLAZO',
-            ], true)) {
-                $errores["ajustes_mensuales.$index.tipo_ajuste"] = "La novedad mensual #{$numero} tiene un tipo de ajuste no válido.";
+            /*
+            * Tipos de novedades mensuales soportados.
+            */
+            if (
+                !in_array(
+                    $tipo,
+                    [
+                        'INASISTENCIA',
+                        'FACTURACION',
+                        'LINEA_ADICIONAL',
+                        'PAGO_VARIABLE',
+
+                        /*
+                        * Compatibilidad temporal con
+                        * formularios antiguos.
+                        */
+                        'PAGO_ADICIONAL',
+
+                        'REEMPLAZO',
+                    ],
+                    true
+                )
+            ) {
+                $errores[
+                    "ajustes_mensuales.$index.tipo_ajuste"
+                ] =
+                    "La novedad mensual #{$numero} tiene un tipo de ajuste no válido.";
+
                 continue;
             }
 
-            if (in_array($tipo, ['INASISTENCIA', 'FACTURACION'], true)) {
-                if (empty($ajuste['suscripcion_asignacion_id'])) {
-                    $errores["ajustes_mensuales.$index.suscripcion_asignacion_id"] = "La novedad mensual #{$numero} requiere una asignación existente.";
+            /*
+            * INASISTENCIA y FACTURACION trabajan
+            * necesariamente sobre una asignación existente.
+            */
+            if (
+                in_array(
+                    $tipo,
+                    [
+                        'INASISTENCIA',
+                        'FACTURACION',
+                    ],
+                    true
+                )
+            ) {
+                if (
+                    empty(
+                        $ajuste[
+                            'suscripcion_asignacion_id'
+                        ]
+                    )
+                ) {
+                    $errores[
+                        "ajustes_mensuales.$index.suscripcion_asignacion_id"
+                    ] =
+                        "La novedad mensual #{$numero} requiere una asignación existente.";
                 }
             }
 
+            /*
+            * Resolver la asignación existente, si fue informada.
+            */
             $asignacionAjuste = null;
 
-            if (!empty($ajuste['suscripcion_asignacion_id'])) {
-                $asignacionAjuste = Asignaciones::find($ajuste['suscripcion_asignacion_id']);
+            if (
+                !empty(
+                    $ajuste[
+                        'suscripcion_asignacion_id'
+                    ]
+                )
+            ) {
+                $asignacionAjuste =
+                    Asignaciones::find(
+                        $ajuste[
+                            'suscripcion_asignacion_id'
+                        ]
+                    );
 
                 if (!$asignacionAjuste) {
-                    $errores["ajustes_mensuales.$index.suscripcion_asignacion_id"] = "La novedad mensual #{$numero} tiene una asignación inválida.";
+                    $errores[
+                        "ajustes_mensuales.$index.suscripcion_asignacion_id"
+                    ] =
+                        "La novedad mensual #{$numero} tiene una asignación inválida.";
+
                     continue;
                 }
 
-                if (in_array($asignacionAjuste->tipo_asignacion, ['COMISION', 'CONTENEDOR_AJUSTE'], true)) {
-                    $errores["ajustes_mensuales.$index.suscripcion_asignacion_id"] = "La novedad mensual #{$numero} no puede usar comisiones ni contenedores como asignación existente.";
+                /*
+                * Las asignaciones técnicas nunca pueden volver
+                * a utilizarse como asignaciones base.
+                *
+                * COMISION:
+                * asignación creada para pagos adicionales.
+                *
+                * CONTENEDOR_AJUSTE:
+                * asignación técnica utilizada para líneas
+                * adicionales, pagos variables, etc.
+                *
+                * EXCEPCION_FACTURACION:
+                * asignación técnica creada para trasladar
+                * una ejecución puntual a otro proveedor.
+                */
+                if (
+                    in_array(
+                        $asignacionAjuste->tipo_asignacion,
+                        [
+                            'COMISION',
+                            'CONTENEDOR_AJUSTE',
+                            'EXCEPCION_FACTURACION',
+                        ],
+                        true
+                    )
+                ) {
+                    $errores[
+                        "ajustes_mensuales.$index.suscripcion_asignacion_id"
+                    ] =
+                        "La novedad mensual #{$numero} no puede usar comisiones, contenedores ni excepciones de facturación como asignación existente.";
                 }
 
-                if ($tipo === 'INASISTENCIA' && $asignacionAjuste->tipo_asignacion !== 'RUTA') {
-                    $errores["ajustes_mensuales.$index.suscripcion_asignacion_id"] = "La inasistencia #{$numero} sólo puede aplicarse a rutas normales.";
+                /*
+                * Las inasistencias sólo corresponden
+                * a rutas normales.
+                */
+                if (
+                    $tipo === 'INASISTENCIA'
+                    && $asignacionAjuste->tipo_asignacion
+                        !== 'RUTA'
+                ) {
+                    $errores[
+                        "ajustes_mensuales.$index.suscripcion_asignacion_id"
+                    ] =
+                        "La inasistencia #{$numero} sólo puede aplicarse a rutas normales.";
                 }
 
-                if ($tipo === 'FACTURACION' && !in_array($asignacionAjuste->tipo_asignacion, ['RUTA', 'VARIABLE', 'FIJO_MENSUAL', 'OPV'], true)) {
-                    $errores["ajustes_mensuales.$index.suscripcion_asignacion_id"] = "El cambio de facturación #{$numero} no puede aplicarse a esta asignación.";
+                /*
+                * Los cambios de facturación mensuales
+                * sólo pueden aplicarse sobre tipos
+                * operacionales reconocidos.
+                *
+                * EXCEPCION_FACTURACION no entra aquí porque
+                * representa una asignación técnica generada
+                * por el nuevo flujo de excepciones por fecha.
+                */
+                if (
+                    $tipo === 'FACTURACION'
+                    && !in_array(
+                        $asignacionAjuste->tipo_asignacion,
+                        [
+                            'RUTA',
+                            'VARIABLE',
+                            'FIJO_MENSUAL',
+                            'OPV',
+                        ],
+                        true
+                    )
+                ) {
+                    $errores[
+                        "ajustes_mensuales.$index.suscripcion_asignacion_id"
+                    ] =
+                        "El cambio de facturación #{$numero} no puede aplicarse a esta asignación.";
                 }
             }
 
-            if (in_array($tipo, ['LINEA_ADICIONAL', 'PAGO_VARIABLE', 'PAGO_ADICIONAL', 'REEMPLAZO'], true)) {
-                if (empty($ajuste['suscripcion_proveedor_id'])) {
-                    $errores["ajustes_mensuales.$index.suscripcion_proveedor_id"] = "La novedad mensual #{$numero} requiere un proveedor.";
+            /*
+            * Líneas que se construyen como novedades
+            * independientes del maestro normal.
+            */
+            if (
+                in_array(
+                    $tipo,
+                    [
+                        'LINEA_ADICIONAL',
+                        'PAGO_VARIABLE',
+                        'PAGO_ADICIONAL',
+                        'REEMPLAZO',
+                    ],
+                    true
+                )
+            ) {
+                /*
+                * Proveedor obligatorio.
+                */
+                if (
+                    empty(
+                        $ajuste[
+                            'suscripcion_proveedor_id'
+                        ]
+                    )
+                ) {
+                    $errores[
+                        "ajustes_mensuales.$index.suscripcion_proveedor_id"
+                    ] =
+                        "La novedad mensual #{$numero} requiere un proveedor.";
                 }
 
-                if (empty($ajuste['codigo'])) {
-                    $errores["ajustes_mensuales.$index.codigo"] = "La novedad mensual #{$numero} requiere un código.";
+                /*
+                * Código obligatorio.
+                */
+                if (
+                    empty(
+                        $ajuste['codigo']
+                    )
+                ) {
+                    $errores[
+                        "ajustes_mensuales.$index.codigo"
+                    ] =
+                        "La novedad mensual #{$numero} requiere un código.";
                 }
 
-                if (!isset($ajuste['costo']) || $ajuste['costo'] === '') {
-                    $errores["ajustes_mensuales.$index.costo"] = "La novedad mensual #{$numero} requiere un costo.";
+                /*
+                * Costo obligatorio.
+                */
+                if (
+                    !isset(
+                        $ajuste['costo']
+                    )
+                    || $ajuste['costo'] === ''
+                ) {
+                    $errores[
+                        "ajustes_mensuales.$index.costo"
+                    ] =
+                        "La novedad mensual #{$numero} requiere un costo.";
                 }
 
-                if (!isset($ajuste['cantidad']) || $ajuste['cantidad'] === '') {
-                    $errores["ajustes_mensuales.$index.cantidad"] = "La novedad mensual #{$numero} requiere una cantidad.";
+                /*
+                * Cantidad obligatoria.
+                */
+                if (
+                    !isset(
+                        $ajuste['cantidad']
+                    )
+                    || $ajuste['cantidad'] === ''
+                ) {
+                    $errores[
+                        "ajustes_mensuales.$index.cantidad"
+                    ] =
+                        "La novedad mensual #{$numero} requiere una cantidad.";
                 }
 
+                /*
+                * Pago variable:
+                *
+                * debe venir desde un concepto configurado
+                * o desde un concepto manual.
+                */
                 if ($tipo === 'PAGO_VARIABLE') {
-                    $tieneConceptoSeleccionado = !empty($ajuste['concepto_pago_variable_id']);
-                    $tieneConceptoManual = !empty(trim((string) ($ajuste['concepto_pago_variable_manual'] ?? '')));
+                    $tieneConceptoSeleccionado =
+                        !empty(
+                            $ajuste[
+                                'concepto_pago_variable_id'
+                            ]
+                        );
 
-                    if (!$tieneConceptoSeleccionado && !$tieneConceptoManual) {
-                        $errores["ajustes_mensuales.$index.concepto_pago_variable_id"] = "El pago variable #{$numero} requiere seleccionar un concepto o escribir uno manualmente.";
+                    $tieneConceptoManual =
+                        !empty(
+                            trim(
+                                (string) (
+                                    $ajuste[
+                                        'concepto_pago_variable_manual'
+                                    ] ?? ''
+                                )
+                            )
+                        );
+
+                    if (
+                        !$tieneConceptoSeleccionado
+                        && !$tieneConceptoManual
+                    ) {
+                        $errores[
+                            "ajustes_mensuales.$index.concepto_pago_variable_id"
+                        ] =
+                            "El pago variable #{$numero} requiere seleccionar un concepto o escribir uno manualmente.";
                     }
                 }
             }
 
+            /*
+            * Inasistencia:
+            *
+            * debe indicar cuántas ejecuciones no fueron
+            * realizadas durante días operativos.
+            */
             if ($tipo === 'INASISTENCIA') {
-                if (!isset($ajuste['q_inasistencia']) || $ajuste['q_inasistencia'] === '') {
-                    $errores["ajustes_mensuales.$index.q_inasistencia"] = "La novedad mensual #{$numero} requiere cantidad de inasistencias.";
+                if (
+                    !isset(
+                        $ajuste[
+                            'q_inasistencia'
+                        ]
+                    )
+                    || $ajuste[
+                        'q_inasistencia'
+                    ] === ''
+                ) {
+                    $errores[
+                        "ajustes_mensuales.$index.q_inasistencia"
+                    ] =
+                        "La novedad mensual #{$numero} requiere cantidad de inasistencias.";
                 }
             }
         }
 
         return $errores;
     }
+
+
+
+
+
+
+
+
 
     private function obtenerFechasFinSemana(int $anio, int $mes): Collection 
     {

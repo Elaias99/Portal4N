@@ -58,6 +58,14 @@ class Asignaciones extends Model
         );
     }
 
+    public function excepcionesFacturacion()
+    {
+        return $this->hasMany(
+            SuscripcionExcepcionFacturacion::class,
+            'suscripcion_asignacion_id'
+        );
+    }
+
 
 
 }

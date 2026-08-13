@@ -24,5 +24,13 @@ class SuscripcionProveedor extends Model
         return $this->hasMany(Asignaciones::class, 'suscripcion_proveedor_id');
     }
 
+    public function excepcionesFacturacion()
+    {
+        return $this->hasMany(
+            SuscripcionExcepcionFacturacion::class,
+            'suscripcion_proveedor_facturacion_id'
+        );
+    }
+
 
 }

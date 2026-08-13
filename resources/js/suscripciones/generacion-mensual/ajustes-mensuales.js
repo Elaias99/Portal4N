@@ -17,8 +17,24 @@ import {
     slugCodigo,
 } from './utils';
 
-export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
-    let ajustesMensuales = [];
+export function inicializarAjustesMensuales(
+        dom,
+        ajustesIniciales = [],
+        excepcionesFacturacionIniciales = []
+    ) {
+        let ajustesMensuales = [];
+
+        /*
+        * Excepciones de facturación por fecha.
+        *
+        * Se mantienen separadas de ajustesMensuales porque
+        * representan una ejecución puntual y el backend las
+        * recibe mediante excepciones_facturacion[].
+        */
+        let excepcionesFacturacion = [];
+
+
+
 
     function esTipoLineaAdicional(tipo) {
         return ['LINEA_ADICIONAL', 'PAGO_VARIABLE', 'PAGO_ADICIONAL', 'REEMPLAZO'].includes(normalizarTipo(tipo));
@@ -204,6 +220,10 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
         return tipoAsignacionOption(option) === 'CONTENEDOR_AJUSTE';
     }
 
+    function esOpcionExcepcionFacturacion(option) {
+        return tipoAsignacionOption(option) === 'EXCEPCION_FACTURACION';
+    }
+
     function opcionAsignacionCompatible(tipo, option) {
         tipo = normalizarTipo(tipo);
 
@@ -213,7 +233,13 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
 
         const tipoAsignacion = tipoAsignacionOption(option);
 
-        if (['COMISION', 'CONTENEDOR_AJUSTE'].includes(tipoAsignacion)) {
+        if (
+            [
+                'COMISION',
+                'CONTENEDOR_AJUSTE',
+                'EXCEPCION_FACTURACION',
+            ].includes(tipoAsignacion)
+        ) {
             return false;
         }
 
@@ -242,13 +268,24 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
         const codigo = normalizarCodigo(option.dataset.codigo || '');
         const tipoAsignacion = tipoAsignacionOption(option);
 
+
+
         if (esOpcionComision(option)) {
             return 'Esta asignación corresponde a comisión. No debe usarse como novedad mensual sobre una asignación existente.';
         }
 
+
+
+
         if (esOpcionContenedorAjuste(option)) {
             return 'Esta asignación corresponde a una línea contenedora de ajuste. No debe seleccionarse como asignación base.';
         }
+
+
+        if (esOpcionExcepcionFacturacion(option)) {
+            return 'Esta asignación corresponde a una excepción técnica de facturación. No debe seleccionarse como asignación base.';
+        }
+
 
         if (tipo === 'INASISTENCIA' && esOpcionCantidadVariable(option)) {
             return `${codigo} está configurada como cantidad variable. Cárgala arriba en “Cantidades variables del mes”; no corresponde registrar inasistencia aquí.`;
@@ -859,6 +896,268 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
         });
     }
 
+
+
+        /*
+    * Construye la identidad única de una excepción.
+    *
+    * En backend existe la misma regla conceptual:
+    *
+    * asignación + fecha
+    *
+    * Por ejemplo:
+    *
+    * EXCEPCION_FACTURACION|ASIGNACION|123|2026-07-25
+    */
+    function construirClaveExcepcionFacturacion(excepcion) {
+        return [
+            'EXCEPCION_FACTURACION',
+            'ASIGNACION',
+            excepcion.suscripcion_asignacion_id || '',
+            excepcion.fecha || '',
+        ].join('|');
+    }
+
+    function existeExcepcionFacturacionDuplicada(clave) {
+        return excepcionesFacturacion.some(function (excepcion) {
+            return excepcion.clave_control === clave;
+        });
+    }
+
+    /*
+    * Normaliza una excepción antes de incorporarla
+    * al estado central del formulario.
+    */
+    function normalizarExcepcionFacturacion(excepcion) {
+        const claveControl =
+            excepcion.clave_control
+            || construirClaveExcepcionFacturacion(excepcion);
+
+        return {
+            clave_control: claveControl,
+
+            suscripcion_asignacion_id:
+                excepcion.suscripcion_asignacion_id || '',
+
+            fecha:
+                excepcion.fecha || '',
+
+            suscripcion_proveedor_facturacion_id:
+                excepcion.suscripcion_proveedor_facturacion_id || '',
+
+            suscripcion_transportista_override_id:
+                excepcion.suscripcion_transportista_override_id || '',
+
+            costo:
+                excepcion.costo ?? '',
+
+            tipo_documento:
+                limpiarTexto(
+                    excepcion.tipo_documento || ''
+                ),
+
+            detalle_documento:
+                limpiarTexto(
+                    excepcion.detalle_documento || ''
+                ),
+
+            detalle_impuesto:
+                limpiarTexto(
+                    excepcion.detalle_impuesto || ''
+                ),
+
+            final:
+                limpiarTexto(
+                    excepcion.final || ''
+                ),
+
+            observacion:
+                limpiarTexto(
+                    excepcion.observacion || ''
+                ),
+
+            /*
+            * Estos campos son sólo visuales.
+            * No forman parte del payload requerido por backend.
+            */
+            asignacion_label:
+                limpiarTexto(
+                    excepcion.asignacion_label || ''
+                ),
+
+            proveedor_facturacion_label:
+                limpiarTexto(
+                    excepcion.proveedor_facturacion_label || ''
+                ),
+
+            transportista_override_label:
+                limpiarTexto(
+                    excepcion.transportista_override_label || ''
+                ),
+
+            codigo:
+                limpiarTexto(
+                    excepcion.codigo || ''
+                ),
+
+            tipo_asignacion:
+                limpiarTexto(
+                    excepcion.tipo_asignacion || ''
+                ),
+        };
+    }
+
+    /*
+    * API utilizado por el modal de facturación masiva
+    * cuando el usuario selecciona una fecha específica.
+    */
+    function agregarExcepcionesFacturacionMasivas(excepciones) {
+        if (!Array.isArray(excepciones)) {
+            return {
+                agregados: 0,
+                duplicados: 0,
+                omitidos: 0,
+            };
+        }
+
+        let agregados = 0;
+        let duplicados = 0;
+        let omitidos = 0;
+
+        excepciones.forEach(function (excepcion) {
+            const normalizada =
+                normalizarExcepcionFacturacion(excepcion);
+
+            /*
+            * Datos mínimos necesarios.
+            */
+            if (
+                !normalizada.suscripcion_asignacion_id
+                || !normalizada.fecha
+                || !normalizada.suscripcion_proveedor_facturacion_id
+            ) {
+                omitidos++;
+                return;
+            }
+
+            const claveControl =
+                normalizada.clave_control;
+
+            if (
+                existeExcepcionFacturacionDuplicada(
+                    claveControl
+                )
+            ) {
+                duplicados++;
+                return;
+            }
+
+            excepcionesFacturacion.push(
+                normalizada
+            );
+
+            agregados++;
+        });
+
+        if (agregados > 0) {
+            renderizarAjustes();
+        }
+
+        return {
+            agregados,
+            duplicados,
+            omitidos,
+        };
+    }
+
+    /*
+    * Formato simple para mostrar una fecha ISO
+    * como fecha legible en el resumen.
+    */
+    function formatearFechaExcepcion(fecha) {
+        const valor =
+            limpiarTexto(fecha || '');
+
+        if (!valor) {
+            return '—';
+        }
+
+        const partes =
+            valor.split('-');
+
+        if (partes.length !== 3) {
+            return valor;
+        }
+
+        return [
+            partes[2],
+            partes[1],
+            partes[0],
+        ].join('/');
+    }
+
+    /*
+    * Descripción visual de una excepción.
+    */
+    function detalleExcepcionFacturacion(excepcion) {
+        const proveedor =
+            excepcion.proveedor_facturacion_label
+            || 'Sin proveedor facturador';
+
+        const documento = [
+            excepcion.tipo_documento,
+            excepcion.detalle_documento,
+            excepcion.detalle_impuesto,
+            excepcion.final,
+        ]
+            .filter(Boolean)
+            .join(' / ');
+
+        const partes = [
+            `Fecha efectiva: ${formatearFechaExcepcion(excepcion.fecha)}`,
+            `Factura a: ${proveedor}`,
+        ];
+
+        if (
+            excepcion.transportista_override_label
+        ) {
+            partes.push(
+                `Transportista efectivo: ${excepcion.transportista_override_label}`
+            );
+        }
+
+        if (excepcion.costo !== '') {
+            const costo =
+                parseInt(
+                    excepcion.costo || 0,
+                    10
+                );
+
+            if (!Number.isNaN(costo)) {
+                partes.push(
+                    `Costo excepcional: ${formatearCLP(costo)}`
+                );
+            }
+        }
+
+        if (documento) {
+            partes.push(
+                `Documento: ${documento}`
+            );
+        }
+
+        if (excepcion.observacion) {
+            partes.push(
+                `Observación: ${excepcion.observacion}`
+            );
+        }
+
+        return partes.join('\n');
+    }
+
+
+
+
     function agregarAjustesMasivos(ajustes) {
         if (!Array.isArray(ajustes)) {
             return {
@@ -1228,10 +1527,18 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
             return;
         }
 
+        /*
+        * Se reconstruyen desde cero tanto los hidden
+        * como el resumen visual.
+        */
         a.hiddenContainer.innerHTML = '';
         a.resumenBody.innerHTML = '';
 
-        if (ajustesMensuales.length === 0) {
+        const cantidadTotal =
+            ajustesMensuales.length
+            + excepcionesFacturacion.length;
+
+        if (cantidadTotal === 0) {
             a.resumenBody.innerHTML = `
                 <tr>
                     <td colspan="7" class="text-muted text-center">
@@ -1240,62 +1547,229 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
                 </tr>
             `;
 
-            if (a.cantidadTexto) a.cantidadTexto.textContent = '0';
-            if (a.totalTexto) a.totalTexto.textContent = formatearCLP(0);
+            if (a.cantidadTexto) {
+                a.cantidadTexto.textContent = '0';
+            }
+
+            if (a.totalTexto) {
+                a.totalTexto.textContent =
+                    formatearCLP(0);
+            }
 
             return;
         }
 
         let total = 0;
 
+        /*
+        * AJUSTES MENSUALES EXISTENTES.
+        *
+        * Esta parte conserva el comportamiento actual.
+        */
         ajustesMensuales.forEach(function (ajuste, index) {
-            total += parseInt(ajuste.total_estimado || 0, 10);
+            total +=
+                parseInt(
+                    ajuste.total_estimado || 0,
+                    10
+                );
 
-            agregarHidden(`ajustes_mensuales[${index}][tipo_ajuste]`, ajuste.tipo_ajuste, a.hiddenContainer);
-            agregarHidden(`ajustes_mensuales[${index}][concepto_pago_variable_id]`, ajuste.concepto_pago_variable_id, a.hiddenContainer);
-            agregarHidden(`ajustes_mensuales[${index}][concepto_pago_variable_manual]`, ajuste.concepto_pago_variable_manual, a.hiddenContainer);
+            agregarHidden(
+                `ajustes_mensuales[${index}][tipo_ajuste]`,
+                ajuste.tipo_ajuste,
+                a.hiddenContainer
+            );
 
-            agregarHidden(`ajustes_mensuales[${index}][suscripcion_asignacion_id]`, ajuste.suscripcion_asignacion_id, a.hiddenContainer);
-            agregarHidden(`ajustes_mensuales[${index}][suscripcion_proveedor_id]`, ajuste.suscripcion_proveedor_id, a.hiddenContainer);
-            agregarHidden(`ajustes_mensuales[${index}][suscripcion_transportista_id]`, ajuste.suscripcion_transportista_id, a.hiddenContainer);
+            agregarHidden(
+                `ajustes_mensuales[${index}][concepto_pago_variable_id]`,
+                ajuste.concepto_pago_variable_id,
+                a.hiddenContainer
+            );
 
-            agregarHidden(`ajustes_mensuales[${index}][suscripcion_proveedor_facturacion_id]`, ajuste.suscripcion_proveedor_facturacion_id, a.hiddenContainer);
-            agregarHidden(`ajustes_mensuales[${index}][suscripcion_transportista_override_id]`, ajuste.suscripcion_transportista_override_id, a.hiddenContainer);
+            agregarHidden(
+                `ajustes_mensuales[${index}][concepto_pago_variable_manual]`,
+                ajuste.concepto_pago_variable_manual,
+                a.hiddenContainer
+            );
 
-            agregarHidden(`ajustes_mensuales[${index}][punto_1]`, ajuste.punto_1, a.hiddenContainer);
-            agregarHidden(`ajustes_mensuales[${index}][origen_gasto]`, ajuste.origen_gasto, a.hiddenContainer);
-            agregarHidden(`ajustes_mensuales[${index}][punto_2]`, ajuste.punto_2, a.hiddenContainer);
-            agregarHidden(`ajustes_mensuales[${index}][codigo]`, ajuste.codigo, a.hiddenContainer);
-            agregarHidden(`ajustes_mensuales[${index}][servicio]`, ajuste.servicio, a.hiddenContainer);
-            agregarHidden(`ajustes_mensuales[${index}][grupo_prefactura]`, ajuste.grupo_prefactura, a.hiddenContainer);
+            agregarHidden(
+                `ajustes_mensuales[${index}][suscripcion_asignacion_id]`,
+                ajuste.suscripcion_asignacion_id,
+                a.hiddenContainer
+            );
 
-            agregarHidden(`ajustes_mensuales[${index}][costo]`, ajuste.costo, a.hiddenContainer);
-            agregarHidden(`ajustes_mensuales[${index}][q_calendario]`, ajuste.q_calendario, a.hiddenContainer);
-            agregarHidden(`ajustes_mensuales[${index}][q_inasistencia]`, ajuste.q_inasistencia, a.hiddenContainer);
-            agregarHidden(`ajustes_mensuales[${index}][cantidad]`, ajuste.cantidad, a.hiddenContainer);
-            agregarHidden(`ajustes_mensuales[${index}][total]`, ajuste.total, a.hiddenContainer);
+            agregarHidden(
+                `ajustes_mensuales[${index}][suscripcion_proveedor_id]`,
+                ajuste.suscripcion_proveedor_id,
+                a.hiddenContainer
+            );
 
-            agregarHidden(`ajustes_mensuales[${index}][tipo_documento]`, ajuste.tipo_documento, a.hiddenContainer);
-            agregarHidden(`ajustes_mensuales[${index}][detalle_documento]`, ajuste.detalle_documento, a.hiddenContainer);
-            agregarHidden(`ajustes_mensuales[${index}][detalle_impuesto]`, ajuste.detalle_impuesto, a.hiddenContainer);
-            agregarHidden(`ajustes_mensuales[${index}][final]`, ajuste.final, a.hiddenContainer);
+            agregarHidden(
+                `ajustes_mensuales[${index}][suscripcion_transportista_id]`,
+                ajuste.suscripcion_transportista_id,
+                a.hiddenContainer
+            );
 
-            agregarHidden(`ajustes_mensuales[${index}][observacion]`, ajuste.observacion, a.hiddenContainer);
+            agregarHidden(
+                `ajustes_mensuales[${index}][suscripcion_proveedor_facturacion_id]`,
+                ajuste.suscripcion_proveedor_facturacion_id,
+                a.hiddenContainer
+            );
 
-            const tipoRender = normalizarTipo(ajuste.tipo_ajuste);
-            const cantidadVisible = tipoRender === 'PAGO_VARIABLE'
-                ? '—'
-                : (ajuste.cantidad || ajuste.q_inasistencia || '—');
+            agregarHidden(
+                `ajustes_mensuales[${index}][suscripcion_transportista_override_id]`,
+                ajuste.suscripcion_transportista_override_id,
+                a.hiddenContainer
+            );
 
-            const row = document.createElement('tr');
+            agregarHidden(
+                `ajustes_mensuales[${index}][punto_1]`,
+                ajuste.punto_1,
+                a.hiddenContainer
+            );
+
+            agregarHidden(
+                `ajustes_mensuales[${index}][origen_gasto]`,
+                ajuste.origen_gasto,
+                a.hiddenContainer
+            );
+
+            agregarHidden(
+                `ajustes_mensuales[${index}][punto_2]`,
+                ajuste.punto_2,
+                a.hiddenContainer
+            );
+
+            agregarHidden(
+                `ajustes_mensuales[${index}][codigo]`,
+                ajuste.codigo,
+                a.hiddenContainer
+            );
+
+            agregarHidden(
+                `ajustes_mensuales[${index}][servicio]`,
+                ajuste.servicio,
+                a.hiddenContainer
+            );
+
+            agregarHidden(
+                `ajustes_mensuales[${index}][grupo_prefactura]`,
+                ajuste.grupo_prefactura,
+                a.hiddenContainer
+            );
+
+            agregarHidden(
+                `ajustes_mensuales[${index}][costo]`,
+                ajuste.costo,
+                a.hiddenContainer
+            );
+
+            agregarHidden(
+                `ajustes_mensuales[${index}][q_calendario]`,
+                ajuste.q_calendario,
+                a.hiddenContainer
+            );
+
+            agregarHidden(
+                `ajustes_mensuales[${index}][q_inasistencia]`,
+                ajuste.q_inasistencia,
+                a.hiddenContainer
+            );
+
+            agregarHidden(
+                `ajustes_mensuales[${index}][cantidad]`,
+                ajuste.cantidad,
+                a.hiddenContainer
+            );
+
+            agregarHidden(
+                `ajustes_mensuales[${index}][total]`,
+                ajuste.total,
+                a.hiddenContainer
+            );
+
+            agregarHidden(
+                `ajustes_mensuales[${index}][tipo_documento]`,
+                ajuste.tipo_documento,
+                a.hiddenContainer
+            );
+
+            agregarHidden(
+                `ajustes_mensuales[${index}][detalle_documento]`,
+                ajuste.detalle_documento,
+                a.hiddenContainer
+            );
+
+            agregarHidden(
+                `ajustes_mensuales[${index}][detalle_impuesto]`,
+                ajuste.detalle_impuesto,
+                a.hiddenContainer
+            );
+
+            agregarHidden(
+                `ajustes_mensuales[${index}][final]`,
+                ajuste.final,
+                a.hiddenContainer
+            );
+
+            agregarHidden(
+                `ajustes_mensuales[${index}][observacion]`,
+                ajuste.observacion,
+                a.hiddenContainer
+            );
+
+            const tipoRender =
+                normalizarTipo(
+                    ajuste.tipo_ajuste
+                );
+
+            const cantidadVisible =
+                tipoRender === 'PAGO_VARIABLE'
+                    ? '—'
+                    : (
+                        ajuste.cantidad
+                        || ajuste.q_inasistencia
+                        || '—'
+                    );
+
+            const row =
+                document.createElement('tr');
 
             row.innerHTML = `
                 <td>${escaparHtml(ajuste.tipo_ajuste || '—')}</td>
-                <td>${escaparHtml(ajuste.asignacion_label || ajuste.proveedor_label || '—')}</td>
-                <td style="white-space: pre-line;">${escaparHtml(detalleCambioAjuste(ajuste))}</td>
-                <td>${escaparHtml(ajuste.codigo || '—')}</td>
-                <td class="text-end">${escaparHtml(cantidadVisible)}</td>
-                <td class="text-end">${formatearCLP(parseInt(ajuste.total_estimado || 0, 10))}</td>
+
+                <td>
+                    ${escaparHtml(
+                        ajuste.asignacion_label
+                        || ajuste.proveedor_label
+                        || '—'
+                    )}
+                </td>
+
+                <td style="white-space: pre-line;">
+                    ${escaparHtml(
+                        detalleCambioAjuste(ajuste)
+                    )}
+                </td>
+
+                <td>
+                    ${escaparHtml(
+                        ajuste.codigo || '—'
+                    )}
+                </td>
+
+                <td class="text-end">
+                    ${escaparHtml(cantidadVisible)}
+                </td>
+
+                <td class="text-end">
+                    ${formatearCLP(
+                        parseInt(
+                            ajuste.total_estimado || 0,
+                            10
+                        )
+                    )}
+                </td>
+
                 <td class="text-center">
                     <button
                         type="button"
@@ -1311,8 +1785,148 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
             a.resumenBody.appendChild(row);
         });
 
-        if (a.cantidadTexto) a.cantidadTexto.textContent = String(ajustesMensuales.length);
-        if (a.totalTexto) a.totalTexto.textContent = formatearCLP(total);
+        /*
+        * EXCEPCIONES DE FACTURACIÓN POR FECHA.
+        *
+        * Se muestran en el mismo resumen visual,
+        * pero se envían al backend mediante un arreglo
+        * completamente independiente:
+        *
+        * excepciones_facturacion[]
+        */
+        excepcionesFacturacion.forEach(
+            function (excepcion, index) {
+                agregarHidden(
+                    `excepciones_facturacion[${index}][suscripcion_asignacion_id]`,
+                    excepcion.suscripcion_asignacion_id,
+                    a.hiddenContainer
+                );
+
+                agregarHidden(
+                    `excepciones_facturacion[${index}][fecha]`,
+                    excepcion.fecha,
+                    a.hiddenContainer
+                );
+
+                agregarHidden(
+                    `excepciones_facturacion[${index}][suscripcion_proveedor_facturacion_id]`,
+                    excepcion.suscripcion_proveedor_facturacion_id,
+                    a.hiddenContainer
+                );
+
+                agregarHidden(
+                    `excepciones_facturacion[${index}][suscripcion_transportista_override_id]`,
+                    excepcion.suscripcion_transportista_override_id,
+                    a.hiddenContainer
+                );
+
+                agregarHidden(
+                    `excepciones_facturacion[${index}][costo]`,
+                    excepcion.costo,
+                    a.hiddenContainer
+                );
+
+                agregarHidden(
+                    `excepciones_facturacion[${index}][tipo_documento]`,
+                    excepcion.tipo_documento,
+                    a.hiddenContainer
+                );
+
+                agregarHidden(
+                    `excepciones_facturacion[${index}][detalle_documento]`,
+                    excepcion.detalle_documento,
+                    a.hiddenContainer
+                );
+
+                agregarHidden(
+                    `excepciones_facturacion[${index}][detalle_impuesto]`,
+                    excepcion.detalle_impuesto,
+                    a.hiddenContainer
+                );
+
+                agregarHidden(
+                    `excepciones_facturacion[${index}][final]`,
+                    excepcion.final,
+                    a.hiddenContainer
+                );
+
+                agregarHidden(
+                    `excepciones_facturacion[${index}][observacion]`,
+                    excepcion.observacion,
+                    a.hiddenContainer
+                );
+
+                const row =
+                    document.createElement('tr');
+
+                row.innerHTML = `
+                    <td>
+                        ${escaparHtml(
+                            'EXCEPCION_FACTURACION'
+                        )}
+                    </td>
+
+                    <td>
+                        ${escaparHtml(
+                            excepcion.asignacion_label
+                            || excepcion.codigo
+                            || '—'
+                        )}
+                    </td>
+
+                    <td style="white-space: pre-line;">
+                        ${escaparHtml(
+                            detalleExcepcionFacturacion(
+                                excepcion
+                            )
+                        )}
+                    </td>
+
+                    <td>
+                        ${escaparHtml(
+                            excepcion.codigo || '—'
+                        )}
+                    </td>
+
+                    <td class="text-end">
+                        1
+                    </td>
+
+                    <td class="text-end">
+                        ${formatearCLP(0)}
+                    </td>
+
+                    <td class="text-center">
+                        <button
+                            type="button"
+                            class="btn btn-outline-danger btn-sm"
+                            data-index="${index}"
+                            data-action="eliminar-excepcion-facturacion"
+                        >
+                            Eliminar
+                        </button>
+                    </td>
+                `;
+
+                a.resumenBody.appendChild(row);
+            }
+        );
+
+        /*
+        * Una excepción representa un traslado de dinero,
+        * no un pago adicional.
+        *
+        * Por eso NO aumenta el total estimado de novedades.
+        */
+        if (a.cantidadTexto) {
+            a.cantidadTexto.textContent =
+                String(cantidadTotal);
+        }
+
+        if (a.totalTexto) {
+            a.totalTexto.textContent =
+                formatearCLP(total);
+        }
     }
 
     function restaurarAjustesIniciales() {
@@ -1403,6 +2017,79 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
         });
     }
 
+
+    function restaurarExcepcionesFacturacionIniciales() {
+        if (
+            !Array.isArray(
+                excepcionesFacturacionIniciales
+            )
+        ) {
+            return;
+        }
+
+        excepcionesFacturacionIniciales.forEach(
+            function (excepcion) {
+                const normalizada =
+                    normalizarExcepcionFacturacion({
+                        ...excepcion,
+
+                        asignacion_label:
+                            excepcion.asignacion_label
+                            || labelPorValor(
+                                dom.ajuste.asignacionSelect,
+                                excepcion
+                                    .suscripcion_asignacion_id
+                            ),
+
+                        proveedor_facturacion_label:
+                            excepcion
+                                .proveedor_facturacion_label
+                            || labelPorValor(
+                                dom.ajuste
+                                    .proveedorFacturacionSelect,
+                                excepcion
+                                    .suscripcion_proveedor_facturacion_id
+                            ),
+
+                        transportista_override_label:
+                            excepcion
+                                .transportista_override_label
+                            || labelPorValor(
+                                dom.ajuste
+                                    .transportistaOverrideSelect,
+                                excepcion
+                                    .suscripcion_transportista_override_id
+                            ),
+                    });
+
+                if (
+                    !normalizada
+                        .suscripcion_asignacion_id
+                    || !normalizada.fecha
+                    || !normalizada
+                        .suscripcion_proveedor_facturacion_id
+                ) {
+                    return;
+                }
+
+                if (
+                    existeExcepcionFacturacionDuplicada(
+                        normalizada.clave_control
+                    )
+                ) {
+                    return;
+                }
+
+                excepcionesFacturacion.push(
+                    normalizada
+                );
+            }
+        );
+    }
+
+
+
+
     function registrarEventosAjustes() {
         const a = dom.ajuste;
 
@@ -1455,30 +2142,84 @@ export function inicializarAjustesMensuales(dom, ajustesIniciales = []) {
             a.agregarBtn.addEventListener('click', agregarAjusteDesdeFormulario);
         }
 
+
+
         if (a.resumenBody) {
-            a.resumenBody.addEventListener('click', function (event) {
-                const button = event.target.closest('[data-action="eliminar-ajuste"]');
+            a.resumenBody.addEventListener(
+                'click',
+                function (event) {
 
-                if (!button) {
-                    return;
+
+                    const button =
+                        event.target.closest(
+                            '[data-action="eliminar-ajuste"], '
+                            + '[data-action="eliminar-excepcion-facturacion"]'
+                        );
+
+
+
+                    if (!button) {
+                        return;
+                    }
+
+                    const index =
+                        parseInt(
+                            button.dataset.index,
+                            10
+                        );
+
+                    if (Number.isNaN(index)) {
+                        return;
+                    }
+
+                    const accion =
+                        button.dataset.action;
+
+                    if (
+                        accion === 'eliminar-ajuste'
+                    ) {
+                        ajustesMensuales.splice(
+                            index,
+                            1
+                        );
+
+                        renderizarAjustes();
+                        return;
+                    }
+
+                    if (
+                        accion
+                        === 'eliminar-excepcion-facturacion'
+                    ) {
+                        excepcionesFacturacion.splice(
+                            index,
+                            1
+                        );
+
+                        renderizarAjustes();
+                    }
                 }
-
-                const index = parseInt(button.dataset.index, 10);
-
-                ajustesMensuales.splice(index, 1);
-                renderizarAjustes();
-            });
+            );
         }
+
+
+
+
+
     }
 
     registrarEventosAjustes();
+
     restaurarAjustesIniciales();
+    restaurarExcepcionesFacturacionIniciales();
+
     actualizarCamposAjustePorTipo();
     actualizarTotalAjusteActual();
     renderizarAjustes();
 
     return {
         agregarAjustesMasivos,
+        agregarExcepcionesFacturacionMasivas,
         renderizarAjustes,
     };
 

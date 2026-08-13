@@ -8,16 +8,25 @@
     aria-labelledby="modal-ajustes-masivos-facturacion-title"
     aria-hidden="true"
 >
-    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+    <div
+        class="modal-dialog modal-xl modal-dialog-scrollable"
+        role="document"
+    >
         <div class="modal-content">
+
             <div class="modal-header">
                 <div>
-                    <h5 class="modal-title mb-1" id="modal-ajustes-masivos-facturacion-title">
+                    <h5
+                        class="modal-title mb-1"
+                        id="modal-ajustes-masivos-facturacion-title"
+                    >
                         Cambios de facturación masivos
                     </h5>
 
                     <div class="small text-muted">
-                        Busca asignaciones, selecciónalas y define el proveedor facturador efectivo para este periodo.
+                        Busca asignaciones, selecciónalas y define el proveedor
+                        facturador efectivo para el período completo o para una
+                        fecha específica.
                     </div>
                 </div>
 
@@ -27,26 +36,39 @@
                     data-dismiss="modal"
                     aria-label="Cerrar"
                 >
-                    <span aria-hidden="true">&times;</span>
+                    <span aria-hidden="true">×</span>
                 </button>
             </div>
 
             <div class="modal-body">
 
-
                 <div class="alert alert-warning small mb-3">
                     <strong>Importante:</strong>
-                    usa esta opción cuando una ruta, servicio o pago ya existe en el periodo,
-                    pero este mes debe pagarse a otro proveedor, con otro documento o con un responsable efectivo distinto.
-                    Este cambio se aplicará sólo al mes seleccionado y no modificará la configuración habitual.
+                    esta opción permite cambiar quién factura una asignación.
+
+                    Para cada asignación seleccionada podrás definir su propia
+                    <strong>fecha efectiva</strong>.
+
+                    Si dejas la fecha en <strong>Todo el mes</strong>, se mantendrá
+                    el comportamiento actual del cambio de facturación mensual.
+
+                    Si seleccionas una fecha específica, el cambio se aplicará
+                    únicamente a esa ejecución y sólo podrá utilizarse con
+                    asignaciones de tipo <strong>RUTA</strong>.
                 </div>
 
+                {{--
+                    Templates para JS.
+                --}}
 
-
-
-                {{-- Templates para JS --}}
-                <select id="facturacion-masiva-proveedor-template" class="d-none" aria-hidden="true">
-                    <option value="">Seleccionar proveedor facturador...</option>
+                <select
+                    id="facturacion-masiva-proveedor-template"
+                    class="d-none"
+                    aria-hidden="true"
+                >
+                    <option value="">
+                        Seleccionar proveedor facturador...
+                    </option>
 
                     @foreach($proveedores as $proveedor)
                         @php
@@ -74,8 +96,14 @@
                     @endforeach
                 </select>
 
-                <select id="facturacion-masiva-transportista-template" class="d-none" aria-hidden="true">
-                    <option value="">Mantener transportista original...</option>
+                <select
+                    id="facturacion-masiva-transportista-template"
+                    class="d-none"
+                    aria-hidden="true"
+                >
+                    <option value="">
+                        Mantener transportista original...
+                    </option>
 
                     @foreach($transportistas as $transportista)
                         <option
@@ -87,25 +115,69 @@
                     @endforeach
                 </select>
 
-                {{-- SECCIÓN 1: BUSCAR Y SELECCIONAR ASIGNACIONES --}}
+
+                <select
+                    id="facturacion-masiva-fecha-template"
+                    class="d-none"
+                    aria-hidden="true"
+                >
+                    <option value="">
+                        Todo el mes
+                    </option>
+
+                    @foreach($fechasFinSemana as $fecha)
+                        @php
+                            $fechaCarbon = \Carbon\Carbon::parse($fecha);
+
+                            $diaSemana = $fechaCarbon->isSaturday()
+                                ? 'Sábado'
+                                : 'Domingo';
+                        @endphp
+
+                        <option value="{{ $fecha }}">
+                            {{ $diaSemana }}
+                            {{ $fechaCarbon->format('d/m/Y') }}
+                        </option>
+                    @endforeach
+                </select>
+
+
+                {{--
+                    SECCIÓN 1:
+                    BUSCAR Y SELECCIONAR ASIGNACIONES
+                --}}
+
                 <div class="border rounded p-3 mb-4">
-                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+
+                    <div
+                        class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3"
+                    >
                         <div>
-                            <h6 class="mb-1">1. Buscar y seleccionar asignaciones</h6>
+                            <h6 class="mb-1">
+                                1. Buscar y seleccionar asignaciones
+                            </h6>
+
                             <div class="small text-muted">
-                                Puedes buscar por código, proveedor base, RUT, transportista, punto, servicio o tipo de asignación.
+                                Puedes buscar por código, proveedor base, RUT,
+                                transportista, punto, servicio o tipo de asignación.
                             </div>
                         </div>
 
                         <div class="small text-muted">
                             Seleccionadas:
-                            <strong id="facturacion-masiva-seleccionadas-contador">0</strong>
+                            <strong id="facturacion-masiva-seleccionadas-contador">
+                                0
+                            </strong>
                         </div>
                     </div>
 
                     <div class="row g-2 align-items-end mb-3">
+
                         <div class="col-md-8">
-                            <label for="facturacion-masiva-buscador" class="form-label">
+                            <label
+                                for="facturacion-masiva-buscador"
+                                class="form-label"
+                            >
                                 Buscar asignación
                             </label>
 
@@ -119,6 +191,7 @@
                         </div>
 
                         <div class="col-md-4 d-flex gap-2">
+
                             <button
                                 type="button"
                                 id="btn-facturacion-masiva-buscar"
@@ -134,68 +207,150 @@
                             >
                                 Limpiar
                             </button>
+
                         </div>
                     </div>
 
-                    <div class="table-responsive" style="max-height: 260px; overflow-y: auto;">
-                        <table class="table table-sm table-bordered align-middle mb-0">
+                    <div
+                        class="table-responsive"
+                        style="max-height: 260px; overflow-y: auto;"
+                    >
+                        <table
+                            class="table table-sm table-bordered align-middle mb-0"
+                        >
                             <thead class="table-light">
                                 <tr>
-                                    <th style="width: 44px;" class="text-center">Sel.</th>
-                                    <th>Código / proveedor base / transportista</th>
-                                    <th>Tipo</th>
-                                    <th>Punto</th>
-                                    <th>Punto 2</th>
-                                    <th class="text-end">Costo</th>
+                                    <th
+                                        style="width: 44px;"
+                                        class="text-center"
+                                    >
+                                        Sel.
+                                    </th>
+
+                                    <th>
+                                        Código / proveedor base / transportista
+                                    </th>
+
+                                    <th>
+                                        Tipo
+                                    </th>
+
+                                    <th>
+                                        Punto
+                                    </th>
+
+                                    <th>
+                                        Punto 2
+                                    </th>
+
+                                    <th class="text-end">
+                                        Costo
+                                    </th>
                                 </tr>
                             </thead>
 
                             <tbody id="facturacion-masiva-asignaciones-body">
+
                                 @php
-                                    $asignacionesFacturacionMasiva = collect($asignacionesAjustesMensuales ?? [])
-                                        ->filter(function ($asignacion) {
-                                            return in_array(
-                                                mb_strtoupper(trim((string) $asignacion->tipo_asignacion)),
-                                                ['RUTA', 'VARIABLE', 'FIJO_MENSUAL', 'OPV'],
-                                                true
-                                            );
-                                        })
-                                        ->values();
+                                    $asignacionesFacturacionMasiva =
+                                        collect(
+                                            $asignacionesAjustesMensuales ?? []
+                                        )
+                                            ->filter(function ($asignacion) {
+                                                return in_array(
+                                                    mb_strtoupper(
+                                                        trim(
+                                                            (string)
+                                                            $asignacion->tipo_asignacion
+                                                        )
+                                                    ),
+                                                    [
+                                                        'RUTA',
+                                                        'VARIABLE',
+                                                        'FIJO_MENSUAL',
+                                                        'OPV',
+                                                    ],
+                                                    true
+                                                );
+                                            })
+                                            ->values();
                                 @endphp
 
-                                @forelse($asignacionesFacturacionMasiva as $asignacion)
+                                @forelse(
+                                    $asignacionesFacturacionMasiva
+                                    as $asignacion
+                                )
+
                                     @php
-                                        $cobranza = $asignacion->suscripcionProveedor?->cobranzaCompra;
-                                        $transportista = $asignacion->transportista;
-                                        $tipoAsignacion = mb_strtoupper(trim((string) $asignacion->tipo_asignacion));
+                                        $cobranza =
+                                            $asignacion
+                                                ->suscripcionProveedor
+                                                ?->cobranzaCompra;
+
+                                        $transportista =
+                                            $asignacion->transportista;
+
+                                        $tipoAsignacion =
+                                            mb_strtoupper(
+                                                trim(
+                                                    (string)
+                                                    $asignacion
+                                                        ->tipo_asignacion
+                                                )
+                                            );
 
                                         $asignacionLabel = trim(
-                                            ($asignacion->codigo ?? 'Sin código')
+                                            ($asignacion->codigo
+                                                ?? 'Sin código')
                                             . ' | '
-                                            . ($cobranza?->razon_social ?? 'Sin proveedor')
+                                            . ($cobranza?->razon_social
+                                                ?? 'Sin proveedor')
                                             . ' | '
-                                            . ($transportista?->nombre_transportista ?? 'Sin transportista')
+                                            . ($transportista
+                                                ?->nombre_transportista
+                                                ?? 'Sin transportista')
                                             . ' | $'
-                                            . number_format((int) $asignacion->costo, 0, ',', '.')
+                                            . number_format(
+                                                (int)
+                                                $asignacion->costo,
+                                                0,
+                                                ',',
+                                                '.'
+                                            )
                                         );
 
-                                        $textoBusqueda = mb_strtoupper(trim(
-                                            ($asignacion->codigo ?? '')
-                                            . ' '
-                                            . ($cobranza?->razon_social ?? '')
-                                            . ' '
-                                            . ($cobranza?->rut_cliente ?? '')
-                                            . ' '
-                                            . ($transportista?->nombre_transportista ?? '')
-                                            . ' '
-                                            . ($asignacion->punto_1 ?? '')
-                                            . ' '
-                                            . ($asignacion->punto_2 ?? '')
-                                            . ' '
-                                            . ($asignacion->servicio ?? '')
-                                            . ' '
-                                            . ($asignacion->tipo_asignacion ?? '')
-                                        ));
+                                        $textoBusqueda =
+                                            mb_strtoupper(
+                                                trim(
+                                                    ($asignacion->codigo
+                                                        ?? '')
+                                                    . ' '
+                                                    . ($cobranza
+                                                        ?->razon_social
+                                                        ?? '')
+                                                    . ' '
+                                                    . ($cobranza
+                                                        ?->rut_cliente
+                                                        ?? '')
+                                                    . ' '
+                                                    . ($transportista
+                                                        ?->nombre_transportista
+                                                        ?? '')
+                                                    . ' '
+                                                    . ($asignacion->punto_1
+                                                        ?? '')
+                                                    . ' '
+                                                    . ($asignacion->punto_2
+                                                        ?? '')
+                                                    . ' '
+                                                    . ($asignacion->servicio
+                                                        ?? '')
+                                                    . ' '
+                                                    . ($asignacion
+                                                        ->tipo_asignacion
+                                                        ?? '')
+                                                )
+                                            );
                                     @endphp
 
                                     <tr
@@ -229,13 +384,19 @@
 
                                             <div class="small text-muted">
                                                 {{ $cobranza?->razon_social ?? 'Sin proveedor' }}
-                                                <span class="mx-1">|</span>
+
+                                                <span class="mx-1">
+                                                    |
+                                                </span>
+
                                                 {{ $transportista?->nombre_transportista ?? 'Sin transportista' }}
                                             </div>
                                         </td>
 
                                         <td>
-                                            <span class="badge bg-light text-dark border">
+                                            <span
+                                                class="badge bg-light text-dark border"
+                                            >
                                                 {{ $tipoAsignacion ?: 'SIN TIPO' }}
                                             </span>
                                         </td>
@@ -249,28 +410,56 @@
                                         </td>
 
                                         <td class="text-end">
-                                            ${{ number_format((int) $asignacion->costo, 0, ',', '.') }}
+                                            ${{
+                                                number_format(
+                                                    (int)
+                                                    $asignacion->costo,
+                                                    0,
+                                                    ',',
+                                                    '.'
+                                                )
+                                            }}
                                         </td>
                                     </tr>
+
                                 @empty
+
                                     <tr>
-                                        <td colspan="6" class="text-muted text-center">
-                                            No hay asignaciones disponibles para cambios de facturación masivos.
+                                        <td
+                                            colspan="6"
+                                            class="text-muted text-center"
+                                        >
+                                            No hay asignaciones disponibles
+                                            para cambios de facturación masivos.
                                         </td>
                                     </tr>
+
                                 @endforelse
+
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                {{-- SECCIÓN 2: COMPLETAR DATOS POR ASIGNACIÓN SELECCIONADA --}}
+                {{--
+                    SECCIÓN 3:
+                    COMPLETAR DATOS POR ASIGNACIÓN SELECCIONADA
+                --}}
+
                 <div class="border rounded p-3">
-                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+
+                    <div
+                        class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3"
+                    >
                         <div>
-                            <h6 class="mb-1">2. Completar cambio de facturación</h6>
+                            <h6 class="mb-1">
+                                2. Completar cambio de facturación
+                            </h6>
+
                             <div class="small text-muted">
-                                Las asignaciones marcadas arriba aparecerán aquí para definir proveedor facturador efectivo y datos opcionales.
+                                Las asignaciones marcadas arriba aparecerán aquí
+                                para definir individualmente su fecha efectiva,
+                                proveedor facturador, transportista y datos opcionales.
                             </div>
                         </div>
 
@@ -283,29 +472,29 @@
                         </button>
                     </div>
 
-
-
-
                     <div
                         id="facturacion-masiva-seleccionadas-body"
                         class="d-flex flex-column gap-3"
                         style="max-height: 420px; overflow-y: auto;"
                     >
-                        <div data-facturacion-masiva-empty class="text-muted text-center border rounded p-3">
+                        <div
+                            data-facturacion-masiva-empty
+                            class="text-muted text-center border rounded p-3"
+                        >
                             No hay asignaciones seleccionadas.
                         </div>
                     </div>
 
-
-
-
-
-
-                    <div id="facturacion-masiva-error" class="alert alert-danger small d-none mb-0"></div>
+                    <div
+                        id="facturacion-masiva-error"
+                        class="alert alert-danger small d-none mb-0"
+                    ></div>
                 </div>
+
             </div>
 
             <div class="modal-footer">
+
                 <button
                     type="button"
                     class="btn btn-outline-secondary"
@@ -321,7 +510,9 @@
                 >
                     Agregar cambios de facturación al resumen
                 </button>
+
             </div>
+
         </div>
     </div>
 </div>

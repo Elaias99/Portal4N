@@ -8,12 +8,12 @@ use App\Models\SuscripcionComisionMensual;
 use App\Services\Calendar\ChileCalendarService;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\SuscripcionExcepcionFacturacion;
 use App\Services\Suscripciones\SuscripcionLiquidacionResumenService;
 use App\Services\Suscripciones\SuscripcionPrefacturaZipService;
 use App\Services\Suscripciones\SuscripcionPrefacturaAgrupacionService;
 use App\Services\Suscripciones\SuscripcionGeneracionMensualService;
-use App\Services\Suscripciones\SuscripcionPrefacturaOcService;
+use App\Services\Suscripciones\SuscripcionExcepcionFacturacionAplicacionService;
 use App\Services\Suscripciones\SuscripcionAjusteMensualService;
 use App\Services\Suscripciones\SuscripcionPrefacturaPdfService;
 use App\Services\Suscripciones\SuscripcionPrefacturaEnvioService;
@@ -283,10 +283,18 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'suscripcionProveedor.cobranzaCompra',
             'transportista',
         ])
-        ->orderBy('codigo')
-        ->get();
+            ->where(
+                'tipo_asignacion',
+                '!=',
+                'EXCEPCION_FACTURACION'
+            )
+            ->orderBy('codigo')
+            ->get();
 
-        return view('suscripciones.liquidacion_detalles.create', compact('asignaciones'));
+        return view(
+            'suscripciones.liquidacion_detalles.create',
+            compact('asignaciones')
+        );
     }
 
     public function store(Request $request, ChileCalendarService $calendar)
@@ -394,8 +402,12 @@ class SuscripcionLiquidacionDetalleController extends Controller
             ->with('success', 'Inasistencia actualizada y total recalculado correctamente.');
     }
 
-    public function show( SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService, SuscripcionPrefacturaAgrupacionService $agrupacionService, SuscripcionAjusteMensualService $ajusteMensualService) 
-    {
+    public function show(
+        SuscripcionLiquidacionDetalle $detalle,
+        SuscripcionLiquidacionResumenService $resumenService,
+        SuscripcionPrefacturaAgrupacionService $agrupacionService,
+        SuscripcionAjusteMensualService $ajusteMensualService
+    ) {
         $detalle->load([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.transportista',
@@ -409,82 +421,520 @@ class SuscripcionLiquidacionDetalleController extends Controller
         * - Asignación base: José Luis
         * - Mayo 2026: proveedor facturación Manuel Hernández
         */
-        $proveedorPrefactura = $ajusteMensualService->proveedorFacturacionParaDetalle($detalle);
-        $suscripcionProveedorId = $proveedorPrefactura?->id;
+        $proveedorPrefactura =
+            $ajusteMensualService->proveedorFacturacionParaDetalle(
+                $detalle
+            );
+
+        $suscripcionProveedorId =
+            $proveedorPrefactura?->id;
 
         if (!$suscripcionProveedorId) {
-            abort(404, 'No se encontró el proveedor de suscripción asociado.');
+            abort(
+                404,
+                'No se encontró el proveedor de suscripción asociado.'
+            );
         }
 
-        $grupoPrefactura = $agrupacionService->grupoDesdeDetalle($detalle);
-        $grupoPrefacturaLabel = $agrupacionService->etiquetaGrupo($grupoPrefactura);
+        $grupoPrefactura =
+            $agrupacionService->grupoDesdeDetalle(
+                $detalle
+            );
+
+        $grupoPrefacturaLabel =
+            $agrupacionService->etiquetaGrupo(
+                $grupoPrefactura
+            );
 
         /*
-        * Antes se filtraba por asignacion.suscripcion_proveedor_id.
-        * Ahora se traen los detalles del periodo y se filtran por proveedor efectivo
-        * de pre-factura, considerando ajustes mensuales.
+        * Antes se filtraba por:
+        *
+        * asignacion.suscripcion_proveedor_id
+        *
+        * Ahora se traen todos los detalles del periodo
+        * y luego se filtran por proveedor efectivo de
+        * pre-factura, considerando ajustes mensuales.
         */
-        $detallesPeriodo = SuscripcionLiquidacionDetalle::with([
-            'asignacion.suscripcionProveedor.cobranzaCompra',
-            'asignacion.transportista',
-            'asignacion.opvPuntos',
-            'asignacion.cantidadesMensuales',
-        ])
-            ->where('anio', $detalle->anio)
-            ->where('mes', $detalle->mes)
-            ->orderBy('codigo')
-            ->get();
+        $detallesPeriodo =
+            SuscripcionLiquidacionDetalle::with([
+                'asignacion.suscripcionProveedor.cobranzaCompra',
+                'asignacion.transportista',
+                'asignacion.opvPuntos',
+                'asignacion.cantidadesMensuales',
+            ])
+                ->where(
+                    'anio',
+                    $detalle->anio
+                )
+                ->where(
+                    'mes',
+                    $detalle->mes
+                )
+                ->orderBy('codigo')
+                ->get();
 
-        $ajusteMensualService->precargarParaDetalles($detallesPeriodo);
+        $ajusteMensualService
+            ->precargarParaDetalles(
+                $detallesPeriodo
+            );
 
-        $detallesProveedor = $detallesPeriodo
-            ->filter(function ($item) use ($suscripcionProveedorId, $ajusteMensualService) {
-                $proveedorItem = $ajusteMensualService->proveedorFacturacionParaDetalle($item);
+        /*
+        * ============================================================
+        * EXCEPCIONES DE FACTURACIÓN POR FECHA
+        * ============================================================
+        *
+        * Esta tabla es la fuente de verdad para saber:
+        *
+        * - qué asignación original perdió una ejecución;
+        * - qué fecha fue reasignada;
+        * - qué proveedor recibió la ejecución;
+        * - qué transportista la realizó;
+        * - cuál fue el costo efectivo.
+        *
+        * No inferimos la excepción a partir de:
+        *
+        * q_calendario - cantidad
+        *
+        * porque esa diferencia también podría explicarse por
+        * otras novedades.
+        */
+        $inicioPeriodo =
+            \Carbon\Carbon::create(
+                (int) $detalle->anio,
+                (int) $detalle->mes,
+                1
+            )
+                ->startOfMonth()
+                ->toDateString();
 
-                return (int) $proveedorItem?->id === (int) $suscripcionProveedorId;
-            })
-            ->values();
+        $finPeriodo =
+            \Carbon\Carbon::create(
+                (int) $detalle->anio,
+                (int) $detalle->mes,
+                1
+            )
+                ->endOfMonth()
+                ->toDateString();
 
-        $gruposPrefactura = $detallesProveedor
-            ->groupBy(function ($item) use ($agrupacionService) {
-                $grupo = $agrupacionService->grupoDesdeDetalle($item);
+        $excepcionesFacturacionPeriodo =
+            SuscripcionExcepcionFacturacion::with([
+                'asignacion.suscripcionProveedor.cobranzaCompra',
+                'asignacion.transportista',
+                'proveedorFacturacion.cobranzaCompra',
+                'transportistaOverride',
+            ])
+                ->where('activo', true)
+                ->whereBetween(
+                    'fecha',
+                    [
+                        $inicioPeriodo,
+                        $finPeriodo,
+                    ]
+                )
+                ->orderBy('fecha')
+                ->orderBy('suscripcion_asignacion_id')
+                ->get();
 
-                return $agrupacionService->claveGrupo($grupo);
-            })
-            ->map(function ($items) use ($resumenService, $agrupacionService) {
-                $items = $items->values();
-                $detalleBase = $items->first();
+        /*
+        * Excepciones agrupadas por asignación ORIGINAL.
+        *
+        * Ejemplo:
+        *
+        * BH.01 original
+        * └── 25/07/2026 -> Sanrey / Claudia
+        *
+        * Esto permitirá mostrar en la pre-factura de Benito:
+        *
+        * 8 fines de semana
+        * - 1 ejecución reasignada
+        *   25/07/2026 -> Sanrey
+        */
+        $excepcionesFacturacionPorAsignacion =
+            $excepcionesFacturacionPeriodo
+                ->groupBy(
+                    'suscripcion_asignacion_id'
+                );
 
-                $grupo = $agrupacionService->grupoDesdeDetalle($detalleBase);
-                $grupoLabel = $agrupacionService->etiquetaGrupo($grupo);
-                $calculosGrupo = $resumenService->calcularPorDetalles($items);
+        /*
+        * Las líneas receptoras son detalles normales de liquidación,
+        * pero apuntan a una asignación técnica:
+        *
+        * tipo_asignacion = EXCEPCION_FACTURACION
+        *
+        * El código técnico creado por nuestro servicio tiene formato:
+        *
+        * EXF-{origenId}-{proveedorId}-{transportistaId}-{costo}
+        *
+        * Aquí asociamos cada detalle receptor con las excepciones
+        * reales que lo originaron.
+        *
+        * Esto también soporta que una misma línea técnica pueda
+        * representar más de una fecha si algún mes futuro lo requiere.
+        */
+        $detalleOrigenPorAsignacion =
+            $detallesPeriodo
+                ->filter(function ($item) {
+                    $tipoAsignacion =
+                        mb_strtoupper(
+                            trim(
+                                (string) (
+                                    $item
+                                        ->asignacion
+                                        ?->tipo_asignacion
+                                    ?? ''
+                                )
+                            )
+                        );
 
-                return [
-                    'label' => $grupoLabel,
-                    'es_general' => mb_strtoupper($grupoLabel) === 'GENERAL',
-                    'detalle_id' => $detalleBase->id,
-                    'items' => $items,
-                    'calculos' => $calculosGrupo,
-                    'total_bruto' => $items->sum('total'),
-                    'total_impuesto' => $calculosGrupo->sum('total_impuesto'),
-                    'total_liquido' => $calculosGrupo->sum('liquido'),
-                ];
-            })
-            ->sortBy(fn ($grupo) => $grupo['es_general'] ? 0 : 1)
-            ->values();
+                    return
+                        $tipoAsignacion
+                        !== 'EXCEPCION_FACTURACION';
+                })
+                ->keyBy(
+                    'suscripcion_asignacion_id'
+                );
 
-        $calculosDetalle = $resumenService->calcularPorDetalles($detallesProveedor);
+        $excepcionesFacturacionPorDetalleReceptor =
+            collect();
+
+        foreach (
+            $detallesPeriodo
+            as $item
+        ) {
+            $tipoAsignacion =
+                mb_strtoupper(
+                    trim(
+                        (string) (
+                            $item
+                                ->asignacion
+                                ?->tipo_asignacion
+                            ?? ''
+                        )
+                    )
+                );
+
+            if (
+                $tipoAsignacion
+                !== 'EXCEPCION_FACTURACION'
+            ) {
+                continue;
+            }
+
+            $codigoTecnico =
+                trim(
+                    (string) (
+                        $item
+                            ->asignacion
+                            ?->codigo
+                        ?? ''
+                    )
+                );
+
+            /*
+            * Recuperamos la asignación original desde
+            * el código técnico que genera nuestro servicio.
+            */
+            if (
+                !preg_match(
+                    '/^EXF-(\d+)-/',
+                    $codigoTecnico,
+                    $coincidencia
+                )
+            ) {
+                continue;
+            }
+
+            $asignacionOrigenId =
+                (int) (
+                    $coincidencia[1]
+                    ?? 0
+                );
+
+            if (
+                $asignacionOrigenId <= 0
+            ) {
+                continue;
+            }
+
+            $excepcionesOrigen =
+                $excepcionesFacturacionPorAsignacion
+                    ->get(
+                        $asignacionOrigenId,
+                        collect()
+                    );
+
+            if (
+                $excepcionesOrigen
+                    ->isEmpty()
+            ) {
+                continue;
+            }
+
+            $proveedorReceptorId =
+                (int) (
+                    $item
+                        ->asignacion
+                        ?->suscripcionProveedor
+                        ?->id
+                    ?? 0
+                );
+
+            $transportistaReceptorId =
+                (int) (
+                    $item
+                        ->asignacion
+                        ?->transportista
+                        ?->id
+                    ?? 0
+                );
+
+            $costoDetalleReceptor =
+                (int) (
+                    $item->costo
+                    ?? 0
+                );
+
+            $detalleOrigen =
+                $detalleOrigenPorAsignacion
+                    ->get(
+                        $asignacionOrigenId
+                    );
+
+            /*
+            * Coincidimos con los mismos criterios que utilizó
+            * SuscripcionExcepcionFacturacionAplicacionService
+            * para agrupar la línea técnica:
+            *
+            * - asignación original;
+            * - proveedor receptor;
+            * - transportista efectivo;
+            * - costo efectivo.
+            */
+            $excepcionesReceptor =
+                $excepcionesOrigen
+                    ->filter(
+                        function (
+                            $excepcion
+                        ) use (
+                            $proveedorReceptorId,
+                            $transportistaReceptorId,
+                            $costoDetalleReceptor,
+                            $detalleOrigen
+                        ) {
+                            $proveedorExcepcionId =
+                                (int) (
+                                    $excepcion
+                                        ->suscripcion_proveedor_facturacion_id
+                                    ?? 0
+                                );
+
+                            $transportistaExcepcionId =
+                                (int) (
+                                    $excepcion
+                                        ->suscripcion_transportista_override_id
+                                    ?: (
+                                        $excepcion
+                                            ->asignacion
+                                            ?->transportista
+                                            ?->id
+                                        ?? 0
+                                    )
+                                );
+
+                            $costoExcepcion =
+                                (int) (
+                                    $excepcion->costo
+                                    ?? $detalleOrigen?->costo
+                                    ?? $excepcion
+                                        ->asignacion
+                                        ?->costo
+                                    ?? 0
+                                );
+
+                            return
+                                $proveedorExcepcionId
+                                    === $proveedorReceptorId
+                                && $transportistaExcepcionId
+                                    === $transportistaReceptorId
+                                && $costoExcepcion
+                                    === $costoDetalleReceptor;
+                        }
+                    )
+                    ->values();
+
+            if (
+                $excepcionesReceptor
+                    ->isEmpty()
+            ) {
+                continue;
+            }
+
+            $excepcionesFacturacionPorDetalleReceptor
+                ->put(
+                    $item->id,
+                    $excepcionesReceptor
+                );
+        }
+
+        /*
+        * ============================================================
+        * DETALLES DEL PROVEEDOR EFECTIVO
+        * ============================================================
+        */
+        $detallesProveedor =
+            $detallesPeriodo
+                ->filter(
+                    function (
+                        $item
+                    ) use (
+                        $suscripcionProveedorId,
+                        $ajusteMensualService
+                    ) {
+                        $proveedorItem =
+                            $ajusteMensualService
+                                ->proveedorFacturacionParaDetalle(
+                                    $item
+                                );
+
+                        return
+                            (int) $proveedorItem?->id
+                            ===
+                            (int) $suscripcionProveedorId;
+                    }
+                )
+                ->values();
+
+        $gruposPrefactura =
+            $detallesProveedor
+                ->groupBy(
+                    function (
+                        $item
+                    ) use (
+                        $agrupacionService
+                    ) {
+                        $grupo =
+                            $agrupacionService
+                                ->grupoDesdeDetalle(
+                                    $item
+                                );
+
+                        return
+                            $agrupacionService
+                                ->claveGrupo(
+                                    $grupo
+                                );
+                    }
+                )
+                ->map(
+                    function (
+                        $items
+                    ) use (
+                        $resumenService,
+                        $agrupacionService
+                    ) {
+                        $items =
+                            $items->values();
+
+                        $detalleBase =
+                            $items->first();
+
+                        $grupo =
+                            $agrupacionService
+                                ->grupoDesdeDetalle(
+                                    $detalleBase
+                                );
+
+                        $grupoLabel =
+                            $agrupacionService
+                                ->etiquetaGrupo(
+                                    $grupo
+                                );
+
+                        $calculosGrupo =
+                            $resumenService
+                                ->calcularPorDetalles(
+                                    $items
+                                );
+
+                        return [
+                            'label' =>
+                                $grupoLabel,
+
+                            'es_general' =>
+                                mb_strtoupper(
+                                    $grupoLabel
+                                ) === 'GENERAL',
+
+                            'detalle_id' =>
+                                $detalleBase->id,
+
+                            'items' =>
+                                $items,
+
+                            'calculos' =>
+                                $calculosGrupo,
+
+                            'total_bruto' =>
+                                $items->sum(
+                                    'total'
+                                ),
+
+                            'total_impuesto' =>
+                                $calculosGrupo
+                                    ->sum(
+                                        'total_impuesto'
+                                    ),
+
+                            'total_liquido' =>
+                                $calculosGrupo
+                                    ->sum(
+                                        'liquido'
+                                    ),
+                        ];
+                    }
+                )
+                ->sortBy(
+                    fn ($grupo) =>
+                        $grupo['es_general']
+                            ? 0
+                            : 1
+                )
+                ->values();
+
+        $calculosDetalle =
+            $resumenService
+                ->calcularPorDetalles(
+                    $detallesProveedor
+                );
 
         /*
         * Encabezado de la pre-factura.
         * Usa proveedor efectivo de facturación.
         */
-        $proveedor = $proveedorPrefactura;
-        $cobranzaCompra = $proveedor?->cobranzaCompra;
+        $proveedor =
+            $proveedorPrefactura;
 
-        $totalBruto = $detallesProveedor->sum('total');
-        $totalImpuesto = $calculosDetalle->sum('total_impuesto');
-        $totalLiquido = $calculosDetalle->sum('liquido');
+        $cobranzaCompra =
+            $proveedor
+                ?->cobranzaCompra;
+
+        $totalBruto =
+            $detallesProveedor
+                ->sum(
+                    'total'
+                );
+
+        $totalImpuesto =
+            $calculosDetalle
+                ->sum(
+                    'total_impuesto'
+                );
+
+        $totalLiquido =
+            $calculosDetalle
+                ->sum(
+                    'liquido'
+                );
 
         $meses = [
             1 => 'Enero',
@@ -503,102 +953,237 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
         /*
         * Estado anual del proveedor efectivo.
-        * Esto permite que mayo aparezca bajo Manuel si existe ajuste,
-        * y que abril siga bajo José Luis si no tiene ajuste.
+        *
+        * Esto permite que mayo aparezca bajo Manuel
+        * si existe ajuste, y que abril siga bajo José
+        * Luis si no tiene ajuste.
         */
-        $detallesAnio = SuscripcionLiquidacionDetalle::with([
-            'asignacion.suscripcionProveedor.cobranzaCompra',
-            'asignacion.transportista',
-            'asignacion.cantidadesMensuales',
-        ])
-            ->where('anio', $detalle->anio)
-            ->orderBy('mes')
-            ->orderBy('codigo')
-            ->get();
+        $detallesAnio =
+            SuscripcionLiquidacionDetalle::with([
+                'asignacion.suscripcionProveedor.cobranzaCompra',
+                'asignacion.transportista',
+                'asignacion.cantidadesMensuales',
+            ])
+                ->where(
+                    'anio',
+                    $detalle->anio
+                )
+                ->orderBy('mes')
+                ->orderBy('codigo')
+                ->get();
 
-        $ajusteMensualService->precargarParaDetalles($detallesAnio);
+        $ajusteMensualService
+            ->precargarParaDetalles(
+                $detallesAnio
+            );
 
-        $detallesAnioProveedor = $detallesAnio
-            ->filter(function ($item) use ($suscripcionProveedorId, $ajusteMensualService) {
-                $proveedorItem = $ajusteMensualService->proveedorFacturacionParaDetalle($item);
+        $detallesAnioProveedor =
+            $detallesAnio
+                ->filter(
+                    function (
+                        $item
+                    ) use (
+                        $suscripcionProveedorId,
+                        $ajusteMensualService
+                    ) {
+                        $proveedorItem =
+                            $ajusteMensualService
+                                ->proveedorFacturacionParaDetalle(
+                                    $item
+                                );
 
-                return (int) $proveedorItem?->id === (int) $suscripcionProveedorId;
-            })
-            ->values();
+                        return
+                            (int) $proveedorItem?->id
+                            ===
+                            (int) $suscripcionProveedorId;
+                    }
+                )
+                ->values();
 
-        $prefacturasProveedorAnio = $detallesAnioProveedor
-            ->groupBy('mes')
-            ->map(function ($items) use ($resumenService, $meses) {
-                $items = $items->values();
-                $detalleBase = $items->first();
+        $prefacturasProveedorAnio =
+            $detallesAnioProveedor
+                ->groupBy('mes')
+                ->map(
+                    function (
+                        $items
+                    ) use (
+                        $resumenService,
+                        $meses
+                    ) {
+                        $items =
+                            $items->values();
 
-                $calculosMes = $resumenService->calcularPorDetalles($items);
+                        $detalleBase =
+                            $items->first();
 
-                return [
-                    'detalle_id' => $detalleBase->id,
-                    'anio' => $detalleBase->anio,
-                    'mes' => (int) $detalleBase->mes,
-                    'mes_nombre' => $meses[(int) $detalleBase->mes] ?? $detalleBase->mes,
-                    'cantidad_lineas' => $items->count(),
-                    'total_bruto' => $items->sum('total'),
-                    'total_impuesto' => $calculosMes->sum('total_impuesto'),
-                    'total_final' => $calculosMes->sum('liquido'),
-                ];
-            });
+                        $calculosMes =
+                            $resumenService
+                                ->calcularPorDetalles(
+                                    $items
+                                );
 
-        $estadoPrefacturas = collect($meses)
-            ->map(function ($nombreMes, $numeroMes) use ($prefacturasProveedorAnio, $detalle) {
-                $prefacturaMes = $prefacturasProveedorAnio->get($numeroMes);
+                        return [
+                            'detalle_id' =>
+                                $detalleBase->id,
 
-                return [
-                    'mes' => $numeroMes,
-                    'mes_nombre' => $nombreMes,
-                    'generada' => (bool) $prefacturaMes,
-                    'es_actual' => (int) $detalle->mes === (int) $numeroMes,
-                    'detalle_id' => $prefacturaMes['detalle_id'] ?? null,
-                    'cantidad_lineas' => $prefacturaMes['cantidad_lineas'] ?? 0,
-                    'total_final' => $prefacturaMes['total_final'] ?? 0,
-                ];
-            })
-            ->values();
+                            'anio' =>
+                                $detalleBase->anio,
+
+                            'mes' =>
+                                (int) $detalleBase->mes,
+
+                            'mes_nombre' =>
+                                $meses[
+                                    (int) $detalleBase->mes
+                                ]
+                                ?? $detalleBase->mes,
+
+                            'cantidad_lineas' =>
+                                $items->count(),
+
+                            'total_bruto' =>
+                                $items->sum(
+                                    'total'
+                                ),
+
+                            'total_impuesto' =>
+                                $calculosMes
+                                    ->sum(
+                                        'total_impuesto'
+                                    ),
+
+                            'total_final' =>
+                                $calculosMes
+                                    ->sum(
+                                        'liquido'
+                                    ),
+                        ];
+                    }
+                );
+
+        $estadoPrefacturas =
+            collect(
+                $meses
+            )
+                ->map(
+                    function (
+                        $nombreMes,
+                        $numeroMes
+                    ) use (
+                        $prefacturasProveedorAnio,
+                        $detalle
+                    ) {
+                        $prefacturaMes =
+                            $prefacturasProveedorAnio
+                                ->get(
+                                    $numeroMes
+                                );
+
+                        return [
+                            'mes' =>
+                                $numeroMes,
+
+                            'mes_nombre' =>
+                                $nombreMes,
+
+                            'generada' =>
+                                (bool) $prefacturaMes,
+
+                            'es_actual' =>
+                                (int) $detalle->mes
+                                ===
+                                (int) $numeroMes,
+
+                            'detalle_id' =>
+                                $prefacturaMes[
+                                    'detalle_id'
+                                ]
+                                ?? null,
+
+                            'cantidad_lineas' =>
+                                $prefacturaMes[
+                                    'cantidad_lineas'
+                                ]
+                                ?? 0,
+
+                            'total_final' =>
+                                $prefacturaMes[
+                                    'total_final'
+                                ]
+                                ?? 0,
+                        ];
+                    }
+                )
+                ->values();
 
         /*
-        * OPV pendientes se revisan sobre el proveedor efectivo de la pre-factura.
+        * OPV pendientes se revisan sobre el proveedor
+        * efectivo de la pre-factura.
         */
-        $opvPendientes = Asignaciones::with([
-            'suscripcionProveedor.cobranzaCompra',
-            'transportista',
-            'opvPuntos',
-        ])
-            ->where('suscripcion_proveedor_id', $suscripcionProveedorId)
-            ->where(function ($query) {
-                $query->whereRaw("UPPER(TRIM(codigo)) = 'OPV'")
-                    ->orWhereRaw("UPPER(TRIM(codigo)) LIKE '%.OPV'")
-                    ->orWhereRaw("UPPER(TRIM(servicio)) = 'OPV'")
-                    ->orWhereRaw("UPPER(TRIM(origen_gasto)) = 'OPV'");
-            })
-            ->whereDoesntHave('opvPuntos')
-            ->orderBy('punto_1')
-            ->get();
+        $opvPendientes =
+            Asignaciones::with([
+                'suscripcionProveedor.cobranzaCompra',
+                'transportista',
+                'opvPuntos',
+            ])
+                ->where(
+                    'suscripcion_proveedor_id',
+                    $suscripcionProveedorId
+                )
+                ->where(
+                    function (
+                        $query
+                    ) {
+                        $query
+                            ->whereRaw(
+                                "UPPER(TRIM(codigo)) = 'OPV'"
+                            )
+                            ->orWhereRaw(
+                                "UPPER(TRIM(codigo)) LIKE '%.OPV'"
+                            )
+                            ->orWhereRaw(
+                                "UPPER(TRIM(servicio)) = 'OPV'"
+                            )
+                            ->orWhereRaw(
+                                "UPPER(TRIM(origen_gasto)) = 'OPV'"
+                            );
+                    }
+                )
+                ->whereDoesntHave(
+                    'opvPuntos'
+                )
+                ->orderBy(
+                    'punto_1'
+                )
+                ->get();
 
-        return view('suscripciones.liquidacion_detalles.show', compact(
-            'detalle',
-            'detallesProveedor',
-            'calculosDetalle',
-            'proveedor',
-            'cobranzaCompra',
-            'totalBruto',
-            'totalImpuesto',
-            'totalLiquido',
-            'meses',
-            'estadoPrefacturas',
-            'opvPendientes',
-            'grupoPrefactura',
-            'grupoPrefacturaLabel',
-            'gruposPrefactura'
-        ));
+        return view(
+            'suscripciones.liquidacion_detalles.show',
+            compact(
+                'detalle',
+                'detallesProveedor',
+                'calculosDetalle',
+                'proveedor',
+                'cobranzaCompra',
+                'totalBruto',
+                'totalImpuesto',
+                'totalLiquido',
+                'meses',
+                'estadoPrefacturas',
+                'opvPendientes',
+                'grupoPrefactura',
+                'grupoPrefacturaLabel',
+                'gruposPrefactura',
+
+                /*
+                * Nuevos datos sólo para presentación.
+                */
+                'excepcionesFacturacionPeriodo',
+                'excepcionesFacturacionPorAsignacion',
+                'excepcionesFacturacionPorDetalleReceptor'
+            )
+        );
     }
-
     public function pdf(
         SuscripcionLiquidacionDetalle $detalle,
         SuscripcionPrefacturaPdfService $pdfService
@@ -819,6 +1404,11 @@ class SuscripcionLiquidacionDetalleController extends Controller
             $resultado['zip_file_name']
         );
     }
+
+
+
+
+
 
 
     public function enviarCorreosPruebaMasivo(
@@ -1264,8 +1854,15 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function generarMes(Request $request, SuscripcionGeneracionMensualService $generacionMensualService)
-    {
+
+
+
+
+    public function generarMes(
+        Request $request,
+        SuscripcionGeneracionMensualService $generacionMensualService,
+        SuscripcionExcepcionFacturacionAplicacionService $excepcionFacturacionAplicacionService
+    ) {
         $request->validate([
             'anio_generar' => 'required|integer|min:2020|max:2100',
             'mes_generar' => 'required|integer|min:1|max:12',
@@ -1273,9 +1870,33 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
         $anio = (int) $request->anio_generar;
         $mes = (int) $request->mes_generar;
-        $proveedorActual = trim((string) $request->input('proveedor_actual'));
 
-        $resultado = $generacionMensualService->generar($anio, $mes);
+        $proveedorActual = trim(
+            (string) $request->input('proveedor_actual')
+        );
+
+        /*
+        * Generar el período utilizando la lógica normal.
+        */
+        $resultado = $generacionMensualService->generar(
+            $anio,
+            $mes
+        );
+
+        /*
+        * Aplicar las excepciones de facturación por fecha
+        * que ya se encuentren registradas para el período.
+        *
+        * El Service es idempotente:
+        * volver a ejecutar el mes no vuelve a descontar
+        * una ejecución adicional.
+        */
+        $resultadoExcepciones =
+            $excepcionFacturacionAplicacionService
+                ->aplicarPeriodo(
+                    $anio,
+                    $mes
+                );
 
         $params = [
             'anio' => $anio,
@@ -1283,32 +1904,149 @@ class SuscripcionLiquidacionDetalleController extends Controller
         ];
 
         if ($proveedorActual !== '') {
-            $params['proveedor'] = $proveedorActual;
+            $params['proveedor'] =
+                $proveedorActual;
         }
 
-        $mensaje = "Mes generado correctamente. Creados: {$resultado['creados']}.";
+        $mensaje =
+            "Mes generado correctamente. "
+            . "Creados: {$resultado['creados']}.";
 
-        if ($resultado['comisiones_creadas'] > 0) {
-            $mensaje .= " Comisiones agregadas: {$resultado['comisiones_creadas']}.";
+        if (
+            ($resultado['cantidades_creadas'] ?? 0) > 0
+        ) {
+            $mensaje .=
+                ' Cantidades variables agregadas: '
+                . "{$resultado['cantidades_creadas']}.";
         }
 
-        if ($resultado['duplicados'] > 0) {
-            $mensaje .= " Registros ya existentes no duplicados: {$resultado['duplicados']}.";
+        if (
+            ($resultado['comisiones_creadas'] ?? 0) > 0
+        ) {
+            $mensaje .=
+                ' Comisiones agregadas: '
+                . "{$resultado['comisiones_creadas']}.";
         }
 
-        if ($resultado['comisiones_duplicadas'] > 0) {
-            $mensaje .= " Comisiones ya existentes no duplicadas: {$resultado['comisiones_duplicadas']}.";
+        if (
+            ($resultado['duplicados'] ?? 0) > 0
+        ) {
+            $mensaje .=
+                ' Registros ya existentes no duplicados: '
+                . "{$resultado['duplicados']}.";
         }
 
-        if ($resultado['opv_sin_rutas']->isNotEmpty()) {
-            $mensaje .= ' No se generaron las siguientes rutas OPV porque no tienen locales OPV asignados: ';
-            $mensaje .= $resultado['opv_sin_rutas']->unique()->implode('; ') . '.';
+        if (
+            ($resultado['cantidades_duplicadas'] ?? 0) > 0
+        ) {
+            $mensaje .=
+                ' Cantidades variables ya existentes no duplicadas: '
+                . "{$resultado['cantidades_duplicadas']}.";
+        }
+
+        if (
+            ($resultado['comisiones_duplicadas'] ?? 0) > 0
+        ) {
+            $mensaje .=
+                ' Comisiones ya existentes no duplicadas: '
+                . "{$resultado['comisiones_duplicadas']}.";
+        }
+
+        /*
+        * Resultado de las excepciones por fecha.
+        */
+        if (
+            ($resultadoExcepciones[
+                'excepciones_procesadas'
+            ] ?? 0) > 0
+        ) {
+            $mensaje .=
+                ' Excepciones de facturación por fecha procesadas: '
+                . "{$resultadoExcepciones['excepciones_procesadas']}.";
+
+            if (
+                ($resultadoExcepciones[
+                    'detalles_origen_actualizados'
+                ] ?? 0) > 0
+            ) {
+                $mensaje .=
+                    ' Liquidaciones de origen actualizadas: '
+                    . "{$resultadoExcepciones['detalles_origen_actualizados']}.";
+            }
+
+            if (
+                ($resultadoExcepciones[
+                    'detalles_receptor_creados'
+                ] ?? 0) > 0
+            ) {
+                $mensaje .=
+                    ' Liquidaciones receptoras creadas: '
+                    . "{$resultadoExcepciones['detalles_receptor_creados']}.";
+            }
+
+            if (
+                ($resultadoExcepciones[
+                    'detalles_receptor_actualizados'
+                ] ?? 0) > 0
+            ) {
+                $mensaje .=
+                    ' Liquidaciones receptoras actualizadas: '
+                    . "{$resultadoExcepciones['detalles_receptor_actualizados']}.";
+            }
+
+            if (
+                ($resultadoExcepciones[
+                    'sin_detalle_origen'
+                ] ?? 0) > 0
+            ) {
+                $mensaje .=
+                    ' Excepciones sin liquidación de origen: '
+                    . "{$resultadoExcepciones['sin_detalle_origen']}.";
+            }
+        }
+
+        if (
+            ($resultadoExcepciones[
+                'detalles_receptor_eliminados'
+            ] ?? 0) > 0
+        ) {
+            $mensaje .=
+                ' Liquidaciones receptoras obsoletas eliminadas: '
+                . "{$resultadoExcepciones['detalles_receptor_eliminados']}.";
+        }
+
+        if (
+            $resultado['opv_sin_rutas']->isNotEmpty()
+        ) {
+            $mensaje .=
+                ' No se generaron las siguientes rutas OPV '
+                . 'porque no tienen locales OPV asignados: ';
+
+            $mensaje .=
+                $resultado['opv_sin_rutas']
+                    ->unique()
+                    ->implode('; ')
+                . '.';
         }
 
         return redirect()
-            ->route('suscripciones.liquidacion-detalles.index', $params)
-            ->with('success', $mensaje);
+            ->route(
+                'suscripciones.liquidacion-detalles.index',
+                $params
+            )
+            ->with(
+                'success',
+                $mensaje
+            );
     }
+
+
+
+
+
+
+
+
 
     public function opvPuntos(Asignaciones $asignacion)
     {
