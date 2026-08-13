@@ -12,11 +12,6 @@ use Carbon\Carbon;
 
 class SuscripcionGeneracionMensualService
 {
-
-
-
-
-
     public function generar(int $anio, int $mes): array
     {
         $asignaciones = Asignaciones::with([
@@ -115,6 +110,14 @@ class SuscripcionGeneracionMensualService
                 function (Asignaciones $asignacion) {
                     if (
                         $this->esAsignacionFijoMensual(
+                            $asignacion
+                        )
+                    ) {
+                        return false;
+                    }
+
+                    if (
+                        $this->esAsignacionReposiciones(
                             $asignacion
                         )
                     ) {
@@ -302,12 +305,21 @@ class SuscripcionGeneracionMensualService
             * El resto utiliza la cantidad de días con despacho
             * configurados para su zona.
             */
+
+
             if (
                 $this->esAsignacionFijoMensual(
                     $asignacion
                 )
             ) {
                 $qCalendario = 1;
+            } elseif (
+                $this->esAsignacionReposiciones(
+                    $asignacion
+                )
+            ) {
+                $qCalendario =
+                    $cantidadFechasEsperadas;
             } else {
                 $resumenZona =
                     $calendarioZonal->get(
@@ -319,6 +331,11 @@ class SuscripcionGeneracionMensualService
                     (int) $resumenZona
                         ->dias_con_despacho;
             }
+
+
+
+
+
 
             $calculo =
                 $this->calcularDetalleMensual(
@@ -525,15 +542,8 @@ class SuscripcionGeneracionMensualService
         ];
     }
 
-
-
-
-
-    private function calcularDetalleMensual(
-        Asignaciones $asignacion,
-        int $qCalendario,
-        int $inasistencias = 0
-    ): array {
+    private function calcularDetalleMensual(Asignaciones $asignacion, int $qCalendario, int $inasistencias = 0): array 
+    {
         $qCalendario =
             max(0, $qCalendario);
 
@@ -638,14 +648,6 @@ class SuscripcionGeneracionMensualService
         ];
     }
 
-
-
-
-
-
-
-
-
     private function contarFinesDeSemanaDelMes(int $anio, int $mes): int
     {
         $fecha = Carbon::create($anio, $mes, 1)->startOfDay();
@@ -681,6 +683,14 @@ class SuscripcionGeneracionMensualService
             || str_ends_with($codigo, '.OPV')
             || $servicio === 'OPV'
             || $origenGasto === 'OPV';
+    }
+
+    private function esAsignacionReposiciones(
+        Asignaciones $asignacion
+    ): bool {
+        return mb_strtoupper(
+            trim((string) $asignacion->codigo)
+        ) === 'REPOSICIONES';
     }
 
 

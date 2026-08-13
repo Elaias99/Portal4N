@@ -402,12 +402,10 @@ class SuscripcionLiquidacionDetalleController extends Controller
             ->with('success', 'Inasistencia actualizada y total recalculado correctamente.');
     }
 
-    public function show(
-        SuscripcionLiquidacionDetalle $detalle,
-        SuscripcionLiquidacionResumenService $resumenService,
-        SuscripcionPrefacturaAgrupacionService $agrupacionService,
-        SuscripcionAjusteMensualService $ajusteMensualService
-    ) {
+
+
+    public function show(SuscripcionLiquidacionDetalle $detalle, SuscripcionLiquidacionResumenService $resumenService, SuscripcionPrefacturaAgrupacionService $agrupacionService, SuscripcionAjusteMensualService $ajusteMensualService) 
+    {
         $detalle->load([
             'asignacion.suscripcionProveedor.cobranzaCompra',
             'asignacion.transportista',
@@ -1184,10 +1182,13 @@ class SuscripcionLiquidacionDetalleController extends Controller
             )
         );
     }
-    public function pdf(
-        SuscripcionLiquidacionDetalle $detalle,
-        SuscripcionPrefacturaPdfService $pdfService
-    ) {
+
+
+
+
+
+    public function pdf(SuscripcionLiquidacionDetalle $detalle, SuscripcionPrefacturaPdfService $pdfService) 
+    {
         try {
             $resultado = $pdfService->generarDesdeDetalle($detalle);
         } catch (\RuntimeException $e) {
@@ -1200,10 +1201,10 @@ class SuscripcionLiquidacionDetalleController extends Controller
     }
 
 
-    public function enviarCorreoPrueba(
-        SuscripcionLiquidacionDetalle $detalle,
-        SuscripcionPrefacturaPdfService $pdfService
-    ) {
+
+
+    public function enviarCorreoPrueba(SuscripcionLiquidacionDetalle $detalle, SuscripcionPrefacturaPdfService $pdfService) 
+    {
         try {
             $resultado = $pdfService->generarDesdeDetalle($detalle);
 
@@ -1260,12 +1261,8 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function pdfMasivo(
-        Request $request,
-        SuscripcionPrefacturaZipService $zipService,
-        SuscripcionOneDriveService $oneDriveService,
-        SuscripcionAjusteMensualService $ajusteMensualService
-    ) {
+    public function pdfMasivo(Request $request, SuscripcionPrefacturaZipService $zipService, SuscripcionOneDriveService $oneDriveService, SuscripcionAjusteMensualService $ajusteMensualService) 
+    {
         $request->validate([
             'anio_pdf' => 'required|integer|min:2020|max:2100',
             'mes_pdf' => 'required|integer|min:1|max:12',
@@ -1411,11 +1408,8 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function enviarCorreosPruebaMasivo(
-        Request $request,
-        SuscripcionPrefacturaEnvioService $envioService,
-        SuscripcionAjusteMensualService $ajusteMensualService
-    ) {
+    public function enviarCorreosPruebaMasivo(Request $request, SuscripcionPrefacturaEnvioService $envioService, SuscripcionAjusteMensualService $ajusteMensualService) 
+    {
         $request->validate([
             'anio_pdf' => 'required|integer|min:2020|max:2100',
             'mes_pdf' => 'required|integer|min:1|max:12',
@@ -1551,11 +1545,8 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function enviarCorreosRealesMasivo(
-        Request $request,
-        SuscripcionPrefacturaEnvioService $envioService,
-        SuscripcionAjusteMensualService $ajusteMensualService
-    ) {
+    public function enviarCorreosRealesMasivo(Request $request, SuscripcionPrefacturaEnvioService $envioService, SuscripcionAjusteMensualService $ajusteMensualService) 
+    {
         $request->validate([
             'anio_pdf' => 'required|integer|min:2020|max:2100',
             'mes_pdf' => 'required|integer|min:1|max:12',
@@ -1714,11 +1705,8 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function revisarDestinatarios(
-        Request $request,
-        SuscripcionPrefacturaEnvioService $envioService,
-        SuscripcionAjusteMensualService $ajusteMensualService
-    ) {
+    public function revisarDestinatarios(Request $request, SuscripcionPrefacturaEnvioService $envioService, SuscripcionAjusteMensualService $ajusteMensualService) 
+    {
         $request->validate([
             'anio_pdf' => 'required|integer|min:2020|max:2100',
             'mes_pdf' => 'required|integer|min:1|max:12',
@@ -1853,16 +1841,8 @@ class SuscripcionLiquidacionDetalleController extends Controller
     }
 
 
-
-
-
-
-
-    public function generarMes(
-        Request $request,
-        SuscripcionGeneracionMensualService $generacionMensualService,
-        SuscripcionExcepcionFacturacionAplicacionService $excepcionFacturacionAplicacionService
-    ) {
+    public function generarMes(Request $request, SuscripcionGeneracionMensualService $generacionMensualService, SuscripcionExcepcionFacturacionAplicacionService $excepcionFacturacionAplicacionService) 
+    {
         $request->validate([
             'anio_generar' => 'required|integer|min:2020|max:2100',
             'mes_generar' => 'required|integer|min:1|max:12',
@@ -2039,14 +2019,6 @@ class SuscripcionLiquidacionDetalleController extends Controller
                 $mensaje
             );
     }
-
-
-
-
-
-
-
-
 
     public function opvPuntos(Asignaciones $asignacion)
     {

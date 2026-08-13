@@ -278,14 +278,8 @@ class SuscripcionComisionMensualController extends Controller
 
 
 
-    public function store(
-        Request $request,
-        SuscripcionGeneracionMensualService $generacionMensualService,
-        SuscripcionAjusteMensualRegistroService $ajusteMensualRegistroService,
-        SuscripcionAjusteMensualAplicacionService $ajusteMensualAplicacionService,
-        SuscripcionExcepcionFacturacionRegistroService $excepcionFacturacionRegistroService,
-        SuscripcionExcepcionFacturacionAplicacionService $excepcionFacturacionAplicacionService
-    ) {
+    public function store(Request $request, SuscripcionGeneracionMensualService $generacionMensualService, SuscripcionAjusteMensualRegistroService $ajusteMensualRegistroService, SuscripcionAjusteMensualAplicacionService $ajusteMensualAplicacionService, SuscripcionExcepcionFacturacionRegistroService $excepcionFacturacionRegistroService, SuscripcionExcepcionFacturacionAplicacionService $excepcionFacturacionAplicacionService) 
+    {
         $data = $request->validate([
             'anio' => [
                 'required',
