@@ -1,5 +1,5 @@
 @php
-    $trackingOnlyUsers = [1, 4, 8, 22, 30, 36,375, 14, 27];
+    $trackingOnlyUsers = [1, 4, 8, 22, 30, 36,375, 14, 27, 384];
     $isTrackingOnlyUser = auth()->check() && in_array(auth()->id(), $trackingOnlyUsers);
 @endphp
 
