@@ -20,6 +20,7 @@ class PagosMasivosDocumentoCompraExport implements
     WithStyles
 {
     private const MONTO_MAXIMO_POR_TRANSFERENCIA = 7000000;
+    private const TIPO_FACTURA_COMPRA_ELECTRONICA = 46;
 
     protected Collection $operaciones;
 
@@ -113,7 +114,15 @@ class PagosMasivosDocumentoCompraExport implements
         // =========================
         // MONTO REAL
         // =========================
-        $monto = (int) ($op['monto'] ?? 0);
+        $montoOperacion = max(0, (int) ($op['monto'] ?? 0));
+
+        $esPagoTotal = ($op['tipo'] ?? null) === 'pago';
+        $esFacturaCompraElectronica =
+            (int) $documento->tipo_documento_id === self::TIPO_FACTURA_COMPRA_ELECTRONICA;
+
+        $monto = $esPagoTotal && $esFacturaCompraElectronica
+            ? min($montoOperacion, max(0, (int) $documento->monto_neto))
+            : $montoOperacion;
 
         // =========================
         // CORREO BENEFICIARIO
