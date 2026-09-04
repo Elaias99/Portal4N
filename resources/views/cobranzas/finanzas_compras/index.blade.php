@@ -278,6 +278,12 @@
                         <span>Exportar Excel</span>
                     </button>
 
+                    <a href="{{ route('finanzas_compras.exportProveedores') }}"
+                       class="btn btn-outline-success btn-sm w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
+                        <i class="bi bi-bank"></i>
+                        <span>Exportar Cuentas Bancarias</span>
+                    </a>
+
                     <button type="button" class="btn btn-success btn-sm w-100 mb-2" data-bs-toggle="modal" data-bs-target="#modalPagosMasivos">
                         Pagar
                     </button>

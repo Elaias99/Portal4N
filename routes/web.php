@@ -556,6 +556,9 @@ Route::get('/finanzas_compras/export', [DocumentoCompraController::class, 'expor
 Route::get('/finanzas-compras/export-all', [DocumentoCompraController::class, 'exportAll'])
     ->name('finanzas_compras.exportAll')->middleware('auth');
 
+Route::get('/finanzas-compras/exportar-proveedores', [DocumentoCompraController::class, 'exportProveedores'])
+    ->name('finanzas_compras.exportProveedores')->middleware('auth');
+
 Route::post(
     'finanzas-compras/proximo-pago/exportar',
     [DocumentoCompraController::class, 'storePagoProgramadoMasivoExport']

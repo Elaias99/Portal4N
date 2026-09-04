@@ -10,6 +10,7 @@ use App\Models\CobranzaCompra;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Auth;
 use App\Exports\DocumentoCompraExport;
+use App\Exports\ProveedoresCuentasBancariasExport;
 use App\Models\MovimientoCompra;
 use App\Models\MovimientoDocumento;
 use Illuminate\Support\Facades\DB;
@@ -969,6 +970,25 @@ class DocumentoCompraController extends Controller
             "Cuentas_Por_Pagar_Todos_{$fecha}.xlsx"
         );
     }
+
+
+
+
+        /**
+     * Exporta el listado completo de proveedores (CobranzaCompra) con
+     * sus cuentas bancarias asociadas. No depende de los filtros de
+     * pantalla: siempre exporta la totalidad de la tabla.
+     */
+    public function exportProveedores()
+    {
+        $fecha = now()->format('Y-m-d_H-i-s');
+
+        return Excel::download(
+            new ProveedoresCuentasBancariasExport(),
+            "Proveedores_Cuentas_Bancarias_{$fecha}.xlsx"
+        );
+    }
+
 
 
 
