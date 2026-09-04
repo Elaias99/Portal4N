@@ -45,6 +45,7 @@ use App\Http\Controllers\HonorarioMensualRecController;
 use App\Http\Controllers\TrackingReportController;
 use App\Http\Controllers\PublicTrackingController;
 use App\Http\Controllers\SuscripcionLiquidacionDetalleController;
+use App\Http\Controllers\CourierCatalogoController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -137,6 +138,33 @@ Route::middleware(['auth'])->group(function () {
     
 
 });
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Módulo Courier
+|--------------------------------------------------------------------------
+*/
+Route::get(
+    '/courier/agentes',
+    [CourierCatalogoController::class, 'index']
+)->name('courier.agentes.index')->middleware('auth');
+
+Route::get(
+    '/courier/tarifas',
+    [CourierCatalogoController::class, 'tarifas']
+)->name('courier.tarifas')->middleware('auth');
+
+Route::get(
+    '/courier/configuraciones',
+    [CourierCatalogoController::class, 'configuraciones']
+)->name('courier.configuraciones')->middleware('auth');
+
+Route::get(
+    '/courier/agentes/{agente}',
+    [CourierCatalogoController::class, 'show']
+)->name('courier.agentes.show')->middleware('auth');
 
 
 
