@@ -18,9 +18,10 @@
     </p>
 
     <p>
-        Agradeceremos generar el documento correspondiente hasta el día
-        miércoles 22 de julio, para que el pago pueda ser realizado este
-        viernes 24 de julio.
+        Es indispensable que emita el documento correspondiente hasta el día
+        martes 15/9, para que el pago sea realizado el día jueves 17/9.
+        Si su documento es emitido fuera de plazo, el pago será realizado
+        el día viernes 25/9.
     </p>
 
 </body>
