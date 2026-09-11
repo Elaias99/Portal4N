@@ -12,21 +12,14 @@ use Symfony\Component\Console\Formatter\OutputFormatter;
 class CourierRevisarLocalidades extends Command
 {
     protected $signature = 'courier:revisar-localidades
-        {periodo : Código AAAAMM del período que se revisará, por ejemplo 202608}
         {--limite=20 : Cantidad máxima de grupos a mostrar; 0 muestra todos}';
 
-    protected $description = 'Revisa posibles equivalencias de localidades por período, sin modificar registros';
+    protected $description = 'Revisa posibles equivalencias de localidades en el catálogo de cobertura, sin modificar registros';
 
     public function handle(DatabaseManager $db, CourierRevisionLocalidadesService $revision): int
     {
-        $codigo = (string) $this->argument('periodo');
         $limite = filter_var($this->option('limite'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
 
-        if (! preg_match('/^[1-9][0-9]{3}(0[1-9]|1[0-2])$/D', $codigo)) {
-            $this->error('Indica un período AAAAMM válido, por ejemplo 202608.');
-
-            return self::INVALID;
-        }
         if ($limite === false) {
             $this->error('--limite debe ser un entero mayor o igual a 0.');
 
@@ -44,26 +37,13 @@ class CourierRevisarLocalidades extends Command
                 $this->texto($conexion->getDatabaseName()),
             ]]);
 
-            $periodo = $conexion->table('courier_periodos')
-                ->select('id', 'codigo', 'estado')
-                ->where('codigo', $codigo)
-                ->first();
-
-            if ($periodo === null) {
-                $this->error("No existe el período {$codigo}. No se revisaron otros períodos.");
-
-                return self::FAILURE;
-            }
-
-            $this->line('Período: '.$this->texto($periodo->codigo).' | Estado: '.$this->texto($periodo->estado));
-
-            // Query Builder evita eventos de modelos. Ambas consultas son SELECT
-            // y usan la misma conexión. No hay limpieza ni persistencia posterior.
+            // Query Builder evita eventos de modelos. Es un SELECT; no hay
+            // limpieza ni persistencia posterior. El catálogo no está
+            // versionado por período, así que se revisa completo.
             $filas = $conexion->table('courier_cobertura_comunas as c')
                 ->leftJoin('courier_agentes as a', 'a.id', '=', 'c.courier_agente_id')
-                ->where('c.courier_periodo_id', $periodo->id)
                 ->select([
-                    'c.id', 'c.courier_periodo_id', 'c.courier_agente_id',
+                    'c.id', 'c.courier_agente_id',
                     'c.localidad', 'c.localidad_clave', 'c.zona',
                     'c.pagar_retorno', 'c.valor_retorno', 'a.nombre as agente_nombre',
                 ])

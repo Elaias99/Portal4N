@@ -33,7 +33,6 @@ class CourierRevisionLocalidadesService
             $total++;
             $fila = [
                 'id' => (int) $cobertura->id,
-                'periodo_id' => (int) $cobertura->courier_periodo_id,
                 'agente_id' => $cobertura->courier_agente_id === null ? null : (int) $cobertura->courier_agente_id,
                 'agente' => $cobertura->agente_nombre,
                 'localidad' => (string) $cobertura->localidad,
@@ -50,10 +49,8 @@ class CourierRevisionLocalidadesService
                 continue;
             }
 
-            // Aun recibiendo varios períodos, nunca se mezclan sus coberturas.
-            $grupo = json_encode([$fila['periodo_id'], $clave], JSON_THROW_ON_ERROR);
-            $agrupados[$grupo]['clave'] = $clave;
-            $agrupados[$grupo]['filas'][] = $fila;
+            $agrupados[$clave]['clave'] = $clave;
+            $agrupados[$clave]['filas'][] = $fila;
         }
 
         $grupos = [];
@@ -87,7 +84,6 @@ class CourierRevisionLocalidadesService
         usort($grupos, fn (array $a, array $b) =>
             ($b['conflicto'] <=> $a['conflicto'])
             ?: strcmp($a['clave'], $b['clave'])
-            ?: ($a['filas'][0]['periodo_id'] <=> $b['filas'][0]['periodo_id'])
         );
 
         return ['total' => $total, 'grupos' => $grupos, 'sin_nombre' => $sinNombre];

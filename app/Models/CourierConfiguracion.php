@@ -14,25 +14,28 @@ class CourierConfiguracion extends Model
     protected $table = 'courier_configuracions';
 
     protected $fillable = [
-        'courier_periodo_id',
         'courier_agente_id',
         'comerciante',
         'servicio',
         'llave',
         'pagar',
         'tabla',
+        'activo'
     ];
 
     protected $casts = [
         'tabla' => 'integer',
+        'activo' => 'boolean'
     ];
 
-    public function periodo(): BelongsTo
+    /*
+     * Replica PagosCentroCostos!D: =+A2&B2&C2, en minúsculas porque la
+     * columna es utf8mb4_bin. Comerciante y servicio van tal cual llegan
+     * de Geolice, sin trim: la llave debe calzar byte a byte.
+     */
+    public static function llave(string $agente, string $comerciante, string $servicio): string
     {
-        return $this->belongsTo(
-            CourierPeriodo::class,
-            'courier_periodo_id'
-        );
+        return mb_strtolower($agente . $comerciante . $servicio);
     }
 
     public function agente(): BelongsTo

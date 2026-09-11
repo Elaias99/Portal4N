@@ -13,18 +13,19 @@ class CourierCoberturaComuna extends Model
     protected $table = 'courier_cobertura_comunas';
 
     protected $fillable = [
-        'courier_periodo_id',
         'courier_agente_id',
         'localidad',
         'localidad_clave',
         'zona',
         'pagar_retorno',
         'valor_retorno',
+        'activo',
     ];
 
     protected $casts = [
         'pagar_retorno' => 'boolean',
         'valor_retorno' => 'integer',
+        'activo' => 'boolean',
     ];
 
     public function periodo(): BelongsTo

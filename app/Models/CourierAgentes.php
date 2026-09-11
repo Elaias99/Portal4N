@@ -44,4 +44,11 @@ class CourierAgentes extends Model
         );
     }
 
+    public function configuraciones(): HasMany
+    {
+        return $this->hasMany(
+            CourierConfiguracion::class,
+            'courier_agente_id'
+        );
+    }
 }

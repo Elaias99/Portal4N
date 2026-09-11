@@ -26,6 +26,7 @@ export default defineConfig({
                 'resources/css/suscripciones_liquidaciones.css',
                 'resources/css/suscripciones_generacion_mensual.css',
                 'resources/css/finanzas_compras.css',
+                'resources/css/courier.css',
                 'resources/js/react/suscripciones/opv-puntos/opv-puntos.css',
                 'resources/sass/app.scss',
 

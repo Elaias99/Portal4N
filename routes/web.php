@@ -146,25 +146,29 @@ Route::middleware(['auth'])->group(function () {
 | Módulo Courier
 |--------------------------------------------------------------------------
 */
-Route::get(
-    '/courier/agentes',
-    [CourierCatalogoController::class, 'index']
-)->name('courier.agentes.index')->middleware('auth');
+Route::middleware('auth')->prefix('courier')->name('courier.')->group(function () {
+    Route::get('/', [CourierCatalogoController::class, 'portada'])
+        ->name('index');
 
-Route::get(
-    '/courier/tarifas',
-    [CourierCatalogoController::class, 'tarifas']
-)->name('courier.tarifas')->middleware('auth');
+    Route::get('/agentes', [CourierCatalogoController::class, 'index'])
+        ->name('agentes.index');
 
-Route::get(
-    '/courier/configuraciones',
-    [CourierCatalogoController::class, 'configuraciones']
-)->name('courier.configuraciones')->middleware('auth');
+    Route::get('/agentes/{agente}', [CourierCatalogoController::class, 'show'])
+        ->whereNumber('agente')
+        ->name('agentes.show');
 
-Route::get(
-    '/courier/agentes/{agente}',
-    [CourierCatalogoController::class, 'show']
-)->name('courier.agentes.show')->middleware('auth');
+    Route::get('/comunas', [CourierCatalogoController::class, 'comunas'])
+        ->name('comunas');
+
+    Route::get('/tarifas', [CourierCatalogoController::class, 'tarifas'])
+        ->name('tarifas');
+
+    Route::get('/configuraciones', [CourierCatalogoController::class, 'configuraciones'])
+        ->name('configuraciones');
+
+    Route::get('/proveedores', [CourierCatalogoController::class, 'proveedores'])
+        ->name('proveedores');
+});
 
 
 

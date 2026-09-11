@@ -14,7 +14,6 @@ class CourierTarifa extends Model
     protected $table = 'courier_tarifas';
 
     protected $fillable = [
-        'courier_periodo_id',
         'numero',
         'nombre',
         'kilo_adicional',
@@ -25,13 +24,6 @@ class CourierTarifa extends Model
         'kilo_adicional' => 'integer',
     ];
 
-    public function periodo(): BelongsTo
-    {
-        return $this->belongsTo(
-            CourierPeriodo::class,
-            'courier_periodo_id'
-        );
-    }
 
     public function tramos(): HasMany
     {
