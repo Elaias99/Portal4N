@@ -108,9 +108,23 @@
             vertical-align: top;
         }
 
-        .detail-table tfoot td {
+        /*
+         * Una fila nunca se parte entre páginas, y los tres totales
+         * viajan juntos. Van en un <tbody> y no en <tfoot> porque DomPDF
+         * repite el tfoot en cada página donde la tabla se corta.
+         */
+        .detail-table tr {
+            page-break-inside: avoid;
+        }
+
+        .detail-table .totales {
+            page-break-inside: avoid;
+        }
+
+        .detail-table .totales td {
             border: 1px solid #000;
             padding: 5px;
+            background: #f7f7f7;
         }
 
         .col-detalle {
@@ -150,12 +164,10 @@
         }
 
         .payment-box {
-            position: fixed;
-            left: 0;
-            right: 0;
-            bottom: 20px;
+            margin-top: 14px;
             border: 1px solid #999;
             padding: 8px 12px;
+            page-break-inside: avoid;
         }
 
         .payment-title {
@@ -179,6 +191,11 @@
 
         .footer-right {
             float: right;
+        }
+
+        /* Número de página real; DomPDF soporta counter(page). */
+        .pagina:before {
+            content: counter(page);
         }
     </style>
 </head>
@@ -354,7 +371,7 @@
             @endforeach
         </tbody>
 
-        <tfoot>
+        <tbody class="totales">
             <tr>
                 <td colspan="3" class="fw-bold text-end">
                     TOTAL {{ $detalleDocumento ?: 'BRUTO' }}
@@ -381,7 +398,7 @@
                     {{ number_format($totalLiquido, 0, ',', '.') }}
                 </td>
             </tr>
-        </tfoot>
+        </tbody>
     </table>
 
     <div class="payment-box">
@@ -398,7 +415,7 @@
 
     <div class="footer">
         <span class="footer-left">{{ $fechaPie }}</span>
-        <span class="footer-right">Página 1</span>
+        <span class="footer-right">Página <span class="pagina"></span></span>
     </div>
 
 </body>
