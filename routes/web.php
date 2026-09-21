@@ -155,6 +155,9 @@ Route::middleware('auth')->prefix('courier')->name('courier.')->group(function (
     Route::post('/importar-geolice', [CourierPagoController::class, 'importarGeolice'])
         ->name('importar-geolice');
 
+    Route::post('/revisar-geolice', [CourierPagoController::class, 'revisarGeolice'])
+        ->name('revisar-geolice');
+
     Route::post('/importar-pesajes', [CourierPagoController::class, 'importarPesajes'])
         ->name('importar-pesajes');
 

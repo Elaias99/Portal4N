@@ -85,9 +85,33 @@ class CourierPagoService
                 ]
             );
 
-            $import = new GeoliceBultosImport($periodo, $nombre);
 
-            Excel::import($import, $archivo, null, TipoExcel::XLSX);
+            $extension = strtolower($archivo->getClientOriginalExtension());
+
+            $tipoExcel = match ($extension) {
+                'xlsx' => TipoExcel::XLSX,
+                'csv' => TipoExcel::CSV,
+                default => throw new \InvalidArgumentException(
+                    "Formato de archivo no soportado: {$extension}"
+                ),
+            };
+
+            $delimitador = $extension === 'csv'
+                ? $this->detectarDelimitadorCsv($archivo->getRealPath())
+                : ',';
+
+            $import = new GeoliceBultosImport(
+                $periodo,
+                $nombre,
+                $delimitador
+            );
+
+            Excel::import(
+                $import,
+                $archivo,
+                null,
+                $tipoExcel
+            );
 
             return CourierImportacion::create([
                 'courier_periodo_id' => $periodo->id,
@@ -306,6 +330,90 @@ class CourierPagoService
         ];
     }
 
+
+
+
+
+
+    public function revisarGeolice(
+        UploadedFile $archivo,
+        string $codigoPeriodo
+    ): array {
+        set_time_limit(0);
+        ini_set('memory_limit', '2048M');
+
+        $nombre = $archivo->getClientOriginalName();
+
+        DB::beginTransaction();
+
+        try {
+            $periodo = CourierPeriodo::firstOrCreate(
+                ['codigo' => $codigoPeriodo],
+                [
+                    'anio' => (int) substr($codigoPeriodo, 0, 4),
+                    'mes' => (int) substr($codigoPeriodo, 4, 2),
+                    'estado' => 'abierto',
+                ]
+            );
+
+            $extension = strtolower($archivo->getClientOriginalExtension());
+
+            $tipoExcel = match ($extension) {
+                'xlsx' => TipoExcel::XLSX,
+                'csv' => TipoExcel::CSV,
+                default => throw new \InvalidArgumentException(
+                    "Formato de archivo no soportado: {$extension}"
+                ),
+            };
+
+            $delimitador = $extension === 'csv'
+                ? $this->detectarDelimitadorCsv($archivo->getRealPath())
+                : ',';
+
+            $import = new GeoliceBultosImport(
+                $periodo,
+                $nombre,
+                $delimitador
+            );
+
+            Excel::import(
+                $import,
+                $archivo,
+                null,
+                $tipoExcel
+            );
+
+            $resultado = [
+                'archivo' => $nombre,
+                'periodo' => $codigoPeriodo,
+                'resumen' => $import->resumen,
+                'estados' => $this->ordenar($import->estados),
+                'estados_desconocidos' => $import->estadosDesconocidos,
+                'comunas_fuera_de_catalogo' => $this->ordenar(
+                    $import->comunasFueraDeCatalogo
+                ),
+                'sin_configuracion' => $this->ordenar(
+                    $import->sinConfiguracion
+                ),
+            ];
+
+            DB::rollBack();
+
+            return $resultado;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            throw $e;
+        }
+    }
+
+
+
+
+
+
+
+
     /* Mayor cantidad primero, conservando las claves. */
     private function ordenar(array $lista): array
     {
@@ -313,4 +421,31 @@ class CourierPagoService
 
         return $lista;
     }
+
+
+
+    private function detectarDelimitadorCsv(string $ruta): string
+    {
+        $archivo = fopen($ruta, 'r');
+
+        if ($archivo === false) {
+            throw new \RuntimeException('No se pudo abrir el archivo CSV.');
+        }
+
+        $primeraLinea = fgets($archivo);
+
+        fclose($archivo);
+
+        if ($primeraLinea === false) {
+            throw new \RuntimeException('El archivo CSV está vacío.');
+        }
+
+        $comas = substr_count($primeraLinea, ',');
+        $puntoComas = substr_count($primeraLinea, ';');
+
+        return $puntoComas > $comas ? ';' : ',';
+    }
+
+
+
 }

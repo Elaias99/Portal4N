@@ -12,6 +12,7 @@ use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
 use Maatwebsite\Excel\Concerns\WithStartRow;
+use Maatwebsite\Excel\Concerns\WithCustomCsvSettings;
 use PhpOffice\PhpSpreadsheet\Shared\Date as FechaExcel;
 
 /*
@@ -24,7 +25,7 @@ use PhpOffice\PhpSpreadsheet\Shared\Date as FechaExcel;
  * en los arreglos públicos para que el comando lo muestre. No escribe
  * nada del cálculo (agente, tabla, kilos): eso es del paso siguiente.
  */
-class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRow
+class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRow, WithCustomCsvSettings
 {
     public array $resumen = [
         'filas' => 0,
@@ -61,19 +62,43 @@ class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRo
     /** @var array<string,int> estado → existe */
     private array $estadosCatalogo;
 
+
+
+
+
     public function __construct(
         private CourierPeriodo $periodo,
         private string $archivoOrigen,
+        private string $delimitadorCsv = ',',
     ) {
         $this->cobertura = CourierCoberturaComuna::query()
             ->with('agente:id,nombre')
             ->get(['localidad_clave', 'courier_agente_id'])
-            ->mapWithKeys(fn ($c) => [$c->localidad_clave => $c->agente?->nombre ?? ''])
+            ->mapWithKeys(fn ($c) => [
+                $c->localidad_clave => $c->agente?->nombre ?? ''
+            ])
             ->all();
 
-        $this->configuraciones = CourierConfiguracion::pluck('llave')->flip()->all();
-        $this->estadosCatalogo = CourierEstadoEntrega::pluck('estado')->flip()->all();
+        $this->configuraciones = CourierConfiguracion::pluck('llave')
+            ->flip()
+            ->all();
+
+        $this->estadosCatalogo = CourierEstadoEntrega::pluck('estado')
+            ->flip()
+            ->all();
     }
+
+
+
+    public function getCsvSettings(): array
+    {
+        return [
+            'delimiter' => $this->delimitadorCsv,
+        ];
+    }
+
+
+
 
     public function startRow(): int
     {

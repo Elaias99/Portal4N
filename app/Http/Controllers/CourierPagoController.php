@@ -64,17 +64,19 @@ class CourierPagoController extends Controller
         ]);
     }
 
-    public function importarGeolice(Request $request): RedirectResponse
+
+
+    public function revisarGeolice(Request $request): RedirectResponse
     {
         $datos = $request->validate(
             [
-                'archivo' => ['required', 'file', 'extensions:xlsx', 'max:40960'],
+                'archivo' => ['required', 'file', 'extensions:xlsx,csv', 'max:40960'],
                 'periodo' => ['required', 'date_format:Y-m'],
             ],
             [
-                'archivo.required' => 'Elige la descarga de Geolice (archivo .xlsx).',
+                'archivo.required' => 'Elige la descarga de Geolice.',
                 'archivo.file' => 'El archivo no se recibió completo; inténtalo de nuevo.',
-                'archivo.extensions' => 'El archivo debe ser el .xlsx que entrega Geolice.',
+                'archivo.extensions' => 'El archivo debe estar en formato .xlsx o .csv.',
                 'archivo.max' => 'El archivo supera el tamaño permitido (40 MB).',
                 'periodo.required' => 'Indica el mes de pago.',
                 'periodo.date_format' => 'El mes de pago no tiene un formato válido.',
@@ -83,11 +85,57 @@ class CourierPagoController extends Controller
 
         $codigo = str_replace('-', '', $datos['periodo']);
 
-        $existente = CourierPeriodo::query()->where('codigo', $codigo)->first();
+        try {
+            $resultado = $this->pago->revisarGeolice(
+                $request->file('archivo'),
+                $codigo
+            );
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()
+                ->withErrors([
+                    'archivo' => 'No se pudo revisar el archivo: ' . $e->getMessage()
+                ])
+                ->withInput();
+        }
+
+        return back()
+            ->with('revisionGeolice', $resultado)
+            ->withInput();
+    }
+
+
+
+
+    public function importarGeolice(Request $request): RedirectResponse
+    {
+        $datos = $request->validate(
+            [
+                'archivo' => ['required', 'file', 'extensions:xlsx,csv', 'max:40960'],
+                'periodo' => ['required', 'date_format:Y-m'],
+            ],
+            [
+                'archivo.required' => 'Elige la descarga de Geolice (archivo .xlsx o .csv).',
+                'archivo.file' => 'El archivo no se recibió completo; inténtalo de nuevo.',
+                'archivo.extensions' => 'El archivo debe ser una descarga de Geolice en formato .xlsx o .csv.',
+                'archivo.max' => 'El archivo supera el tamaño permitido (40 MB).',
+                'periodo.required' => 'Indica el mes de pago.',
+                'periodo.date_format' => 'El mes de pago no tiene un formato válido.',
+            ]
+        );
+
+        $codigo = str_replace('-', '', $datos['periodo']);
+
+        $existente = CourierPeriodo::query()
+            ->where('codigo', $codigo)
+            ->first();
 
         if ($existente?->estaCerrado()) {
             return back()
-                ->withErrors(['periodo' => "El período {$existente->nombre} está cerrado; no se puede cargar sobre él."])
+                ->withErrors([
+                    'periodo' => "El período {$existente->nombre} está cerrado; no se puede cargar sobre él."
+                ])
                 ->withInput();
         }
 
@@ -101,7 +149,9 @@ class CourierPagoController extends Controller
             report($e);
 
             return back()
-                ->withErrors(['archivo' => 'Falló la importación, no se guardó nada: ' . $e->getMessage()])
+                ->withErrors([
+                    'archivo' => 'Falló la importación, no se guardó nada: ' . $e->getMessage()
+                ])
                 ->withInput();
         }
 
@@ -110,6 +160,14 @@ class CourierPagoController extends Controller
             'importacion' => $importacion->id,
         ]);
     }
+
+
+
+
+
+
+
+
 
     public function importarPesajes(Request $request): RedirectResponse
     {

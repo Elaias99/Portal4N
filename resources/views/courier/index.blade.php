@@ -4,28 +4,236 @@
 
 @section('content')
 @php
-    $n = fn ($v) => number_format((int) $v, 0, ',', '.');
-    $hayBultos = $alertas !== null && $alertas['total'] > 0;
-    $hayPesajes = $alertas !== null && $alertas['pesajes']['registros'] > 0;
-    $ultimaCarga = $importaciones->first();
-    $tipoMostrado = $mostradas->first()?->tipo;
+    $revision = request()->boolean('nuevo') ? null : session('revisionGeolice');
+
+    $n = fn ($v) => number_format((int) ($v ?? 0), 0, ',', '.');
+
+    $resumenRevision = $revision['resumen'] ?? [];
+
+    $comunasFuera = $revision['comunas_fuera_de_catalogo'] ?? [];
+    $sinConfiguracion = $revision['sin_configuracion'] ?? [];
+    $estadosDesconocidos = $revision['estados_desconocidos'] ?? [];
+
+    $bultosComunasFuera = array_sum($comunasFuera);
+    $bultosSinConfiguracion = array_sum($sinConfiguracion);
+    $bultosEstadosDesconocidos = array_sum($estadosDesconocidos);
+
+    $hayAdvertencias =
+        ! empty($comunasFuera)
+        || ! empty($sinConfiguracion)
+        || ! empty($estadosDesconocidos)
+        || (($resumenRevision['fechas_no_reconocidas'] ?? 0) > 0)
+        || (($resumenRevision['sin_comuna'] ?? 0) > 0);
+
+    $periodoNombre = null;
+
+    if (! empty($revision['periodo']) && preg_match('/^(\\d{4})(\\d{2})$/', $revision['periodo'], $m)) {
+        $meses = [
+            1 => 'Enero',
+            2 => 'Febrero',
+            3 => 'Marzo',
+            4 => 'Abril',
+            5 => 'Mayo',
+            6 => 'Junio',
+            7 => 'Julio',
+            8 => 'Agosto',
+            9 => 'Septiembre',
+            10 => 'Octubre',
+            11 => 'Noviembre',
+            12 => 'Diciembre',
+        ];
+
+        $periodoNombre = ($meses[(int) $m[2]] ?? $m[2]) . ' ' . $m[1];
+    }
 @endphp
+
+<style>
+    .co-review-summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .co-review-stat {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1rem 1.1rem;
+        background: #fff;
+    }
+
+    .co-review-stat-label {
+        display: block;
+        color: #6b7280;
+        font-size: .85rem;
+        margin-bottom: .35rem;
+    }
+
+    .co-review-stat-value {
+        display: block;
+        font-size: 1.4rem;
+        line-height: 1.1;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .co-review-status {
+        display: flex;
+        gap: .75rem;
+        align-items: flex-start;
+        padding: 1rem 1.1rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+    }
+
+    .co-review-status.is-ok {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+    }
+
+    .co-review-status.is-warn {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+    }
+
+    .co-review-status strong {
+        display: block;
+        margin-bottom: .2rem;
+    }
+
+    .co-review-status p {
+        margin: 0;
+        color: #4b5563;
+    }
+
+    .co-review-issues {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .co-review-issue {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #fff;
+        padding: 1rem 1.1rem;
+    }
+
+    .co-review-issue.is-ok {
+        border-color: #bbf7d0;
+    }
+
+    .co-review-issue.is-warn {
+        border-color: #fde68a;
+    }
+
+    .co-review-issue-title {
+        margin: 0 0 .35rem;
+        font-size: 1rem;
+        font-weight: 700;
+    }
+
+    .co-review-issue-count {
+        font-size: 1.75rem;
+        line-height: 1;
+        font-weight: 700;
+        margin-bottom: .45rem;
+    }
+
+    .co-review-issue-text {
+        margin: 0;
+        color: #6b7280;
+        font-size: .9rem;
+    }
+
+    .co-review-details {
+        margin-top: .85rem;
+    }
+
+    .co-review-details summary {
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .co-review-list {
+        margin: .75rem 0 0;
+        padding: 0;
+        list-style: none;
+        max-height: 240px;
+        overflow: auto;
+    }
+
+    .co-review-list li {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: .45rem 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .co-review-list li:last-child {
+        border-bottom: 0;
+    }
+
+    .co-review-actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: center;
+        margin-top: 1.25rem;
+    }
+
+    .co-review-actions-right {
+        display: flex;
+        gap: .75rem;
+        align-items: center;
+    }
+
+    .co-review-disabled-note {
+        color: #6b7280;
+        font-size: .85rem;
+        margin: .5rem 0 0;
+        text-align: right;
+    }
+
+    @media (max-width: 900px) {
+        .co-review-summary,
+        .co-review-issues {
+            grid-template-columns: 1fr;
+        }
+
+        .co-review-actions {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .co-review-actions-right {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .co-review-disabled-note {
+            text-align: left;
+        }
+    }
+</style>
 
 <div class="co-page">
 
     @include('courier.partials.header', [
         'titulo' => 'Courier · Pago del mes',
-        'subtitulo' => 'Carga la descarga de Geolice, revisa qué no calza con los catálogos y sigue el proceso hasta el pago a cada agente.',
+        'subtitulo' => $revision
+            ? 'Revisa el resultado antes de decidir si el archivo debe incorporarse al proceso.'
+            : 'Carga la descarga de Geolice para comenzar el proceso de pago Courier.',
         'volverRuta' => route('cobranzas.general'),
         'volverTexto' => 'Volver al panel de Finanzas',
-        'meta' => 'Datos mensuales · Geolice y bodega',
+        'meta' => $revision ? 'Revisión del archivo' : 'Inicio del proceso',
     ])
-
-    @include('courier.partials.nav', ['activo' => 'index'])
 
     @if($errors->any())
         <div class="co-alert co-alert-danger" role="alert">
-            <strong>No se pudo importar.</strong>
+            <strong>No se pudo revisar el archivo.</strong>
+
             <ul>
                 @foreach($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -34,290 +242,321 @@
         </div>
     @endif
 
-    {{-- ====== PERÍODO ====== --}}
-    <section class="co-periodo">
-        <form method="GET" action="{{ route('courier.index') }}" class="co-periodo-form">
-            <label for="periodo">Período de pago</label>
-            <select id="periodo" name="periodo" class="form-select" onchange="this.form.submit()" @disabled($periodos->isEmpty())>
-                @forelse($periodos as $p)
-                    <option value="{{ $p->codigo }}" @selected($periodo && $p->id === $periodo->id)>{{ $p->nombre }}</option>
-                @empty
-                    <option value="">Sin períodos todavía</option>
-                @endforelse
-            </select>
-        </form>
-
-        <div class="co-periodo-info">
-            @if($periodo)
-                <span class="co-badge {{ $periodo->estaCerrado() ? 'co-badge-neutral' : 'co-badge-si' }}">
-                    {{ $periodo->estaCerrado() ? 'Cerrado' : 'Abierto' }}
-                </span>
-                <span class="co-periodo-kpi"><strong>{{ $n($alertas['total']) }}</strong> bultos cargados</span>
-                @if($ultimaCarga)
-                    <span class="co-periodo-kpi">Última carga <strong>{{ $ultimaCarga->created_at->format('d-m-Y H:i') }}</strong></span>
-                @endif
-            @else
-                <span class="co-periodo-kpi is-muted">Aún no hay períodos: la primera carga crea el suyo.</span>
-            @endif
-        </div>
-    </section>
-
-    {{-- ====== PASOS DEL PROCESO ====== --}}
-    <ol class="co-steps">
-        <li class="co-step {{ $hayBultos ? 'is-done' : 'is-current' }}">
-            <span class="co-step-num">1</span>
-            <span class="co-step-body">
-                <span class="co-step-title">Importar Geolice</span>
-                <span class="co-step-state">{{ $hayBultos ? $n($alertas['total']) . ' bultos' : 'Pendiente' }}</span>
-            </span>
-        </li>
-        <li class="co-step {{ $hayPesajes ? 'is-done' : ($hayBultos ? 'is-current' : 'is-soon') }}">
-            <span class="co-step-num">2</span>
-            <span class="co-step-body">
-                <span class="co-step-title">Importar pesajes de bodega</span>
-                <span class="co-step-state">
-                    @if($hayPesajes)
-                        {{ $n($alertas['pesajes']['dias']) }} {{ $alertas['pesajes']['dias'] === 1 ? 'día' : 'días' }} · {{ $n($alertas['con_pesaje']) }} bultos con peso
-                    @elseif($hayBultos)
-                        Pendiente
-                    @else
-                        Después del paso 1
-                    @endif
-                </span>
-            </span>
-        </li>
-        <li class="co-step is-soon">
-            <span class="co-step-num">3</span>
-            <span class="co-step-body">
-                <span class="co-step-title">Calcular pago</span>
-                <span class="co-step-state">Próximo paso</span>
-            </span>
-        </li>
-        <li class="co-step is-soon">
-            <span class="co-step-num">4</span>
-            <span class="co-step-body">
-                <span class="co-step-title">Resumen y banco</span>
-                <span class="co-step-state">Próximo paso</span>
-            </span>
-        </li>
-    </ol>
-
-    {{-- ====== RESULTADO DE UNA CARGA (carrusel) ====== --}}
-    @if($mostradas->isNotEmpty())
-        @if($tipoMostrado === \App\Models\CourierImportacion::TIPO_PESAJES)
-            @include('courier.partials.pesajes-slider', ['cargas' => $mostradas, 'periodo' => $periodo])
-        @else
-            @include('courier.partials.importacion-slider', ['importacion' => $mostradas->first(), 'periodo' => $periodo])
-        @endif
-    @endif
-
-    {{-- ====== PASO 1: IMPORTAR ====== --}}
-    <section class="co-region co-upload" id="importar">
-        <div class="co-region-head">
-            <h2 class="co-region-title">Paso 1 · Importar descarga de Geolice</h2>
-            <span class="co-region-meta">El archivo <code>export-NNNN-packages.xlsx</code>, tal cual lo entrega Geolice</span>
-        </div>
-        <form method="POST" action="{{ route('courier.importar-geolice') }}" enctype="multipart/form-data" class="co-region-body co-upload-form" data-upload>
-            @csrf
-            <div class="co-upload-row">
-                <div class="co-field co-upload-file">
-                    <label for="archivo">Archivo</label>
-                    <input type="file" id="archivo" name="archivo" class="form-control" accept=".xlsx" required>
+    @if(!$revision)
+        <section class="co-region co-upload" id="importar">
+            <div class="co-region-head">
+                <div>
+                    <h2 class="co-region-title">Comenzar pago Courier</h2>
+                    <p class="co-note">
+                        Selecciona el mes de pago y carga la descarga de Geolice correspondiente.
+                        En esta etapa el archivo sólo se revisa; todavía no se guardan bultos.
+                    </p>
                 </div>
-                <div class="co-field">
-                    <label for="mes">Mes de pago</label>
-                    <input type="month" id="mes" name="periodo" class="form-control" value="{{ old('periodo', $mesSugerido) }}" required>
-                </div>
-                <button type="submit" class="co-btn co-btn-primary" data-submit>Importar</button>
             </div>
-            <p class="co-note">
-                Se puede cargar la misma descarga o una más nueva del mismo mes: los bultos ya cargados se actualizan, no se duplican.
-                Los que ya existen de un mes anterior no se tocan.
-            </p>
-            <p class="co-upload-progress" data-progress hidden>
-                Importando… la descarga trae decenas de miles de filas y puede tardar un par de minutos. No cierres esta pestaña.
-            </p>
-        </form>
-    </section>
 
-    {{-- ====== PASO 2: PESAJES DE BODEGA ====== --}}
-    <section class="co-region co-upload" id="pesajes">
-        <div class="co-region-head">
-            <h2 class="co-region-title">Paso 2 · Importar pesajes de bodega</h2>
-            <span class="co-region-meta">Los CSV <code>Proceso del dia dd-mm-aaaa.csv</code>; puedes elegir varios días a la vez</span>
-        </div>
-        <form method="POST" action="{{ route('courier.importar-pesajes') }}" enctype="multipart/form-data" class="co-region-body co-upload-form" data-upload>
-            @csrf
-            <div class="co-upload-row">
-                <div class="co-field co-upload-file">
-                    <label for="archivos">Archivos</label>
-                    <input type="file" id="archivos" name="archivos[]" class="form-control" accept=".csv,.txt" multiple required>
+            <form
+                method="POST"
+                action="{{ route('courier.revisar-geolice') }}"
+                enctype="multipart/form-data"
+                class="co-region-body co-upload-form"
+                data-upload
+            >
+                @csrf
+
+                <div class="co-upload-row">
+                    <div class="co-field">
+                        <label for="mes">Mes de pago</label>
+                        <input
+                            type="month"
+                            id="mes"
+                            name="periodo"
+                            class="form-control"
+                            value="{{ old('periodo', $mesSugerido) }}"
+                            required
+                        >
+                    </div>
+
+                    <div class="co-field co-upload-file">
+                        <label for="archivo">Archivo de Geolice</label>
+                        <input
+                            type="file"
+                            id="archivo"
+                            name="archivo"
+                            class="form-control"
+                            accept=".xlsx,.csv"
+                            required
+                        >
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="co-btn co-btn-primary"
+                        data-submit
+                        data-loading-text="Revisando…"
+                    >
+                        Revisar archivo
+                    </button>
                 </div>
-                <div class="co-field">
-                    <label for="mes-pesajes">Mes de pago</label>
-                    <input type="month" id="mes-pesajes" name="periodo" class="form-control" value="{{ old('periodo', $mesSugerido) }}" required>
-                </div>
-                <button type="submit" class="co-btn co-btn-primary" data-submit>Importar</button>
-            </div>
-            <p class="co-note">
-                La fecha del pesaje se toma del nombre del archivo. Cada bulto guarda su peso por día: si el mismo CSV se carga dos veces, se actualiza, no se duplica.
-                @if($hayBultos && ! $hayPesajes)
-                    Hoy {{ $n($alertas['total']) }} bultos esperan su peso de bodega.
-                @endif
-            </p>
-            <p class="co-upload-progress" data-progress hidden>
-                Importando pesajes…
-            </p>
-        </form>
-    </section>
 
-    {{-- ====== ALERTAS VIVAS DEL PERÍODO ====== --}}
-    @if($hayBultos)
-        @php
-            $comunasFuera = $alertas['comunas_fuera_de_catalogo'];
-            $sinConfig = $alertas['sin_configuracion'];
-            $estadosDesc = $alertas['estados_desconocidos'];
-        @endphp
-
-        <div class="co-alertas-head">
-            <h2 class="co-region-title">Qué no calza con los catálogos</h2>
-            <span class="co-region-meta">Se recalcula cada vez que abres esta página. Cuando el catálogo se corrige, la alerta desaparece sola.</span>
-        </div>
-
-        <div class="co-alertas">
-
-            <article class="co-alerta {{ $comunasFuera === [] ? 'is-ok' : 'is-warn' }}">
-                <span class="co-alerta-count">{{ $n(count($comunasFuera)) }}</span>
-                <h3 class="co-alerta-title">{{ count($comunasFuera) === 1 ? 'Comuna no reconocida' : 'Comunas no reconocidas' }}</h3>
-                <p class="co-alerta-text">
-                    @if($comunasFuera === [])
-                        Todas las comunas de destino existen en el catálogo.
-                    @else
-                        {{ $n($alertas['comunas_fuera_bultos']) }} bultos vienen con una comuna que no está en el catálogo, así que no se sabe qué agente los reparte.
-                    @endif
+                <p class="co-note">
+                    Usa la descarga de Geolice en formato <code>.xlsx</code> o <code>.csv</code>.
                 </p>
-                @if($comunasFuera !== [])
-                    <details class="co-alerta-details">
-                        <summary>Ver comunas</summary>
-                        <ul class="co-alerta-list">
-                            @foreach(array_slice($comunasFuera, 0, 30, true) as $comuna => $cant)
-                                <li><span>{{ $comuna }}</span><strong>{{ $n($cant) }}</strong></li>
-                            @endforeach
-                        </ul>
-                        @if(count($comunasFuera) > 30)
-                            <p class="co-note">… y {{ count($comunasFuera) - 30 }} más.</p>
-                        @endif
-                    </details>
-                @endif
-            </article>
 
-            <article class="co-alerta {{ $sinConfig === [] ? 'is-ok' : 'is-warn' }}">
-                <span class="co-alerta-count">{{ $n(count($sinConfig)) }}</span>
-                <h3 class="co-alerta-title">{{ count($sinConfig) === 1 ? 'Combinación sin configuración de pago' : 'Combinaciones sin configuración de pago' }}</h3>
-                <p class="co-alerta-text">
-                    @if($sinConfig === [])
-                        Todas las combinaciones agente + cliente + servicio tienen configuración.
-                    @else
-                        {{ $n($alertas['sin_configuracion_bultos']) }} bultos caen en una combinación agente + cliente + servicio que no existe en Configuración de pago. No es tabla 0: nadie ha definido si se pagan.
-                    @endif
+                <p class="co-upload-progress" data-progress hidden>
+                    Revisando el archivo… este proceso puede tardar unos minutos. No cierres esta pestaña.
                 </p>
-                @if($sinConfig !== [])
-                    <details class="co-alerta-details">
-                        <summary>Ver combinaciones</summary>
-                        <ul class="co-alerta-list">
-                            @foreach(array_slice($sinConfig, 0, 30, true) as $combo => $cant)
-                                <li><span>{{ $combo }}</span><strong>{{ $n($cant) }}</strong></li>
-                            @endforeach
-                        </ul>
-                        @if(count($sinConfig) > 30)
-                            <p class="co-note">… y {{ count($sinConfig) - 30 }} más.</p>
-                        @endif
-                    </details>
-                @endif
-            </article>
+            </form>
+        </section>
+    @else
 
-            <article class="co-alerta {{ $estadosDesc === [] ? 'is-ok' : 'is-danger' }}">
-                <span class="co-alerta-count">{{ $n(count($estadosDesc)) }}</span>
-                <h3 class="co-alerta-title">{{ count($estadosDesc) === 1 ? 'Estado de entrega fuera del catálogo' : 'Estados de entrega fuera del catálogo' }}</h3>
-                <p class="co-alerta-text">
-                    @if($estadosDesc === [])
-                        Todos los estados que informa Geolice están en el catálogo, con su regla de pagar o descontar.
-                    @else
-                        Geolice informa estados que el catálogo no conoce; sin regla, no se sabe si esos bultos se pagan o se descuentan.
-                    @endif
-                </p>
-                @if($estadosDesc !== [])
-                    <ul class="co-alerta-list">
-                        @foreach($estadosDesc as $e)
-                            <li><span>{{ $e['estado'] }}</span><strong>{{ $n($e['bultos']) }}</strong></li>
-                        @endforeach
-                    </ul>
-                @endif
-            </article>
-
-        </div>
-
-        <div class="co-chips">
-            <span class="co-chip is-ok"><strong>{{ $n($alertas['con_pesaje']) }}</strong> con pesaje de bodega</span>
-            <span class="co-chip"><strong>{{ $n($alertas['sin_pesaje']) }}</strong> sin pesaje de bodega</span>
-            <span class="co-chip"><strong>{{ $n($alertas['sin_peso_declarado']) }}</strong> sin peso declarado</span>
-            <span class="co-chip"><strong>{{ $n($alertas['sin_comuna']) }}</strong> sin comuna de destino</span>
-            @foreach($alertas['estados'] as $e)
-                <span class="co-chip {{ $e['considerar'] === 'DESCONTAR' ? 'is-descontar' : '' }}">
-                    <strong>{{ $n($e['bultos']) }}</strong> {{ $e['estado'] }}
-                </span>
-            @endforeach
-        </div>
-    @endif
-
-    {{-- ====== HISTORIAL DE CARGAS ====== --}}
-    @if($importaciones->isNotEmpty())
         <section class="co-region">
             <div class="co-region-head">
-                <h2 class="co-region-title">Cargas de este período</h2>
-                <span class="co-region-meta">Quién cargó qué y cuándo</span>
+                <div>
+                    <h2 class="co-region-title">Resultado de la revisión</h2>
+                    <p class="co-note">
+                        El archivo fue leído y analizado. Esta revisión no confirma todavía la importación.
+                    </p>
+                </div>
             </div>
-            <div class="co-region-body is-flush">
-                <div class="table-responsive">
-                    <table class="co-table">
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Tipo</th>
-                                <th>Archivo</th>
-                                <th>Usuario</th>
-                                <th class="is-num">Filas</th>
-                                <th class="is-num">Nuevos</th>
-                                <th class="is-num">Actualizados</th>
-                                <th class="is-num">Duración</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($importaciones as $carga)
-                                <tr class="{{ $mostradas->contains('id', $carga->id) ? 'is-selected' : '' }}">
-                                    <td class="is-strong">{{ $carga->created_at->format('d-m-Y H:i') }}</td>
-                                    <td>
-                                        <span class="co-badge {{ $carga->tipo === \App\Models\CourierImportacion::TIPO_PESAJES ? 'co-badge-neutral' : 'co-badge-accent' }}">
-                                            {{ $carga->tipo === \App\Models\CourierImportacion::TIPO_PESAJES ? 'Pesajes' : 'Geolice' }}
-                                        </span>
-                                    </td>
-                                    <td class="is-mono">{{ $carga->archivo }}</td>
-                                    <td>{{ $carga->usuario?->name ?? 'Terminal' }}</td>
-                                    <td class="is-num">{{ $n($carga->filas) }}</td>
-                                    <td class="is-num">{{ $n($carga->nuevos) }}</td>
-                                    <td class="is-num">{{ $n($carga->actualizados) }}</td>
-                                    <td class="is-num is-muted">{{ $carga->duracion_seg !== null ? $carga->duracion_seg . ' s' : '—' }}</td>
-                                    <td class="is-num">
-                                        <a href="{{ route('courier.index', ['periodo' => $periodo->codigo, 'importacion' => $carga->id]) }}#resultado" class="co-btn co-btn-muted co-btn-sm">Ver resultado</a>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+
+            <div class="co-region-body">
+
+                <div class="co-review-status {{ $hayAdvertencias ? 'is-warn' : 'is-ok' }}">
+                    <div>
+                        <strong>
+                            {{ $hayAdvertencias
+                                ? 'Archivo revisado con observaciones'
+                                : 'Archivo revisado correctamente' }}
+                        </strong>
+
+                        <p>
+                            {{ $hayAdvertencias
+                                ? 'Se encontraron datos que conviene revisar antes de confirmar la importación.'
+                                : 'No se detectaron observaciones en los controles disponibles actualmente.' }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="co-review-summary">
+                    <div class="co-review-stat">
+                        <span class="co-review-stat-label">Archivo</span>
+                        <span class="co-review-stat-value" style="font-size: 1rem;">
+                            {{ $revision['archivo'] ?? '—' }}
+                        </span>
+                    </div>
+
+                    <div class="co-review-stat">
+                        <span class="co-review-stat-label">Período de pago</span>
+                        <span class="co-review-stat-value" style="font-size: 1rem;">
+                            {{ $periodoNombre ?? ($revision['periodo'] ?? '—') }}
+                        </span>
+                    </div>
+
+                    <div class="co-review-stat">
+                        <span class="co-review-stat-label">Bultos encontrados</span>
+                        <span class="co-review-stat-value">
+                            {{ $n($resumenRevision['filas'] ?? 0) }}
+                        </span>
+                    </div>
+
+                    <div class="co-review-stat">
+                        <span class="co-review-stat-label">Bultos nuevos</span>
+                        <span class="co-review-stat-value">
+                            {{ $n($resumenRevision['nuevos'] ?? 0) }}
+                        </span>
+                    </div>
+
+                    <div class="co-review-stat">
+                        <span class="co-review-stat-label">Ya existentes en este período</span>
+                        <span class="co-review-stat-value">
+                            {{ $n(
+                                ($resumenRevision['actualizados'] ?? 0)
+                                + ($resumenRevision['sin_cambio'] ?? 0)
+                            ) }}
+                        </span>
+                    </div>
+
+                    <div class="co-review-stat">
+                        <span class="co-review-stat-label">Encontrados en período anterior</span>
+                        <span class="co-review-stat-value">
+                            {{ $n($resumenRevision['de_periodo_anterior'] ?? 0) }}
+                        </span>
+                    </div>
                 </div>
             </div>
         </section>
+
+        <section class="co-region">
+            <div class="co-region-head">
+                <div>
+                    <h2 class="co-region-title">Observaciones</h2>
+                    <p class="co-note">
+                        Aquí sólo se muestran los puntos que pueden necesitar revisión antes de continuar.
+                    </p>
+                </div>
+            </div>
+
+            <div class="co-region-body">
+                <div class="co-review-issues">
+
+                    <article class="co-review-issue {{ empty($comunasFuera) ? 'is-ok' : 'is-warn' }}">
+                        <h3 class="co-review-issue-title">Comunas fuera del catálogo</h3>
+
+                        <div class="co-review-issue-count">
+                            {{ $n(count($comunasFuera)) }}
+                        </div>
+
+                        <p class="co-review-issue-text">
+                            @if(empty($comunasFuera))
+                                Todas las comunas informadas tienen una cobertura conocida.
+                            @else
+                                {{ $n($bultosComunasFuera) }} bultos usan una comuna que no existe actualmente en el catálogo.
+                            @endif
+                        </p>
+
+                        @if(!empty($comunasFuera))
+                            <details class="co-review-details">
+                                <summary>Ver detalle</summary>
+
+                                <ul class="co-review-list">
+                                    @foreach(array_slice($comunasFuera, 0, 30, true) as $comuna => $cantidad)
+                                        <li>
+                                            <span>{{ $comuna }}</span>
+                                            <strong>{{ $n($cantidad) }}</strong>
+                                        </li>
+                                    @endforeach
+                                </ul>
+
+                                @if(count($comunasFuera) > 30)
+                                    <p class="co-note">
+                                        Se muestran 30 de {{ $n(count($comunasFuera)) }} comunas.
+                                    </p>
+                                @endif
+                            </details>
+                        @endif
+                    </article>
+
+                    <article class="co-review-issue {{ empty($sinConfiguracion) ? 'is-ok' : 'is-warn' }}">
+                        <h3 class="co-review-issue-title">Sin configuración de pago</h3>
+
+                        <div class="co-review-issue-count">
+                            {{ $n(count($sinConfiguracion)) }}
+                        </div>
+
+                        <p class="co-review-issue-text">
+                            @if(empty($sinConfiguracion))
+                                Todas las combinaciones conocidas tienen configuración de pago.
+                            @else
+                                {{ $n($bultosSinConfiguracion) }} bultos no encuentran una combinación agente + cliente + servicio.
+                            @endif
+                        </p>
+
+                        @if(!empty($sinConfiguracion))
+                            <details class="co-review-details">
+                                <summary>Ver detalle</summary>
+
+                                <ul class="co-review-list">
+                                    @foreach(array_slice($sinConfiguracion, 0, 30, true) as $combinacion => $cantidad)
+                                        <li>
+                                            <span>{{ $combinacion }}</span>
+                                            <strong>{{ $n($cantidad) }}</strong>
+                                        </li>
+                                    @endforeach
+                                </ul>
+
+                                @if(count($sinConfiguracion) > 30)
+                                    <p class="co-note">
+                                        Se muestran 30 de {{ $n(count($sinConfiguracion)) }} combinaciones.
+                                    </p>
+                                @endif
+                            </details>
+                        @endif
+                    </article>
+
+                    <article class="co-review-issue {{ empty($estadosDesconocidos) ? 'is-ok' : 'is-warn' }}">
+                        <h3 class="co-review-issue-title">Estados fuera del catálogo</h3>
+
+                        <div class="co-review-issue-count">
+                            {{ $n(count($estadosDesconocidos)) }}
+                        </div>
+
+                        <p class="co-review-issue-text">
+                            @if(empty($estadosDesconocidos))
+                                Todos los estados informados existen en el catálogo.
+                            @else
+                                {{ $n($bultosEstadosDesconocidos) }} bultos usan estados que todavía no tienen una regla conocida.
+                            @endif
+                        </p>
+
+                        @if(!empty($estadosDesconocidos))
+                            <details class="co-review-details">
+                                <summary>Ver detalle</summary>
+
+                                <ul class="co-review-list">
+                                    @foreach(array_slice($estadosDesconocidos, 0, 30, true) as $estado => $cantidad)
+                                        <li>
+                                            <span>{{ $estado }}</span>
+                                            <strong>{{ $n($cantidad) }}</strong>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </details>
+                        @endif
+                    </article>
+
+                </div>
+
+                <div class="co-review-summary">
+                    <div class="co-review-stat">
+                        <span class="co-review-stat-label">Sin comuna de destino</span>
+                        <span class="co-review-stat-value">
+                            {{ $n($resumenRevision['sin_comuna'] ?? 0) }}
+                        </span>
+                    </div>
+
+                    <div class="co-review-stat">
+                        <span class="co-review-stat-label">Sin peso declarado</span>
+                        <span class="co-review-stat-value">
+                            {{ $n($resumenRevision['sin_peso_declarado'] ?? 0) }}
+                        </span>
+                    </div>
+
+                    <div class="co-review-stat">
+                        <span class="co-review-stat-label">Fechas no reconocidas</span>
+                        <span class="co-review-stat-value">
+                            {{ $n($resumenRevision['fechas_no_reconocidas'] ?? 0) }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="co-review-actions">
+                    <a
+                        href="{{ route('courier.index', ['nuevo' => 1]) }}"
+                        class="co-btn co-btn-muted"
+                    >
+                        Elegir otro archivo
+                    </a>
+
+                    <div>
+                        <div class="co-review-actions-right">
+                            <button
+                                type="button"
+                                class="co-btn co-btn-primary"
+                                disabled
+                                title="La confirmación se habilitará en el siguiente paso."
+                            >
+                                Confirmar importación
+                            </button>
+                        </div>
+
+                        <p class="co-review-disabled-note">
+                            Primera prueba: este botón todavía no guarda información.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
     @endif
 
 </div>
@@ -326,68 +565,19 @@
 @push('scripts')
 <script>
 (function () {
-    /* Carrusel del resultado de la carga: una tarjeta por dato. */
-    document.querySelectorAll('[data-slider]').forEach(function (slider) {
-        var track = slider.querySelector('[data-track]');
-        var slides = Array.prototype.slice.call(track.children);
-        var dots = slider.querySelector('[data-dots]');
-        var prev = slider.querySelector('[data-prev]');
-        var next = slider.querySelector('[data-next]');
-        var current = slider.querySelector('[data-current]');
-        var total = slider.querySelector('[data-total]');
-        var index = 0;
-
-        if (!slides.length) { return; }
-
-        total.textContent = slides.length;
-
-        slides.forEach(function (_, i) {
-            var dot = document.createElement('button');
-            dot.type = 'button';
-            dot.setAttribute('aria-label', 'Ir a la tarjeta ' + (i + 1));
-            dot.addEventListener('click', function () { ir(i); });
-            dots.appendChild(dot);
-        });
-
-        function pad() {
-            return parseFloat(getComputedStyle(track).paddingLeft) || 0;
-        }
-
-        function ir(i) {
-            i = Math.max(0, Math.min(slides.length - 1, i));
-            track.scrollTo({ left: slides[i].offsetLeft - pad(), behavior: 'smooth' });
-        }
-
-        function actualizar() {
-            var x = track.scrollLeft + pad() + 2;
-            var i = 0;
-            slides.forEach(function (s, k) { if (s.offsetLeft <= x) { i = k; } });
-            if (track.scrollLeft + track.clientWidth >= track.scrollWidth - 2) { i = slides.length - 1; }
-            index = i;
-            current.textContent = i + 1;
-            Array.prototype.forEach.call(dots.children, function (d, k) { d.classList.toggle('is-active', k === i); });
-            prev.disabled = i === 0;
-            next.disabled = i === slides.length - 1;
-        }
-
-        prev.addEventListener('click', function () { ir(index - 1); });
-        next.addEventListener('click', function () { ir(index + 1); });
-        track.addEventListener('scroll', function () { window.requestAnimationFrame(actualizar); });
-        track.addEventListener('keydown', function (e) {
-            if (e.key === 'ArrowRight') { e.preventDefault(); ir(index + 1); }
-            if (e.key === 'ArrowLeft') { e.preventDefault(); ir(index - 1); }
-        });
-
-        actualizar();
-    });
-
-    /* Formularios de carga: avisan que están trabajando y evitan el doble envío. */
     document.querySelectorAll('[data-upload]').forEach(function (form) {
         form.addEventListener('submit', function () {
             var boton = form.querySelector('[data-submit]');
             var aviso = form.querySelector('[data-progress]');
-            if (boton) { boton.disabled = true; boton.textContent = 'Importando…'; }
-            if (aviso) { aviso.hidden = false; }
+
+            if (boton) {
+                boton.disabled = true;
+                boton.textContent = boton.getAttribute('data-loading-text') || 'Revisando…';
+            }
+
+            if (aviso) {
+                aviso.hidden = false;
+            }
         });
     });
 })();
