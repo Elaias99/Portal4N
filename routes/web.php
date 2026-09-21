@@ -46,6 +46,7 @@ use App\Http\Controllers\TrackingReportController;
 use App\Http\Controllers\PublicTrackingController;
 use App\Http\Controllers\SuscripcionLiquidacionDetalleController;
 use App\Http\Controllers\CourierCatalogoController;
+use App\Http\Controllers\CourierPagoController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -147,9 +148,17 @@ Route::middleware(['auth'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->prefix('courier')->name('courier.')->group(function () {
-    Route::get('/', [CourierCatalogoController::class, 'portada'])
+    // Raíz = proceso de pago del mes.
+    Route::get('/', [CourierPagoController::class, 'index'])
         ->name('index');
 
+    Route::post('/importar-geolice', [CourierPagoController::class, 'importarGeolice'])
+        ->name('importar-geolice');
+
+    Route::post('/importar-pesajes', [CourierPagoController::class, 'importarPesajes'])
+        ->name('importar-pesajes');
+
+    // Catálogos.
     Route::get('/agentes', [CourierCatalogoController::class, 'index'])
         ->name('agentes.index');
 

@@ -146,17 +146,91 @@ class CourierCatalogoService
                 return $cfg;
             });
 
+        /*
+         * Tablas de tarifa que realmente usa este agente: las que aparecen
+         * en sus configuraciones de pago. Se omite la tabla 0 (sin tarifa)
+         * porque es toda ceros y no aporta nada en la ficha.
+         */
+        $numerosTabla = $configuraciones
+            ->pluck('tabla')
+            ->filter(fn ($t) => $t !== null && $t !== 0)
+            ->unique()
+            ->sort()
+            ->values();
+
+        $tarifasAgente = CourierTarifa::query()
+            ->whereIn('numero', $numerosTabla)
+            ->with(['tramos' => fn ($q) => $q->orderBy('peso')])
+            ->orderBy('numero')
+            ->get();
+
         return [
             'agente' => $agente,
             'zonas' => $cobertura->pluck('zona')->filter()->unique()->values()->all(),
             'cobertura' => $cobertura,
             'configuraciones' => $configuraciones,
+            'tarifas_agente' => $tarifasAgente,
+            'tarifas_tramos' => $this->tramosComprimidos($tarifasAgente),
             'resumen_pago' => [
                 'si' => $configuraciones->where('pagar', 'SI')->count(),
                 'no' => $configuraciones->where('pagar', 'NO')->count(),
                 'revisar' => $configuraciones->where('pagar', 'REVISAR')->count(),
             ],
         ];
+    }
+
+    /*
+     * Comprime los 20 tramos de varias tablas en filas por rango de kilos.
+     * Una fila nueva empieza en cada kilo donde ALGUNA de las tablas cambia
+     * de valor; dentro de la fila todas las tablas valen lo mismo que en su
+     * primer kilo. Ej.: tabla 1 (863 / 1.380 / 1.725) + tabla 15 (plana)
+     * → filas 1–6, 7–12, 13–20.
+     *
+     * Devuelve [['desde' => 1, 'hasta' => 6, 'valores' => [numero => valor]], …]
+     */
+    private function tramosComprimidos(Collection $tarifas): array
+    {
+        if ($tarifas->isEmpty()) {
+            return [];
+        }
+
+        $valores = [];   // [numero => [peso => valor]]
+        $cortes = [1];
+        $pesoMax = 1;
+
+        foreach ($tarifas as $tarifa) {
+            $anterior = null;
+
+            foreach ($tarifa->tramos as $tramo) {
+                $valores[$tarifa->numero][$tramo->peso] = $tramo->valor;
+                $pesoMax = max($pesoMax, $tramo->peso);
+
+                if ($anterior !== null && $tramo->valor !== $anterior) {
+                    $cortes[] = $tramo->peso;
+                }
+
+                $anterior = $tramo->valor;
+            }
+        }
+
+        $cortes = array_values(array_unique($cortes));
+        sort($cortes);
+
+        $filas = [];
+
+        foreach ($cortes as $i => $desde) {
+            $hasta = isset($cortes[$i + 1]) ? $cortes[$i + 1] - 1 : $pesoMax;
+
+            $filas[] = [
+                'desde' => $desde,
+                'hasta' => $hasta,
+                'valores' => $tarifas
+                    ->mapWithKeys(fn ($t) => [$t->numero => $valores[$t->numero][$desde] ?? null])
+                    ->all(),
+            ];
+        }
+
+        return $filas;
     }
 
     /*

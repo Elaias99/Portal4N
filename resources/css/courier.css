@@ -1,5 +1,5 @@
 /*
- * Módulo Courier · catálogos.
+ * Módulo Courier: pago del mes (raíz) y catálogos.
  * Mismo lenguaje visual que Suscripciones (sl-*), con prefijo co-.
  */
 
@@ -167,6 +167,36 @@
 
 .co-search .co-search-input .form-control {
     padding-left: 2.3rem;
+    min-height: 44px;
+    font-size: 0.95rem;
+}
+
+/* Fila del buscador de la portada: texto + zona + botones en una línea. */
+.co-search .co-search-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 190px auto auto;
+    gap: 0.6rem;
+    align-items: stretch;
+}
+
+.co-search .co-search-zona {
+    min-height: 44px;
+}
+
+.co-search .co-search-row .co-btn {
+    min-height: 44px;
+    padding-left: 1.4rem;
+    padding-right: 1.4rem;
+}
+
+@media (max-width: 767px) {
+    .co-search .co-search-row {
+        grid-template-columns: 1fr 1fr;
+    }
+    .co-search .co-search-row .co-search-input {
+        grid-column: 1 / -1;
+    }
 }
 
 /* ---------- Tarjetas de resumen ---------- */
@@ -511,17 +541,61 @@ a.co-stat:hover {
     display: grid;
     grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
     gap: 0.9rem;
-    align-items: start;
+    align-items: stretch;
+}
+
+/* La columna izquierda se estira hasta la altura de la derecha
+   (titular + comunas) y su tabla hace scroll dentro de ese alto. */
+.co-ficha-grid > .co-region,
+.co-ficha-grid > div > .co-region:last-child {
+    margin-bottom: 0;
+}
+
+.co-ficha-grid > .co-region {
+    display: flex;
+    flex-direction: column;
+    /* La tarjeta no aporta altura propia a la fila (height: 0) y luego
+       se estira al alto que fijó la columna derecha (min-height: 100%).
+       Así nunca crece con su contenido: la tabla hace scroll adentro. */
+    height: 0;
+    min-height: 100%;
+}
+
+.co-ficha-grid > .co-region > .co-region-body.is-flush {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.co-ficha-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* En una sola columna no hay vecina que fije la altura: la tarjeta
+   vuelve a medir por su contenido, con el mismo tope que Comunas. */
+@media (max-width: 992px) {
+    .co-ficha-grid > .co-region { height: auto; min-height: 0; }
+    .co-ficha-scroll { max-height: 520px; }
+}
+
+/* Titular del pago en la misma fila del título de la tarjeta. */
+.co-titulares {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.4rem 1rem;
+    text-align: right;
 }
 
 .co-titular {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.55rem 0;
-    border-bottom: 1px solid var(--co-line-soft);
-    font-size: 0.82rem;
+    gap: 0.5rem;
+    font-size: 0.88rem;
+    font-weight: 600;
 }
 
 .co-titular:last-child {
@@ -549,6 +623,117 @@ a.co-stat:hover {
     color: var(--co-muted);
     font-size: 0.68rem;
     font-weight: 600;
+}
+
+/* ---------- Ficha: tarifas del agente ---------- */
+
+.co-tarifas {
+    margin-top: 0.9rem;
+}
+
+.co-tarifas .co-region-head {
+    align-items: flex-start;
+}
+
+.co-tarifas-sub {
+    margin: 0.2rem 0 0;
+    color: var(--co-muted);
+    font-size: 0.76rem;
+    line-height: 1.45;
+}
+
+.co-tarifas .co-region-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.co-tarifas-calc {
+    border-bottom: 1px solid var(--co-line-soft);
+}
+
+.co-tarifas-table {
+    table-layout: fixed;
+}
+
+.co-tarifas-table thead th {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    vertical-align: bottom;
+}
+
+.co-tarifas-table thead th.is-hit,
+.co-tarifas-table td.is-hit {
+    background: var(--co-accent-soft);
+}
+
+.co-tarifas-num {
+    display: block;
+    color: var(--co-accent-strong);
+    font-size: 0.8rem;
+    font-weight: 750;
+    letter-spacing: -0.01em;
+}
+
+.co-tarifas-nombre {
+    display: block;
+    margin-top: 0.1rem;
+    color: var(--co-muted);
+    font-size: 0.68rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    white-space: normal;
+}
+
+.co-tarifas-kilos {
+    width: 190px;
+    color: var(--co-muted);
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.co-tarifas-kilos strong {
+    color: var(--co-text);
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.co-tarifas-valor {
+    font-size: 0.95rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+}
+
+.co-tarifas-table tbody tr:nth-child(even) td {
+    background: #fbfcfe;
+}
+
+.co-tarifas-table tbody tr.is-hit td {
+    background: var(--co-accent-soft);
+}
+
+.co-tarifas-table tbody td.is-hit {
+    box-shadow: inset 0 0 0 2px var(--co-accent);
+    border-radius: 6px;
+}
+
+.co-tarifas-adicional td {
+    border-top: 2px solid var(--co-line);
+}
+
+.co-tarifas-adicional .co-tarifas-valor {
+    color: var(--co-accent-strong);
+}
+
+.co-tarifas-foot {
+    padding: 0.7rem 1.15rem;
+    border-top: 1px solid var(--co-line-soft);
+}
+
+.co-tarifas-foot code {
+    font-size: 0.72rem;
 }
 
 /* ---------- Varios ---------- */
@@ -623,4 +808,696 @@ a.co-stat:hover {
     .co-ficha-head { grid-template-columns: 1fr; }
     .co-ficha-kpis { grid-auto-flow: row; text-align: left; }
     .co-span-2, .co-span-3, .co-span-4, .co-span-5, .co-span-6 { grid-column: span 12; }
+}
+
+/* =====================================================================
+   Pago del mes (raíz del módulo)
+   ===================================================================== */
+
+/* La pestaña del proceso se separa de las de catálogo. */
+.co-nav .co-nav-main {
+    font-weight: 720;
+}
+
+.co-nav-sep {
+    align-self: center;
+    width: 1px;
+    height: 22px;
+    margin: 0 0.35rem;
+    background: var(--co-line);
+}
+
+/* ---------- Avisos de formulario ---------- */
+
+.co-alert {
+    margin-bottom: 1rem;
+    padding: 0.85rem 1.15rem;
+    border: 1px solid var(--co-line);
+    border-radius: var(--co-radius);
+    background: var(--co-surface);
+    font-size: 0.82rem;
+}
+
+.co-alert ul {
+    margin: 0.35rem 0 0;
+    padding-left: 1.1rem;
+}
+
+.co-alert-danger {
+    border-color: #fecdd3;
+    background: var(--co-danger-soft);
+    color: #9f1239;
+}
+
+/* ---------- Barra de período ---------- */
+
+.co-periodo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    margin-bottom: 1rem;
+    padding: 0.85rem 1.15rem;
+    border: 1px solid var(--co-line);
+    border-radius: var(--co-radius);
+    background: var(--co-surface);
+    box-shadow: 0 3px 14px rgba(16, 35, 63, 0.055);
+}
+
+.co-periodo-form {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.co-periodo-form label {
+    margin: 0;
+    color: var(--co-muted);
+    font-size: 0.74rem;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.co-periodo-form .form-select {
+    min-width: 200px;
+    min-height: 40px;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.co-periodo-info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.25rem;
+}
+
+.co-periodo-kpi {
+    color: var(--co-muted);
+    font-size: 0.8rem;
+}
+
+.co-periodo-kpi strong {
+    color: var(--co-text);
+    font-size: 0.95rem;
+    font-weight: 750;
+}
+
+/* ---------- Pasos del proceso ---------- */
+
+.co-steps {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.6rem;
+    margin: 0 0 1rem;
+    padding: 0;
+    list-style: none;
+}
+
+.co-step {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0.95rem;
+    border: 1px solid var(--co-line);
+    border-radius: var(--co-radius);
+    background: var(--co-surface);
+}
+
+.co-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: var(--co-muted);
+    font-size: 0.8rem;
+    font-weight: 750;
+}
+
+.co-step-body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.co-step-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.co-step-state {
+    color: var(--co-muted);
+    font-size: 0.72rem;
+}
+
+.co-step.is-done { border-color: #bbf7d0; background: var(--co-ok-soft); }
+.co-step.is-done .co-step-num { background: var(--co-ok); color: #fff; }
+.co-step.is-done .co-step-state { color: var(--co-ok); font-weight: 650; }
+
+.co-step.is-current { border-color: var(--co-accent); box-shadow: 0 0 0 3px rgba(11, 99, 229, 0.12); }
+.co-step.is-current .co-step-num { background: var(--co-accent); color: #fff; }
+
+.co-step.is-soon { opacity: 0.7; }
+
+/* ---------- Formulario de carga ---------- */
+
+.co-upload-form {
+    display: block;
+}
+
+.co-upload-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 190px auto;
+    gap: 0.75rem;
+    align-items: end;
+    margin-bottom: 0.75rem;
+}
+
+.co-upload-row .co-field label {
+    display: block;
+    margin-bottom: 0.3rem;
+    color: #334155;
+    font-size: 0.72rem;
+    font-weight: 650;
+}
+
+.co-upload-row .form-control {
+    min-height: 42px;
+}
+
+.co-upload-row .co-btn {
+    min-height: 42px;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
+
+.co-upload-progress {
+    margin: 0.6rem 0 0;
+    padding: 0.6rem 0.85rem;
+    border: 1px dashed #bfdbfe;
+    border-radius: 6px;
+    background: var(--co-accent-soft);
+    color: var(--co-accent-strong);
+    font-size: 0.78rem;
+    font-weight: 650;
+}
+
+.co-upload-progress[hidden] {
+    display: none;
+}
+
+/* ---------- Carrusel del resultado ---------- */
+
+.co-slider {
+    margin-bottom: 1rem;
+    border: 1px solid var(--co-line);
+    border-radius: var(--co-radius);
+    background: linear-gradient(180deg, #fbfcfe 0%, #f3f6fb 100%);
+    box-shadow: 0 3px 14px rgba(16, 35, 63, 0.055);
+}
+
+.co-slider-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.9rem 1.15rem 0.6rem;
+}
+
+.co-slider-sub {
+    margin: 0.2rem 0 0;
+    color: var(--co-muted);
+    font-size: 0.76rem;
+}
+
+.co-slider-sub code {
+    color: var(--co-text);
+    font-size: 0.74rem;
+}
+
+.co-slider-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.co-slider-count {
+    min-width: 52px;
+    color: var(--co-muted);
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.co-slider-track {
+    position: relative;
+    display: flex;
+    gap: 0.9rem;
+    padding: 0.5rem 1.15rem 1rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: 1.15rem;
+    scrollbar-width: none;
+    outline: none;
+}
+
+.co-slider-track::-webkit-scrollbar {
+    display: none;
+}
+
+.co-slider-track:focus-visible {
+    box-shadow: inset 0 0 0 2px rgba(11, 99, 229, 0.35);
+    border-radius: var(--co-radius);
+}
+
+.co-slide {
+    --co-slide-color: var(--co-accent);
+    flex: 0 0 clamp(280px, 62%, 620px);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-height: 300px;
+    padding: 1.25rem 1.35rem 1.15rem;
+    border: 1px solid var(--co-line);
+    border-top: 4px solid var(--co-slide-color);
+    border-radius: var(--co-radius);
+    background: var(--co-surface);
+    box-shadow: 0 6px 20px rgba(16, 35, 63, 0.07);
+    scroll-snap-align: start;
+}
+
+.co-slide.is-accent  { --co-slide-color: var(--co-accent); }
+.co-slide.is-neutral { --co-slide-color: #64748b; }
+.co-slide.is-ok      { --co-slide-color: var(--co-ok); }
+.co-slide.is-warn    { --co-slide-color: #f59e0b; }
+.co-slide.is-danger  { --co-slide-color: var(--co-danger); }
+
+.co-slide-hero {
+    border-color: transparent;
+    border-top-color: transparent;
+    background: linear-gradient(135deg, #0b2a6b 0%, #0b63e5 60%, #2f8bff 100%);
+    color: #fff;
+}
+
+.co-slide-hero .co-slide-eyebrow { color: rgba(255, 255, 255, 0.75); }
+.co-slide-hero .co-slide-title,
+.co-slide-hero .co-slide-value { color: #fff; }
+.co-slide-hero .co-slide-text { color: rgba(255, 255, 255, 0.85); }
+
+.co-slide-eyebrow {
+    color: var(--co-slide-color);
+    font-size: 0.7rem;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.co-slide-value {
+    margin-top: 0.35rem;
+    font-size: clamp(2.2rem, 4vw, 3.1rem);
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.co-slide-value small {
+    font-size: 0.5em;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+.co-slide-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+}
+
+.co-slide-text {
+    margin: 0.4rem 0 0;
+    color: var(--co-muted);
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+.co-slide-foot {
+    margin-top: auto;
+    padding-top: 0.75rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.72rem;
+}
+
+.co-slide-more {
+    color: var(--co-muted);
+    font-size: 0.74rem;
+}
+
+/* Mini-estadísticas dentro de una tarjeta. */
+.co-slide-tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+    margin-top: 0.6rem;
+}
+
+/* Muchos días de pesaje: tres columnas y tarjetas más compactas. */
+.co-slide-tiles.is-dense {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.co-slide-tiles.is-dense .co-tile-value {
+    font-size: 1.2rem;
+}
+
+.co-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid var(--co-line-soft);
+    border-radius: 8px;
+    background: #fbfcfe;
+}
+
+.co-tile.is-accent { border-color: #bfdbfe; background: var(--co-accent-soft); }
+.co-tile.is-warn   { border-color: #fed7aa; background: var(--co-warn-soft); }
+
+.co-tile-value {
+    font-size: 1.55rem;
+    font-weight: 780;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+}
+
+.co-tile.is-accent .co-tile-value { color: var(--co-accent-strong); }
+.co-tile.is-warn .co-tile-value   { color: var(--co-warn); }
+
+.co-tile-label {
+    font-size: 0.76rem;
+    font-weight: 720;
+}
+
+.co-tile-text {
+    color: var(--co-muted);
+    font-size: 0.71rem;
+    line-height: 1.4;
+}
+
+/* Barra de proporción. */
+.co-bar {
+    height: 12px;
+    margin-top: 0.75rem;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.co-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--co-accent) 0%, #2f8bff 100%);
+    transition: width 500ms ease;
+}
+
+.co-bar-legend {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.35rem;
+    color: var(--co-muted);
+    font-size: 0.74rem;
+}
+
+.co-bar-legend strong {
+    color: var(--co-text);
+}
+
+/* Listas con barra por fila. */
+.co-slide-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin: 0.6rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.co-slide-list li {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.78rem;
+}
+
+.co-slide-list.is-plain li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid var(--co-line-soft);
+}
+
+.co-slide-list.is-plain li:last-child {
+    border-bottom: 0;
+}
+
+.co-slide-list-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.co-slide-list-bar {
+    display: block;
+    height: 8px;
+    border-radius: 999px;
+    background: #eef2f7;
+    overflow: hidden;
+}
+
+.co-slide-list-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--co-slide-color);
+}
+
+.co-slide-list-num {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.co-slide-tag {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-style: normal;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+.co-slide-tag.is-danger {
+    background: var(--co-danger-soft);
+    color: var(--co-danger);
+}
+
+.co-slider-dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0 1.15rem 0.9rem;
+}
+
+.co-slider-dots button {
+    width: 9px;
+    height: 9px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: #cbd5e1;
+    cursor: pointer;
+    transition: transform 160ms ease, background-color 160ms ease;
+}
+
+.co-slider-dots button.is-active {
+    background: var(--co-accent);
+    transform: scale(1.35);
+}
+
+/* ---------- Alertas vivas ---------- */
+
+.co-alertas-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    margin: 0.25rem 0 0.6rem;
+}
+
+.co-alertas {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.co-alerta {
+    --co-alerta-color: var(--co-ok);
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--co-line);
+    border-left: 4px solid var(--co-alerta-color);
+    border-radius: var(--co-radius);
+    background: var(--co-surface);
+    box-shadow: 0 3px 14px rgba(16, 35, 63, 0.055);
+}
+
+.co-alerta.is-ok     { --co-alerta-color: var(--co-ok); }
+.co-alerta.is-warn   { --co-alerta-color: #f59e0b; }
+.co-alerta.is-danger { --co-alerta-color: var(--co-danger); }
+
+.co-alerta-count {
+    color: var(--co-alerta-color);
+    font-size: 1.9rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.co-alerta-title {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 720;
+    letter-spacing: -0.01em;
+}
+
+.co-alerta-text {
+    margin: 0;
+    color: var(--co-muted);
+    font-size: 0.76rem;
+    line-height: 1.5;
+}
+
+.co-alerta-details {
+    margin-top: 0.4rem;
+}
+
+.co-alerta-details summary {
+    color: var(--co-accent);
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.co-alerta-list {
+    display: flex;
+    flex-direction: column;
+    margin: 0.4rem 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.76rem;
+}
+
+.co-alerta-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid var(--co-line-soft);
+}
+
+.co-alerta-list li:last-child {
+    border-bottom: 0;
+}
+
+.co-alerta-list li span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.co-alerta-list li strong {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Cifras sueltas del período. */
+.co-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+}
+
+.co-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--co-line);
+    border-radius: 999px;
+    background: var(--co-surface);
+    color: var(--co-muted);
+    font-size: 0.74rem;
+}
+
+.co-chip strong {
+    color: var(--co-text);
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+}
+
+.co-chip.is-ok {
+    border-color: #bbf7d0;
+    background: var(--co-ok-soft);
+    color: #166534;
+}
+
+.co-chip.is-ok strong {
+    color: var(--co-ok);
+}
+
+.co-chip.is-descontar {
+    border-color: #fecdd3;
+    background: var(--co-danger-soft);
+    color: #9f1239;
+}
+
+.co-chip.is-descontar strong {
+    color: var(--co-danger);
+}
+
+/* Historial: fila cuyo resultado se está mostrando. */
+.co-page .co-table tbody tr.is-selected td {
+    background: var(--co-accent-soft);
+}
+
+@media (max-width: 992px) {
+    .co-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .co-alertas { grid-template-columns: 1fr; }
+    .co-upload-row { grid-template-columns: 1fr; }
+    .co-slide { flex-basis: 88%; }
+    .co-slide-tiles { grid-template-columns: 1fr; }
 }

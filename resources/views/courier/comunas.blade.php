@@ -6,38 +6,40 @@
 <div class="co-page">
 
     @include('courier.partials.header', [
-        'titulo' => 'Comunas y cobertura',
-        'subtitulo' => 'Cada escritura de comuna que Geolice puede enviar, con el agente y la zona que le corresponde.',
+        'titulo' => 'Courier · Comunas',
+        'subtitulo' => 'Escribe una comuna y sabrás qué agente la reparte, en qué zona y si se paga retorno. Desde el agente llegas a sus clientes, tarifas y comunas.',
     ])
 
     @include('courier.partials.nav', ['activo' => 'comunas'])
 
-    <section class="co-region">
-        <form method="GET" action="{{ route('courier.comunas') }}" class="co-filters" role="search">
-            <div class="co-field co-span-5">
-                <label for="q">Comuna o agente</label>
+    {{-- ====== BUSCADOR ====== --}}
+    <form method="GET" action="{{ route('courier.comunas') }}" class="co-search" role="search">
+        <p class="co-search-label">¿Qué agente atiende esta comuna?</p>
+        <div class="co-search-row">
+            <div class="co-search-input">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
                 <input type="search" id="q" name="q" class="form-control"
-                       value="{{ $buscar }}" placeholder="Curacaví, Las Condes, 4N RM…" autocomplete="off" autofocus>
+                       value="{{ $buscar }}" placeholder="Curacaví, Las Condes, Puerto Aysén… o el nombre de un agente"
+                       autocomplete="off" autofocus>
             </div>
-            <div class="co-field co-span-3">
-                <label for="zona">Zona</label>
-                <select id="zona" name="zona" class="form-select">
-                    <option value="">Todas</option>
-                    <option value="RM" @selected($zona === 'RM')>RM</option>
-                    <option value="Regiones" @selected($zona === 'Regiones')>Regiones</option>
-                    <option value="sin_zona" @selected($zona === 'sin_zona')>Sin zona</option>
-                </select>
-            </div>
-            <div class="co-span-2">
-                <button type="submit" class="co-btn co-btn-primary w-100">Buscar</button>
-            </div>
+            <select id="zona" name="zona" class="form-select co-search-zona" aria-label="Zona">
+                <option value="">Todas las zonas</option>
+                <option value="RM" @selected($zona === 'RM')>RM</option>
+                <option value="Regiones" @selected($zona === 'Regiones')>Regiones</option>
+                <option value="sin_zona" @selected($zona === 'sin_zona')>Sin zona</option>
+            </select>
+            <button type="submit" class="co-btn co-btn-primary">Buscar</button>
             @if($buscar !== '' || $zona !== '')
-                <div class="co-span-2">
-                    <a href="{{ route('courier.comunas') }}" class="co-btn co-btn-muted w-100">Limpiar</a>
-                </div>
+                <a href="{{ route('courier.comunas') }}" class="co-btn co-btn-muted">Limpiar</a>
             @endif
-        </form>
+        </div>
+        <p class="co-search-hint">
+            Sin preocuparte de tildes ni mayúsculas. Una misma comuna puede aparecer con varias escrituras: cada una es una fila, porque así la envía Geolice.
+        </p>
+    </form>
 
+    {{-- ====== RESULTADOS ====== --}}
+    <section class="co-region">
         <div class="co-region-head">
             <h2 class="co-region-title">
                 {{ number_format($comunas->total(), 0, ',', '.') }}
@@ -46,9 +48,7 @@
                     para "{{ $buscar }}"
                 @endif
             </h2>
-            <span class="co-region-meta">
-                Una misma comuna puede aparecer con varias escrituras: cada una es una fila, porque así la envía Geolice.
-            </span>
+            <span class="co-region-meta">Hoja <code>Operador</code> de la planilla</span>
         </div>
 
         <div class="co-region-body is-flush">
@@ -68,7 +68,6 @@
                                 <th>Agente</th>
                                 <th>Zona</th>
                                 <th class="is-num">Paga retorno</th>
-                                <th class="is-mono">Clave de búsqueda</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -98,7 +97,6 @@
                                             <span class="is-muted">no</span>
                                         @endif
                                     </td>
-                                    <td class="is-mono is-muted">{{ $fila->localidad_clave }}</td>
                                 </tr>
                             @endforeach
                         </tbody>

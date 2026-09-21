@@ -1,10 +1,11 @@
 {{--
     Cabecera del módulo Courier.
-    $titulo, $subtitulo (opcional), $volverRuta, $volverTexto (opcionales)
+    $titulo, $subtitulo (opcional), $volverRuta, $volverTexto, $meta (opcionales)
 --}}
 @php
     $volverRuta = $volverRuta ?? route('courier.index');
-    $volverTexto = $volverTexto ?? 'Volver a catálogos Courier';
+    $volverTexto = $volverTexto ?? 'Volver a Pago del mes';
+    $meta = $meta ?? 'Catálogos cargados desde la planilla de Operaciones';
 @endphp
 
 <header class="co-page-header">
@@ -21,6 +22,6 @@
     </div>
 
     <div class="co-header-meta">
-        Catálogos cargados desde la planilla de Operaciones
+        {{ $meta }}
     </div>
 </header>

@@ -14,16 +14,6 @@ class CourierCatalogoController extends Controller
     ) {
     }
 
-    /*
-     * Portada: conteos y salud de los catálogos, más el buscador de comunas.
-     */
-    public function portada(): View
-    {
-        return view('courier.index', [
-            'resumen' => $this->catalogo->resumen(),
-        ]);
-    }
-
     public function index(Request $request): View
     {
         $buscar = trim((string) $request->input('q', ''));
@@ -35,20 +25,45 @@ class CourierCatalogoController extends Controller
         ]);
     }
 
-    public function show(int $agente): View
+    public function show(Request $request, int $agente): View
     {
         $detalle = $this->catalogo->detalleAgente($agente);
+
+        /*
+         * Calculadora de la ficha: misma regla que /courier/tarifas, pero
+         * sólo acepta una tabla que este agente use.
+         */
+        $tablaCalc = $request->filled('tabla') ? (int) $request->input('tabla') : null;
+        $pesoCalc = $request->filled('peso') ? (int) $request->input('peso') : null;
+        $valorCalc = null;
+
+        if ($tablaCalc !== null && $pesoCalc !== null && $pesoCalc >= 1) {
+            $tarifa = $detalle['tarifas_agente']->firstWhere('numero', $tablaCalc);
+
+            if ($tarifa instanceof CourierTarifa) {
+                $valorCalc = $this->catalogo->valorPorPeso($tarifa, $pesoCalc);
+            }
+        }
 
         return view('courier.show', [
             'agente' => $detalle['agente'],
             'zonas' => $detalle['zonas'],
             'cobertura' => $detalle['cobertura'],
             'configuraciones' => $detalle['configuraciones'],
+            'tarifasAgente' => $detalle['tarifas_agente'],
+            'tarifasTramos' => $detalle['tarifas_tramos'],
+            'tablaCalc' => $tablaCalc,
+            'pesoCalc' => $pesoCalc,
+            'valorCalc' => $valorCalc,
             'resumenPago' => $detalle['resumen_pago'],
             'resumen' => $this->catalogo->resumen(),
         ]);
     }
 
+    /*
+     * Buscador de comunas: se escribe una comuna (o un agente) y se ve
+     * quién la reparte, en qué zona y si se paga retorno.
+     */
     public function comunas(Request $request): View
     {
         $buscar = trim((string) $request->input('q', ''));

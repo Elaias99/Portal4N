@@ -35,7 +35,7 @@ class CourierConfiguracion extends Model
      */
     public static function llave(string $agente, string $comerciante, string $servicio): string
     {
-        return mb_strtolower($agente . $comerciante . $servicio);
+        return mb_strtolower(trim($agente) . trim($comerciante) . trim($servicio));
     }
 
     public function agente(): BelongsTo
