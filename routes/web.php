@@ -47,6 +47,10 @@ use App\Http\Controllers\PublicTrackingController;
 use App\Http\Controllers\SuscripcionLiquidacionDetalleController;
 use App\Http\Controllers\CourierCatalogoController;
 use App\Http\Controllers\CourierPagoController;
+use App\Http\Controllers\BsaleGuiaImportacionController;
+
+
+
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -182,6 +186,19 @@ Route::middleware('auth')->prefix('courier')->name('courier.')->group(function (
         ->name('proveedores');
 });
 
+
+
+Route::middleware('auth')->prefix('bsale/guias')->name('bsale.guias.')->group(function () {
+
+    Route::get('/', [BsaleGuiaImportacionController::class, 'index',])->block(120, 65)->name('index');
+
+    Route::post('/previsualizar', [BsaleGuiaImportacionController::class,'previsualizar',])->block(120, 65)->name('previsualizar');
+
+    Route::post('/{identificador}/generar', [BsaleGuiaImportacionController::class,'generar',])->where('identificador', '[a-f0-9]{64}')->block(120, 65)->name('generar');
+
+    Route::post('/limpiar', function (\Illuminate\Http\Request $request) {$request->session()->forget(['bsale_importacion','bsale_resultados',]); return redirect()->route('bsale.guias.index');})->block(120, 65)->name('limpiar');
+
+});
 
 
 

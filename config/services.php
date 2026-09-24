@@ -41,6 +41,11 @@ return [
         'timeout' => env('TRACKING_API_TIMEOUT', 15),
     ],
 
+    'bsale' => [
+        'demo_token' => env('BSALE_DEMO_TOKEN'),
+        'production_token' => env('BSALE_PRODUCTION_TOKEN'),
+    ],
+
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],

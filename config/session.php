@@ -19,7 +19,7 @@ return [
     */
 
     'driver' => env('SESSION_DRIVER', 'database'),
-
+    'block_store' => 'file',
     /*
     |--------------------------------------------------------------------------
     | Session Lifetime
