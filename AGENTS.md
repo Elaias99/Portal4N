@@ -2,9 +2,9 @@
 
 ## Propósito
 
-Este repositorio contiene un módulo Laravel llamado **Suscripciones** que genera
-liquidaciones y pre-facturas mensuales para proveedores de servicios de reparto
-de fin de semana.
+Este repositorio contiene, entre otros, los módulos Laravel **Suscripciones** y
+**Cuentas por Pagar**. Suscripciones genera liquidaciones y pre-facturas
+mensuales para proveedores de servicios de reparto de fin de semana.
 
 Las reglas del módulo no deben inferirse solamente desde nombres de columnas o
 métodos. Antes de analizar, modificar o probar cualquier archivo relacionado con
@@ -14,15 +14,105 @@ Suscripciones, lee primero la documentación disponible en:
 - `storage/agents/docs/suscripciones/arquitectura.md`
 - `storage/agents/docs/suscripciones/modelo-datos.md`
 - `storage/agents/docs/suscripciones/reglas-negocio.md`
-- `storage/agents/docs/suscripciones/flujo-generacion-mensual.md`
+- `storage/agents/docs/suscripciones/generacion-mensual.md`
 - `storage/agents/docs/suscripciones/zonas-distribucion.md`
 - `storage/agents/docs/suscripciones/ajustes-mensuales.md`
-- `storage/agents/docs/suscripciones/prefacturas-distribucion.md`
-- `storage/agents/docs/suscripciones/riesgos-y-consideraciones.md`
+- `storage/agents/docs/suscripciones/prefacturas-y-envios.md`
+- `storage/agents/docs/suscripciones/riesgos-conocidos.md`
 
 Algunos de esos documentos pueden agregarse progresivamente. Si un documento
 referenciado todavía no existe, informa esa ausencia y continúa con los
 documentos y el código disponibles.
+
+## Cuentas por Pagar
+
+El módulo **Cuentas por Pagar** administra documentos de compra importados
+desde el Registro de Compras (RCV) del SII, su vencimiento, saldo, referencias,
+pagos y programación de transferencias. Su ruta funcional principal es:
+
+```text
+/finanzas/compras
+```
+
+Antes de analizar, modificar o probar archivos relacionados con Cuentas por
+Pagar, lee primero la documentación disponible en:
+
+- `storage/agents/docs/cuentas_por_pagar/README.md`
+- `storage/agents/docs/cuentas_por_pagar/arquitectura.md`
+- `storage/agents/docs/cuentas_por_pagar/modelo-datos.md`
+- `storage/agents/docs/cuentas_por_pagar/importacion-rcv.md`
+- `storage/agents/docs/cuentas_por_pagar/proveedores-y-vencimientos.md`
+- `storage/agents/docs/cuentas_por_pagar/saldos-y-estados.md`
+- `storage/agents/docs/cuentas_por_pagar/referencias-notas-credito.md`
+- `storage/agents/docs/cuentas_por_pagar/pagos-cruces-y-programacion.md`
+- `storage/agents/docs/cuentas_por_pagar/exportaciones-y-panel-finanzas.md`
+- `storage/agents/docs/cuentas_por_pagar/riesgos-conocidos.md`
+- `storage/agents/docs/cuentas_por_pagar/pruebas.md`
+
+Algunos de estos documentos pueden agregarse progresivamente. Si un documento
+referenciado todavía no existe, informa su ausencia y continúa con los
+documentos y el código disponibles.
+
+### Invariantes críticas de Cuentas por Pagar
+
+#### Identidad de un documento importado
+
+La identidad lógica de un documento RCV es:
+
+```text
+empresa_id + tipo_documento_id + rut_proveedor + folio
+```
+
+No se debe identificar un documento solo por folio, RUT, razón social o tipo de
+documento.
+
+#### Empresa receptora del RCV
+
+La empresa se resuelve desde el RUT contenido en el nombre del archivo RCV.
+Una importación no debe imputar documentos a otra empresa ni alterar documentos
+históricos pertenecientes a otro RUT.
+
+#### Configuración del proveedor
+
+La relación de proveedor de Cuentas por Pagar es:
+
+```text
+documentos_compras.cobranza_compra_id
+→ cobranza_compras.id
+```
+
+La asociación se resuelve por RUT del proveedor. Si no existe configuración,
+el documento puede quedar importado sin vencimiento y debe pasar por el flujo
+explícito de creación/reprocesamiento; no se deben inventar créditos ni datos
+bancarios.
+
+#### Estados y saldo
+
+`status_original` representa el estado calculado por vencimiento. `estado`
+representa una gestión manual u operativa. No deben confundirse ni sobrescribirse
+sin revisar pagos, pronto pagos, abonos, cruces y referencias.
+
+El saldo pendiente debe recalcularse desde una fuente de negocio coherente. Antes
+de cambiar su fórmula, identifica todos los caminos que lo afectan: pago, pronto
+pago, abono, cruce, nota de crédito, nota de débito y referencia documental.
+
+#### Referencias documentales
+
+Una referencia entre documentos de compra debe mantenerse dentro de la misma
+empresa y del mismo RUT de proveedor. Las notas de crédito y los movimientos
+automáticos que originen no deben modificar facturas ajenas.
+
+#### Programación y pago efectivo
+
+Una programación de próximo pago no equivale a un pago registrado y no debe
+cerrar el documento ni llevar su saldo a cero. La exportación bancaria tampoco
+debe confundirse con la confirmación del pago.
+
+#### Historial y trazabilidad
+
+Los movimientos en `movimientos_compras` son trazabilidad financiera. No se
+deben borrar, recrear ni reasignar movimientos históricos sin revisar el
+documento, el saldo y la operación que los originó.
 
 ## Libertad de análisis y pruebas
 
