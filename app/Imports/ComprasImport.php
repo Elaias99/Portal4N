@@ -239,6 +239,7 @@ class ComprasImport implements ToModel, WithHeadingRow
         $esPagoAutomatico = in_array($formaPagoNormalizada, [
             'CAJA CHICA',
             'FONDO POR RENDIR',
+            'ANTICIPADO',
         ], true);
 
         if ($esPagoAutomatico) {

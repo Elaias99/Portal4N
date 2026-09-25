@@ -325,6 +325,7 @@ class CobranzaCompraController extends Controller
                 $esPagoAutomatico = in_array($formaPagoNormalizada, [
                     'CAJA CHICA',
                     'FONDO POR RENDIR',
+                    'ANTICIPADO',
                 ], true);
 
                 $datosActualizar = [

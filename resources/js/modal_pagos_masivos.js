@@ -24,6 +24,20 @@
             return '$' + num.toLocaleString('es-CL');
         }
 
+        // Factura de Compra Electrónica (46): en pago total se transfiere solo el neto,
+        // igual que PagosMasivosDocumentoCompraExport. El monto registrado no cambia.
+        const TIPO_FACTURA_COMPRA_ELECTRONICA = 46;
+
+        function montoMostrado(doc) {
+            const monto = Number(doc.monto || 0);
+
+            if (doc.operacion === 'pago' && doc.tipoDocumento === TIPO_FACTURA_COMPRA_ELECTRONICA) {
+                return Math.min(monto, Math.max(0, doc.montoNeto));
+            }
+
+            return monto;
+        }
+
         function textoDocumentos(cantidad) {
             return `${cantidad} ${cantidad === 1 ? 'documento' : 'documentos'}`;
         }
@@ -49,7 +63,7 @@
 
             docs.forEach(doc => {
                 const empresa = doc.empresa || 'Sin empresa';
-                const monto = Number(doc.monto || 0);
+                const monto = montoMostrado(doc);
 
                 totalGeneral += monto;
 
@@ -156,6 +170,8 @@
                     fechaVencimiento: doc.fechaVencimiento || '',
                     saldoInicial: Number(doc.saldo),
                     montoTotal: Number(doc.total),
+                    montoNeto: Number(doc.neto || 0),
+                    tipoDocumento: Number(doc.tipoDocumento || 0),
                     operacion: 'pago',
                     monto: Number(doc.saldo),
 
@@ -242,7 +258,7 @@
                             min="1"
                             max="${doc.saldoInicial}"
                             step="1"
-                            value="${doc.monto}"
+                            value="${montoMostrado(doc)}"
                             ${doc.operacion === 'pago' ? 'disabled' : ''}
                         >
                     </td>
@@ -351,7 +367,7 @@
 
                     if (op === 'pago') {
                         documentosSeleccionados[id].monto = documentosSeleccionados[id].saldoInicial;
-                        inputMonto.value = documentosSeleccionados[id].saldoInicial;
+                        inputMonto.value = montoMostrado(documentosSeleccionados[id]);
                         inputMonto.disabled = true;
                         upsertHiddenMonto(id, documentosSeleccionados[id].saldoInicial);
                     } else {

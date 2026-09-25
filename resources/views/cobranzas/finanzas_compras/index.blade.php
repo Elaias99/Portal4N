@@ -458,6 +458,8 @@
                                                     data-fecha-vencimiento="{{ $doc->fecha_vencimiento ? \Carbon\Carbon::parse($doc->fecha_vencimiento)->format('d-m-Y') : '' }}"
                                                     data-saldo="{{ $doc->saldo_pendiente }}"
                                                     data-total="{{ $doc->monto_total }}"
+                                                    data-neto="{{ $doc->monto_neto }}"
+                                                    data-tipo-documento="{{ $doc->tipo_documento_id }}"
                                                     data-programado-id="{{ $doc->pagoProgramado?->id ?? '' }}"
                                                     data-forma-pago="{{ $formaPagoCompra }}"
                                                     data-omitido-banco="{{ $esPortalProveedor ? 1 : 0 }}"

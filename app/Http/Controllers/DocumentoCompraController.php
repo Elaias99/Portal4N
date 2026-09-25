@@ -350,6 +350,14 @@ class DocumentoCompraController extends Controller
         $nota = DocumentoCompra::findOrFail($request->nota_id);
         $factura = DocumentoCompra::findOrFail($request->factura_id);
 
+        // Validaciones de negocio
+        $errorReferencia = $this->validarReferenciaCompra($nota, $factura);
+
+        if ($errorReferencia) {
+            return redirect()->route('finanzas_compras.index')
+                ->with('error', $errorReferencia);
+        }
+
         $syncMovimientoReferencia = app(\App\Services\SincronizarMovimientoReferenciaCompraService::class);
 
         $referenciaAnterior = $nota->referencia_id
@@ -403,7 +411,8 @@ class DocumentoCompraController extends Controller
             ]);
         }
 
-        $syncMovimientoReferencia = app(\App\Services\SincronizarMovimientoReferenciaCompraService::class);
+        // Validar todas las referencias antes de guardar cualquiera
+        $pares = [];
 
         foreach ($referencias as $notaId => $facturaId) {
             $nota = DocumentoCompra::find($notaId);
@@ -413,6 +422,21 @@ class DocumentoCompraController extends Controller
                 continue;
             }
 
+            $errorReferencia = $this->validarReferenciaCompra($nota, $factura);
+
+            if ($errorReferencia) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Nota folio {$nota->folio} → documento folio {$factura->folio}: {$errorReferencia} No se guardó ninguna referencia.",
+                ], 422);
+            }
+
+            $pares[] = [$nota, $factura];
+        }
+
+        $syncMovimientoReferencia = app(\App\Services\SincronizarMovimientoReferenciaCompraService::class);
+
+        foreach ($pares as [$nota, $factura]) {
             $referenciaAnterior = $nota->referencia_id
                 ? DocumentoCompra::find($nota->referencia_id)
                 : null;
@@ -447,6 +471,31 @@ class DocumentoCompraController extends Controller
         session()->forget('sugerencias_notas_compras');
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Reglas de referencia documental (mismas que asignarNuevaReferencia).
+     * Retorna el mensaje de error o null si la referencia es válida.
+     */
+    private function validarReferenciaCompra(DocumentoCompra $documento, DocumentoCompra $referencia): ?string
+    {
+        if ((int) $documento->id === (int) $referencia->id) {
+            return 'Un documento no puede referenciarse a sí mismo.';
+        }
+
+        if ((int) $documento->empresa_id !== (int) $referencia->empresa_id) {
+            return 'La referencia debe pertenecer a la misma empresa.';
+        }
+
+        if ((string) $documento->rut_proveedor !== (string) $referencia->rut_proveedor) {
+            return 'La referencia debe corresponder al mismo proveedor.';
+        }
+
+        if ((int) $documento->tipo_documento_id === 61 && (int) $referencia->tipo_documento_id !== 33) {
+            return 'La Nota de Crédito solo puede referenciar una Factura Electrónica.';
+        }
+
+        return null;
     }
 
 

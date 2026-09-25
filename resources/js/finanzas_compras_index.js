@@ -28,6 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
             fechaVencimiento: cb.dataset.fechaVencimiento || '',
             saldo: Number(cb.dataset.saldo),
             total: Number(cb.dataset.total),
+            neto: Number(cb.dataset.neto || 0),
+            tipoDocumento: Number(cb.dataset.tipoDocumento || 0),
 
             formaPago: cb.dataset.formaPago || '',
             omitidoBanco: cb.dataset.omitidoBanco === '1'
