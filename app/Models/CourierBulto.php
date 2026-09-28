@@ -53,7 +53,9 @@ class CourierBulto extends Model
         // B. Cálculo
         'courier_agente_id',
         'zona',
+        'tipo_pago',
         'courier_configuracion_id',
+        'courier_proveedor_id',
         'considerar_pago',
         'tabla',
         'peso_bodega',
@@ -96,6 +98,15 @@ class CourierBulto extends Model
         return $this->belongsTo(
             CourierAgentes::class,
             'courier_agente_id'
+        );
+    }
+
+    /* A quién se le paga: agente + repartidor resueltos en el cálculo. */
+    public function proveedor(): BelongsTo
+    {
+        return $this->belongsTo(
+            CourierProveedor::class,
+            'courier_proveedor_id'
         );
     }
 

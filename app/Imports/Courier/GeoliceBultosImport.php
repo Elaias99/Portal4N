@@ -24,6 +24,15 @@ use PhpOffice\PhpSpreadsheet\Shared\Date as FechaExcel;
  * Además de guardar, detecta qué no calza con los catálogos y lo deja
  * en los arreglos públicos para que el comando lo muestre. No escribe
  * nada del cálculo (agente, tabla, kilos): eso es del paso siguiente.
+ *
+ * Tiene dos modos:
+ *
+ * - normal: guarda los bultos.
+ * - solo analizar ($soloAnalizar): cuenta y diagnostica SIN tocar la
+ *   base. Es el que usa la pantalla de revisión previa. Antes esa
+ *   pantalla insertaba las decenas de miles de filas y hacía rollback
+ *   para no dejarlas, lo que hacía esperar al usuario por un trabajo
+ *   que después se descartaba.
  */
 class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRow, WithCustomCsvSettings
 {
@@ -32,6 +41,12 @@ class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRo
         'nuevos' => 0,
         'actualizados' => 0,
         'sin_cambio' => 0,
+        /*
+         * Solo en modo analizar: bultos que ya están en este período.
+         * No se puede saber todavía cuáles cambiarían y cuáles no; eso
+         * se resuelve al guardar (actualizados / sin_cambio).
+         */
+        'ya_en_el_periodo' => 0,
         'de_periodo_anterior' => 0,
         'con_peso_declarado' => 0,
         'sin_peso_declarado' => 0,
@@ -49,6 +64,17 @@ class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRo
 
     /** @var array<string,int> comuna de destino → bultos, cuando no está en cobertura */
     public array $comunasFueraDeCatalogo = [];
+
+    /*
+     * Hasta tres bultos de ejemplo por comuna no reconocida.
+     *
+     * El nombre por sí solo muchas veces no dice nada: Geolice llega a
+     * mandar un número en esa columna. Con el cliente y la dirección,
+     * Operaciones puede reconocer de qué envíos se trata.
+     *
+     * @var array<string,array<int,array<string,string|null>>>
+     */
+    public array $comunasFueraEjemplos = [];
 
     /** @var array<string,int> "agente | comerciante | servicio" → bultos, cuando no hay configuración */
     public array $sinConfiguracion = [];
@@ -70,6 +96,7 @@ class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRo
         private CourierPeriodo $periodo,
         private string $archivoOrigen,
         private string $delimitadorCsv = ',',
+        private bool $soloAnalizar = false,
     ) {
         $this->cobertura = CourierCoberturaComuna::query()
             ->with('agente:id,nombre')
@@ -129,6 +156,45 @@ class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRo
             return;
         }
 
+        foreach ($filas as $datos) {
+            $this->detectar($datos);
+        }
+
+        if ($this->soloAnalizar) {
+            $this->clasificar($filas);
+
+            return;
+        }
+
+        $this->guardar($filas);
+    }
+
+    /*
+     * Modo analizar: solo dice cuántos son nuevos, cuántos ya están en
+     * este período y cuántos vienen de uno anterior. Consulta liviana:
+     * pide dos columnas, no el bulto completo, y no escribe nada.
+     */
+    private function clasificar(array $filas): void
+    {
+        $existentes = CourierBulto::query()
+            ->whereIn('seguimiento', array_keys($filas))
+            ->pluck('courier_periodo_id', 'seguimiento');
+
+        foreach ($filas as $seguimiento => $datos) {
+            $periodoId = $existentes->get($seguimiento);
+
+            if ($periodoId === null) {
+                $this->resumen['nuevos']++;
+            } elseif ((int) $periodoId !== (int) $this->periodo->id) {
+                $this->resumen['de_periodo_anterior']++;
+            } else {
+                $this->resumen['ya_en_el_periodo']++;
+            }
+        }
+    }
+
+    private function guardar(array $filas): void
+    {
         $existentes = CourierBulto::whereIn('seguimiento', array_keys($filas))
             ->get()
             ->keyBy('seguimiento');
@@ -137,8 +203,6 @@ class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRo
         $ahora = now()->format('Y-m-d H:i:s');
 
         foreach ($filas as $seguimiento => $datos) {
-            $this->detectar($datos);
-
             $bulto = $existentes->get($seguimiento);
 
             if ($bulto === null) {
@@ -252,6 +316,15 @@ class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRo
             $this->resumen['comuna_fuera_de_catalogo']++;
             $comuna = $datos['comuna_destino'];
             $this->comunasFueraDeCatalogo[$comuna] = ($this->comunasFueraDeCatalogo[$comuna] ?? 0) + 1;
+
+            if (count($this->comunasFueraEjemplos[$comuna] ?? []) < 3) {
+                $this->comunasFueraEjemplos[$comuna][] = [
+                    'seguimiento' => $datos['seguimiento'],
+                    'comerciante' => trim((string) $datos['comerciante']),
+                    'servicio' => trim((string) $datos['servicio']),
+                    'direccion' => $datos['direccion'],
+                ];
+            }
 
             return;
         }

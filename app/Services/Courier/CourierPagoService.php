@@ -11,9 +11,11 @@ use App\Models\CourierEstadoEntrega;
 use App\Models\CourierImportacion;
 use App\Models\CourierPeriodo;
 use App\Models\CourierPesaje;
+use App\Models\CourierProveedor;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Excel as TipoExcel;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -26,6 +28,13 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class CourierPagoService
 {
+    /*
+     * Carpeta donde queda el archivo mientras el usuario mira la
+     * revisión y decide si lo confirma. Es temporal: se borra al
+     * confirmar, al descartar, o cuando pasa un día.
+     */
+    private const CARPETA_REVISIONES = 'courier/revisiones';
+
     public function periodos(): Collection
     {
         return CourierPeriodo::query()
@@ -68,14 +77,56 @@ class CourierPagoService
      */
     public function importarGeolice(UploadedFile $archivo, string $codigoPeriodo, ?int $usuarioId): CourierImportacion
     {
-        // Misma holgura que el comando: la descarga trae decenas de miles de filas.
+        return $this->guardarBultos(
+            $archivo->getRealPath(),
+            $archivo->getClientOriginalName(),
+            strtolower($archivo->getClientOriginalExtension()),
+            $codigoPeriodo,
+            $usuarioId
+        );
+    }
+
+    /*
+     * Confirma una revisión: importa el archivo que quedó guardado
+     * cuando el usuario lo revisó, sin pedirle que lo suba otra vez.
+     */
+    public function confirmarGeolice(string $token, ?int $usuarioId): CourierImportacion
+    {
+        $revision = $this->leerRevision($token);
+
+        $importacion = $this->guardarBultos(
+            Storage::path($revision['ruta']),
+            $revision['archivo'],
+            $revision['extension'],
+            $revision['periodo'],
+            $usuarioId
+        );
+
+        $this->descartarRevision($token);
+
+        return $importacion;
+    }
+
+    /*
+     * Lee el archivo y guarda los bultos. Es el único lugar que escribe:
+     * lo usan la confirmación desde pantalla y el comando de terminal.
+     * Todo o nada: si algo falla no queda ni el período nuevo ni bultos
+     * a medias.
+     */
+    private function guardarBultos(
+        string $ruta,
+        string $nombre,
+        string $extension,
+        string $codigoPeriodo,
+        ?int $usuarioId
+    ): CourierImportacion {
+        // La descarga trae decenas de miles de filas.
         set_time_limit(0);
         ini_set('memory_limit', '2048M');
 
-        $nombre = $archivo->getClientOriginalName();
         $inicio = microtime(true);
 
-        return DB::transaction(function () use ($archivo, $codigoPeriodo, $usuarioId, $nombre, $inicio) {
+        return DB::transaction(function () use ($ruta, $nombre, $extension, $codigoPeriodo, $usuarioId, $inicio) {
             $periodo = CourierPeriodo::firstOrCreate(
                 ['codigo' => $codigoPeriodo],
                 [
@@ -85,33 +136,7 @@ class CourierPagoService
                 ]
             );
 
-
-            $extension = strtolower($archivo->getClientOriginalExtension());
-
-            $tipoExcel = match ($extension) {
-                'xlsx' => TipoExcel::XLSX,
-                'csv' => TipoExcel::CSV,
-                default => throw new \InvalidArgumentException(
-                    "Formato de archivo no soportado: {$extension}"
-                ),
-            };
-
-            $delimitador = $extension === 'csv'
-                ? $this->detectarDelimitadorCsv($archivo->getRealPath())
-                : ',';
-
-            $import = new GeoliceBultosImport(
-                $periodo,
-                $nombre,
-                $delimitador
-            );
-
-            Excel::import(
-                $import,
-                $archivo,
-                null,
-                $tipoExcel
-            );
+            $import = $this->leerArchivoGeolice($ruta, $extension, $periodo, $nombre);
 
             return CourierImportacion::create([
                 'courier_periodo_id' => $periodo->id,
@@ -238,6 +263,7 @@ class CourierPagoService
                 'estados_desconocidos' => [],
                 'comunas_fuera_de_catalogo' => [],
                 'comunas_fuera_bultos' => 0,
+                'comunas_fuera_ejemplos' => [],
                 'sin_configuracion' => [],
                 'sin_configuracion_bultos' => 0,
             ];
@@ -325,6 +351,7 @@ class CourierPagoService
             'estados_desconocidos' => $estadosDesconocidos,
             'comunas_fuera_de_catalogo' => $this->ordenar($comunasFuera),
             'comunas_fuera_bultos' => array_sum($comunasFuera),
+            'comunas_fuera_ejemplos' => $this->ejemplosPorComuna($periodo, array_keys($comunasFuera)),
             'sin_configuracion' => $this->ordenar($sinConfiguracion),
             'sin_configuracion_bultos' => array_sum($sinConfiguracion),
         ];
@@ -335,6 +362,12 @@ class CourierPagoService
 
 
 
+    /*
+     * Revisión previa: lee el archivo, lo diagnostica contra los
+     * catálogos y NO escribe nada en la base. El archivo queda guardado
+     * en disco para que la confirmación no obligue a subirlo otra vez;
+     * el token que se devuelve es la forma de volver a él.
+     */
     public function revisarGeolice(
         UploadedFile $archivo,
         string $codigoPeriodo
@@ -343,67 +376,209 @@ class CourierPagoService
         ini_set('memory_limit', '2048M');
 
         $nombre = $archivo->getClientOriginalName();
+        $extension = strtolower($archivo->getClientOriginalExtension());
 
-        DB::beginTransaction();
+        if (! in_array($extension, ['xlsx', 'csv'], true)) {
+            throw new \InvalidArgumentException("Formato de archivo no soportado: {$extension}");
+        }
+
+        $this->limpiarRevisionesViejas();
+
+        $token = bin2hex(random_bytes(16));
+        $ruta = self::CARPETA_REVISIONES . "/{$token}.{$extension}";
+
+        Storage::putFileAs(self::CARPETA_REVISIONES, $archivo, "{$token}.{$extension}");
+
+        /*
+         * El período puede no existir todavía: en ese caso se trabaja
+         * con una instancia sin guardar, para no crear un período por
+         * el solo hecho de mirar un archivo. Sin id, cualquier bulto
+         * que ya exista cuenta como de un período anterior, que es
+         * justamente lo que corresponde.
+         */
+        $periodo = CourierPeriodo::query()->where('codigo', $codigoPeriodo)->first()
+            ?? new CourierPeriodo([
+                'codigo' => $codigoPeriodo,
+                'anio' => (int) substr($codigoPeriodo, 0, 4),
+                'mes' => (int) substr($codigoPeriodo, 4, 2),
+                'estado' => 'abierto',
+            ]);
 
         try {
-            $periodo = CourierPeriodo::firstOrCreate(
-                ['codigo' => $codigoPeriodo],
-                [
-                    'anio' => (int) substr($codigoPeriodo, 0, 4),
-                    'mes' => (int) substr($codigoPeriodo, 4, 2),
-                    'estado' => 'abierto',
-                ]
-            );
-
-            $extension = strtolower($archivo->getClientOriginalExtension());
-
-            $tipoExcel = match ($extension) {
-                'xlsx' => TipoExcel::XLSX,
-                'csv' => TipoExcel::CSV,
-                default => throw new \InvalidArgumentException(
-                    "Formato de archivo no soportado: {$extension}"
-                ),
-            };
-
-            $delimitador = $extension === 'csv'
-                ? $this->detectarDelimitadorCsv($archivo->getRealPath())
-                : ',';
-
-            $import = new GeoliceBultosImport(
+            $import = $this->leerArchivoGeolice(
+                Storage::path($ruta),
+                $extension,
                 $periodo,
                 $nombre,
-                $delimitador
+                soloAnalizar: true
             );
-
-            Excel::import(
-                $import,
-                $archivo,
-                null,
-                $tipoExcel
-            );
-
-            $resultado = [
-                'archivo' => $nombre,
-                'periodo' => $codigoPeriodo,
-                'resumen' => $import->resumen,
-                'estados' => $this->ordenar($import->estados),
-                'estados_desconocidos' => $import->estadosDesconocidos,
-                'comunas_fuera_de_catalogo' => $this->ordenar(
-                    $import->comunasFueraDeCatalogo
-                ),
-                'sin_configuracion' => $this->ordenar(
-                    $import->sinConfiguracion
-                ),
-            ];
-
-            DB::rollBack();
-
-            return $resultado;
         } catch (\Throwable $e) {
-            DB::rollBack();
+            Storage::delete($ruta);
 
             throw $e;
+        }
+
+        Storage::put(
+            self::CARPETA_REVISIONES . "/{$token}.json",
+            json_encode([
+                'archivo' => $nombre,
+                'extension' => $extension,
+                'periodo' => $codigoPeriodo,
+                'ruta' => $ruta,
+            ], JSON_UNESCAPED_UNICODE)
+        );
+
+        return [
+            'token' => $token,
+            'archivo' => $nombre,
+            'periodo' => $codigoPeriodo,
+            'resumen' => $import->resumen,
+            'estados' => $this->ordenar($import->estados),
+            'estados_desconocidos' => $import->estadosDesconocidos,
+            'comunas_fuera_de_catalogo' => $this->ordenar(
+                $import->comunasFueraDeCatalogo
+            ),
+            'comunas_fuera_ejemplos' => $import->comunasFueraEjemplos,
+            'sin_configuracion' => $this->ordenar(
+                $import->sinConfiguracion
+            ),
+        ];
+    }
+
+    /*
+     * Lectura del archivo, común a la revisión y a la importación.
+     *
+     * El CSV se lee directamente con fgetcsv en vez de pasar por
+     * Laravel Excel: con lectura por lotes, Laravel Excel recorre el
+     * archivo entero una vez por lote, y en una descarga de decenas de
+     * miles de filas eso se nota. El xlsx sí lo necesita.
+     */
+    private function leerArchivoGeolice(
+        string $ruta,
+        string $extension,
+        CourierPeriodo $periodo,
+        string $nombre,
+        bool $soloAnalizar = false
+    ): GeoliceBultosImport {
+        $delimitador = $extension === 'csv'
+            ? $this->detectarDelimitadorCsv($ruta)
+            : ',';
+
+        $import = new GeoliceBultosImport(
+            $periodo,
+            $nombre,
+            $delimitador,
+            $soloAnalizar
+        );
+
+        if ($extension === 'csv') {
+            $this->leerCsvPorLotes($import, $ruta, $delimitador);
+
+            return $import;
+        }
+
+        Excel::import($import, $ruta, null, TipoExcel::XLSX);
+
+        return $import;
+    }
+
+    /*
+     * Recorre el CSV una sola vez y entrega los lotes al importador,
+     * igual que haría Laravel Excel pero sin releer el archivo.
+     */
+    private function leerCsvPorLotes(
+        GeoliceBultosImport $import,
+        string $ruta,
+        string $delimitador
+    ): void {
+        $archivo = fopen($ruta, 'r');
+
+        if ($archivo === false) {
+            throw new \RuntimeException('No se pudo abrir el archivo de Geolice.');
+        }
+
+        try {
+            // Encabezado.
+            fgetcsv($archivo, 0, $delimitador, '"', '');
+
+            $lote = [];
+            $porLote = $import->chunkSize();
+
+            while (($campos = fgetcsv($archivo, 0, $delimitador, '"', '')) !== false) {
+                if ($campos === [null]) {
+                    continue; // línea en blanco
+                }
+
+                $lote[] = collect($campos);
+
+                if (count($lote) >= $porLote) {
+                    $import->collection(collect($lote));
+                    $lote = [];
+                }
+            }
+
+            if ($lote !== []) {
+                $import->collection(collect($lote));
+            }
+        } finally {
+            fclose($archivo);
+        }
+    }
+
+    /*
+     * Devuelve los datos de una revisión guardada. El token se valida
+     * con formato estricto: es parte de una ruta de archivo.
+     */
+    private function leerRevision(string $token): array
+    {
+        if (! preg_match('/^[a-f0-9]{32}$/', $token)) {
+            throw new \InvalidArgumentException('La revisión no es válida.');
+        }
+
+        $meta = self::CARPETA_REVISIONES . "/{$token}.json";
+
+        if (! Storage::exists($meta)) {
+            throw new \RuntimeException(
+                'La revisión ya no está disponible; vuelve a cargar el archivo.'
+            );
+        }
+
+        $datos = json_decode(Storage::get($meta), true);
+
+        if (! is_array($datos) || ! Storage::exists($datos['ruta'] ?? '')) {
+            throw new \RuntimeException(
+                'La revisión ya no está disponible; vuelve a cargar el archivo.'
+            );
+        }
+
+        return $datos;
+    }
+
+    public function descartarRevision(?string $token): void
+    {
+        if ($token === null || ! preg_match('/^[a-f0-9]{32}$/', $token)) {
+            return;
+        }
+
+        foreach (Storage::files(self::CARPETA_REVISIONES) as $archivo) {
+            if (str_starts_with(basename($archivo), $token . '.')) {
+                Storage::delete($archivo);
+            }
+        }
+    }
+
+    /*
+     * Un archivo revisado y nunca confirmado no debe quedar ocupando
+     * disco para siempre.
+     */
+    private function limpiarRevisionesViejas(int $horas = 24): void
+    {
+        $limite = now()->subHours($horas)->getTimestamp();
+
+        foreach (Storage::files(self::CARPETA_REVISIONES) as $archivo) {
+            if (Storage::lastModified($archivo) < $limite) {
+                Storage::delete($archivo);
+            }
         }
     }
 
@@ -413,6 +588,272 @@ class CourierPagoService
 
 
 
+
+    /*
+     * Lo que hoy se puede pagar del período: sólo los bultos que el
+     * cálculo dejó en PAGAR. El IVA se agrega por proveedor, y sólo a
+     * los que emiten Factura, igual que la hoja Banco de la planilla.
+     *
+     * Devuelve null si el período todavía no se ha calculado.
+     */
+    public function resumenPago(CourierPeriodo $periodo): ?array
+    {
+        $calculados = CourierBulto::query()
+            ->delPeriodo($periodo->id)
+            ->whereNotNull('calculado_at')
+            ->count();
+
+        if ($calculados === 0) {
+            return null;
+        }
+
+        $filas = CourierBulto::query()
+            ->delPeriodo($periodo->id)
+            ->where('estado_pago', 'PAGAR')
+            ->selectRaw('zona, tipo_pago, courier_proveedor_id, COUNT(*) AS bultos, SUM(valor) AS monto')
+            ->groupBy('zona', 'tipo_pago', 'courier_proveedor_id')
+            ->get();
+
+        $proveedores = CourierProveedor::query()
+            ->whereIn('id', $filas->pluck('courier_proveedor_id')->filter()->unique())
+            ->get(['id', 'razon_social', 'rut', 'tipo_documento'])
+            ->keyBy('id');
+
+        $porZona = [];
+        $porProveedor = [];
+        $porTipo = [];
+        $bultos = 0;
+        $neto = 0;
+
+        foreach ($filas as $fila) {
+            $monto = (int) $fila->monto;
+            $cantidad = (int) $fila->bultos;
+
+            $bultos += $cantidad;
+            $neto += $monto;
+
+            $zona = $fila->zona ?: 'Sin zona';
+            $tipo = $fila->tipo_pago ?: 'Variables';
+
+            $porZona[$zona]['zona'] = $zona;
+            $porZona[$zona]['bultos'] = ($porZona[$zona]['bultos'] ?? 0) + $cantidad;
+            $porZona[$zona]['neto'] = ($porZona[$zona]['neto'] ?? 0) + $monto;
+
+            $porTipo[$tipo] = ($porTipo[$tipo] ?? 0) + $monto;
+
+            $proveedor = $fila->courier_proveedor_id
+                ? $proveedores->get($fila->courier_proveedor_id)
+                : null;
+
+            /*
+             * Sin proveedor resuelto el bulto igual tiene valor, pero no
+             * se sabe a quién pagarle. Se agrupa aparte para que quede
+             * a la vista y no se mezcle con los pagos reales.
+             */
+            $clave = $proveedor?->razon_social ?? '__sin_proveedor__';
+
+            $porProveedor[$clave]['razon_social'] = $proveedor?->razon_social;
+            $porProveedor[$clave]['rut'] = $proveedor?->rut;
+            $porProveedor[$clave]['tipo_documento'] = $proveedor?->tipo_documento;
+            $porProveedor[$clave]['zona'] = $porProveedor[$clave]['zona'] ?? $zona;
+            $porProveedor[$clave]['bultos'] = ($porProveedor[$clave]['bultos'] ?? 0) + $cantidad;
+            $porProveedor[$clave]['neto'] = ($porProveedor[$clave]['neto'] ?? 0) + $monto;
+        }
+
+        /* Banco: el 19% se agrega sólo cuando el documento es Factura. */
+        $iva = 0;
+
+        foreach ($porProveedor as &$datos) {
+            $datos['iva'] = $datos['tipo_documento'] === 'Factura'
+                ? (int) round($datos['neto'] * 0.19)
+                : 0;
+            $datos['total'] = $datos['neto'] + $datos['iva'];
+            $iva += $datos['iva'];
+        }
+        unset($datos);
+
+        uasort($porProveedor, fn ($a, $b) => $b['neto'] <=> $a['neto']);
+
+        $orden = ['RM' => 0, 'Regiones' => 1, 'Sin zona' => 2];
+        uasort($porZona, fn ($a, $b) => ($orden[$a['zona']] ?? 9) <=> ($orden[$b['zona']] ?? 9));
+
+        arsort($porTipo);
+
+        /* Lo que quedó fuera por falta de una regla, no por decisión. */
+        $bloqueados = CourierBulto::query()
+            ->delPeriodo($periodo->id)
+            ->whereIn('motivo', ['sin_comuna', 'comuna_desconocida', 'sin_configuracion', 'sin_tabla', 'sin_tarifa', 'configuracion_revisar'])
+            ->count();
+
+        $motivos = CourierBulto::query()
+            ->delPeriodo($periodo->id)
+            ->where('estado_pago', 'DESCONTAR')
+            ->selectRaw('motivo, COUNT(*) AS bultos')
+            ->groupBy('motivo')
+            ->orderByDesc('bultos')
+            ->get()
+            ->mapWithKeys(fn ($f) => [$f->motivo ?? 'sin motivo' => (int) $f->bultos])
+            ->all();
+
+        return [
+            'calculado_at' => CourierBulto::query()->delPeriodo($periodo->id)->max('calculado_at'),
+            'bultos_calculados' => $calculados,
+            'bultos_pagados' => $bultos,
+            'neto' => $neto,
+            'iva' => $iva,
+            'total' => $neto + $iva,
+            'por_zona' => array_values($porZona),
+            'por_tipo' => $porTipo,
+            'por_proveedor' => $porProveedor,
+            'bloqueados' => $bloqueados,
+            'motivos' => $motivos,
+            'sin_calcular' => CourierBulto::query()->delPeriodo($periodo->id)->whereNull('calculado_at')->count(),
+        ];
+    }
+
+    /*
+     * Cómo se reparten los bultos del período entre los agentes, según
+     * la comuna de destino. Es la antesala del resumen de pago: tiene
+     * la misma forma (zona → agente), pero cuenta bultos, no pesos.
+     * No calcula nada; solo cruza la comuna con el catálogo.
+     */
+    public function distribucion(CourierPeriodo $periodo): array
+    {
+        $estadosCatalogo = CourierEstadoEntrega::pluck('considerar', 'estado')->all();
+
+        $cobertura = CourierCoberturaComuna::query()
+            ->with('agente:id,nombre')
+            ->get(['localidad_clave', 'zona', 'courier_agente_id'])
+            ->mapWithKeys(fn ($c) => [
+                $c->localidad_clave => [
+                    'agente_id' => $c->courier_agente_id,
+                    'agente' => $c->agente?->nombre ?? '—',
+                    'zona' => $c->zona,
+                ],
+            ])
+            ->all();
+
+        /*
+         * Se agrupa la comuna en binario para no juntar variantes que
+         * el catálogo trata como distintas (Maipu / Maipú).
+         */
+        $filas = CourierBulto::query()
+            ->delPeriodo($periodo->id)
+            ->selectRaw('comuna_destino COLLATE utf8mb4_bin AS comuna, estado_entrega AS estado, COUNT(*) AS n')
+            ->groupBy('comuna', 'estado')
+            ->get();
+
+        $agentes = [];
+        $comunasNoReconocidas = [];
+        $sinComuna = 0;
+        $noReconocidas = 0;
+        $total = 0;
+
+        foreach ($filas as $fila) {
+            $cantidad = (int) $fila->n;
+            $total += $cantidad;
+
+            $descuenta = ($estadosCatalogo[$fila->estado] ?? null) === CourierEstadoEntrega::DESCONTAR;
+
+            if ($fila->comuna === null || $fila->comuna === '') {
+                $sinComuna += $cantidad;
+
+                continue;
+            }
+
+            $datos = $cobertura[CourierCoberturaComuna::clave($fila->comuna)] ?? null;
+
+            if ($datos === null) {
+                $noReconocidas += $cantidad;
+                $comunasNoReconocidas[$fila->comuna] = ($comunasNoReconocidas[$fila->comuna] ?? 0) + $cantidad;
+
+                continue;
+            }
+
+            $zona = $datos['zona'] ?: 'Sin zona';
+            $llave = $zona . '|' . $datos['agente_id'];
+
+            $agentes[$llave] ??= [
+                'zona' => $zona,
+                'agente_id' => $datos['agente_id'],
+                'agente' => $datos['agente'],
+                'bultos' => 0,
+                'con_estado_pagable' => 0,
+                'con_estado_descontado' => 0,
+            ];
+
+            $agentes[$llave]['bultos'] += $cantidad;
+            $agentes[$llave][$descuenta ? 'con_estado_descontado' : 'con_estado_pagable'] += $cantidad;
+        }
+
+        /* Orden de zonas como en la planilla: RM, Regiones, el resto. */
+        $orden = ['RM' => 0, 'Regiones' => 1, 'Sin zona' => 2];
+        $zonas = [];
+
+        foreach ($agentes as $datos) {
+            $zonas[$datos['zona']]['zona'] = $datos['zona'];
+            $zonas[$datos['zona']]['bultos'] = ($zonas[$datos['zona']]['bultos'] ?? 0) + $datos['bultos'];
+            $zonas[$datos['zona']]['agentes'][] = $datos;
+        }
+
+        uasort($zonas, fn ($a, $b) => ($orden[$a['zona']] ?? 9) <=> ($orden[$b['zona']] ?? 9));
+
+        foreach ($zonas as &$zona) {
+            usort($zona['agentes'], fn ($a, $b) => $b['bultos'] <=> $a['bultos']);
+        }
+        unset($zona);
+
+        arsort($comunasNoReconocidas);
+
+        return [
+            'total' => $total,
+            'zonas' => array_values($zonas),
+            'con_agente' => $total - $sinComuna - $noReconocidas,
+            'sin_comuna' => $sinComuna,
+            'comuna_no_reconocida' => $noReconocidas,
+            'comunas_no_reconocidas' => $comunasNoReconocidas,
+        ];
+    }
+
+    /*
+     * Hasta tres bultos de ejemplo por comuna no reconocida.
+     *
+     * El nombre que manda Geolice a veces no dice nada por sí solo
+     * (llega a venir un número). Con el cliente y la dirección,
+     * Operaciones puede reconocer de qué envíos se trata.
+     */
+    private function ejemplosPorComuna(CourierPeriodo $periodo, array $comunas): array
+    {
+        if ($comunas === []) {
+            return [];
+        }
+
+        $ejemplos = [];
+
+        CourierBulto::query()
+            ->delPeriodo($periodo->id)
+            ->whereIn('comuna_destino', $comunas)
+            ->select(['seguimiento', 'comuna_destino', 'comerciante', 'servicio', 'direccion'])
+            ->orderBy('id')
+            ->chunk(1000, function ($bultos) use (&$ejemplos) {
+                foreach ($bultos as $bulto) {
+                    $comuna = $bulto->comuna_destino;
+
+                    if (count($ejemplos[$comuna] ?? []) >= 3) {
+                        continue;
+                    }
+
+                    $ejemplos[$comuna][] = [
+                        'seguimiento' => $bulto->seguimiento,
+                        'comerciante' => trim((string) $bulto->comerciante),
+                        'servicio' => trim((string) $bulto->servicio),
+                        'direccion' => $bulto->direccion,
+                    ];
+                }
+            });
+
+        return $ejemplos;
+    }
 
     /* Mayor cantidad primero, conservando las claves. */
     private function ordenar(array $lista): array

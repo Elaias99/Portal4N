@@ -99,14 +99,24 @@ php artisan courier:importar-pesajes {archivos*} --periodo=AAAAMM [--fecha=AAAA-
 `geolice` o `pesajes`, nombre del archivo, usuario, conteos, duración y el
 diagnóstico completo en JSON). Es lo que la planilla nunca tuvo.
 
-### Pantalla raíz `/courier` (existe, se rediseñará)
+### Pantallas del período
 
-Hoy muestra, todo en una misma página: selector de período, los cuatro pasos
-del proceso, un carrusel con el resultado de la última carga, los formularios
-de carga de Geolice y de pesajes, las alertas vivas del período y el
-historial de cargas. Funciona, pero Elías la evaluó como sobrecargada: **se
-va a rediseñar para mostrar una sola cosa a la vez** (el paso actual y su
-acción). No construir sobre ella sin acordar antes el nuevo diseño.
+Un selector de período y cuatro vistas, cada una con su tema
+(`partials/periodo-nav.blade.php`):
+
+| Vista | Ruta | Qué muestra |
+|---|---|---|
+| Resumen del período | `/courier` | Estado, datos cargados, **lo que se puede pagar**, accesos a las demás y la carga de archivos. |
+| Pago a proveedores | `/courier/pago` | Totales por zona y tipo de pago, detalle por proveedor con IVA, y por qué no se pagan los demás. |
+| Distribución por agente | `/courier/distribucion` | Cuántos bultos le tocan a cada agente, por zona. |
+| Pendientes | `/courier/pendientes` | Comunas no reconocidas, combinaciones sin configuración y estados con su regla, con las listas completas. |
+
+La regla de diseño, que Elías pidió expresamente: **una cosa a la vez**. La
+portada no repite el detalle de las otras; sólo lo cuenta y enlaza. No volver
+a apilar secciones en ella.
+
+La carga de Geolice tiene **revisión previa**: se sube el archivo, se muestra
+qué trae y qué no calza, y recién al confirmar se guardan los bultos.
 
 Las **alertas vivas** (`CourierPagoService::alertas`) se recalculan desde
 `courier_bultos` en cada visita: comunas no reconocidas, combinaciones sin
@@ -116,19 +126,63 @@ catálogo se corrige, la alerta desaparece sola.
 Las cargas desde pantalla usan las **mismas clases de importación** que los
 comandos, dentro de una transacción; si algo falla no queda nada a medias.
 
-## Fase 3 · Cálculo (no construida)
+### Datos del mes desde la planilla de Operaciones
 
-Lo que falta: un servicio que recorra los bultos del período y llene sus
-columnas de cálculo siguiendo `02-cadena-de-pago.md` (agente, zona,
-configuración, tabla, kilos y su origen, valor, estado de pago y motivo).
-Las columnas ya existen en `courier_bultos`; el diseño está pensado para que
-el cálculo se pueda repetir sin volver a importar.
+Cuando no se guardaron los CSV diarios de bodega, los pesos y los controles
+se sacan del propio Excel del mes:
 
-## Fase 4 · Resumen, banco y pre-facturas (no construida)
+```
+php artisan courier:importar-mes {xlsx} --periodo=AAAAMM [--hojas=Retornos,Blue] [--solo-mostrar]
+```
 
-Suma por agente y por zona, IVA según tipo de documento, nómina para banco.
-El patrón a seguir es el del módulo Suscripciones (pre-factura → PDF → ZIP →
-correo), documentado en `storage/agents/docs/suscripciones/`.
+- Carga `PesoReal` → `courier_pesajes` y `especiales`, `Retornos`, `Blue` y
+  `PagadosMesAnterior` → `courier_controles`.
+- **Lee una hoja a la vez**, con un filtro de columnas
+  (`App\Imports\Courier\FiltroColumnas`): las cinco juntas agotan la memoria
+  (`PesoReal` sola pasa las cien mil filas).
+- Las celdas con fórmula se resuelven con el **último valor calculado** que
+  guardó Excel (`getOldCalculatedValue`). En `Retornos` el código del bulto y
+  su valor son fórmulas; sin esto la hoja entera se descarta.
+- `--hojas` permite recargar sólo una, sin repetir `PesoReal`.
+
+## Fase 3 · Cálculo (hecha)
+
+```
+php artisan courier:calcular --periodo=AAAAMM
+```
+
+`App\Services\Courier\CourierCalculoService` recorre los bultos del período y
+llena sus columnas de cálculo siguiendo `02-cadena-de-pago.md`. Se puede
+repetir cuantas veces se quiera: reescribe el cálculo y no toca lo que trajo
+Geolice.
+
+- Cada bulto que no se paga queda con un **motivo**; los textos están en
+  `CourierCalculoService::MOTIVOS`. Distingue los motivos que son una
+  decisión ya tomada (configuración `NO`, estado que descuenta, pagado el mes
+  anterior) de los que **necesitan que Operaciones defina algo**
+  (`sin_configuracion`, `comuna_desconocida`, `sin_comuna`, `sin_tabla`,
+  `sin_tarifa`, `configuracion_revisar`).
+- Los kilos salen de bodega, del peso declarado (truncado, mínimo 1) o de 1 kg
+  por defecto, y queda registrado en `origen_peso` cuál se usó.
+- Cuando un bulto tiene varios pesajes se toma el primero, como el `BUSCARV`
+  de la planilla. **Pendiente de confirmar con Operaciones.**
+- `Lanas` vs `Variables` se decide por comerciante, con la lista verificada
+  contra la réplica de agosto.
+- Tarda unos minutos: actualiza bulto por bulto. Si molesta, se puede pasar a
+  actualizaciones por lote.
+
+## Fase 4 · Resumen y pago (parcial)
+
+`CourierPagoService::resumenPago()` arma lo que se puede pagar: totales por
+zona, por tipo de pago y **por proveedor con IVA** (19% sólo cuando el tipo de
+documento es exactamente `Factura`, como la hoja Banco). Vive en la pantalla
+`/courier/pago`, y la portada muestra el total.
+
+Falta: la nómina para banco con sus datos de cuenta, y los **pagos manuales**
+que Operaciones lleva en hojas aparte (acuerdos, servicios, ruta CV, visitas,
+apoyo alza, fijo base, especiales), que son la mayor parte del total del mes.
+Para las pre-facturas el patrón a seguir es el de Suscripciones, documentado
+en `storage/agents/docs/suscripciones/`.
 
 ## Convenciones técnicas que hay que respetar
 

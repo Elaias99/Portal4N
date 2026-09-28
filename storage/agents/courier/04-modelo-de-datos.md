@@ -7,7 +7,8 @@ autocontenido (ver decisión en `05-decisiones-y-pendientes.md`).
 ## Vista general
 
 ```
-courier_periodos ──┬── courier_bultos ──(seguimiento)── courier_pesajes
+courier_periodos ──┬── courier_bultos ──(seguimiento)─┬─ courier_pesajes
+                   │                                  └─ courier_controles
                    └── courier_importaciones
 
 courier_agentes ──┬── courier_cobertura_comunas   (comuna → agente, zona)
@@ -96,12 +97,14 @@ la "tabla" del jefe), `orden_compra`, `guia_despacho`, `estado_entrega`,
 `repartidor_nombre`, `repartidor_telefono`, `usuario_entrega`.
 
 **Grupo B — lo que llena el cálculo (vacío al importar):**
-`courier_agente_id`, `zona`, `courier_configuracion_id`, `considerar_pago`
-(copia de `pagar`), `tabla` (copia), `peso_bodega`, `peso_pago`,
-`origen_peso` (`bodega` / `declarado` / `x`), `valor`, `estado_pago`
-(`PAGAR` / `DESCONTAR`), `motivo` (por qué se descontó), `calculado_at`.
-Se copian `pagar` y `tabla` para que el bulto conserve lo que se le aplicó
-aunque el catálogo cambie después.
+`courier_agente_id`, `zona`, `tipo_pago` (`Variables` / `Lanas`),
+`courier_configuracion_id`, `courier_proveedor_id` (a quién se le paga),
+`considerar_pago` (copia de `pagar`), `tabla` (copia), `peso_bodega`,
+`peso_pago`, `origen_peso` (`bodega` / `declarado` / `x`), `valor`,
+`estado_pago` (`PAGAR` / `DESCONTAR`), `motivo` (clave del motivo por el
+que se descontó; los textos están en `CourierCalculoService::MOTIVOS`),
+`calculado_at`. Se copian `pagar`, `tabla` y el proveedor para que el
+bulto conserve lo que se le aplicó aunque el catálogo cambie después.
 
 Índices: único `seguimiento`; `codigo`; (`periodo`, `agente`); (`periodo`,
 `estado_pago`).
@@ -112,6 +115,14 @@ Una fila por bulto **y por día de pesaje**. Modelo `CourierPesaje`.
 `fecha_pesaje` (del nombre del archivo), `kilos` (entero; 0 = pasó por la
 balanza sin peso), `archivo_origen`. Único (`seguimiento`, `fecha_pesaje`).
 Relación `bulto()` por `seguimiento`, sin FK: el bulto puede llegar después.
+
+### `courier_controles`
+Las cuatro hojas del mes que sacan bultos del pago, en una sola tabla
+porque todas hacen lo mismo: marcar un bulto. Modelo `CourierControl`.
+`courier_periodo_id`, `tipo` (`especial` / `retorno` / `blue` /
+`pagado_mes_anterior`), `seguimiento`, `valor` (sólo los retornos traen
+su propio monto), `archivo_origen`. Único (`periodo`, `tipo`,
+`seguimiento`).
 
 ### `courier_importaciones`
 Historial de cargas. Modelo `CourierImportacion`. `courier_periodo_id`,

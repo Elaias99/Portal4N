@@ -11,6 +11,7 @@
     $resumenRevision = $revision['resumen'] ?? [];
 
     $comunasFuera = $revision['comunas_fuera_de_catalogo'] ?? [];
+    $comunasFueraEjemplos = $revision['comunas_fuera_ejemplos'] ?? [];
     $sinConfiguracion = $revision['sin_configuracion'] ?? [];
     $estadosDesconocidos = $revision['estados_desconocidos'] ?? [];
 
@@ -45,6 +46,21 @@
 
         $periodoNombre = ($meses[(int) $m[2]] ?? $m[2]) . ' ' . $m[1];
     }
+
+    $alertasPeriodo = $alertas ?? [];
+    $estadosPeriodo = $alertasPeriodo['estados'] ?? [];
+    $comunasFueraPeriodo = $alertasPeriodo['comunas_fuera_de_catalogo'] ?? [];
+    $sinConfiguracionPeriodo = $alertasPeriodo['sin_configuracion'] ?? [];
+    $ultimaImportacion = $importaciones->first();
+
+    /*
+     * Los tres grupos no se solapan: un bulto sin comuna no puede tener
+     * comuna no reconocida, y la configuración sólo se busca cuando la
+     * comuna sí se reconoció.
+     */
+    $pendientesTotal = ($alertasPeriodo['sin_comuna'] ?? 0)
+        + ($alertasPeriodo['comunas_fuera_bultos'] ?? 0)
+        + ($alertasPeriodo['sin_configuracion_bultos'] ?? 0);
 @endphp
 
 <style>
@@ -224,10 +240,14 @@
         'titulo' => 'Courier · Pago del mes',
         'subtitulo' => $revision
             ? 'Revisa el resultado antes de decidir si el archivo debe incorporarse al proceso.'
-            : 'Carga la descarga de Geolice para comenzar el proceso de pago Courier.',
+            : (($alertasPeriodo['total'] ?? 0) > 0
+                ? "{$periodo->nombre} tiene datos cargados. Revisa primero su estado antes de continuar."
+                : 'Carga la descarga de Geolice para comenzar el proceso de pago Courier.'),
         'volverRuta' => route('cobranzas.general'),
         'volverTexto' => 'Volver al panel de Finanzas',
-        'meta' => $revision ? 'Revisión del archivo' : 'Inicio del proceso',
+        'meta' => $revision
+            ? 'Revisión del archivo'
+            : (($alertasPeriodo['total'] ?? 0) > 0 ? 'Datos del período' : 'Inicio del proceso'),
     ])
 
     @if($errors->any())
@@ -242,11 +262,197 @@
         </div>
     @endif
 
+    @if($periodo && !$revision)
+        @include('courier.partials.periodo-nav', ['activo' => 'resumen'])
+
+        <div class="co-chips" style="margin-bottom: 1rem;">
+            <span class="co-chip">Estado: <strong>{{ $periodo->estado === 'cerrado' ? 'Cerrado' : 'Abierto' }}</strong></span>
+            <span class="co-chip"><strong>{{ $n($alertasPeriodo['total'] ?? 0) }}</strong> bultos cargados</span>
+        </div>
+
+        <section class="co-region">
+            <div class="co-region-head">
+                <div>
+                    <h2 class="co-region-title">Datos cargados</h2>
+                    <p class="co-note">La descarga de Geolice ya está guardada. Estas cifras aún no representan pagos calculados.</p>
+                </div>
+            </div>
+
+            <div class="co-region-body">
+                <div class="co-review-summary">
+                    <div class="co-review-stat">
+                        <span class="co-review-stat-label">Bultos del período</span>
+                        <span class="co-review-stat-value">{{ $n($alertasPeriodo['total'] ?? 0) }}</span>
+                    </div>
+
+                    <div class="co-review-stat">
+                        <span class="co-review-stat-label">Archivos importados</span>
+                        <span class="co-review-stat-value">{{ $n($importaciones->count()) }}</span>
+                    </div>
+
+                    <div class="co-review-stat">
+                        <span class="co-review-stat-label">Última carga</span>
+                        <span class="co-review-stat-value" style="font-size: 1rem;">
+                            {{ $ultimaImportacion?->archivo ?? '—' }}
+                        </span>
+                        @if($ultimaImportacion)
+                            <p class="co-note" style="margin-top: .45rem;">
+                                {{ $ultimaImportacion->created_at->format('d-m-Y H:i') }} · {{ $ultimaImportacion->usuario?->name ?? 'Terminal' }}
+                            </p>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="co-region">
+            <div class="co-region-head">
+                <div>
+                    <h2 class="co-region-title">Dónde seguir</h2>
+                    <p class="co-note">El detalle de cada tema vive en su propia pantalla, para poder mirarlo con calma.</p>
+                </div>
+            </div>
+
+            <div class="co-region-body">
+                <div class="co-accesos">
+                    <a class="co-acceso" href="{{ route('courier.distribucion', ['periodo' => $periodo->codigo]) }}">
+                        <span class="co-acceso-valor">{{ $n($alertasPeriodo['total'] ?? 0) }}</span>
+                        <span class="co-acceso-titulo">Distribución por agente</span>
+                        <span class="co-acceso-texto">
+                            Cuántos bultos le corresponden a cada agente, agrupados por zona.
+                        </span>
+                    </a>
+
+                    <a class="co-acceso {{ $pendientesTotal > 0 ? 'is-warn' : 'is-ok' }}"
+                       href="{{ route('courier.pendientes', ['periodo' => $periodo->codigo]) }}">
+                        <span class="co-acceso-valor">{{ $n($pendientesTotal) }}</span>
+                        <span class="co-acceso-titulo">Bultos con algo pendiente</span>
+                        <span class="co-acceso-texto">
+                            Sin comuna, con comuna no reconocida o sin configuración de pago.
+                        </span>
+                    </a>
+
+                    <a class="co-acceso" href="#importar">
+                        <span class="co-acceso-valor">{{ $n($importaciones->count()) }}</span>
+                        <span class="co-acceso-titulo">Archivos cargados</span>
+                        <span class="co-acceso-texto">
+                            Cargar otra descarga de Geolice sobre este mismo período.
+                        </span>
+                    </a>
+                </div>
+            </div>
+        </section>
+    @endif
+
+    {{-- ====== LO QUE SE PUEDE PAGAR ====== --}}
+    @if($periodo && !$revision)
+        <section class="co-region co-pago-resumen">
+            <div class="co-region-head">
+                <div>
+                    <h2 class="co-region-title">Lo que se puede pagar hoy</h2>
+                    <p class="co-note">
+                        @if($resumenPago)
+                            Bultos que cumplen todas las reglas del catálogo: comuna reconocida, configuración de pago
+                            y tarifa. Calculado el {{ \Carbon\Carbon::parse($resumenPago['calculado_at'])->format('d-m-Y H:i') }}.
+                        @elseif(($alertasPeriodo['total'] ?? 0) > 0)
+                            El período todavía no se ha calculado.
+                        @else
+                            El período está vacío.
+                        @endif
+                    </p>
+                </div>
+                <div class="co-review-actions-right">
+                    @if($resumenPago)
+                        <a href="{{ route('courier.pago', ['periodo' => $periodo->codigo]) }}" class="co-btn co-btn-primary co-btn-sm">
+                            Ver detalle por proveedor
+                        </a>
+                    @endif
+
+                    @if(($alertasPeriodo['total'] ?? 0) > 0)
+                        <form method="POST" action="{{ route('courier.calcular') }}" data-upload>
+                            @csrf
+                            <input type="hidden" name="periodo" value="{{ $periodo->codigo }}">
+                            <button
+                                type="submit"
+                                class="co-btn {{ $resumenPago ? 'co-btn-muted' : 'co-btn-primary' }} co-btn-sm"
+                                data-submit
+                                data-loading-text="Calculando…"
+                            >
+                                {{ $resumenPago ? 'Volver a calcular' : 'Calcular pago del período' }}
+                            </button>
+                        </form>
+                    @endif
+                </div>
+            </div>
+
+            <div class="co-region-body">
+                @if(! $resumenPago)
+                    <p class="co-empty">
+                        @if(($alertasPeriodo['total'] ?? 0) > 0)
+                            Los bultos están cargados, pero falta aplicarles la cadena de pago:
+                            comuna, agente, configuración, kilos y tarifa.
+                            Aprieta <strong>Calcular pago del período</strong> para verlos convertidos en montos.
+                        @else
+                            Todavía no hay bultos en este período. Carga la descarga de Geolice para empezar.
+                        @endif
+                    </p>
+                @else
+                    <div class="co-totales">
+                        <div class="co-total is-principal">
+                            <span class="co-total-label">Total a pagar con IVA</span>
+                            <span class="co-total-valor">${{ $n($resumenPago['total']) }}</span>
+                            <span class="co-total-detalle">
+                                {{ $n($resumenPago['bultos_pagados']) }} bultos de {{ $n($resumenPago['bultos_calculados']) }}
+                            </span>
+                        </div>
+
+                        <div class="co-total">
+                            <span class="co-total-label">Neto</span>
+                            <span class="co-total-valor">${{ $n($resumenPago['neto']) }}</span>
+                            <span class="co-total-detalle">Suma del valor de cada bulto</span>
+                        </div>
+
+                        <div class="co-total">
+                            <span class="co-total-label">IVA</span>
+                            <span class="co-total-valor">${{ $n($resumenPago['iva']) }}</span>
+                            <span class="co-total-detalle">Sólo a los proveedores que emiten factura</span>
+                        </div>
+
+                        <div class="co-total {{ $resumenPago['bloqueados'] > 0 ? 'is-warn' : '' }}">
+                            <span class="co-total-label">Bultos sin poder pagar</span>
+                            <span class="co-total-valor">{{ $n($resumenPago['bloqueados']) }}</span>
+                            <span class="co-total-detalle">Les falta una regla, no una decisión de pago</span>
+                        </div>
+                    </div>
+
+                    @if($resumenPago['por_tipo'] !== [])
+                        <div class="co-chips" style="margin: 1rem 0 0;">
+                            @foreach($resumenPago['por_tipo'] as $tipo => $monto)
+                                <span class="co-chip">{{ $tipo }}: <strong>${{ $n($monto) }}</strong></span>
+                            @endforeach
+                            @foreach($resumenPago['por_zona'] as $zona)
+                                <span class="co-chip">{{ $zona['zona'] }}: <strong>${{ $n($zona['neto']) }}</strong></span>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <p class="co-note" style="margin-top: 1rem;">
+                        Este monto cubre los pagos que salen de la descarga de Geolice (Variables y Lanas).
+                        Los pagos que Operaciones lleva aparte —acuerdos, servicios, ruta CV, visitas y otros— todavía
+                        no están en el sistema y no se suman acá.
+                    </p>
+                @endif
+            </div>
+        </section>
+    @endif
+
     @if(!$revision)
         <section class="co-region co-upload" id="importar">
             <div class="co-region-head">
                 <div>
-                    <h2 class="co-region-title">Comenzar pago Courier</h2>
+                    <h2 class="co-region-title">
+                        {{ ($alertasPeriodo['total'] ?? 0) > 0 ? 'Revisar otra descarga de Geolice' : 'Comenzar pago Courier' }}
+                    </h2>
                     <p class="co-note">
                         Selecciona el mes de pago y carga la descarga de Geolice correspondiente.
                         En esta etapa el archivo sólo se revisa; todavía no se guardan bultos.
@@ -370,8 +576,9 @@
                         <span class="co-review-stat-label">Ya existentes en este período</span>
                         <span class="co-review-stat-value">
                             {{ $n(
-                                ($resumenRevision['actualizados'] ?? 0)
-                                + ($resumenRevision['sin_cambio'] ?? 0)
+                                $resumenRevision['ya_en_el_periodo']
+                                    ?? (($resumenRevision['actualizados'] ?? 0)
+                                        + ($resumenRevision['sin_cambio'] ?? 0))
                             ) }}
                         </span>
                     </div>
@@ -421,7 +628,14 @@
                                 <ul class="co-review-list">
                                     @foreach(array_slice($comunasFuera, 0, 30, true) as $comuna => $cantidad)
                                         <li>
-                                            <span>{{ $comuna }}</span>
+                                            <span>
+                                                <span class="co-comuna-nombre">{{ $comuna }}</span>
+                                                @foreach($comunasFueraEjemplos[$comuna] ?? [] as $ejemplo)
+                                                    <span class="co-comuna-ejemplo">
+                                                        {{ $ejemplo['comerciante'] }} · {{ $ejemplo['direccion'] ?? 'sin dirección' }}
+                                                    </span>
+                                                @endforeach
+                                            </span>
                                             <strong>{{ $n($cantidad) }}</strong>
                                         </li>
                                     @endforeach
@@ -538,20 +752,27 @@
                     </a>
 
                     <div>
-                        <div class="co-review-actions-right">
-                            <button
-                                type="button"
-                                class="co-btn co-btn-primary"
-                                disabled
-                                title="La confirmación se habilitará en el siguiente paso."
-                            >
-                                Confirmar importación
-                            </button>
-                        </div>
+                        <form
+                            method="POST"
+                            action="{{ route('courier.confirmar-geolice') }}"
+                            data-upload
+                        >
+                            @csrf
+                            <div class="co-review-actions-right">
+                                <button
+                                    type="submit"
+                                    class="co-btn co-btn-primary"
+                                    data-submit
+                                    data-loading-text="Guardando…"
+                                >
+                                    Confirmar importación
+                                </button>
+                            </div>
 
-                        <p class="co-review-disabled-note">
-                            Primera prueba: este botón todavía no guarda información.
-                        </p>
+                            <p class="co-review-disabled-note" data-progress hidden>
+                                Guardando los bultos… no cierres esta pestaña.
+                            </p>
+                        </form>
                     </div>
                 </div>
             </div>

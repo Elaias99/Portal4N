@@ -162,6 +162,22 @@ Route::middleware('auth')->prefix('courier')->name('courier.')->group(function (
     Route::post('/revisar-geolice', [CourierPagoController::class, 'revisarGeolice'])
         ->name('revisar-geolice');
 
+    Route::post('/confirmar-geolice', [CourierPagoController::class, 'confirmarGeolice'])
+        ->name('confirmar-geolice');
+
+    // Vistas del período, cada una con su tema.
+    Route::get('/distribucion', [CourierPagoController::class, 'distribucion'])
+        ->name('distribucion');
+
+    Route::get('/pendientes', [CourierPagoController::class, 'pendientes'])
+        ->name('pendientes');
+
+    Route::get('/pago', [CourierPagoController::class, 'pago'])
+        ->name('pago');
+
+    Route::post('/calcular', [CourierPagoController::class, 'calcular'])
+        ->name('calcular');
+
     Route::post('/importar-pesajes', [CourierPagoController::class, 'importarPesajes'])
         ->name('importar-pesajes');
 

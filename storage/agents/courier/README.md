@@ -36,10 +36,16 @@ aplica las mismas reglas y deja registro de todo.
 | Fase | Estado |
 |---|---|
 | 1. Catálogos (reglas) cargados y consultables | Hecha |
-| 2. Datos del mes: descarga de Geolice y pesajes de bodega, con diagnóstico | Hecha |
-| 3. Cálculo del pago por bulto | No construida |
-| 4. Resumen por agente, IVA, nómina banco, pre-facturas | No construida |
-| Pantalla raíz (proceso del mes) | Existe, pero será rediseñada: muestra demasiado a la vez |
+| 2. Datos del mes: Geolice, pesos de bodega y controles, con diagnóstico | Hecha |
+| 3. Cálculo del pago por bulto | Hecha |
+| 4. Totales por zona, tipo de pago y proveedor con IVA | Hecha |
+| 5. Nómina para banco y pre-facturas | No construida |
+| 6. Pagos que Operaciones lleva a mano (acuerdos, servicios, ruta CV…) | No construida |
+
+**Ojo con el alcance:** el cálculo cubre los pagos que salen de la descarga
+de Geolice (Variables y Lanas). En agosto 2026 eso fue cerca de un cuarto del
+total que pagó Operaciones; el resto son hojas escritas a mano que todavía no
+están en el sistema. Ver `05-decisiones-y-pendientes.md`.
 
 ## Mapa de documentos
 

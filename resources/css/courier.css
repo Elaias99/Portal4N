@@ -849,6 +849,12 @@ a.co-stat:hover {
     color: #9f1239;
 }
 
+.co-alert-ok {
+    border-color: #bbf7d0;
+    background: var(--co-ok-soft);
+    color: #166534;
+}
+
 /* ---------- Barra de período ---------- */
 
 .co-periodo {
@@ -904,6 +910,209 @@ a.co-stat:hover {
     color: var(--co-text);
     font-size: 0.95rem;
     font-weight: 750;
+}
+
+/* ---------- Navegación entre vistas del período ---------- */
+
+.co-subnav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.co-subnav a {
+    padding: 0.35rem 0.8rem;
+    border: 1px solid var(--co-line);
+    border-radius: 999px;
+    background: #fbfcfe;
+    color: var(--co-muted);
+    font-size: 0.78rem;
+    font-weight: 650;
+    text-decoration: none;
+    transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
+}
+
+.co-subnav a:hover {
+    border-color: var(--co-accent);
+    color: var(--co-accent);
+    text-decoration: none;
+}
+
+.co-subnav a.is-active {
+    border-color: var(--co-accent);
+    background: var(--co-accent-soft);
+    color: var(--co-accent-strong);
+}
+
+/* ---------- Accesos a las otras vistas ---------- */
+
+.co-accesos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 0.75rem;
+}
+
+.co-acceso {
+    --co-acceso-color: var(--co-accent);
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--co-line);
+    border-left: 4px solid var(--co-acceso-color);
+    border-radius: var(--co-radius);
+    background: var(--co-surface);
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.co-acceso:hover {
+    color: inherit;
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(16, 35, 63, 0.09);
+}
+
+.co-acceso.is-ok   { --co-acceso-color: var(--co-ok); }
+.co-acceso.is-warn { --co-acceso-color: #f59e0b; }
+
+.co-acceso-valor {
+    color: var(--co-acceso-color);
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.co-acceso-titulo {
+    font-size: 0.9rem;
+    font-weight: 720;
+}
+
+.co-acceso-texto {
+    color: var(--co-muted);
+    font-size: 0.76rem;
+    line-height: 1.45;
+}
+
+/* ---------- Totales a pagar ---------- */
+
+.co-totales {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 0.75rem;
+}
+
+.co-total {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--co-line);
+    border-radius: var(--co-radius);
+    background: var(--co-surface);
+}
+
+.co-total.is-principal {
+    border-color: transparent;
+    background: linear-gradient(135deg, #0b2a6b 0%, #0b63e5 70%, #2f8bff 100%);
+    color: #fff;
+}
+
+.co-total.is-warn {
+    border-color: #fed7aa;
+    background: var(--co-warn-soft);
+}
+
+.co-total-label {
+    color: var(--co-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.co-total.is-principal .co-total-label {
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.co-total-valor {
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+}
+
+.co-total.is-principal .co-total-valor {
+    font-size: 2.1rem;
+}
+
+.co-total.is-warn .co-total-valor {
+    color: var(--co-warn);
+}
+
+.co-total-detalle {
+    color: var(--co-muted);
+    font-size: 0.74rem;
+    line-height: 1.4;
+}
+
+.co-total.is-principal .co-total-detalle {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* Fila de totales al pie de una tabla. */
+.co-page .co-table tbody tr.co-fila-total td {
+    border-top: 2px solid var(--co-line);
+    background: #f8fafc;
+    font-weight: 750;
+}
+
+/* ---------- Comunas no reconocidas ---------- */
+
+.co-comuna-nombre {
+    display: block;
+    font-weight: 700;
+}
+
+/*
+ * Ejemplos de bultos bajo una comuna que el catálogo no conoce: el
+ * nombre solo no alcanza para identificarla cuando Geolice manda un
+ * número o un texto cualquiera.
+ */
+.co-comuna-ejemplo {
+    display: block;
+    color: var(--co-muted);
+    font-size: 0.72rem;
+    line-height: 1.5;
+}
+
+/* ---------- Barra de proporción dentro de una tabla ---------- */
+
+.co-barra {
+    display: inline-block;
+    width: 90px;
+    height: 8px;
+    margin-right: 0.5rem;
+    border-radius: 999px;
+    background: #eef2f7;
+    overflow: hidden;
+    vertical-align: middle;
+}
+
+.co-barra span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--co-accent);
+}
+
+/* Tabla que puede desbordar a lo ancho en pantallas chicas. */
+.co-table-wrap {
+    overflow-x: auto;
 }
 
 /* ---------- Pasos del proceso ---------- */
