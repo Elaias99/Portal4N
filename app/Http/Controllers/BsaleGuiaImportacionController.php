@@ -339,9 +339,9 @@ class BsaleGuiaImportacionController extends Controller
             $cabecera['DestinoCarga'],
             'Troncal: ' . $cabecera['Troncal'],
             'Posta: ' . $cabecera['Posta'],
-            'Patente: ' . $cabecera['Patente'],
-            'Chofer: ' . $cabecera['Chofer'],
-            'RUT chofer: ' . $cabecera['RutChofer'],
+            // 'Patente: ' . $cabecera['Patente'],
+            // 'Chofer: ' . $cabecera['Chofer'],
+            // 'RUT chofer: ' . $cabecera['RutChofer'],
             'Total bultos: ' . $totalBultos,
             'Total kilos: ' . $totalKilos,
         ]);
@@ -378,6 +378,25 @@ class BsaleGuiaImportacionController extends Controller
             'municipality' => $destino['municipality'],
             'city' => $destino['city'],
             'details' => $detalles,
+
+
+            // Patente, chofer y RUT en la cabecera de la guía.
+            'dynamicAttributes' => [
+                [
+                    'dynamicAttributeId' => 30,
+                    'description' => (string) $cabecera['Patente'],
+                ],
+                [
+                    'dynamicAttributeId' => 31,
+                    'description' => (string) $cabecera['Chofer'],
+                ],
+                [
+                    'dynamicAttributeId' => 32,
+                    'description' => (string) $cabecera['RutChofer'],
+                ],
+            ],
+
+
         ];
 
         // Revisar nuevamente el estado bajo bloqueo de BD.

@@ -269,7 +269,7 @@
         </form>
 
 
-            {{-- @if ($archivo !== null)
+            @if ($archivo !== null)
                 <form
                     action="{{ route('bsale.guias.limpiar') }}"
                     method="POST"
@@ -281,7 +281,7 @@
                         Limpiar importación
                     </button>
                 </form>
-            @endif --}}
+            @endif
 
 
 
