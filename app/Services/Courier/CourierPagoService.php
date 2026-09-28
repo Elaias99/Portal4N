@@ -887,6 +887,242 @@ class CourierPagoService
         return $puntoComas > $comas ? ';' : ',';
     }
 
+    /*
+     * Paso 1 del recorrido: ¿es el archivo correcto?
+     *
+     * Existe porque no había forma de saber qué descarga estaba cargada:
+     * se llegó a contrastar el cálculo contra la planilla de Operaciones
+     * usando una descarga que no correspondía al mes, y nadie se dio
+     * cuenta hasta mirar la base a mano. El reparto por mes de recepción
+     * es lo que delata ese caso.
+     *
+     * Sólo lee.
+     */
+    public function resumenDelArchivo(CourierPeriodo $periodo): array
+    {
+        $ultima = CourierImportacion::query()
+            ->where('courier_periodo_id', $periodo->id)
+            ->where('tipo', CourierImportacion::TIPO_GEOLICE)
+            ->orderByDesc('id')
+            ->first(['archivo', 'filas', 'created_at']);
 
+        $bultos = CourierBulto::query()
+            ->delPeriodo($periodo->id)
+            ->selectRaw('COUNT(*) total')
+            ->selectRaw('MIN(fecha_recepcion) desde')
+            ->selectRaw('MAX(fecha_recepcion) hasta')
+            ->selectRaw('MAX(calculado_at) calculado_at')
+            ->selectRaw('SUM(calculado_at IS NULL) sin_calcular')
+            ->first();
 
+        $total = (int) ($bultos->total ?? 0);
+
+        return [
+            'archivo' => $ultima?->archivo,
+            'importado_at' => $ultima?->created_at,
+            'bultos' => $total,
+            'sin_calcular' => (int) ($bultos->sin_calcular ?? 0),
+            'desde' => $bultos->desde ?? null,
+            'hasta' => $bultos->hasta ?? null,
+            'calculado_at' => $bultos->calculado_at ?? null,
+            /*
+             * Los pesos de balanza y los controles no vienen de Geolice:
+             * salen de la planilla de Operaciones y sobreviven a que se
+             * vacíen los bultos.
+             */
+            'pesajes' => CourierPesaje::query()
+                ->where('courier_periodo_id', $periodo->id)
+                ->count(),
+            /*
+             * Reparto por mes de la fecha de recepción. Si el mes que se
+             * paga no aparece acá, la descarga cargada no corresponde.
+             */
+            'meses' => $total === 0 ? [] : CourierBulto::query()
+                ->delPeriodo($periodo->id)
+                ->whereNotNull('fecha_recepcion')
+                ->selectRaw("DATE_FORMAT(fecha_recepcion, '%Y-%m') mes, COUNT(*) bultos")
+                ->groupBy('mes')
+                ->orderBy('mes')
+                ->get()
+                ->map(fn ($f) => ['mes' => $f->mes, 'bultos' => (int) $f->bultos])
+                ->all(),
+            'estado' => match (true) {
+                $total === 0 => 'sin_archivo',
+                (int) ($bultos->sin_calcular ?? 0) > 0 => 'sin_calcular',
+                default => 'listo',
+            },
+        ];
+    }
+
+    /*
+     * Paso 2 del recorrido: ¿qué no se pudo reconocer?
+     *
+     * Igual que alertas(), pero separando lo que cuesta plata de lo que
+     * no. Un bulto con comuna desconocida y estado Anulado no se iba a
+     * pagar de todas formas; uno Entregado sí. Mostrarlos juntos obliga
+     * a ir al Excel a averiguar cuál es cuál.
+     *
+     * "Vivo" = su estado de entrega no lo descarta. Un estado que no
+     * está en el catálogo cuenta como vivo: nadie decidió descartarlo.
+     *
+     * No depende del cálculo: esta pantalla se ve antes de calcular, así
+     * que no puede apoyarse en la columna motivo.
+     */
+    public function loQueNoSeReconoce(CourierPeriodo $periodo): array
+    {
+        $bultos = CourierBulto::query()->delPeriodo($periodo->id);
+
+        $descartan = CourierEstadoEntrega::query()
+            ->where('considerar', 'DESCONTAR')
+            ->pluck('estado')
+            ->flip()
+            ->all();
+
+        $vivo = fn (?string $estado) => ! isset($descartan[(string) $estado]);
+
+        $sinComuna = (clone $bultos)
+            ->whereNull('comuna_destino')
+            ->selectRaw('estado_entrega, COUNT(*) AS n')
+            ->groupBy('estado_entrega')
+            ->get();
+
+        $cobertura = CourierCoberturaComuna::query()
+            ->with('agente:id,nombre')
+            ->get(['localidad_clave', 'courier_agente_id'])
+            ->mapWithKeys(fn ($c) => [$c->localidad_clave => $c->agente?->nombre ?? ''])
+            ->all();
+
+        $configuraciones = CourierConfiguracion::pluck('llave')->flip()->all();
+
+        /* Colación binaria: "CONCÓN" y "Concón" no deben caer juntos. */
+        $grupos = (clone $bultos)
+            ->whereNotNull('comuna_destino')
+            ->selectRaw(
+                'comuna_destino COLLATE utf8mb4_bin AS comuna, '
+                . 'comerciante COLLATE utf8mb4_bin AS comerciante_bin, '
+                . 'servicio COLLATE utf8mb4_bin AS servicio_bin, '
+                . 'estado_entrega, COUNT(*) AS n'
+            )
+            ->groupBy('comuna', 'comerciante_bin', 'servicio_bin', 'estado_entrega')
+            ->get();
+
+        $comunas = [];
+        $sinConfiguracion = [];
+
+        foreach ($grupos as $grupo) {
+            $cantidad = (int) $grupo->n;
+            $vivos = $vivo($grupo->estado_entrega) ? $cantidad : 0;
+            $clave = CourierCoberturaComuna::clave($grupo->comuna);
+
+            if (! isset($cobertura[$clave])) {
+                $comunas[$grupo->comuna]['etiqueta'] = $grupo->comuna;
+                $comunas[$grupo->comuna]['bultos'] = ($comunas[$grupo->comuna]['bultos'] ?? 0) + $cantidad;
+                $comunas[$grupo->comuna]['vivos'] = ($comunas[$grupo->comuna]['vivos'] ?? 0) + $vivos;
+
+                continue;
+            }
+
+            $agente = $cobertura[$clave];
+            $llave = CourierConfiguracion::llave($agente, $grupo->comerciante_bin, $grupo->servicio_bin);
+
+            if (isset($configuraciones[$llave])) {
+                continue;
+            }
+
+            $etiqueta = $agente . ' | ' . trim($grupo->comerciante_bin) . ' | ' . trim($grupo->servicio_bin);
+
+            $sinConfiguracion[$etiqueta]['etiqueta'] = $etiqueta;
+            $sinConfiguracion[$etiqueta]['bultos'] = ($sinConfiguracion[$etiqueta]['bultos'] ?? 0) + $cantidad;
+            $sinConfiguracion[$etiqueta]['vivos'] = ($sinConfiguracion[$etiqueta]['vivos'] ?? 0) + $vivos;
+        }
+
+        /* Lo que cuesta plata arriba; lo que no, abajo. */
+        $ordenar = function (array $lista): array {
+            uasort($lista, fn ($a, $b) => [$b['vivos'], $b['bultos']] <=> [$a['vivos'], $a['bultos']]);
+
+            return $lista;
+        };
+
+        $comunas = $ordenar($comunas);
+        $sinConfiguracion = $ordenar($sinConfiguracion);
+
+        $bloques = [
+            'sin_comuna' => [
+                'bultos' => (int) $sinComuna->sum('n'),
+                'vivos' => (int) $sinComuna->filter(fn ($f) => $vivo($f->estado_entrega))->sum('n'),
+                'detalle' => [],
+            ],
+            'comuna_desconocida' => [
+                'bultos' => array_sum(array_column($comunas, 'bultos')),
+                'vivos' => array_sum(array_column($comunas, 'vivos')),
+                'detalle' => array_values($comunas),
+            ],
+            'sin_configuracion' => [
+                'bultos' => array_sum(array_column($sinConfiguracion, 'bultos')),
+                'vivos' => array_sum(array_column($sinConfiguracion, 'vivos')),
+                'detalle' => array_values($sinConfiguracion),
+            ],
+        ];
+
+        return [
+            'total' => (clone $bultos)->count(),
+            'bultos' => array_sum(array_column($bloques, 'bultos')),
+            'vivos' => array_sum(array_column($bloques, 'vivos')),
+            'bloques' => $bloques,
+            'ejemplos' => $this->ejemplosPorComuna($periodo, array_keys($comunas)),
+            'estados_que_descartan' => array_keys($descartan),
+        ];
+    }
+
+    /*
+     * Paso 4 del recorrido: ¿con qué peso se pagó?
+     *
+     * Sólo mira los bultos que sí se pagan: el peso de los demás no
+     * cuesta nada. El kilo es plata, y los que se pagan con el kilo por
+     * defecto se pierden en silencio, así que van separados.
+     */
+    public function origenDeLosPesos(CourierPeriodo $periodo): ?array
+    {
+        $filas = CourierBulto::query()
+            ->delPeriodo($periodo->id)
+            ->where('estado_pago', 'PAGAR')
+            ->selectRaw('origen_peso, COUNT(*) bultos, SUM(peso_pago) kilos, SUM(valor) monto')
+            ->groupBy('origen_peso')
+            ->get();
+
+        if ($filas->isEmpty()) {
+            return null;
+        }
+
+        $nombres = [
+            'bodega' => 'Pesado en bodega',
+            'declarado' => 'Peso que declaró el cliente',
+            'x' => 'Sin peso: se pagó 1 kilo',
+        ];
+
+        $grupos = [];
+        $bultos = 0;
+        $monto = 0;
+
+        foreach (['bodega', 'declarado', 'x'] as $origen) {
+            $fila = $filas->firstWhere('origen_peso', $origen);
+
+            $grupos[] = [
+                'origen' => $origen,
+                'nombre' => $nombres[$origen],
+                'bultos' => (int) ($fila->bultos ?? 0),
+                'kilos' => (int) ($fila->kilos ?? 0),
+                'monto' => (int) ($fila->monto ?? 0),
+            ];
+
+            $bultos += (int) ($fila->bultos ?? 0);
+            $monto += (int) ($fila->monto ?? 0);
+        }
+
+        return [
+            'grupos' => $grupos,
+            'bultos' => $bultos,
+            'monto' => $monto,
+        ];
+    }
 }

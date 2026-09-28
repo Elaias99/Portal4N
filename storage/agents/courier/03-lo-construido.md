@@ -165,7 +165,7 @@ Geolice.
 - Los kilos salen de bodega, del peso declarado (truncado, mínimo 1) o de 1 kg
   por defecto, y queda registrado en `origen_peso` cuál se usó.
 - Cuando un bulto tiene varios pesajes se toma el primero, como el `BUSCARV`
-  de la planilla. **Pendiente de confirmar con Operaciones.**
+  de la planilla.
 - `Lanas` vs `Variables` se decide por comerciante, con la lista verificada
   contra la réplica de agosto.
 - Tarda unos minutos: actualiza bulto por bulto. Si molesta, se puede pasar a

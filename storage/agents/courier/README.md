@@ -55,8 +55,9 @@ están en el sistema. Ver `05-decisiones-y-pendientes.md`.
 | `02-cadena-de-pago.md` | La regla de pago bulto por bulto, tal como la entendimos. Es el corazón del módulo. |
 | `03-lo-construido.md` | Qué existe hoy en Portal4N: tablas, comandos, pantallas, servicios y sus convenciones. |
 | `04-modelo-de-datos.md` | Las tablas `courier_*`, sus columnas, llaves y relaciones. |
-| `05-decisiones-y-pendientes.md` | Decisiones tomadas y por qué; preguntas abiertas para Operaciones; próximos pasos. |
+| `05-decisiones-y-pendientes.md` | Decisiones tomadas y por qué, próximos pasos y lo que no se debe hacer. |
 | `06-como-trabajar-con-elias.md` | Reglas de trabajo que Elías pidió expresamente. Obligatorio para cualquier agente. |
+| `07-la-planilla-completa.md` | Anatomía de la planilla de Operaciones hoja por hoja, julio y agosto: las fórmulas de `BaseGeolize`, los pagos que se escriben a mano y cómo se arma la nómina de banco. |
 | `construccion-replica.md` | Documento histórico y detallado de cómo se replicó la planilla en Excel (agosto 2026). Tiene cifras de esa réplica; úsalo solo como referencia de fórmulas. |
 
 ## Vocabulario mínimo

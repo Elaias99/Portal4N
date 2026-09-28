@@ -1,4 +1,4 @@
-# 05 · Decisiones tomadas, preguntas abiertas y próximos pasos
+# 05 · Decisiones tomadas, próximos pasos y lo que no se debe hacer
 
 ## Decisiones tomadas (y por qué)
 
@@ -10,35 +10,11 @@
 | Las variantes de escritura de una comuna se **agregan al catálogo**; no se corrige la descarga. | La próxima descarga traería el mismo texto. Es lo que hacía el jefe. |
 | El bulto guarda las 31 columnas de Geolice **tal cual** y el cálculo escribe en columnas aparte. | Nunca hay que volver a importar por un dato que faltó, y se puede recalcular sin perder el origen. |
 | El código del bulto es único en todo el sistema; un bulto pertenece al primer período en que apareció. | Resuelve el traslape de descargas y reemplaza la hoja `PagadosMesAnterior`. |
-| Los pesajes se guardan **todos**, uno por bulto y día. | Bodega pesa el mismo bulto en días distintos, a veces con kilos distintos; cuál manda es una regla de negocio que no está definida. |
+| Los pesajes se guardan **todos**, uno por bulto y día. | Bodega pesa el mismo bulto en días distintos, a veces con kilos distintos. Guardarlos todos deja que el cálculo elija; hoy toma el primero, como el `BUSCARV` de la planilla. |
 | Courier **no se enlaza todavía** con `cobranza_compras` (maestro de proveedores que usa Suscripciones). `courier_proveedores.cobranza_compra_id` queda vacío. | Elías no quiere mezclar un módulo en construcción con tablas que ya se usan en producción. El enlace es un `UPDATE` por RUT normalizado cuando se decida. Hay proveedores Courier que no existen en el maestro. |
 | Las comunas no reconocidas **no se emparejan automáticamente**. | Un emparejamiento "porque se parece" puede pagarle el bulto a otro proveedor. La idea acordada (no construida): el sistema sugiere y una persona confirma con un clic; al confirmar, la variante se guarda en el catálogo con registro de quién la aprobó. |
 | Las cargas corren de forma síncrona, sin cola, en una transacción. | Mismo patrón que Suscripciones; suficiente para el tamaño actual. |
 | Los conteos del diagnóstico son informativos; **el sistema no asume reglas** para lo que no calza. | Regla de trabajo de Elías: no inventar criterios. Lo que no tiene regla se lleva a Operaciones. |
-
-## Preguntas abiertas para Operaciones
-
-Ninguna bloquea construir; todas bloquean pagar un mes real.
-
-1. **Pesajes del mes completo.** Hoy hay solo algunos días.
-2. **`Retiro en ruta`** (Rendic, Verisure, Postalchile, Construmart, Maicao,
-   Chilepost): ¿se paga? ¿con qué tabla? Además esos bultos vienen sin
-   comuna y con códigos que parten con `SH`.
-3. **`Cajas Los Andes` + `Servicio Standar (Cotizacion)`**: no existe en
-   `PagosCentroCostos`.
-4. **Mayorista de Revés Derecho**: el jefe dijo que se paga distinto y lo
-   revisa a mano. ¿Cómo se calcula?
-5. **Qué pesaje manda** cuando un bulto tiene varios con kilos distintos:
-   ¿el más reciente, el mayor, el primero?
-6. **Qué significa `REVISAR`** en la configuración de pago.
-7. Un bulto que estuvo en la descarga del mes anterior pero **no se pagó**
-   (por ejemplo, estaba pendiente) y ahora aparece entregado: ¿se paga este
-   mes? La planilla lo tratará como "pagado el mes anterior" solo si estuvo
-   en `BaseCL`; hay que confirmar la regla.
-8. Comunas basura que manda Geolice (`#N/D`, `EDIFICIO CORPORATIVO`): ¿qué
-   hacer con esos bultos?
-9. Sus **bases nuevas con llave por RUT** (clientes, tipos de servicio
-   normalizados, centros de costo): cuándo las entrega.
 
 ## Próximos pasos, en orden
 

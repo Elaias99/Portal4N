@@ -165,6 +165,10 @@ Route::middleware('auth')->prefix('courier')->name('courier.')->group(function (
     Route::post('/confirmar-geolice', [CourierPagoController::class, 'confirmarGeolice'])
         ->name('confirmar-geolice');
 
+    // El recorrido del período: una pantalla, una pregunta.
+    Route::get('/paso/{paso}', [CourierPagoController::class, 'paso'])
+        ->name('paso');
+
     // Vistas del período, cada una con su tema.
     Route::get('/distribucion', [CourierPagoController::class, 'distribucion'])
         ->name('distribucion');

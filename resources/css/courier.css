@@ -1710,3 +1710,177 @@ a.co-stat:hover {
     .co-slide { flex-basis: 88%; }
     .co-slide-tiles { grid-template-columns: 1fr; }
 }
+
+/* ---------- Recorrido del período: una pantalla, una pregunta ---------- */
+
+/*
+ * Cada pantalla responde una sola pregunta. Por eso el ancho es angosto
+ * (una columna, nada de rejillas), el título es grande y hay un solo
+ * lugar donde mirar primero: el número.
+ */
+.co-page-paso {
+    max-width: 62rem;
+    margin: 0 auto;
+}
+
+.co-paso {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--co-line);
+    border-radius: var(--co-radius);
+    background: var(--co-surface);
+    box-shadow: 0 3px 14px rgba(16, 35, 63, 0.055);
+}
+
+.co-paso-cabeza {
+    padding: 1.6rem 1.9rem 1.25rem;
+    border-bottom: 1px solid var(--co-line-soft);
+}
+
+.co-paso-cuenta {
+    margin: 0 0 0.5rem;
+    color: var(--co-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.co-paso-pregunta {
+    margin: 0;
+    color: var(--co-text);
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+}
+
+.co-paso-bajada {
+    margin: 0.45rem 0 0;
+    max-width: 46rem;
+    color: var(--co-muted);
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.co-paso-cuerpo {
+    padding: 1.7rem 1.9rem 1.9rem;
+}
+
+/* El dato que responde la pregunta. Es lo primero que se mira. */
+.co-paso-dato {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.1rem 0.7rem;
+    margin: 0 0 0.9rem;
+}
+
+.co-paso-numero {
+    color: var(--co-accent);
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+}
+
+.co-paso-numero.is-atencion {
+    color: var(--co-warn);
+}
+
+.co-paso-unidad {
+    color: var(--co-muted);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.co-paso-frase {
+    margin: 0;
+    max-width: 52rem;
+    color: var(--co-text);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.co-paso-frase strong {
+    font-weight: 750;
+}
+
+/* Cada bloque es un desglose del mismo número de arriba, nunca otro tema. */
+.co-paso-bloque {
+    margin-top: 1.8rem;
+    padding-top: 1.4rem;
+    border-top: 1px solid var(--co-line-soft);
+}
+
+.co-paso-subtitulo {
+    margin: 0 0 0.35rem;
+    color: var(--co-text);
+    font-size: 1rem;
+    font-weight: 750;
+}
+
+.co-paso-bloque .co-note {
+    max-width: 52rem;
+    margin-bottom: 0.9rem;
+}
+
+.co-paso-bloque .co-table {
+    margin-top: 0.75rem;
+}
+
+.co-paso-pie {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1.05rem 1.9rem;
+    border-top: 1px solid var(--co-line-soft);
+    background: #fbfcfe;
+    border-radius: 0 0 var(--co-radius) var(--co-radius);
+}
+
+@media (max-width: 720px) {
+    .co-paso-cabeza,
+    .co-paso-cuerpo,
+    .co-paso-pie { padding-left: 1.15rem; padding-right: 1.15rem; }
+
+    .co-paso-pregunta { font-size: 1.4rem; }
+    .co-paso-numero { font-size: 2.4rem; }
+}
+
+/*
+ * Lo que no cuesta plata no compite por atención con lo que sí.
+ * Se sigue viendo completo, pero apagado.
+ */
+.co-paso-marca {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.14rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+.co-paso-marca.is-atencion {
+    background: var(--co-warn-soft);
+    color: var(--co-warn);
+}
+
+.co-paso-marca.is-quieto {
+    background: #f1f5f9;
+    color: var(--co-muted);
+}
+
+.co-paso-bloque.is-sin-costo .co-paso-subtitulo {
+    color: var(--co-muted);
+    font-weight: 700;
+}
+
+.co-paso-bloque.is-sin-costo .co-table-wrap {
+    opacity: 0.75;
+}
+
+.co-table tbody tr.is-quieto td {
+    color: var(--co-muted);
+}
