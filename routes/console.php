@@ -170,7 +170,7 @@ Schedule::call(function () {
         'operaciones@4nlogistica.cl',
         'gisseth.mondaca@latam.com',
         'hansdelabarra@4nlogistica.cl',
-        'homeropardo@4nlogistica.cl',
+        'luissilva@4nlogistica.cl',
         'eliascorrea@4nlogistica.cl',
         'jp.soza@4nlogistica.cl',
     ])
