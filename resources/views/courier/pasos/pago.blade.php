@@ -17,7 +17,10 @@
      * Los motivos que son una decisión ya tomada se separan de los que
      * siguen esperando que Operaciones defina algo.
      */
-    $esperanDefinicion = ['sin_comuna', 'comuna_desconocida', 'sin_configuracion', 'sin_tabla', 'sin_tarifa', 'configuracion_revisar'];
+    $esperanDefinicion = [
+        'sin_comuna', 'comuna_desconocida', 'sin_configuracion', 'sin_tabla', 'sin_tarifa', 'configuracion_revisar',
+        'retorno_sin_cobertura', 'retorno_sin_valor',
+    ];
 @endphp
 
 <div class="co-page co-page-paso">

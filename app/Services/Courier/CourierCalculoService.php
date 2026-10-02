@@ -26,6 +26,15 @@ class CourierCalculoService
 {
     public const TIPO_VARIABLES = 'Variables';
     public const TIPO_LANAS = 'Lanas';
+    public const TIPO_RETORNOS = 'Retornos';
+
+    /*
+     * Un retorno es un bulto que vuelve desde regiones: Geolice lo
+     * informa con el destinatario "Desde Concepción", "Desde-Local, Concepción"
+     * o "Local, Concepción". Después de "Desde" puede venir espacio o guion:
+     * así lo pagó LogisticaCL en agosto.
+     */
+    private const PATRON_RETORNO = '/^\s*desde[\s-]+/iu';
 
     /*
      * Comerciantes cuyo pago va a la hoja Geolize-Lanas en vez de
@@ -53,6 +62,9 @@ class CourierCalculoService
         'sin_tabla' => 'La configuración no tiene tabla asignada',
         'estado' => 'El estado de entrega descuenta el bulto',
         'sin_tarifa' => 'La tabla asignada no existe en el catálogo de tarifas',
+        'retorno_sin_cobertura' => 'Retorno desde una comuna que no está en el catálogo',
+        'retorno_no_se_paga' => 'La comuna de origen no paga retornos',
+        'retorno_sin_valor' => 'La comuna paga retornos pero no tiene valor asignado',
     ];
 
     public function __construct(
@@ -100,6 +112,7 @@ class CourierCalculoService
                 ->select([
                     'id', 'seguimiento', 'comuna_destino', 'comerciante',
                     'servicio', 'estado_entrega', 'peso_declarado', 'repartidor_nombre',
+                    'destinatario_nombre',
                 ])
                 ->orderBy('id')
                 ->chunkById(2000, function ($bultos) use (
@@ -251,12 +264,16 @@ class CourierCalculoService
             $salida['origen_peso'] = 'x';
         }
 
-        /* Paso 5 · controles que sacan el bulto antes que nada. */
+        /*
+         * Paso 5 · controles que sacan el bulto antes que nada.
+         *
+         * Los retornos ya no se toman de la hoja Retornos de la planilla:
+         * se reconocen por el destinatario y se pagan más abajo.
+         */
         $codigo = strtoupper($bulto->seguimiento);
 
         foreach ([
             CourierControl::PAGADO_MES_ANTERIOR => 'pagado_mes_anterior',
-            CourierControl::RETORNO => 'retorno',
             CourierControl::BLUE => 'blue',
             CourierControl::ESPECIAL => 'especial',
         ] as $tipo => $motivo) {
@@ -265,6 +282,16 @@ class CourierCalculoService
 
                 return $salida;
             }
+        }
+
+        /*
+         * Lanas manda sobre retorno: un bulto de Revés Derecho que vuelve
+         * desde regiones se sigue pagando como Lanas, igual que en
+         * LogisticaCL, donde se pregunta por Lanas antes que por retorno.
+         */
+        if ($salida['tipo_pago'] !== self::TIPO_LANAS
+            && preg_match(self::PATRON_RETORNO, (string) $bulto->destinatario_nombre) === 1) {
+            return $this->calcularRetorno($bulto, $salida, $cobertura, $estados, $proveedores);
         }
 
         if ($clave === null) {
@@ -346,6 +373,68 @@ class CourierCalculoService
         return $salida;
     }
 
+    /*
+     * Un retorno no se paga por kilo ni por configuración: se paga un
+     * valor fijo que depende de la comuna desde donde vuelve el bulto,
+     * y que está en el catálogo de cobertura (hoja Operador, columnas
+     * PAGAR RETORNO y VALOR/RETORNO).
+     *
+     * La comuna de origen sale del nombre del destinatario:
+     * "Desde Concepción" → Concepción; "Local 12, Concepción" → Concepción.
+     */
+    private function calcularRetorno(
+        object $bulto,
+        array $salida,
+        array $cobertura,
+        array $estados,
+        array $proveedores
+    ): array {
+        $salida['tipo_pago'] = self::TIPO_RETORNOS;
+
+        if (($estados[$bulto->estado_entrega] ?? null) === CourierEstadoEntrega::DESCONTAR) {
+            $salida['motivo'] = 'estado';
+
+            return $salida;
+        }
+
+        $nombre = trim((string) $bulto->destinatario_nombre);
+        $origen = str_contains($nombre, ',')
+            ? trim((string) substr($nombre, strpos($nombre, ',') + 1))
+            : trim((string) preg_replace('/^\s*desde[\s-]*/iu', '', $nombre));
+
+        $comuna = $origen === '' ? null : ($cobertura[CourierCoberturaComuna::clave($origen)] ?? null);
+
+        if ($comuna === null) {
+            $salida['motivo'] = 'retorno_sin_cobertura';
+
+            return $salida;
+        }
+
+        $salida['courier_agente_id'] = $comuna['agente_id'];
+        $salida['zona'] = $comuna['zona'];
+        $salida['courier_proveedor_id'] = $proveedores[
+            CourierProveedor::llave($comuna['agente'], (string) $bulto->repartidor_nombre)
+        ] ?? null;
+
+        if (! $comuna['pagar_retorno']) {
+            $salida['motivo'] = 'retorno_no_se_paga';
+
+            return $salida;
+        }
+
+        if ($comuna['valor_retorno'] === null || (int) $comuna['valor_retorno'] < 0) {
+            $salida['motivo'] = 'retorno_sin_valor';
+
+            return $salida;
+        }
+
+        $salida['valor'] = (int) $comuna['valor_retorno'];
+        $salida['estado_pago'] = 'PAGAR';
+        $salida['motivo'] = null;
+
+        return $salida;
+    }
+
     private function tipoPago(?string $comerciante): string
     {
         return in_array(mb_strtolower(trim((string) $comerciante)), self::COMERCIANTES_LANAS, true)
@@ -357,12 +446,14 @@ class CourierCalculoService
     {
         return CourierCoberturaComuna::query()
             ->with('agente:id,nombre')
-            ->get(['localidad_clave', 'zona', 'courier_agente_id'])
+            ->get(['localidad_clave', 'zona', 'courier_agente_id', 'pagar_retorno', 'valor_retorno'])
             ->mapWithKeys(fn ($c) => [
                 $c->localidad_clave => [
                     'agente_id' => $c->courier_agente_id,
                     'agente' => $c->agente?->nombre ?? '',
                     'zona' => $c->zona,
+                    'pagar_retorno' => (bool) $c->pagar_retorno,
+                    'valor_retorno' => $c->valor_retorno,
                 ],
             ])
             ->all();

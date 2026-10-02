@@ -28,6 +28,15 @@
                 El 19% se agrega sólo a quienes emiten factura.
             </p>
 
+            @if(($resumenPago['por_tipo'] ?? []) !== [])
+                {{-- Neto por tipo de pago: la misma lectura que las columnas de ResumenPagos. --}}
+                <div class="co-chips" style="margin-top: 1rem;">
+                    @foreach($resumenPago['por_tipo'] as $tipo => $monto)
+                        <span class="co-chip">{{ $tipo }}: <strong>${{ $n($monto) }}</strong></span>
+                    @endforeach
+                </div>
+            @endif
+
             <div class="co-paso-bloque">
                 <h2 class="co-paso-subtitulo">A quién se le paga</h2>
 
