@@ -47,6 +47,13 @@ class CourierCalculoService
         '(orquidea) hilanderia maisa',
     ];
 
+    /*
+     * Lo que entrega el personal de 4N no se le paga a ningún proveedor.
+     * En DatosProveedores esas filas tienen la razón social "Planta";
+     * LogisticaCL las deja fuera de la misma forma (proveedor interno).
+     */
+    private const PROVEEDOR_INTERNO = 'planta';
+
     /* Motivos por los que un bulto no se paga. */
     public const MOTIVOS = [
         'pagado_mes_anterior' => 'Ya se pagó el mes anterior',
@@ -65,6 +72,7 @@ class CourierCalculoService
         'retorno_sin_cobertura' => 'Retorno desde una comuna que no está en el catálogo',
         'retorno_no_se_paga' => 'La comuna de origen no paga retornos',
         'retorno_sin_valor' => 'La comuna paga retornos pero no tiene valor asignado',
+        'proveedor_interno' => 'Lo entregó personal de 4N (Planta)',
     ];
 
     public function __construct(
@@ -92,7 +100,7 @@ class CourierCalculoService
         $configuraciones = $this->configuraciones();
         $estados = CourierEstadoEntrega::pluck('considerar', 'estado')->all();
         $tarifas = CourierTarifa::with(['tramos' => fn ($q) => $q->orderBy('peso')])->get()->keyBy('numero');
-        $proveedores = CourierProveedor::pluck('id', 'llave')->all();
+        $proveedores = $this->proveedores();
         $controles = $this->controles($periodo);
         $pesajes = $this->pesajes($periodo);
 
@@ -321,9 +329,11 @@ class CourierCalculoService
         $salida['tabla'] = $configuracion['tabla'];
 
         /* Paso 7 · a quién se le paga. */
-        $salida['courier_proveedor_id'] = $proveedores[
+        $proveedor = $proveedores[
             CourierProveedor::llave($comuna['agente'], (string) $bulto->repartidor_nombre)
         ] ?? null;
+
+        $salida['courier_proveedor_id'] = $proveedor['id'] ?? null;
 
         if ($configuracion['pagar'] === 'NO') {
             $salida['motivo'] = 'configuracion_no';
@@ -361,6 +371,16 @@ class CourierCalculoService
 
         if ($tarifa === null) {
             $salida['motivo'] = 'sin_tarifa';
+
+            return $salida;
+        }
+
+        /*
+         * Personal de 4N. Va al final para que este motivo cuente sólo
+         * los bultos que, de no ser por él, se pagarían.
+         */
+        if ($proveedor !== null && $proveedor['interno']) {
+            $salida['motivo'] = 'proveedor_interno';
 
             return $salida;
         }
@@ -412,9 +432,12 @@ class CourierCalculoService
 
         $salida['courier_agente_id'] = $comuna['agente_id'];
         $salida['zona'] = $comuna['zona'];
-        $salida['courier_proveedor_id'] = $proveedores[
+
+        $proveedor = $proveedores[
             CourierProveedor::llave($comuna['agente'], (string) $bulto->repartidor_nombre)
         ] ?? null;
+
+        $salida['courier_proveedor_id'] = $proveedor['id'] ?? null;
 
         if (! $comuna['pagar_retorno']) {
             $salida['motivo'] = 'retorno_no_se_paga';
@@ -424,6 +447,12 @@ class CourierCalculoService
 
         if ($comuna['valor_retorno'] === null || (int) $comuna['valor_retorno'] < 0) {
             $salida['motivo'] = 'retorno_sin_valor';
+
+            return $salida;
+        }
+
+        if ($proveedor !== null && $proveedor['interno']) {
+            $salida['motivo'] = 'proveedor_interno';
 
             return $salida;
         }
@@ -454,6 +483,20 @@ class CourierCalculoService
                     'zona' => $c->zona,
                     'pagar_retorno' => (bool) $c->pagar_retorno,
                     'valor_retorno' => $c->valor_retorno,
+                ],
+            ])
+            ->all();
+    }
+
+    /* llave → id del proveedor y si es personal de 4N. */
+    private function proveedores(): array
+    {
+        return CourierProveedor::query()
+            ->get(['id', 'llave', 'razon_social'])
+            ->mapWithKeys(fn ($p) => [
+                $p->llave => [
+                    'id' => $p->id,
+                    'interno' => mb_strtolower(trim((string) $p->razon_social)) === self::PROVEEDOR_INTERNO,
                 ],
             ])
             ->all();
