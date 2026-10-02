@@ -5,6 +5,17 @@
 @section('content')
 @php
     $n = fn ($v) => number_format((int) ($v ?? 0), 0, ',', '.');
+    $pct = fn ($parte, $todo) => $todo > 0 ? round($parte * 100 / $todo, 1) : 0;
+
+    /*
+     * Tipos de pago que Operaciones paga cada mes y que todavía no se
+     * cargan en el sistema. Se muestran apagados, para que se entienda
+     * por qué el total es parcial.
+     */
+    $pendientes = array_values(array_diff(
+        ['Ruta CV', 'Servicios', 'Visitas', 'Apoyo Alza', 'Especiales'],
+        array_keys($resumenPago['por_tipo'] ?? [])
+    ));
 @endphp
 
 <div class="co-page co-page-paso">
@@ -20,22 +31,65 @@
                 <span class="co-paso-unidad">a pagar, con IVA</span>
             </p>
 
+            <dl class="co-paso-cifras">
+                <div class="co-paso-cifra">
+                    <dt>Neto</dt>
+                    <dd>${{ $n($resumenPago['neto']) }}</dd>
+                </div>
+                <div class="co-paso-cifra">
+                    <dt>IVA</dt>
+                    <dd>${{ $n($resumenPago['iva']) }}</dd>
+                </div>
+                <div class="co-paso-cifra">
+                    <dt>Proveedores</dt>
+                    <dd>{{ $n(count($resumenPago['por_proveedor'])) }}</dd>
+                </div>
+            </dl>
+
             <p class="co-paso-frase">
-                Son <strong>${{ $n($resumenPago['neto']) }}</strong> netos más
-                <strong>${{ $n($resumenPago['iva']) }}</strong> de IVA, repartidos entre
-                <strong>{{ $n(count($resumenPago['por_proveedor'])) }}</strong> proveedores,
-                por {{ $n($resumenPago['bultos_pagados']) }} bultos.
-                El 19% se agrega sólo a quienes emiten factura.
+                El 19% de IVA se agrega sólo a quienes emiten factura.
             </p>
 
-            @if(($resumenPago['por_tipo'] ?? []) !== [])
-                {{-- Neto por tipo de pago: la misma lectura que las columnas de ResumenPagos. --}}
-                <div class="co-chips" style="margin-top: 1rem;">
-                    @foreach($resumenPago['por_tipo'] as $tipo => $monto)
-                        <span class="co-chip">{{ $tipo }}: <strong>${{ $n($monto) }}</strong></span>
-                    @endforeach
+            <div class="co-paso-bloque">
+                <h2 class="co-paso-subtitulo">Por tipo de pago</h2>
+
+                <div class="co-table-wrap">
+                    <table class="co-table">
+                        <thead>
+                            <tr>
+                                <th>Tipo de pago</th>
+                                <th>Parte del neto</th>
+                                <th class="is-num">Neto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($resumenPago['por_tipo'] as $tipo => $monto)
+                                <tr>
+                                    <td class="is-strong">{{ $tipo }}</td>
+                                    <td>
+                                        <span class="co-barra is-ancha" role="img"
+                                              aria-label="{{ $pct($monto, $resumenPago['neto']) }} por ciento del neto">
+                                            <span style="width: {{ $pct($monto, $resumenPago['neto']) }}%"></span>
+                                        </span>
+                                        {{ $pct($monto, $resumenPago['neto']) }}%
+                                    </td>
+                                    <td class="is-num is-strong">${{ $n($monto) }}</td>
+                                </tr>
+                            @endforeach
+                            @foreach($pendientes as $tipo)
+                                <tr class="is-quieto">
+                                    <td>{{ $tipo }}</td>
+                                    <td colspan="2">Todavía no está en el sistema</td>
+                                </tr>
+                            @endforeach
+                            <tr class="co-fila-total">
+                                <td class="is-strong" colspan="2">Neto</td>
+                                <td class="is-num is-strong">${{ $n($resumenPago['neto']) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-            @endif
+            </div>
 
             <div class="co-paso-bloque">
                 <h2 class="co-paso-subtitulo">A quién se le paga</h2>
@@ -67,7 +121,10 @@
                                             <span class="co-badge co-badge-no">Sin definir</span>
                                         @endif
                                     </td>
-                                    <td class="is-num">{{ $n($proveedor['bultos']) }}</td>
+                                    {{-- Un proveedor que sólo tiene Acuerdos no tiene bultos. --}}
+                                    <td class="is-num {{ $proveedor['bultos'] > 0 ? '' : 'is-muted' }}">
+                                        {{ $proveedor['bultos'] > 0 ? $n($proveedor['bultos']) : '—' }}
+                                    </td>
                                     <td class="is-num">${{ $n($proveedor['neto']) }}</td>
                                     <td class="is-num is-muted">{{ $proveedor['iva'] > 0 ? '$' . $n($proveedor['iva']) : '—' }}</td>
                                     <td class="is-num is-strong">${{ $n($proveedor['total']) }}</td>
@@ -84,12 +141,6 @@
                     </table>
                 </div>
             </div>
-
-            <p class="co-note">
-                Este total cubre sólo los pagos que salen de la descarga de Geolice. Los acuerdos, servicios,
-                ruta CV, visitas, apoyo alza, fijo base y especiales que Operaciones lleva en hojas aparte
-                todavía no están en el sistema.
-            </p>
 
         @endif
 

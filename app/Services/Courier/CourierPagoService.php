@@ -4,11 +4,13 @@ namespace App\Services\Courier;
 
 use App\Imports\Courier\GeoliceBultosImport;
 use App\Imports\Courier\PesajesImport;
+use App\Models\CourierAcuerdo;
 use App\Models\CourierBulto;
 use App\Models\CourierCoberturaComuna;
 use App\Models\CourierConfiguracion;
 use App\Models\CourierEstadoEntrega;
 use App\Models\CourierImportacion;
+use App\Models\CourierPagoProceso;
 use App\Models\CourierPeriodo;
 use App\Models\CourierPesaje;
 use App\Models\CourierProveedor;
@@ -613,6 +615,29 @@ class CourierPagoService
             ->selectRaw('zona, tipo_pago, courier_proveedor_id, COUNT(*) AS bultos, SUM(valor) AS monto')
             ->groupBy('zona', 'tipo_pago', 'courier_proveedor_id')
             ->get();
+
+        /*
+         * Acuerdos, Ruta CV, Servicios, Visitas, Especiales y Apoyo Alza
+         * no son bultos: entran al mismo resumen como una fila más por
+         * zona, tipo y proveedor, con cero bultos.
+         */
+        $filas = $filas
+            ->concat(
+                CourierAcuerdo::query()
+                    ->delPeriodo($periodo->id)
+                    ->where('total', '>', 0)
+                    ->selectRaw('zona, ? AS tipo_pago, courier_proveedor_id, 0 AS bultos, SUM(total) AS monto', [CourierAcuerdo::TIPO_PAGO])
+                    ->groupBy('zona', 'courier_proveedor_id')
+                    ->get()
+            )
+            ->concat(
+                CourierPagoProceso::query()
+                    ->delPeriodo($periodo->id)
+                    ->where('total', '>', 0)
+                    ->selectRaw('zona, proceso AS tipo_pago, courier_proveedor_id, 0 AS bultos, SUM(total) AS monto')
+                    ->groupBy('zona', 'proceso', 'courier_proveedor_id')
+                    ->get()
+            );
 
         $proveedores = CourierProveedor::query()
             ->whereIn('id', $filas->pluck('courier_proveedor_id')->filter()->unique())

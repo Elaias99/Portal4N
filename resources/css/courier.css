@@ -1884,3 +1884,49 @@ a.co-stat:hover {
 .co-table tbody tr.is-quieto td {
     color: var(--co-muted);
 }
+
+/* Las cifras que acompañan al número principal del paso, en una fila. */
+.co-paso-cifras {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 1.2rem 0 0.9rem;
+}
+
+.co-paso-cifra {
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--co-line-soft);
+    border-radius: var(--co-radius);
+    background: #fbfcfe;
+}
+
+.co-paso-cifra dt {
+    margin: 0;
+    color: var(--co-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.co-paso-cifra dd {
+    margin: 0.3rem 0 0;
+    color: var(--co-text);
+    font-size: 1.3rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.co-barra.is-ancha {
+    width: 160px;
+}
+
+/* El RUT no se corta en dos líneas. */
+.co-paso-bloque .co-table .is-mono {
+    white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+    .co-paso-cifras { grid-template-columns: 1fr; }
+    .co-barra.is-ancha { width: 90px; }
+}

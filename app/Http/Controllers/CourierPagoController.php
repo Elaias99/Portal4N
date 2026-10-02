@@ -53,7 +53,7 @@ class CourierPagoController extends Controller
         ],
         'totales' => [
             'pregunta' => '¿Cuánto y a quién?',
-            'bajada' => 'El total del período y el detalle por proveedor, con su documento e IVA.',
+            'bajada' => 'El total del período, cuánto aporta cada tipo de pago y a quién se le paga, con su documento e IVA.',
             'requiere_calculo' => true,
         ],
     ];

@@ -54,6 +54,17 @@ class CourierCalculoService
      */
     private const PROVEEDOR_INTERNO = 'planta';
 
+    /*
+     * Revés Derecho Mayorista (Paso a Paso del jefe, hoja de julio): lo
+     * que va a regiones vuelve a RM con la comuna CD QUILICURA y se paga
+     * ahí. Se quedan en su comuna los de Transporte Mandame y Curacaví.
+     * LogisticaCL aplica la misma regla.
+     */
+    private const MAYORISTA_COMERCIANTE = 'revesderecho';
+    private const MAYORISTA_SERVICIOS = ['servicio standar (mayorista)', 'standar (mayorista)'];
+    private const MAYORISTA_COMUNA = 'CD QUILICURA';
+    private const MAYORISTA_SE_QUEDAN = ['transporte mandame (talagante)', 'operador curacavi'];
+
     /* Motivos por los que un bulto no se paga. */
     public const MOTIVOS = [
         'pagado_mes_anterior' => 'Ya se pagó el mes anterior',
@@ -250,6 +261,11 @@ class CourierCalculoService
             : CourierCoberturaComuna::clave($bulto->comuna_destino);
 
         $comuna = $clave === null ? null : ($cobertura[$clave] ?? null);
+
+        if ($this->esMayoristaQueVuelve($bulto, $comuna)) {
+            $clave = CourierCoberturaComuna::clave(self::MAYORISTA_COMUNA);
+            $comuna = $cobertura[$clave] ?? null;
+        }
 
         if ($comuna !== null) {
             $salida['courier_agente_id'] = $comuna['agente_id'];
@@ -462,6 +478,20 @@ class CourierCalculoService
         $salida['motivo'] = null;
 
         return $salida;
+    }
+
+    /*
+     * Sin comuna o con una que no está en el catálogo también vuelve a
+     * RM: sólo se quedan los agentes de MAYORISTA_SE_QUEDAN.
+     */
+    private function esMayoristaQueVuelve(object $bulto, ?array $comuna): bool
+    {
+        if (mb_strtolower(trim((string) $bulto->comerciante)) !== self::MAYORISTA_COMERCIANTE
+            || ! in_array(mb_strtolower(trim((string) $bulto->servicio)), self::MAYORISTA_SERVICIOS, true)) {
+            return false;
+        }
+
+        return ! in_array(mb_strtolower(trim($comuna['agente'] ?? '')), self::MAYORISTA_SE_QUEDAN, true);
     }
 
     private function tipoPago(?string $comerciante): string
