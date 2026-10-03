@@ -47,6 +47,7 @@ use App\Http\Controllers\PublicTrackingController;
 use App\Http\Controllers\SuscripcionLiquidacionDetalleController;
 use App\Http\Controllers\CourierCatalogoController;
 use App\Http\Controllers\CourierPagoController;
+use App\Http\Controllers\CourierGeoliceCaptureController;
 use App\Http\Controllers\BsaleGuiaImportacionController;
 
 
@@ -155,6 +156,21 @@ Route::middleware('auth')->prefix('courier')->name('courier.')->group(function (
     // Raíz = proceso de pago del mes.
     Route::get('/', [CourierPagoController::class, 'index'])
         ->name('index');
+
+    Route::post('/geo/cuenta', [CourierGeoliceCaptureController::class, 'saveAccount'])
+        ->name('geo.account');
+    Route::delete('/geo/cuenta', [CourierGeoliceCaptureController::class, 'forgetAccount'])
+        ->name('geo.account.forget');
+    Route::post('/geo/capturas', [CourierGeoliceCaptureController::class, 'capture'])
+        ->name('geo.capture');
+    Route::get('/geo/capturas/{capture}', [CourierGeoliceCaptureController::class, 'status'])
+        ->whereUuid('capture')->name('geo.status');
+    Route::get('/geo/capturas/{capture}/archivo', [CourierGeoliceCaptureController::class, 'download'])
+        ->whereUuid('capture')->name('geo.download');
+    Route::post('/geo/capturas/{capture}/revisar', [CourierGeoliceCaptureController::class, 'review'])
+        ->whereUuid('capture')->name('geo.review');
+    Route::delete('/geo/capturas/{capture}', [CourierGeoliceCaptureController::class, 'cancel'])
+        ->whereUuid('capture')->name('geo.cancel');
 
     Route::post('/importar-geolice', [CourierPagoController::class, 'importarGeolice'])
         ->name('importar-geolice');

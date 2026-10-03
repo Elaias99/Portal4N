@@ -6,6 +6,7 @@ use App\Imports\Courier\GeoliceBultosImport;
 use App\Imports\Courier\PesajesImport;
 use App\Models\CourierAcuerdo;
 use App\Models\CourierBulto;
+use App\Models\CourierCierre;
 use App\Models\CourierCoberturaComuna;
 use App\Models\CourierConfiguracion;
 use App\Models\CourierEstadoEntrega;
@@ -96,12 +97,18 @@ class CourierPagoService
     {
         $revision = $this->leerRevision($token);
 
+        if (isset($revision['origen_captura'])
+            && (int) $revision['origen_captura']['user_id'] !== $usuarioId) {
+            throw new \InvalidArgumentException('La revisión de esta captura no pertenece a tu cuenta.');
+        }
+
         $importacion = $this->guardarBultos(
             Storage::path($revision['ruta']),
             $revision['archivo'],
             $revision['extension'],
             $revision['periodo'],
-            $usuarioId
+            $usuarioId,
+            $revision['origen_captura'] ?? null
         );
 
         $this->descartarRevision($token);
@@ -120,7 +127,8 @@ class CourierPagoService
         string $nombre,
         string $extension,
         string $codigoPeriodo,
-        ?int $usuarioId
+        ?int $usuarioId,
+        ?array $origenCaptura = null
     ): CourierImportacion {
         // La descarga trae decenas de miles de filas.
         set_time_limit(0);
@@ -128,7 +136,7 @@ class CourierPagoService
 
         $inicio = microtime(true);
 
-        return DB::transaction(function () use ($ruta, $nombre, $extension, $codigoPeriodo, $usuarioId, $inicio) {
+        return DB::transaction(function () use ($ruta, $nombre, $extension, $codigoPeriodo, $usuarioId, $inicio, $origenCaptura) {
             $periodo = CourierPeriodo::firstOrCreate(
                 ['codigo' => $codigoPeriodo],
                 [
@@ -155,6 +163,7 @@ class CourierPagoService
                     'estados_desconocidos' => $import->estadosDesconocidos,
                     'comunas_fuera_de_catalogo' => $this->ordenar($import->comunasFueraDeCatalogo),
                     'sin_configuracion' => $this->ordenar($import->sinConfiguracion),
+                    ...($origenCaptura === null ? [] : ['origen_captura' => $origenCaptura]),
                 ],
             ]);
         });
@@ -372,7 +381,8 @@ class CourierPagoService
      */
     public function revisarGeolice(
         UploadedFile $archivo,
-        string $codigoPeriodo
+        string $codigoPeriodo,
+        ?array $origenCaptura = null
     ): array {
         set_time_limit(0);
         ini_set('memory_limit', '2048M');
@@ -427,6 +437,7 @@ class CourierPagoService
                 'extension' => $extension,
                 'periodo' => $codigoPeriodo,
                 'ruta' => $ruta,
+                ...($origenCaptura === null ? [] : ['origen_captura' => $origenCaptura]),
             ], JSON_UNESCAPED_UNICODE)
         );
 
@@ -444,7 +455,27 @@ class CourierPagoService
             'sin_configuracion' => $this->ordenar(
                 $import->sinConfiguracion
             ),
+            ...($origenCaptura === null ? [] : ['origen_captura' => $origenCaptura]),
         ];
+    }
+
+    /**
+     * Revisa un archivo que la captura ya descargó. No guarda bultos ni calcula pagos.
+     *
+     * @param array{capture_id: string, user_id: int, from: string, to: string, payment_period: string} $origenCaptura
+     * @return array<string, mixed>
+     */
+    public function revisarCapturaGeolice(
+        string $ruta,
+        string $nombre,
+        string $codigoPeriodo,
+        array $origenCaptura
+    ): array {
+        return $this->revisarGeolice(
+            new UploadedFile($ruta, $nombre, null, null, true),
+            $codigoPeriodo,
+            $origenCaptura
+        );
     }
 
     /*
@@ -685,15 +716,23 @@ class CourierPagoService
             $porProveedor[$clave]['neto'] = ($porProveedor[$clave]['neto'] ?? 0) + $monto;
         }
 
-        /* Banco: el 19% se agrega sólo cuando el documento es Factura. */
+        /*
+         * Impuesto por documento: la factura suma 19% de IVA, la boleta de
+         * honorarios resta 15,25% de retención y la factura exenta no
+         * lleva. El cierre lo calcula igual, pero por OC.
+         */
         $iva = 0;
+        $retencion = 0;
 
         foreach ($porProveedor as &$datos) {
-            $datos['iva'] = $datos['tipo_documento'] === 'Factura'
-                ? (int) round($datos['neto'] * 0.19)
-                : 0;
-            $datos['total'] = $datos['neto'] + $datos['iva'];
+            $impuesto = CourierImpuestos::calcular($datos['tipo_documento'], $datos['neto']);
+
+            $datos['iva'] = ($impuesto['impuesto'] ?? null) === CourierImpuestos::IVA ? $impuesto['valor_impuesto'] : 0;
+            $datos['retencion'] = ($impuesto['impuesto'] ?? null) === CourierImpuestos::RETENCION ? $impuesto['valor_impuesto'] : 0;
+            $datos['total'] = $datos['neto'] + $datos['iva'] - $datos['retencion'];
+
             $iva += $datos['iva'];
+            $retencion += $datos['retencion'];
         }
         unset($datos);
 
@@ -726,7 +765,9 @@ class CourierPagoService
             'bultos_pagados' => $bultos,
             'neto' => $neto,
             'iva' => $iva,
-            'total' => $neto + $iva,
+            'retencion' => $retencion,
+            'total' => $neto + $iva - $retencion,
+            'cierre' => CourierCierre::where('courier_periodo_id', $periodo->id)->first(),
             'por_zona' => array_values($porZona),
             'por_tipo' => $porTipo,
             'por_proveedor' => $porProveedor,

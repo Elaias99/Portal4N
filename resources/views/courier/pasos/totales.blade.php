@@ -26,9 +26,19 @@
             <p class="co-empty">Este período todavía no se ha calculado.</p>
         @else
 
+            @if($resumenPago['cierre'])
+                <p class="co-paso-frase" style="margin-bottom: 1rem;">
+                    <span class="co-badge co-badge-accent">Cerrado</span>
+                    El {{ $resumenPago['cierre']->closed_at->format('d-m-Y') }} se cerraron
+                    <strong>{{ $n($resumenPago['cierre']->registros) }}</strong> pagos en
+                    <strong>{{ $n($resumenPago['cierre']->ordenes_compra) }}</strong> órdenes de compra,
+                    por <strong>${{ $n($resumenPago['cierre']->total) }}</strong>. El período ya no admite cambios.
+                </p>
+            @endif
+
             <p class="co-paso-dato">
                 <span class="co-paso-numero">${{ $n($resumenPago['total']) }}</span>
-                <span class="co-paso-unidad">a pagar, con IVA</span>
+                <span class="co-paso-unidad">a pagar</span>
             </p>
 
             <dl class="co-paso-cifras">
@@ -38,7 +48,11 @@
                 </div>
                 <div class="co-paso-cifra">
                     <dt>IVA</dt>
-                    <dd>${{ $n($resumenPago['iva']) }}</dd>
+                    <dd>+${{ $n($resumenPago['iva']) }}</dd>
+                </div>
+                <div class="co-paso-cifra">
+                    <dt>Retención</dt>
+                    <dd>−${{ $n($resumenPago['retencion']) }}</dd>
                 </div>
                 <div class="co-paso-cifra">
                     <dt>Proveedores</dt>
@@ -47,7 +61,8 @@
             </dl>
 
             <p class="co-paso-frase">
-                El 19% de IVA se agrega sólo a quienes emiten factura.
+                La factura suma 19% de IVA, la boleta de honorarios descuenta 15,25% de retención
+                y la factura exenta no lleva impuesto.
             </p>
 
             <div class="co-paso-bloque">
@@ -104,6 +119,7 @@
                                 <th class="is-num">Bultos</th>
                                 <th class="is-num">Neto</th>
                                 <th class="is-num">IVA</th>
+                                <th class="is-num">Retención</th>
                                 <th class="is-num">Total</th>
                             </tr>
                         </thead>
@@ -126,7 +142,8 @@
                                         {{ $proveedor['bultos'] > 0 ? $n($proveedor['bultos']) : '—' }}
                                     </td>
                                     <td class="is-num">${{ $n($proveedor['neto']) }}</td>
-                                    <td class="is-num is-muted">{{ $proveedor['iva'] > 0 ? '$' . $n($proveedor['iva']) : '—' }}</td>
+                                    <td class="is-num is-muted">{{ $proveedor['iva'] > 0 ? '+$' . $n($proveedor['iva']) : '—' }}</td>
+                                    <td class="is-num is-muted">{{ $proveedor['retencion'] > 0 ? '−$' . $n($proveedor['retencion']) : '—' }}</td>
                                     <td class="is-num is-strong">${{ $n($proveedor['total']) }}</td>
                                 </tr>
                             @endforeach
@@ -134,7 +151,8 @@
                                 <td class="is-strong" colspan="3">Total</td>
                                 <td class="is-num">{{ $n($resumenPago['bultos_pagados']) }}</td>
                                 <td class="is-num">${{ $n($resumenPago['neto']) }}</td>
-                                <td class="is-num">${{ $n($resumenPago['iva']) }}</td>
+                                <td class="is-num">+${{ $n($resumenPago['iva']) }}</td>
+                                <td class="is-num">−${{ $n($resumenPago['retencion']) }}</td>
                                 <td class="is-num is-strong">${{ $n($resumenPago['total']) }}</td>
                             </tr>
                         </tbody>

@@ -1888,7 +1888,7 @@ a.co-stat:hover {
 /* Las cifras que acompañan al número principal del paso, en una fila. */
 .co-paso-cifras {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
     gap: 0.75rem;
     margin: 1.2rem 0 0.9rem;
 }

@@ -8,6 +8,7 @@ use App\Models\CourierPeriodo;
 use App\Services\Courier\CourierCalculoService;
 use App\Services\Courier\CourierCatalogoService;
 use App\Services\Courier\CourierPagoService;
+use App\Services\Courier\Geo\GeoliceCapturePresenter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -114,7 +115,7 @@ class CourierPagoController extends Controller
         ]));
     }
 
-    public function index(Request $request): View
+    public function index(Request $request, GeoliceCapturePresenter $geo): View
     {
         /*
          * "Elegir otro archivo": se descarta la revisión y su archivo,
@@ -151,6 +152,10 @@ class CourierPagoController extends Controller
             }
         }
 
+        $mesSugerido = $periodo
+            ? sprintf('%04d-%02d', $periodo->anio, $periodo->mes)
+            : now()->format('Y-m');
+
         return view('courier.index', [
             'periodos' => $periodos,
             'periodo' => $periodo,
@@ -158,9 +163,8 @@ class CourierPagoController extends Controller
             'resumenPago' => $periodo ? $this->pago->resumenPago($periodo) : null,
             'importaciones' => $periodo ? $this->pago->importaciones($periodo) : collect(),
             'mostradas' => $mostradas,
-            'mesSugerido' => $periodo
-                ? sprintf('%04d-%02d', $periodo->anio, $periodo->mes)
-                : now()->format('Y-m'),
+            'mesSugerido' => $mesSugerido,
+            'geo' => $geo->forUser((int) $request->user()->getAuthIdentifier(), $mesSugerido),
             'resumen' => $this->catalogo->resumen(),
         ]);
     }

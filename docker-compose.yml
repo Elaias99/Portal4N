@@ -3,6 +3,12 @@ services:
     build: .
     container_name: portal4n-app
     restart: unless-stopped
+    shm_size: "1gb"
+    environment:
+      # Reach the database published on Windows; keep its existing port and credentials.
+      DB_HOST: host.docker.internal
+      # Windows bind mounts use host ACLs rather than Unix chmod.
+      COURIER_GEO_APPLY_UNIX_PERMISSIONS: "false"
     ports:
       - "8000:80"
     volumes:
@@ -18,7 +24,7 @@ services:
       MYSQL_DATABASE: portal_4n
       MYSQL_ROOT_PASSWORD: root
     ports:
-      - "3307:3306"
+      - "3308:3306"
     volumes:
       - dbdata:/var/lib/mysql
 

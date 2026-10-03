@@ -30,6 +30,14 @@ return [
 
     'disks' => [
 
+        'courier-geo' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/courier-geo'),
+            'visibility' => env('COURIER_GEO_APPLY_UNIX_PERMISSIONS', true) ? 'private' : null,
+            'directory_visibility' => 'private',
+            'throw' => true,
+        ],
+
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app'),

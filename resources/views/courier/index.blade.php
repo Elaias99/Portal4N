@@ -242,7 +242,7 @@
             ? 'Revisa el resultado antes de decidir si el archivo debe incorporarse al proceso.'
             : (($alertasPeriodo['total'] ?? 0) > 0
                 ? "{$periodo->nombre} tiene datos cargados. Revisa primero su estado antes de continuar."
-                : 'Carga la descarga de Geolice para comenzar el proceso de pago Courier.'),
+                : 'Trae los paquetes de Geo y revisa el archivo antes de incorporarlo al pago Courier.'),
         'volverRuta' => route('cobranzas.general'),
         'volverTexto' => 'Volver al panel de Finanzas',
         'meta' => $revision
@@ -252,7 +252,7 @@
 
     @if($errors->any())
         <div class="co-alert co-alert-danger" role="alert">
-            <strong>No se pudo revisar el archivo.</strong>
+            <strong>No se pudo completar la solicitud.</strong>
 
             <ul>
                 @foreach($errors->all() as $error)
@@ -286,7 +286,11 @@
     @endif
 
     @if(!$revision)
-        <section class="co-region co-upload" id="importar">
+        @include('courier.partials.geo-captura')
+
+        <details class="co-region">
+            <summary class="co-region-head" style="cursor: pointer;">Usar un archivo descargado</summary>
+        <section class="co-upload" id="importar">
             <div class="co-region-head">
                 <div>
                     <h2 class="co-region-title">
@@ -352,6 +356,7 @@
                 </p>
             </form>
         </section>
+        </details>
     @else
 
         <section class="co-region">

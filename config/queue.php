@@ -30,6 +30,15 @@ return [
 
     'connections' => [
 
+        'courier-geo' => [
+            'driver' => 'database',
+            'connection' => env('DB_QUEUE_CONNECTION'),
+            'table' => env('DB_QUEUE_TABLE', 'jobs'),
+            'queue' => 'courier-geo',
+            'retry_after' => 4500,
+            'after_commit' => true,
+        ],
+
         'sync' => [
             'driver' => 'sync',
         ],
