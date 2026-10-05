@@ -195,7 +195,7 @@
                     </thead>
                     <tbody>
                         @php
-                            $necesitanDecision = ['sin_comuna', 'comuna_desconocida', 'sin_configuracion', 'sin_tabla', 'sin_tarifa', 'configuracion_revisar'];
+                            $necesitanDecision = ['sin_comuna', 'comuna_desconocida', 'sin_rut_proveedor', 'sin_configuracion', 'llave_ambigua', 'sin_tabla', 'sin_tarifa', 'configuracion_revisar', 'peumo_sin_guia', 'peumo_sin_tarifa'];
                         @endphp
                         @foreach($resumenPago['motivos'] as $motivo => $cantidad)
                             <tr>

@@ -18,7 +18,7 @@
      * siguen esperando que Operaciones defina algo.
      */
     $esperanDefinicion = [
-        'sin_comuna', 'comuna_desconocida', 'sin_configuracion', 'sin_tabla', 'sin_tarifa', 'configuracion_revisar',
+        'sin_comuna', 'comuna_desconocida', 'sin_rut_proveedor', 'sin_configuracion', 'llave_ambigua', 'sin_tabla', 'sin_tarifa', 'configuracion_revisar', 'peumo_sin_guia', 'peumo_sin_tarifa',
         'retorno_sin_cobertura', 'retorno_sin_valor',
     ];
 @endphp

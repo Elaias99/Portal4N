@@ -6,7 +6,6 @@ use GuzzleHttp\Cookie\CookieJar;
 use GuzzleHttp\Cookie\SetCookie;
 use Illuminate\Support\Facades\Http;
 use Throwable;
-use ZipArchive;
 
 class GeoliceCaptureService
 {
@@ -143,7 +142,7 @@ class GeoliceCaptureService
             if (! rename($temporary, $final)) {
                 throw new GeoliceCaptureException('No se pudo guardar el archivo descargado.');
             }
-            $fileName = 'geolice_'.$capture['from'].'_'.$capture['to'].'_creacion_export'.$exportId.'.xlsx';
+            $fileName = 'geolice_'.$capture['from'].'_'.$capture['to'].'_creacion_export'.$exportId.'.csv';
             $this->store->update($userId, $id, ['state' => 'leyendo', 'file_name' => $fileName, 'message' => 'Archivo guardado. Preparando el resumen de paquetes…']);
             $this->stage = 'leer_archivo';
             $result = $this->summary->read($final);
@@ -394,20 +393,18 @@ class GeoliceCaptureService
         }
         $this->record('descarga_respuesta_http', ['http_status' => $response->status()]);
         if (! $response->successful()) {
-            throw new GeoliceCaptureException('Geo no permitió descargar el archivo. Revisa la conexión de tu cuenta antes de volver a solicitarlo.');
+            throw new GeoliceCaptureException(in_array($response->status(), [502, 503, 504], true)
+                ? 'Geo tardó demasiado en entregar el archivo. La exportación sigue en sus notificaciones; vuelve a solicitarla más tarde.'
+                : 'Geo no permitió descargar el archivo. Revisa la conexión de tu cuenta antes de volver a solicitarlo.');
         }
-        $zip = new ZipArchive;
-        $opened = $zip->open($destination, ZipArchive::RDONLY);
-        if ($opened !== true) {
-            $this->record('descarga_excel_no_abierto', ['zip_error_code' => $opened], 'warning');
-            throw new GeoliceCaptureException('No se pudo abrir el Excel descargado para comprobar su contenido.');
+        $file = @fopen($destination, 'rb');
+        $firstLine = $file === false ? false : fgets($file, 8192);
+        if ($file !== false) {
+            fclose($file);
         }
-        try {
-            if ($zip->locateName('xl/workbook.xml') === false || $zip->locateName('[Content_Types].xml') === false) {
-                throw new GeoliceCaptureException('Geo devolvió un archivo que no corresponde a una base Excel.');
-            }
-        } finally {
-            $zip->close();
+        if ($firstLine === false || ! str_contains($firstLine, 'Seguimiento paquete')) {
+            $this->record('descarga_csv_sin_cabecera', [], 'warning');
+            throw new GeoliceCaptureException('Geo devolvió un archivo que no corresponde a la base de paquetes.');
         }
     }
 }

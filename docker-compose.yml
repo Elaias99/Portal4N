@@ -13,6 +13,8 @@ services:
       - "8000:80"
     volumes:
       - .:/var/www/html
+      # vendor/ vive en un volumen de Docker: leerlo desde Windows hace que cada página tarde ~11 s.
+      - vendor:/var/www/html/vendor
     depends_on:
       - db
 
@@ -30,3 +32,4 @@ services:
 
 volumes:
   dbdata:
+  vendor:

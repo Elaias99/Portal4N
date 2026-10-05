@@ -120,7 +120,9 @@ function collectLinks(text) {
     for (const match of text.matchAll(pattern)) {
         decoder.innerHTML = match[0].replace(/&amp;/g, '&').replace(/&amp;/g, '&');
         const link = decoder.value;
-        if (/format=xlsx(?:&|$)/.test(link)) state.links[match[1]] = link;
+        // CSV y no Excel: Geo arma el Excel recién al descargarlo y, con decenas de miles de
+        // paquetes, su servidor corta a los 60 s (504). El CSV lo envía por partes desde el inicio.
+        if (/format=csv(?:&|$)/.test(link)) state.links[match[1]] = link;
     }
 }
 

@@ -746,7 +746,7 @@ class CourierPagoService
         /* Lo que quedó fuera por falta de una regla, no por decisión. */
         $bloqueados = CourierBulto::query()
             ->delPeriodo($periodo->id)
-            ->whereIn('motivo', ['sin_comuna', 'comuna_desconocida', 'sin_configuracion', 'sin_tabla', 'sin_tarifa', 'configuracion_revisar'])
+            ->whereIn('motivo', ['sin_comuna', 'comuna_desconocida', 'sin_rut_proveedor', 'sin_configuracion', 'llave_ambigua', 'sin_tabla', 'sin_tarifa', 'configuracion_revisar', 'peumo_sin_guia', 'peumo_sin_tarifa'])
             ->count();
 
         $motivos = CourierBulto::query()

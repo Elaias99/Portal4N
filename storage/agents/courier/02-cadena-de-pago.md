@@ -26,27 +26,38 @@ La **comuna de destino** que trae Geolice se busca en el catálogo de comunas
 
 > Ejemplo: `Antofagasta` → agente `Claudio Castro (Antofagasta)`, zona `Regiones`.
 
-## Paso 2 · Agente + comerciante + servicio → ¿se paga? ¿con qué tabla?
+## Paso 2 · RUT proveedor + RUT cliente + servicio → ¿se paga? ¿con qué tabla?
 
-Se arma una **llave** pegando los tres textos (agente, comerciante, servicio)
-y se busca en la configuración de pago (hoja `PagosCentroCostos`). El
-resultado tiene dos partes:
+Es la llave de pago de Operaciones. Se carga desde `Llaves_Courier_AAAAMM.xlsx`
+con `php artisan courier:importar-llaves <archivo>` (tablas `courier_llave_*`
+y `courier_llaves`); cada carga reemplaza la anterior. La hoja `Tarifas` del
+mismo archivo actualiza los centros de costo (`courier_tarifas`).
 
-- **Pagar**: `SI`, `NO` o `REVISAR`.
-- **Tabla**: el número de tarifa que aplica.
+1. El **RUT del proveedor** sale del agente (paso 7).
+2. El **RUT del cliente** sale del comerciante (hoja `Clientes`).
+3. El **código del servicio** sale del servicio (hoja `Servicios`).
+4. Con los tres se busca en la hoja `Llaves`. Si hay varias, manda la del
+   agente del bulto. El resultado tiene dos partes:
+   - **Pagar**: `SI`, `NO` o `REVISAR`.
+   - **Tabla**: el número de tarifa (centro de costo) que aplica.
 
-Tres situaciones que hay que distinguir bien:
-
-| Situación | Significado |
+| Situación | Motivo |
 |---|---|
-| Configuración existe, pagar `SI`, tabla N | Se paga con la tarifa N. |
-| Configuración existe, tabla `0` | Existe la regla y dice **explícitamente que no se paga**. |
-| **La llave no existe** | Nadie ha definido si se paga. No es tabla 0. Hay que preguntarle a Operaciones. El sistema no asume nada. |
+| Llave `SI`, tabla N | Se paga con la tarifa N. |
+| Llave `SI`, tabla `0` | Existe la regla y dice que no se paga (`tabla_cero`). |
+| Llave `NO` | `configuracion_no`. |
+| Llave `REVISAR` | `configuracion_revisar`. |
+| Varias llaves que no dicen lo mismo | `llave_ambigua`. |
+| **No hay llave** (o el comerciante o el servicio no están en las hojas) | `sin_configuracion`. El sistema no asume nada. |
 
-La llave se compara en minúsculas y **sin espacios ni tabulaciones en los
-extremos** (Geolice a veces los agrega); todo lo demás debe calzar exacto.
+Comerciante y servicio se comparan en minúsculas y sin espacios de más
+(Geolice a veces agrega tabulaciones).
 
-> Ejemplo: `Claudio Castro (Antofagasta)` + `Chilepost` + `Servicio Standar` → pagar `SI`, tabla `2`.
+La llave se carga para el mes que se va a calcular: agosto 2026 se calcula
+con `Llaves_Courier_202608.xlsx`, que refleja cómo Operaciones aplicó la
+llave ese mes.
+
+> Ejemplo: `Claudio Castro (Antofagasta)` → RUT del proveedor; `Chilepost` → RUT del cliente; `Servicio Standar` → código; la llave dice pagar `SI`, tabla `2`.
 
 ## Paso 3 · ¿Con cuántos kilos?
 
@@ -102,16 +113,46 @@ Comercial Reginella y Orquídea/Hilandería Maisa son **Lanas**; el resto,
 **Variables**. Es solo una clasificación para el resumen; el valor ya salió
 del paso 4.
 
+## Peumo · por guía de despacho
+
+Los bultos de `Comercial Peumo Ltda` con servicio `Servicio Standar (V.
+Trabajadores)` son el tipo de pago **Peumo**. No pasan por la llave ni por
+el peso:
+
+1. Se agrupan por **guía de despacho**, en el orden en que llegaron en el
+   archivo de Geo. Los ya pagados el mes anterior y los de pago especial no
+   cuentan.
+2. Cada bulto busca su comuna en la hoja `Peumo` de la llave (tabla
+   `courier_tarifas_peumo`): valor del **primer bulto** y del **resto**. La
+   comparación es exacta salvo mayúsculas.
+3. El primer bulto de la guía paga el valor del primero y los demás el del
+   resto, aunque el primero después no se pague (por estado, por ejemplo).
+4. Si la guía no viene (`peumo_sin_guia`), o si algún bulto de la guía no
+   tiene una tarifa única para su comuna (`peumo_sin_tarifa`), la guía
+   entera queda sin pagar.
+
+A quién se le paga y si se paga (estado, Blue, personal de 4N) sigue la
+misma cadena que el resto, y hace falta el RUT del cliente (hoja `Clientes`).
+
 ## Paso 7 · A quién se le paga
 
-Con **agente + repartidor** (en la planilla: Operador + Usuario) se busca en
-`DatosProveedores` la **razón social, RUT, tipo de documento y datos
-bancarios**. En casi todos los agentes el repartidor no cambia nada; en unos
-pocos (`4N RM`, `4N Temuco`) el repartidor define a quién se le paga.
+Se calcula antes que el paso 2, porque la llave parte de este RUT.
 
-El jefe está pasando a identificar al que cobra por **RUT + razón social**;
-el operador queda como dato extra. En Portal4N eso convierte a
-`courier_proveedores` en el índice principal.
+1. El **agente** del paso 1 da el **RUT del proveedor** (hoja `Agentes`).
+   Si el agente no está en la hoja, el motivo es `sin_rut_proveedor`.
+2. Si el bulto lo entregó personal de 4N que trabaja para otro proveedor, la
+   hoja `Repartidores 4N` (RUT + agente + repartidor) da el RUT de ese
+   proveedor. `N/A` = se queda en 4N.
+3. Lo que queda a nombre de **4 Nortes Logística** (`77346078-7`) lo entregó
+   personal propio y no se paga (`proveedor_interno`). Los agentes con RUT
+   `0-0` (Envío externo, Latam) no son proveedores Courier: lo que entregan
+   no se paga (`sin_proveedor_courier`), tampoco retornos ni Peumo.
+4. Con el RUT se busca el proveedor en `courier_proveedores` (razón social,
+   tipo de documento, datos bancarios). El bulto guarda el RUT en
+   `rut_proveedor` aunque no esté en el catálogo.
+5. La hoja `Proveedores` del Excel de llaves agrega a `courier_proveedores`
+   los RUT que cobran y todavía no están (llave `rut:…`, sin datos
+   bancarios). Los que ya están no se modifican.
 
 ## Paso 8 · Resumen y banco
 

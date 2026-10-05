@@ -8,7 +8,7 @@ use Throwable;
 /** Resume exclusivamente el archivo capturado; no consulta bultos ni reglas de pago. */
 class GeolicePackageSummary
 {
-    public function __construct(private readonly GeoliceXlsxRows $reader) {}
+    public function __construct(private readonly GeoliceCsvRows $reader) {}
 
     /** @return array{rows: int, packages: int, duplicates: int, without_tracking: int, statuses: list<array{status: string, packages: int}>} */
     public function read(string $path): array
@@ -22,7 +22,7 @@ class GeolicePackageSummary
             foreach ($this->reader->rows($path) as $row) {
                 if (! $hasHeaders) {
                     if ($row['number'] !== 1) {
-                        throw new GeoliceCaptureException('El Excel descargado no contiene una cabecera de paquetes en la primera fila.');
+                        throw new GeoliceCaptureException('El archivo descargado no contiene una cabecera de paquetes en la primera fila.');
                     }
                     foreach ($row['values'] as $index => $value) {
                         $header = $this->header($value);
@@ -67,7 +67,7 @@ class GeolicePackageSummary
         }
 
         if (! $hasHeaders) {
-            throw new GeoliceCaptureException('El Excel descargado no contiene una cabecera de paquetes.');
+            throw new GeoliceCaptureException('El archivo descargado no contiene una cabecera de paquetes.');
         }
         $result = [];
         foreach ($statuses as $status => $count) {
@@ -110,7 +110,7 @@ class GeolicePackageSummary
             throw new GeoliceCaptureException('No se pudo comprobar la cabecera del archivo antes de revisar en Courier.');
         }
 
-        throw new GeoliceCaptureException('El Excel descargado no contiene una cabecera de paquetes.');
+        throw new GeoliceCaptureException('El archivo descargado no contiene una cabecera de paquetes.');
     }
 
     private function header(string $value): string

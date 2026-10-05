@@ -184,7 +184,7 @@ class GeoliceCaptureStore
             throw new GeoliceCaptureException('La solicitud de captura no es válida.');
         }
 
-        return Storage::disk('courier-geo')->path($this->folder($userId).'/'.$id.'/paquetes.xlsx'.($temporary ? '.part' : ''));
+        return Storage::disk('courier-geo')->path($this->folder($userId).'/'.$id.'/paquetes.csv'.($temporary ? '.part' : ''));
     }
 
     /** @param array<string, mixed> $capture */

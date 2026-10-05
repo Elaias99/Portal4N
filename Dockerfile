@@ -18,6 +18,9 @@ RUN apt-get update && apt-get install -y \
 # Habilitar mod_rewrite (Laravel lo necesita)
 RUN a2enmod rewrite
 
+# Composer, para instalar paquetes dentro del contenedor (vendor/ vive en un volumen)
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
 # Establecer el directorio de trabajo
 WORKDIR /var/www/html
 

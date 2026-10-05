@@ -2,13 +2,10 @@
 
 namespace App\Services\Courier;
 
-use App\Models\CourierBulto;
 use App\Models\CourierCoberturaComuna;
-use App\Models\CourierConfiguracion;
 use App\Models\CourierControl;
 use App\Models\CourierEstadoEntrega;
 use App\Models\CourierPeriodo;
-use App\Models\CourierProveedor;
 use App\Models\CourierTarifa;
 use Illuminate\Support\Facades\DB;
 
@@ -27,6 +24,7 @@ class CourierCalculoService
     public const TIPO_VARIABLES = 'Variables';
     public const TIPO_LANAS = 'Lanas';
     public const TIPO_RETORNOS = 'Retornos';
+    public const TIPO_PEUMO = 'Peumo';
 
     /*
      * Un retorno es un bulto que vuelve desde regiones: Geolice lo
@@ -48,11 +46,12 @@ class CourierCalculoService
     ];
 
     /*
-     * Lo que entrega el personal de 4N no se le paga a ningún proveedor.
-     * En DatosProveedores esas filas tienen la razón social "Planta";
-     * LogisticaCL las deja fuera de la misma forma (proveedor interno).
+     * Lo que entrega el personal de 4N no se le paga a ningún proveedor:
+     * es lo que queda a nombre de 4 Nortes Logística después de pasar
+     * por la hoja Repartidores 4N de la llave (antes, "Planta" en
+     * DatosProveedores). LogisticaCL lo deja fuera de la misma forma.
      */
-    private const PROVEEDOR_INTERNO = 'planta';
+    private const RUT_4N = '77346078-7';
 
     /*
      * Revés Derecho Mayorista (Paso a Paso del jefe, hoja de julio): lo
@@ -73,17 +72,22 @@ class CourierCalculoService
         'especial' => 'Tiene pago especial autorizado',
         'sin_comuna' => 'Geolice no informó la comuna',
         'comuna_desconocida' => 'La comuna no está en el catálogo',
-        'sin_configuracion' => 'No hay configuración de pago para esta combinación',
-        'configuracion_no' => 'La configuración dice que no se paga',
-        'configuracion_revisar' => 'La configuración está marcada para revisar',
+        'sin_rut_proveedor' => 'El agente no tiene RUT de proveedor en la llave de pago',
+        'sin_proveedor_courier' => 'El agente no es un proveedor Courier (RUT 0-0: Envío externo, Latam)',
+        'sin_configuracion' => 'No hay llave de pago para este proveedor, cliente y servicio',
+        'llave_ambigua' => 'Hay más de una llave de pago y no dicen lo mismo',
+        'configuracion_no' => 'La llave de pago dice que no se paga',
+        'configuracion_revisar' => 'La llave de pago está marcada para revisar',
         'tabla_cero' => 'La tabla de tarifa es 0 (no se paga)',
-        'sin_tabla' => 'La configuración no tiene tabla asignada',
+        'sin_tabla' => 'La llave de pago no tiene tabla asignada',
         'estado' => 'El estado de entrega descuenta el bulto',
         'sin_tarifa' => 'La tabla asignada no existe en el catálogo de tarifas',
         'retorno_sin_cobertura' => 'Retorno desde una comuna que no está en el catálogo',
         'retorno_no_se_paga' => 'La comuna de origen no paga retornos',
         'retorno_sin_valor' => 'La comuna paga retornos pero no tiene valor asignado',
-        'proveedor_interno' => 'Lo entregó personal de 4N (Planta)',
+        'peumo_sin_guia' => 'Peumo: el bulto no trae guía de despacho',
+        'peumo_sin_tarifa' => 'Peumo: alguna comuna de la guía no tiene una tarifa Peumo única',
+        'proveedor_interno' => 'Lo entregó personal de 4N',
     ];
 
     public function __construct(
@@ -107,17 +111,23 @@ class CourierCalculoService
 
         $motivos = [];
 
+        /* Sin la llave cargada todo quedaría sin pagar; mejor no calcular. */
+        if (! DB::table('courier_llave_agentes')->exists()) {
+            throw new \RuntimeException('Falta cargar la llave de pago: php artisan courier:importar-llaves <archivo>.');
+        }
+
         $cobertura = $this->cobertura();
-        $configuraciones = $this->configuraciones();
+        $llaves = CourierLlaves::desdeBase();
         $estados = CourierEstadoEntrega::pluck('considerar', 'estado')->all();
         $tarifas = CourierTarifa::with(['tramos' => fn ($q) => $q->orderBy('peso')])->get()->keyBy('numero');
         $proveedores = $this->proveedores();
         $controles = $this->controles($periodo);
         $pesajes = $this->pesajes($periodo);
+        $peumo = $this->peumo($periodo, $controles);
 
         DB::transaction(function () use (
             $periodo, &$resumen, &$motivos,
-            $cobertura, $configuraciones, $estados, $tarifas, $proveedores, $controles, $pesajes
+            $cobertura, $llaves, $estados, $tarifas, $proveedores, $controles, $pesajes, $peumo
         ) {
             $ahora = now()->format('Y-m-d H:i:s');
 
@@ -136,14 +146,14 @@ class CourierCalculoService
                 ->orderBy('id')
                 ->chunkById(2000, function ($bultos) use (
                     &$resumen, &$motivos, $ahora,
-                    $cobertura, $configuraciones, $estados, $tarifas, $proveedores, $controles, $pesajes
+                    $cobertura, $llaves, $estados, $tarifas, $proveedores, $controles, $pesajes, $peumo
                 ) {
                     $calculos = [];
 
                     foreach ($bultos as $bulto) {
                         $calculo = $this->calcularBulto(
-                            $bulto, $cobertura, $configuraciones, $estados,
-                            $tarifas, $proveedores, $controles, $pesajes
+                            $bulto, $cobertura, $llaves, $estados,
+                            $tarifas, $proveedores, $controles, $pesajes, $peumo
                         );
 
                         $resumen['bultos']++;
@@ -232,19 +242,21 @@ class CourierCalculoService
     private function calcularBulto(
         object $bulto,
         array $cobertura,
-        array $configuraciones,
+        CourierLlaves $llaves,
         array $estados,
         $tarifas,
         array $proveedores,
         array $controles,
-        array $pesajes
+        array $pesajes,
+        array $peumo
     ): array {
         $salida = [
             'courier_agente_id' => null,
             'zona' => null,
-            'tipo_pago' => $this->tipoPago($bulto->comerciante),
+            'tipo_pago' => $this->tipoPago($bulto->comerciante, $bulto->servicio),
             'courier_configuracion_id' => null,
             'courier_proveedor_id' => null,
+            'rut_proveedor' => null,
             'considerar_pago' => null,
             'tabla' => null,
             'peso_bodega' => null,
@@ -308,6 +320,11 @@ class CourierCalculoService
             }
         }
 
+        /* Peumo se paga por guía, no por kilo ni por la llave. */
+        if ($salida['tipo_pago'] === self::TIPO_PEUMO) {
+            return $this->calcularPeumo($bulto, $salida, $clave, $comuna, $llaves, $estados, $proveedores, $peumo);
+        }
+
         /*
          * Lanas manda sobre retorno: un bulto de Revés Derecho que vuelve
          * desde regiones se sigue pagando como Lanas, igual que en
@@ -315,7 +332,7 @@ class CourierCalculoService
          */
         if ($salida['tipo_pago'] !== self::TIPO_LANAS
             && preg_match(self::PATRON_RETORNO, (string) $bulto->destinatario_nombre) === 1) {
-            return $this->calcularRetorno($bulto, $salida, $cobertura, $estados, $proveedores);
+            return $this->calcularRetorno($bulto, $salida, $cobertura, $llaves, $estados, $proveedores);
         }
 
         if ($clave === null) {
@@ -330,34 +347,51 @@ class CourierCalculoService
             return $salida;
         }
 
-        /* Paso 2 · agente + comerciante + servicio → ¿se paga? ¿qué tabla? */
-        $llave = CourierConfiguracion::llave($comuna['agente'], $bulto->comerciante, $bulto->servicio);
-        $configuracion = $configuraciones[$llave] ?? null;
+        /*
+         * Paso 7 · a quién se le paga. Va antes que la llave porque la
+         * llave parte del RUT del proveedor.
+         */
+        $rutProveedor = $llaves->rutProveedor($comuna['agente'], $bulto->repartidor_nombre);
+        $salida['rut_proveedor'] = $rutProveedor;
+        $salida['courier_proveedor_id'] = $this->proveedorPorRut($proveedores, $rutProveedor);
 
-        if ($configuracion === null) {
+        if ($rutProveedor === null) {
+            $salida['motivo'] = 'sin_rut_proveedor';
+
+            return $salida;
+        }
+
+        if (CourierLlaves::sinProveedorCourier($rutProveedor)) {
+            $salida['motivo'] = 'sin_proveedor_courier';
+
+            return $salida;
+        }
+
+        /* Paso 2 · RUT proveedor + RUT cliente + servicio → ¿se paga? ¿qué tabla? */
+        $llave = $llaves->buscar($rutProveedor, $bulto->comerciante, $bulto->servicio, $comuna['agente']);
+
+        if ($llave === null) {
             $salida['motivo'] = 'sin_configuracion';
 
             return $salida;
         }
 
-        $salida['courier_configuracion_id'] = $configuracion['id'];
-        $salida['considerar_pago'] = $configuracion['pagar'];
-        $salida['tabla'] = $configuracion['tabla'];
+        if ($llave === CourierLlaves::AMBIGUA) {
+            $salida['motivo'] = 'llave_ambigua';
 
-        /* Paso 7 · a quién se le paga. */
-        $proveedor = $proveedores[
-            CourierProveedor::llave($comuna['agente'], (string) $bulto->repartidor_nombre)
-        ] ?? null;
+            return $salida;
+        }
 
-        $salida['courier_proveedor_id'] = $proveedor['id'] ?? null;
+        $salida['considerar_pago'] = $llave['pagar'];
+        $salida['tabla'] = $llave['tabla'];
 
-        if ($configuracion['pagar'] === 'NO') {
+        if ($llave['pagar'] === 'NO') {
             $salida['motivo'] = 'configuracion_no';
 
             return $salida;
         }
 
-        if ($configuracion['pagar'] === 'REVISAR') {
+        if ($llave['pagar'] === 'REVISAR') {
             $salida['motivo'] = 'configuracion_revisar';
 
             return $salida;
@@ -370,20 +404,20 @@ class CourierCalculoService
             return $salida;
         }
 
-        if ($configuracion['tabla'] === null) {
+        if ($llave['tabla'] === null) {
             $salida['motivo'] = 'sin_tabla';
 
             return $salida;
         }
 
-        if ((int) $configuracion['tabla'] === 0) {
+        if ((int) $llave['tabla'] === 0) {
             $salida['valor'] = 0;
             $salida['motivo'] = 'tabla_cero';
 
             return $salida;
         }
 
-        $tarifa = $tarifas->get($configuracion['tabla']);
+        $tarifa = $tarifas->get($llave['tabla']);
 
         if ($tarifa === null) {
             $salida['motivo'] = 'sin_tarifa';
@@ -395,7 +429,7 @@ class CourierCalculoService
          * Personal de 4N. Va al final para que este motivo cuente sólo
          * los bultos que, de no ser por él, se pagarían.
          */
-        if ($proveedor !== null && $proveedor['interno']) {
+        if ($this->esInterno($rutProveedor)) {
             $salida['motivo'] = 'proveedor_interno';
 
             return $salida;
@@ -422,6 +456,7 @@ class CourierCalculoService
         object $bulto,
         array $salida,
         array $cobertura,
+        CourierLlaves $llaves,
         array $estados,
         array $proveedores
     ): array {
@@ -449,11 +484,15 @@ class CourierCalculoService
         $salida['courier_agente_id'] = $comuna['agente_id'];
         $salida['zona'] = $comuna['zona'];
 
-        $proveedor = $proveedores[
-            CourierProveedor::llave($comuna['agente'], (string) $bulto->repartidor_nombre)
-        ] ?? null;
+        $rutProveedor = $llaves->rutProveedor($comuna['agente'], $bulto->repartidor_nombre);
+        $salida['rut_proveedor'] = $rutProveedor;
+        $salida['courier_proveedor_id'] = $this->proveedorPorRut($proveedores, $rutProveedor);
 
-        $salida['courier_proveedor_id'] = $proveedor['id'] ?? null;
+        if (CourierLlaves::sinProveedorCourier($rutProveedor)) {
+            $salida['motivo'] = 'sin_proveedor_courier';
+
+            return $salida;
+        }
 
         if (! $comuna['pagar_retorno']) {
             $salida['motivo'] = 'retorno_no_se_paga';
@@ -467,7 +506,7 @@ class CourierCalculoService
             return $salida;
         }
 
-        if ($proveedor !== null && $proveedor['interno']) {
+        if ($this->esInterno($rutProveedor)) {
             $salida['motivo'] = 'proveedor_interno';
 
             return $salida;
@@ -494,11 +533,121 @@ class CourierCalculoService
         return ! in_array(mb_strtolower(trim($comuna['agente'] ?? '')), self::MAYORISTA_SE_QUEDAN, true);
     }
 
-    private function tipoPago(?string $comerciante): string
+    /* Lanas se pregunta antes que Peumo, igual que en LogisticaCL. */
+    private function tipoPago(?string $comerciante, ?string $servicio): string
     {
-        return in_array(mb_strtolower(trim((string) $comerciante)), self::COMERCIANTES_LANAS, true)
-            ? self::TIPO_LANAS
-            : self::TIPO_VARIABLES;
+        if (in_array(mb_strtolower(trim((string) $comerciante)), self::COMERCIANTES_LANAS, true)) {
+            return self::TIPO_LANAS;
+        }
+
+        return CourierPeumo::esPeumo($comerciante, $servicio) ? self::TIPO_PEUMO : self::TIPO_VARIABLES;
+    }
+
+    /*
+     * Un bulto de Peumo sigue la cadena de siempre para saber a quién se
+     * le paga y si se paga; el valor sale de su guía (CourierPeumo).
+     * Como en LogisticaCL, hace falta el RUT del cliente aunque no se
+     * busque la llave.
+     */
+    private function calcularPeumo(
+        object $bulto,
+        array $salida,
+        ?string $clave,
+        ?array $comuna,
+        CourierLlaves $llaves,
+        array $estados,
+        array $proveedores,
+        array $peumo
+    ): array {
+        if ($clave === null) {
+            $salida['motivo'] = 'sin_comuna';
+
+            return $salida;
+        }
+
+        if ($comuna === null) {
+            $salida['motivo'] = 'comuna_desconocida';
+
+            return $salida;
+        }
+
+        $rutProveedor = $llaves->rutProveedor($comuna['agente'], $bulto->repartidor_nombre);
+        $salida['rut_proveedor'] = $rutProveedor;
+        $salida['courier_proveedor_id'] = $this->proveedorPorRut($proveedores, $rutProveedor);
+
+        if ($rutProveedor === null) {
+            $salida['motivo'] = 'sin_rut_proveedor';
+
+            return $salida;
+        }
+
+        if (CourierLlaves::sinProveedorCourier($rutProveedor)) {
+            $salida['motivo'] = 'sin_proveedor_courier';
+
+            return $salida;
+        }
+
+        if ($llaves->rutCliente($bulto->comerciante) === null) {
+            $salida['motivo'] = 'sin_configuracion';
+
+            return $salida;
+        }
+
+        if (($estados[$bulto->estado_entrega] ?? null) === CourierEstadoEntrega::DESCONTAR) {
+            $salida['motivo'] = 'estado';
+
+            return $salida;
+        }
+
+        $guia = $peumo[$bulto->id] ?? ['motivo' => 'peumo_sin_guia'];
+
+        if (isset($guia['motivo'])) {
+            $salida['motivo'] = $guia['motivo'];
+
+            return $salida;
+        }
+
+        if ($this->esInterno($rutProveedor)) {
+            $salida['motivo'] = 'proveedor_interno';
+
+            return $salida;
+        }
+
+        $salida['valor'] = $guia['valor'];
+        $salida['estado_pago'] = 'PAGAR';
+        $salida['motivo'] = null;
+
+        return $salida;
+    }
+
+    /*
+     * id → valor o motivo de cada bulto de Peumo del período. Se arma
+     * antes de recorrer los bultos porque el valor depende de la posición
+     * del bulto dentro de su guía. Los ya pagados el mes anterior y los
+     * de pago especial no cuentan: en LogisticaCL ni siquiera se cargan.
+     */
+    private function peumo(CourierPeriodo $periodo, array $controles): array
+    {
+        $bultos = [];
+
+        DB::table('courier_bultos')
+            ->where('courier_periodo_id', $periodo->id)
+            ->whereRaw('LOWER(comerciante) LIKE ?', ['%peumo%'])
+            ->select(['id', 'seguimiento', 'comerciante', 'servicio', 'guia_despacho', 'comuna_destino'])
+            ->orderBy('id')
+            ->chunkById(5000, function ($filas) use (&$bultos, $controles) {
+                foreach ($filas as $fila) {
+                    $codigo = strtoupper($fila->seguimiento);
+
+                    if (CourierPeumo::esPeumo($fila->comerciante, $fila->servicio)
+                        && ! isset($controles[CourierControl::PAGADO_MES_ANTERIOR][$codigo])
+                        && ! isset($controles[CourierControl::ESPECIAL][$codigo])) {
+                        $bultos[] = $fila;
+                    }
+                }
+            });
+
+        return $bultos === [] ? [] : CourierPeumo::desdeBase()->valores($bultos);
     }
 
     private function cobertura(): array
@@ -518,28 +667,35 @@ class CourierCalculoService
             ->all();
     }
 
-    /* llave → id del proveedor y si es personal de 4N. */
+    /*
+     * RUT → id del proveedor en el catálogo (DatosProveedores). Un RUT
+     * puede tener varias filas, una por operador y usuario; se toma la
+     * primera, igual que en Acuerdos y los demás procesos.
+     */
     private function proveedores(): array
     {
-        return CourierProveedor::query()
-            ->get(['id', 'llave', 'razon_social'])
-            ->mapWithKeys(fn ($p) => [
-                $p->llave => [
-                    'id' => $p->id,
-                    'interno' => mb_strtolower(trim((string) $p->razon_social)) === self::PROVEEDOR_INTERNO,
-                ],
-            ])
-            ->all();
+        $porRut = [];
+
+        DB::table('courier_proveedores')
+            ->whereNotNull('rut')
+            ->orderBy('id')
+            ->get(['id', 'rut'])
+            ->each(function ($proveedor) use (&$porRut) {
+                $porRut[CourierProveedoresPorRut::normalizar($proveedor->rut)] ??= $proveedor->id;
+            });
+
+        return $porRut;
     }
 
-    private function configuraciones(): array
+    private function proveedorPorRut(array $proveedores, ?string $rut): ?int
     {
-        return CourierConfiguracion::query()
-            ->get(['id', 'llave', 'pagar', 'tabla'])
-            ->mapWithKeys(fn ($c) => [
-                $c->llave => ['id' => $c->id, 'pagar' => $c->pagar, 'tabla' => $c->tabla],
-            ])
-            ->all();
+        return $rut === null ? null : ($proveedores[CourierProveedoresPorRut::normalizar($rut)] ?? null);
+    }
+
+    private function esInterno(?string $rut): bool
+    {
+        return $rut !== null
+            && CourierProveedoresPorRut::normalizar($rut) === CourierProveedoresPorRut::normalizar(self::RUT_4N);
     }
 
     /* tipo → [seguimiento => true] */

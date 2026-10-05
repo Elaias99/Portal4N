@@ -56,6 +56,7 @@ class CourierBulto extends Model
         'tipo_pago',
         'courier_configuracion_id',
         'courier_proveedor_id',
+        'rut_proveedor',
         'considerar_pago',
         'tabla',
         'peso_bodega',
