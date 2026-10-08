@@ -3,6 +3,7 @@
 namespace App\Services\Courier;
 
 use App\Models\CourierAcuerdo;
+use App\Models\CourierApoyoAlzaRegla;
 use App\Models\CourierPagoProceso;
 use App\Models\CourierPeriodo;
 use Carbon\CarbonImmutable;
@@ -68,6 +69,14 @@ class CourierProcesosService
             throw new \RuntimeException('El archivo no trae filas para cargar.');
         }
 
+        /*
+         * Con reglas guardadas, Apoyo Alza se arma solo al calcular: un
+         * archivo del mes se pisaría en el siguiente cálculo.
+         */
+        if ($proceso === CourierPagoProceso::APOYO_ALZA && CourierApoyoAlzaRegla::exists()) {
+            throw new \RuntimeException('Apoyo Alza ya se calcula con las reglas guardadas en /courier/apoyo-alza. Para cambiarlas, carga ahí la plantilla.');
+        }
+
         return DB::transaction(function () use ($proceso, $nombreArchivo, $periodo, $filas) {
             CourierPagoProceso::delPeriodo($periodo->id)->where('proceso', $proceso)->delete();
 
@@ -81,6 +90,11 @@ class CourierProcesosService
 
             $estados = $proceso === CourierPagoProceso::APOYO_ALZA ? $this->calcularApoyo($periodo) : [];
 
+            /* Los días de Ruta CV son base de Apoyo Alza. */
+            if ($proceso === CourierPagoProceso::RUTA_CV) {
+                $this->aplicarReglasApoyo($periodo);
+            }
+
             $cargados = CourierPagoProceso::delPeriodo($periodo->id)->where('proceso', $proceso);
 
             return [
@@ -88,6 +102,107 @@ class CourierProcesosService
                 'total' => (int) (clone $cargados)->sum('total'),
                 'sin_proveedor' => (clone $cargados)->whereNull('courier_proveedor_id')->count(),
                 'sin_zona' => (clone $cargados)->whereNull('zona')->count(),
+                'estados' => $estados,
+            ];
+        });
+    }
+
+    /*
+     * Reemplaza la lista completa de reglas de Apoyo Alza con la de la
+     * plantilla (primera hoja, mismas columnas que LogisticaCL). No toca
+     * ningún período: las reglas se aplican al calcular.
+     */
+    public function cargarReglasApoyo(string $ruta, string $nombreArchivo): int
+    {
+        $libro = IOFactory::load($ruta);
+
+        try {
+            $filas = $this->apoyoAlza($libro->getSheet(0));
+        } finally {
+            $libro->disconnectWorksheets();
+        }
+
+        if ($filas === []) {
+            throw new \RuntimeException('La plantilla no trae reglas.');
+        }
+
+        return DB::transaction(function () use ($filas, $nombreArchivo) {
+            CourierApoyoAlzaRegla::query()->delete();
+
+            foreach ($filas as $fila) {
+                $d = $fila['datos'];
+
+                CourierApoyoAlzaRegla::create([
+                    'fila_origen' => $fila['fila_origen'],
+                    'proveedor' => $fila['proveedor'],
+                    'rut_proveedor' => $fila['rut_proveedor'],
+                    'zona' => $fila['zona'],
+                    'proceso_base' => $d['proceso_base'],
+                    'servicio_acuerdo' => $d['servicio_acuerdo'],
+                    'factor' => $d['factor'],
+                    'porcentaje' => $d['porcentaje'],
+                    'monto_dia' => $d['monto_dia'],
+                    'empresa_mandante' => $d['empresa_mandante'],
+                    'agencia' => $d['agencia'],
+                    'archivo_origen' => $nombreArchivo,
+                ]);
+            }
+
+            return count($filas);
+        });
+    }
+
+    /*
+     * Arma Apoyo Alza del período desde las reglas guardadas y lo calcula.
+     * Reemplaza lo que hubiera de Apoyo Alza en el período. Si no hay
+     * reglas, o el período está cerrado, no hace nada y devuelve null.
+     *
+     * Se llama al calcular los bultos, al cargar Acuerdos y al cargar
+     * Ruta CV, porque esas son sus bases.
+     *
+     * @return array{filas: int, total: int, estados: array<string, int>}|null
+     */
+    public function aplicarReglasApoyo(CourierPeriodo $periodo): ?array
+    {
+        if ($periodo->estaCerrado() || ! CourierApoyoAlzaRegla::exists()) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($periodo) {
+            CourierPagoProceso::delPeriodo($periodo->id)->where('proceso', CourierPagoProceso::APOYO_ALZA)->delete();
+
+            foreach (CourierApoyoAlzaRegla::query()->orderBy('id')->get() as $regla) {
+                $servicio = $regla->servicio_acuerdo;
+
+                CourierPagoProceso::create($this->conProveedor([
+                    'fila_origen' => $regla->fila_origen,
+                    'proveedor' => $regla->proveedor,
+                    'rut_proveedor' => $regla->rut_proveedor,
+                    'concepto' => $regla->proceso_base . ($servicio !== null ? ' · ' . $servicio : ''),
+                    'total' => 0,
+                    'datos' => [
+                        'proceso_base' => $regla->proceso_base,
+                        'servicio_acuerdo' => $servicio,
+                        'factor' => $regla->factor,
+                        'porcentaje' => $regla->porcentaje,
+                        'monto_dia' => $regla->monto_dia,
+                        'empresa_mandante' => $regla->empresa_mandante,
+                        'agencia' => $regla->agencia,
+                        'regla_id' => $regla->id,
+                    ],
+                ], $regla->zona) + [
+                    'courier_periodo_id' => $periodo->id,
+                    'proceso' => CourierPagoProceso::APOYO_ALZA,
+                    'archivo_origen' => 'Reglas de Apoyo Alza',
+                ]);
+            }
+
+            $estados = $this->calcularApoyo($periodo);
+            $filas = CourierPagoProceso::delPeriodo($periodo->id)->where('proceso', CourierPagoProceso::APOYO_ALZA);
+
+            return [
+                'filas' => (clone $filas)->count(),
+                'total' => (int) (clone $filas)->sum('total'),
                 'estados' => $estados,
             ];
         });

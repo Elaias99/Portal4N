@@ -4,9 +4,11 @@ namespace App\Imports\Courier;
 
 use App\Models\CourierBulto;
 use App\Models\CourierCoberturaComuna;
-use App\Models\CourierConfiguracion;
+use App\Models\CourierControl;
 use App\Models\CourierEstadoEntrega;
 use App\Models\CourierPeriodo;
+use App\Services\Courier\CourierCalculoService;
+use App\Services\Courier\CourierRevisionLlaves;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
@@ -82,8 +84,8 @@ class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRo
     /** @var array<string,string> localidad_clave → nombre del agente */
     private array $cobertura;
 
-    /** @var array<string,int> llave de configuración → existe */
-    private array $configuraciones;
+    /* Pregunta lo mismo que el cálculo: ¿tiene llave de pago? */
+    private CourierRevisionLlaves $revision;
 
     /** @var array<string,int> estado → existe */
     private array $estadosCatalogo;
@@ -106,9 +108,7 @@ class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRo
             ])
             ->all();
 
-        $this->configuraciones = CourierConfiguracion::pluck('llave')
-            ->flip()
-            ->all();
+        $this->revision = CourierRevisionLlaves::desdeBase($this->cobertura);
 
         $this->estadosCatalogo = CourierEstadoEntrega::pluck('estado')
             ->flip()
@@ -156,8 +156,10 @@ class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRo
             return;
         }
 
-        foreach ($filas as $datos) {
-            $this->detectar($datos);
+        $controlados = $this->controlados(array_keys($filas));
+
+        foreach ($filas as $seguimiento => $datos) {
+            $this->detectar($datos, isset($controlados[strtoupper((string) $seguimiento)]));
         }
 
         if ($this->soloAnalizar) {
@@ -289,7 +291,7 @@ class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRo
      * Cruces de diagnóstico contra los catálogos. Solo cuenta; no
      * escribe en el bulto.
      */
-    private function detectar(array $datos): void
+    private function detectar(array $datos, bool $controlado = false): void
     {
         if ($datos['peso_declarado'] === null) {
             $this->resumen['sin_peso_declarado']++;
@@ -329,14 +331,55 @@ class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRo
             return;
         }
 
-        $agente = $this->cobertura[$clave];
-        $llave = CourierConfiguracion::llave($agente, $datos['comerciante'], $datos['servicio']);
+        /* El cálculo saca estos bultos antes de mirar la llave. */
+        if ($controlado) {
+            return;
+        }
 
-        if (! isset($this->configuraciones[$llave])) {
+        $etiqueta = $this->revision->faltante(
+            $this->cobertura[$clave],
+            $datos['comerciante'],
+            $datos['servicio'],
+            $datos['repartidor_nombre'],
+            preg_match(CourierCalculoService::PATRON_RETORNO, (string) $datos['destinatario_nombre']) === 1
+        );
+
+        if ($etiqueta !== null) {
             $this->resumen['sin_configuracion']++;
-            $etiqueta = $agente . ' | ' . $datos['comerciante'] . ' | ' . $datos['servicio'];
             $this->sinConfiguracion[$etiqueta] = ($this->sinConfiguracion[$etiqueta] ?? 0) + 1;
         }
+    }
+
+    /*
+     * Bultos que el cálculo saca antes de mirar la llave (pagado el mes
+     * anterior, Blue, especial), según los controles que el período ya
+     * tenga cargados. Un período nuevo todavía no tiene ninguno.
+     *
+     * @param  list<string>  $seguimientos
+     * @return array<string,true>  seguimiento en mayúsculas → true
+     */
+    private function controlados(array $seguimientos): array
+    {
+        if (! $this->periodo->exists) {
+            return [];
+        }
+
+        $controlados = [];
+
+        CourierControl::query()
+            ->delPeriodo($this->periodo->id)
+            ->whereIn('tipo', [
+                CourierControl::PAGADO_MES_ANTERIOR,
+                CourierControl::BLUE,
+                CourierControl::ESPECIAL,
+            ])
+            ->whereIn('seguimiento', $seguimientos)
+            ->pluck('seguimiento')
+            ->each(function ($seguimiento) use (&$controlados) {
+                $controlados[strtoupper((string) $seguimiento)] = true;
+            });
+
+        return $controlados;
     }
 
     /* ---------- limpieza de formato ---------- */

@@ -6,6 +6,13 @@ Este repositorio contiene un módulo Laravel llamado **Suscripciones** que gener
 liquidaciones y pre-facturas mensuales para proveedores de servicios de reparto
 de fin de semana.
 
+Este repositorio contiene además el módulo **Courier**, que lleva el pago a
+proveedores Courier. Sus reglas están en la sección **Módulo Courier**, al final
+de este archivo. Las secciones «Seguridad de datos» y «Modo auditoría y
+autorización de cambios» valen para los dos módulos; las invariantes y las
+ubicaciones de código que aparecen antes de la sección Courier son de
+Suscripciones.
+
 Las reglas del módulo no deben inferirse solamente desde nombres de columnas o
 métodos. Antes de analizar, modificar o probar cualquier archivo relacionado con
 Suscripciones, lee primero la documentación disponible en:
@@ -218,3 +225,122 @@ automáticamente.
 
 Una autorización para corregir un hallazgo no autoriza cambios adicionales no
 relacionados.
+
+## Módulo Courier
+
+### Qué es
+
+Calcula el pago mensual a los proveedores Courier de 4N Logística. Parte de la
+descarga de paquetes de Geo (Geolice), calcula el valor de cada bulto, suma los
+pagos manuales (acuerdos, ruta CV, servicios, visitas, especiales, apoyo alza) y
+cierra el mes con órdenes de compra (OC), IVA y retención.
+
+- Rutas: `/courier`, con nombres `courier.*`.
+- Controladores: `CourierPagoController`, `CourierCatalogoController`,
+  `CourierGeoliceCaptureController`.
+- Servicios: `app/Services/Courier/`.
+- Comandos: `app/Console/Commands/Courier*.php` (`courier:*`).
+- Tablas: `courier_*`.
+- Vistas: `resources/views/courier/`.
+- Estilos: `resources/css/courier.css`, con prefijo `co-`.
+- JavaScript propio: `resources/js/geolice-capture.js`.
+
+### Qué leer primero
+
+Antes de analizar o modificar algo de Courier, lee en `storage/agents/courier/`:
+
+- `README.md`
+- `01-negocio.md`
+- `02-cadena-de-pago.md`
+- `03-lo-construido.md`
+- `04-modelo-de-datos.md`
+- `05-decisiones-y-pendientes.md`
+- `06-como-trabajar-con-elias.md`
+- `07-la-planilla-completa.md`
+- `herramientas/README.md`
+
+Los documentos 03, 04 y 05 todavía no incluyen lo último construido: pantallas
+por pasos, captura desde Geo, llave de pago por RUT, Peumo, pagos manuales y
+cierre. Si un documento y el código se contradicen, manda el código y se informa
+la contradicción.
+
+### Reparto de trabajo entre dos agentes
+
+En Courier trabajan dos agentes sobre la misma carpeta del proyecto: uno de
+front y uno de back.
+
+**Agente de front.** Solo toca:
+
+- `resources/views/courier/`
+- `resources/css/courier.css`
+- `resources/js/geolice-capture.js`
+
+**Agente de back.** Toca todo lo demás de Courier: controladores, servicios,
+comandos, modelos, migraciones, rutas y configuración. No toca las vistas, el
+CSS ni el JS de la lista anterior.
+
+Reglas entre los dos:
+
+1. Trabaja uno a la vez. El usuario hace un commit cuando termina cada uno.
+2. Al terminar una tarea, el agente lista los archivos que tocó.
+3. El punto de contacto es el controlador: el back entrega a la vista variables
+   con nombre y tipo definidos. Esa lista es el contrato de la pantalla. El back
+   no cambia el nombre ni el tipo de una variable sin avisar al usuario antes.
+4. Si una vista necesita un dato que el contrato no trae, el front se detiene y
+   se lo dice al usuario para que el back lo agregue. No modifica controladores
+   ni servicios para conseguirlo.
+5. Ninguno de los dos toca las vistas ni el código de Suscripciones.
+
+### Reglas del agente de front
+
+- Una pantalla a la vez. Antes de programar, acuerda con el usuario qué ve
+  primero y qué queda escondido hasta que lo pida, muestra un bosquejo y espera
+  su OK.
+- Usa solo las variables del contrato de la pantalla.
+- No calcula valores de pago ni aplica reglas de negocio en Blade ni en
+  JavaScript. Muestra lo que entrega el back.
+- Todo número en pantalla debe poder abrirse hasta el bulto de origen, o indicar
+  de dónde sale.
+- En las piezas nuevas no usa íconos.
+- Sigue el lenguaje visual existente: `resources/css/courier.css`, prefijo `co-`,
+  clon del estilo `sl-` de Suscripciones.
+- Los cambios de CSS y JavaScript requieren `npm run build`; lo corre el
+  usuario.
+
+### Reglas de negocio que ningún agente decide
+
+- El sistema calcula y marca. No decide lo que no tiene regla; eso lo define
+  Operaciones.
+- Nunca se relacionan ni se corrigen automáticamente dos escrituras de una
+  comuna. Cada variante se muestra con su cantidad de bultos y el agente al que
+  iría, y una persona decide caso a caso.
+- No se hace `UPDATE` a mano sobre `courier_bultos`.
+- Courier no lee ni escribe `cobranza_compras` ni las tablas de Suscripciones.
+- Un período cerrado no se modifica. `courier_cierres` y
+  `courier_pagos_cerrados` tienen triggers que lo impiden, y un bulto cerrado
+  no se paga dos veces.
+
+### Seguridad en Courier
+
+- No leer ni mostrar el `.env`, claves, tokens ni contraseñas. La cuenta de Geo
+  de cada usuario está cifrada y no se abre.
+- No copiar datos de destinatarios, repartidores ni cuentas bancarias a
+  documentos, chats ni archivos del repositorio.
+- No ejecutar comandos que modifiquen datos o el entorno sin permiso expreso del
+  usuario para esa tarea: `php artisan migrate`, `courier:importar-*`,
+  `courier:calcular`, `courier:cerrar`, `npm run build` y `docker compose`. El
+  agente los entrega listos y el usuario los corre.
+- El proyecto corre en Docker. Los comandos se entregan como
+  `docker compose exec app php artisan …`, uno por bloque. Los que leen archivos
+  de Descargas van con el `php artisan` de Windows, porque el contenedor no ve
+  esa carpeta.
+
+### Cómo trabajar con el usuario
+
+- Responde en español, corto y un paso a la vez.
+- No inventes criterios ni pasos que el usuario no pidió. Si ves algo
+  conveniente, menciónalo como observación aparte.
+- Al explicar el proceso, no uses cifras; solo la regla y, si hace falta, un
+  ejemplo. Al verificar datos, sí.
+- Los documentos de `storage/agents/courier/` llevan solo instrucciones
+  conocidas, sin preguntas ni dudas.

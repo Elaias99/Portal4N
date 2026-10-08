@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\CourierBulto;
 use App\Models\CourierImportacion;
 use App\Models\CourierPeriodo;
+use App\Services\Courier\CourierAcuerdosService;
 use App\Services\Courier\CourierCalculoService;
 use App\Services\Courier\CourierCatalogoService;
 use App\Services\Courier\CourierPagoService;
+use App\Services\Courier\CourierProcesosService;
 use App\Services\Courier\Geo\GeoliceCapturePresenter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -52,6 +54,11 @@ class CourierPagoController extends Controller
             'bajada' => 'El kilo es plata. De los que se pagan, con qué peso se calculó cada uno.',
             'requiere_calculo' => true,
         ],
+        'extras' => [
+            'pregunta' => '¿Qué pagos extra tiene el mes?',
+            'bajada' => 'Lo que no sale de los paquetes: Acuerdos, Ruta CV, Servicios, Visitas y Especiales. Apoyo Alza se calcula solo.',
+            'requiere_calculo' => true,
+        ],
         'totales' => [
             'pregunta' => '¿Cuánto y a quién?',
             'bajada' => 'El total del período, cuánto aporta cada tipo de pago y a quién se le paga, con su documento e IVA.',
@@ -91,6 +98,7 @@ class CourierPagoController extends Controller
             'reconocer' => ['sinResolver' => $this->pago->loQueNoSeReconoce($periodo)],
             'pago', 'totales' => ['resumenPago' => $this->pago->resumenPago($periodo)],
             'peso' => ['pesos' => $this->pago->origenDeLosPesos($periodo)],
+            'extras' => ['extras' => $this->pago->pagosExtra($periodo)],
         };
 
         return view("courier.pasos.{$paso}", array_merge($datos, [
@@ -265,9 +273,16 @@ class CourierPagoController extends Controller
             ]);
         }
 
-        /* Calcular es el paso que abre las pantallas de montos. */
+        /*
+         * Calcular es el paso que abre las pantallas de montos. Si se
+         * recalcula desde una de ellas (por ejemplo tras subir pesos), se
+         * vuelve a esa misma pantalla.
+         */
+        $volver = (string) $request->input('volver', '');
+        $destino = (self::PASOS[$volver]['requiere_calculo'] ?? false) ? $volver : 'pago';
+
         return redirect()
-            ->route('courier.paso', ['paso' => 'pago', 'periodo' => $periodo->codigo])
+            ->route('courier.paso', ['paso' => $destino, 'periodo' => $periodo->codigo])
             ->with('calculoListo', $resultado['resumen']);
     }
 
@@ -462,5 +477,110 @@ class CourierPagoController extends Controller
             'periodo' => $codigo,
             'importacion' => $registros->pluck('id')->implode(','),
         ]);
+    }
+
+    /*
+     * Paso Pagos extra: sube el archivo de uno de los pagos del mes con el
+     * mismo código que los comandos courier:importar-acuerdos y
+     * courier:importar-proceso. Reemplaza lo que ese pago tenía en el
+     * período. Acuerdos y Ruta CV rearman Apoyo Alza solos.
+     */
+    public function importarExtra(
+        Request $request,
+        CourierAcuerdosService $acuerdos,
+        CourierProcesosService $procesos
+    ): RedirectResponse {
+        $datos = $request->validate(
+            [
+                'tipo' => ['required', 'in:' . implode(',', array_keys(CourierPagoService::PAGOS_EXTRA))],
+                'archivo' => ['required', 'file', 'extensions:xlsx', 'max:20480'],
+                'periodo' => ['required', 'regex:/^\d{4}(0[1-9]|1[0-2])$/'],
+            ],
+            [
+                'archivo.required' => 'Elige el archivo.',
+                'archivo.extensions' => 'El archivo debe ser un Excel (.xlsx).',
+                'archivo.max' => 'El archivo supera el tamaño permitido (20 MB).',
+            ]
+        );
+
+        $tipo = $datos['tipo'];
+        $nombreTipo = CourierPagoService::PAGOS_EXTRA[$tipo];
+        $periodo = CourierPeriodo::query()->where('codigo', $datos['periodo'])->first();
+
+        if ($periodo === null || $periodo->estaCerrado()) {
+            return back()->withErrors(["archivo_{$tipo}" => 'El período no existe o está cerrado.']);
+        }
+
+        $archivo = $request->file('archivo');
+
+        try {
+            $r = $tipo === 'acuerdos'
+                ? $acuerdos->importar($archivo->getRealPath(), $archivo->getClientOriginalName(), $periodo)
+                : $procesos->importar($nombreTipo, $archivo->getRealPath(), $archivo->getClientOriginalName(), $periodo);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->withErrors(["archivo_{$tipo}" => 'No se cargó nada: ' . $e->getMessage()]);
+        }
+
+        return redirect()
+            ->route('courier.paso', ['paso' => 'extras', 'periodo' => $periodo->codigo])
+            ->with('extraCargado', [
+                'nombre' => $nombreTipo,
+                'archivo' => $archivo->getClientOriginalName(),
+                'filas' => (int) ($r['acuerdos'] ?? $r['filas'] ?? 0),
+                'total' => (int) ($r['total'] ?? 0),
+                'sin_proveedor' => (int) ($r['sin_proveedor'] ?? 0),
+            ]);
+    }
+
+    /*
+     * Paso Peso: sube la plantilla de pesos (Excel) al período. Sólo
+     * guarda; para que el total use los pesos hay que volver a calcular.
+     */
+    public function importarPesos(Request $request): RedirectResponse
+    {
+        $datos = $request->validate(
+            [
+                'archivo' => ['required', 'file', 'extensions:xlsx', 'max:40960'],
+                'periodo' => ['required', 'regex:/^\d{4}(0[1-9]|1[0-2])$/'],
+            ],
+            [
+                'archivo.required' => 'Elige el Excel de pesos.',
+                'archivo.file' => 'El archivo no se recibió completo; inténtalo de nuevo.',
+                'archivo.extensions' => 'Los pesos deben venir en un Excel (.xlsx).',
+                'archivo.max' => 'El archivo supera el tamaño permitido (40 MB).',
+                'periodo.required' => 'Indica el período.',
+            ]
+        );
+
+        $periodo = CourierPeriodo::query()->where('codigo', $datos['periodo'])->first();
+
+        if ($periodo === null) {
+            return back()->withErrors(['archivo' => 'Ese período no existe.']);
+        }
+
+        if ($periodo->estaCerrado()) {
+            return back()->withErrors(['archivo' => "El período {$periodo->nombre} está cerrado; no se puede cargar sobre él."]);
+        }
+
+        try {
+            $carga = $this->pago->importarPlantillaPesos(
+                $request->file('archivo'),
+                $periodo,
+                $request->user()?->id
+            );
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->withErrors(['archivo' => 'No se cargó nada: ' . $e->getMessage()]);
+        }
+
+        return redirect()
+            ->route('courier.paso', ['paso' => 'peso', 'periodo' => $periodo->codigo])
+            ->with('pesosCargados', $carga->conteos() + [
+                'archivo' => $carga->archivo,
+                'bultos_con_peso' => (int) ($carga->resumen['bultos_con_peso'] ?? 0),
+            ]);
     }
 }

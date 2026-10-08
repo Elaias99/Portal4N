@@ -3,6 +3,7 @@
 namespace App\Services\Courier;
 
 use App\Models\CourierAgentes;
+use App\Models\CourierApoyoAlzaRegla;
 use App\Models\CourierCoberturaComuna;
 use App\Models\CourierConfiguracion;
 use App\Models\CourierEstadoEntrega;
@@ -11,6 +12,7 @@ use App\Models\CourierProveedor;
 use App\Models\CourierTarifa;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /*
  * Consultas de sólo lectura sobre los catálogos Courier.
@@ -61,6 +63,12 @@ class CourierCatalogoService
                 'no' => CourierConfiguracion::where('pagar', 'NO')->count(),
                 'revisar' => CourierConfiguracion::where('pagar', 'REVISAR')->count(),
                 'si_tabla_0' => CourierConfiguracion::where('pagar', 'SI')->where('tabla', 0)->count(),
+            ],
+            'reglas' => [
+                'total' => DB::table('courier_llaves')->count(),
+            ],
+            'apoyo_alza' => [
+                'total' => CourierApoyoAlzaRegla::count(),
             ],
             'proveedores' => [
                 'total' => CourierProveedor::count(),
@@ -323,6 +331,53 @@ class CourierCatalogoService
             })
             ->orderBy('comerciante')
             ->orderBy('servicio')
+            ->paginate(self::POR_PAGINA)
+            ->withQueryString();
+    }
+
+    /*
+     * Reglas de pago (courier_llaves): qué agente cobra por qué cliente y
+     * servicio, si se paga y con qué tabla. Es lo que usa el cálculo; aquí
+     * sólo se mira. Se busca por agente o comerciante.
+     */
+    public function reglas(?string $buscar = null): LengthAwarePaginator
+    {
+        return DB::table('courier_llaves as l')
+            ->leftJoin('courier_tarifas as t', 't.numero', '=', 'l.tabla')
+            ->when($buscar, function ($q) use ($buscar) {
+                $q->where(function ($sub) use ($buscar) {
+                    $sub->where('l.agente', 'like', "%{$buscar}%")
+                        ->orWhere('l.comerciante', 'like', "%{$buscar}%");
+                });
+            })
+            ->orderBy('l.agente')
+            ->orderBy('l.comerciante')
+            ->orderBy('l.servicio')
+            ->select([
+                'l.id', 'l.agente', 'l.rut_proveedor', 'l.comerciante', 'l.rut_cliente',
+                'l.servicio', 'l.codigo_servicio', 'l.pagar', 'l.tabla', 't.nombre as tabla_nombre',
+            ])
+            ->paginate(self::POR_PAGINA)
+            ->withQueryString();
+    }
+
+    /*
+     * Reglas de Apoyo Alza (sin período), buscables por proveedor, RUT o
+     * agencia.
+     */
+    public function apoyoAlzaReglas(?string $buscar = null): LengthAwarePaginator
+    {
+        return CourierApoyoAlzaRegla::query()
+            ->when($buscar, function ($q) use ($buscar) {
+                $q->where(function ($sub) use ($buscar) {
+                    $sub->where('proveedor', 'like', "%{$buscar}%")
+                        ->orWhere('rut_proveedor', 'like', "%{$buscar}%")
+                        ->orWhere('agencia', 'like', "%{$buscar}%");
+                });
+            })
+            ->orderBy('proveedor')
+            ->orderBy('proceso_base')
+            ->orderBy('id')
             ->paginate(self::POR_PAGINA)
             ->withQueryString();
     }

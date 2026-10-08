@@ -31,8 +31,12 @@ class CourierCalculoService
      * informa con el destinatario "Desde Concepción", "Desde-Local, Concepción"
      * o "Local, Concepción". Después de "Desde" puede venir espacio o guion:
      * así lo pagó LogisticaCL en agosto.
+     *
+     * La misma expresión en dos formas: para PHP (PATRON_RETORNO) y para
+     * el REGEXP de la base (RETORNO_REGEX), que usan las alertas.
      */
-    private const PATRON_RETORNO = '/^\s*desde[\s-]+/iu';
+    public const RETORNO_REGEX = '^\s*desde[\s-]+';
+    public const PATRON_RETORNO = '/' . self::RETORNO_REGEX . '/iu';
 
     /*
      * Comerciantes cuyo pago va a la hoja Geolize-Lanas en vez de
@@ -61,7 +65,7 @@ class CourierCalculoService
      */
     private const MAYORISTA_COMERCIANTE = 'revesderecho';
     private const MAYORISTA_SERVICIOS = ['servicio standar (mayorista)', 'standar (mayorista)'];
-    private const MAYORISTA_COMUNA = 'CD QUILICURA';
+    public const MAYORISTA_COMUNA = 'CD QUILICURA';
     private const MAYORISTA_SE_QUEDAN = ['transporte mandame (talagante)', 'operador curacavi'];
 
     /* Motivos por los que un bulto no se paga. */
@@ -91,7 +95,8 @@ class CourierCalculoService
     ];
 
     public function __construct(
-        private readonly CourierCatalogoService $catalogo
+        private readonly CourierCatalogoService $catalogo,
+        private readonly CourierProcesosService $procesos
     ) {
     }
 
@@ -189,7 +194,10 @@ class CourierCalculoService
 
         arsort($motivos);
 
-        return ['resumen' => $resumen, 'motivos' => $motivos];
+        /* Lo que ganan por bultos es base de Apoyo Alza: se rearma con las reglas guardadas. */
+        $apoyo = $this->procesos->aplicarReglasApoyo($periodo);
+
+        return ['resumen' => $resumen, 'motivos' => $motivos, 'apoyo' => $apoyo];
     }
 
     /*
@@ -253,7 +261,7 @@ class CourierCalculoService
         $salida = [
             'courier_agente_id' => null,
             'zona' => null,
-            'tipo_pago' => $this->tipoPago($bulto->comerciante, $bulto->servicio),
+            'tipo_pago' => self::tipoPago($bulto->comerciante, $bulto->servicio),
             'courier_configuracion_id' => null,
             'courier_proveedor_id' => null,
             'rut_proveedor' => null,
@@ -274,7 +282,7 @@ class CourierCalculoService
 
         $comuna = $clave === null ? null : ($cobertura[$clave] ?? null);
 
-        if ($this->esMayoristaQueVuelve($bulto, $comuna)) {
+        if (self::esMayoristaQueVuelve($bulto->comerciante, $bulto->servicio, $comuna['agente'] ?? null)) {
             $clave = CourierCoberturaComuna::clave(self::MAYORISTA_COMUNA);
             $comuna = $cobertura[$clave] ?? null;
         }
@@ -523,18 +531,18 @@ class CourierCalculoService
      * Sin comuna o con una que no está en el catálogo también vuelve a
      * RM: sólo se quedan los agentes de MAYORISTA_SE_QUEDAN.
      */
-    private function esMayoristaQueVuelve(object $bulto, ?array $comuna): bool
+    public static function esMayoristaQueVuelve(?string $comerciante, ?string $servicio, ?string $agente): bool
     {
-        if (mb_strtolower(trim((string) $bulto->comerciante)) !== self::MAYORISTA_COMERCIANTE
-            || ! in_array(mb_strtolower(trim((string) $bulto->servicio)), self::MAYORISTA_SERVICIOS, true)) {
+        if (mb_strtolower(trim((string) $comerciante)) !== self::MAYORISTA_COMERCIANTE
+            || ! in_array(mb_strtolower(trim((string) $servicio)), self::MAYORISTA_SERVICIOS, true)) {
             return false;
         }
 
-        return ! in_array(mb_strtolower(trim($comuna['agente'] ?? '')), self::MAYORISTA_SE_QUEDAN, true);
+        return ! in_array(mb_strtolower(trim((string) $agente)), self::MAYORISTA_SE_QUEDAN, true);
     }
 
     /* Lanas se pregunta antes que Peumo, igual que en LogisticaCL. */
-    private function tipoPago(?string $comerciante, ?string $servicio): string
+    public static function tipoPago(?string $comerciante, ?string $servicio): string
     {
         if (in_array(mb_strtolower(trim((string) $comerciante)), self::COMERCIANTES_LANAS, true)) {
             return self::TIPO_LANAS;

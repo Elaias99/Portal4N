@@ -1,5 +1,5 @@
 {{--
-    Navegación del módulo. $activo = index | agentes | comunas | tarifas | configuraciones | proveedores
+    Navegación del módulo. $activo = index | agentes | comunas | tarifas | configuraciones | reglas | apoyo-alza | proveedores
     $resumen viene del service y aporta los conteos.
     La raíz (index) es el proceso de pago; el resto son catálogos.
 --}}
@@ -11,6 +11,8 @@
 
         // 'tarifas' => ['ruta' => route('courier.tarifas'), 'icono' => 'fa-weight-hanging', 'texto' => 'Tarifas', 'count' => $resumen['tarifas']['total'] ?? null],
         // 'configuraciones' => ['ruta' => route('courier.configuraciones'), 'icono' => 'fa-sliders', 'texto' => 'Configuración de pago', 'count' => $resumen['configuraciones']['total'] ?? null],
+        'reglas' => ['ruta' => route('courier.reglas'), 'icono' => null, 'texto' => 'Reglas de pago', 'count' => $resumen['reglas']['total'] ?? null],
+        'apoyo-alza' => ['ruta' => route('courier.apoyo-alza'), 'icono' => null, 'texto' => 'Apoyo Alza', 'count' => $resumen['apoyo_alza']['total'] ?? null],
         'proveedores' => ['ruta' => route('courier.proveedores'), 'icono' => 'fa-building-columns', 'texto' => 'Proveedores', 'count' => $resumen['proveedores']['total'] ?? null],
     ];
 @endphp

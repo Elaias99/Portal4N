@@ -22,6 +22,25 @@
 
     @include('courier.partials.paso-cabeza')
 
+        @if(session('calculoListo'))
+            @php $c = session('calculoListo'); @endphp
+            <div class="co-alert co-alert-ok" role="status">
+                <strong>Cálculo terminado.</strong>
+                {{ $n($c['pagar']) }} bultos se pagan y {{ $n($c['descontar']) }} quedan fuera.
+                Apoyo Alza se armó con las reglas guardadas.
+            </div>
+        @endif
+
+        @if($resumenPago && ! $resumenPago['cierre'])
+            <form method="POST" action="{{ route('courier.calcular') }}" data-subir style="margin-bottom:1rem">
+                @csrf
+                <input type="hidden" name="periodo" value="{{ $periodo->codigo }}">
+                <input type="hidden" name="volver" value="totales">
+                <button type="submit" class="co-btn co-btn-muted" data-loading-text="Calculando…">Calcular de nuevo</button>
+                <span class="co-note">Vuelve a calcular los bultos y Apoyo Alza con lo que esté cargado ahora.</span>
+            </form>
+        @endif
+
         @if(! $resumenPago)
             <p class="co-empty">Este período todavía no se ha calculado.</p>
         @else
@@ -166,3 +185,20 @@
 
 </div>
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    document.querySelectorAll('[data-subir]').forEach(function (form) {
+        form.addEventListener('submit', function () {
+            var boton = form.querySelector('button[type="submit"]');
+
+            if (boton) {
+                boton.disabled = true;
+                boton.textContent = boton.getAttribute('data-loading-text') || 'Procesando…';
+            }
+        });
+    });
+})();
+</script>
+@endpush

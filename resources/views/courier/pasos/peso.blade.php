@@ -14,6 +14,25 @@
 
     @include('courier.partials.paso-cabeza')
 
+        @if(session('pesosCargados'))
+            @php $c = session('pesosCargados'); @endphp
+            <div class="co-alert co-alert-ok" role="status">
+                <strong>Pesos cargados de {{ $c['archivo'] }}.</strong>
+                {{ $n($c['filas'] ?? 0) }} pesos leídos
+                ({{ $n($c['nuevos'] ?? 0) }} nuevos · {{ $n($c['actualizados'] ?? 0) }} actualizados · {{ $n($c['sin_cambio'] ?? 0) }} sin cambio)
+                · {{ $n($c['en_cero'] ?? 0) }} en 0 kg
+                · {{ $n($c['descartados'] ?? 0) }} descartados.
+                {{ $n($c['bultos_con_peso']) }} bultos de este período ya tienen peso de balanza.
+                Ahora aprieta <strong>Calcular de nuevo</strong> para que el total use estos pesos.
+            </div>
+        @elseif(session('calculoListo'))
+            @php $c = session('calculoListo'); @endphp
+            <div class="co-alert co-alert-ok" role="status">
+                <strong>Cálculo terminado.</strong>
+                {{ $n($c['pagar']) }} bultos se pagan y {{ $n($c['descontar']) }} quedan fuera.
+            </div>
+        @endif
+
         @if(! $pesos || $bultos === 0)
             <p class="co-empty">Este período todavía no tiene bultos con pago calculado.</p>
         @else
@@ -68,7 +87,57 @@
 
         @endif
 
+        <div class="co-paso-bloque">
+            <h2 class="co-paso-subtitulo">Subir pesos</h2>
+
+            <p class="co-note">
+                Excel con las columnas
+                <strong>Codigo_S+Bulto · Notas · Cod_seguimiento · Fecha de maestro · Comerciante · Servicio</strong>,
+                en la primera hoja. <strong>Notas</strong> son los kilos.
+            </p>
+
+            @if($errors->has('archivo'))
+                <div class="co-alert co-alert-danger" role="alert">{{ $errors->first('archivo') }}</div>
+            @endif
+
+            <form method="POST" action="{{ route('courier.importar-pesos') }}" enctype="multipart/form-data" data-subir>
+                @csrf
+                <input type="hidden" name="periodo" value="{{ $periodo->codigo }}">
+                <div class="co-field">
+                    <label for="archivo-pesos">Archivo de pesos</label>
+                    <input type="file" id="archivo-pesos" name="archivo" class="form-control" accept=".xlsx" required>
+                </div>
+                <button type="submit" class="co-btn co-btn-primary" data-loading-text="Subiendo…" style="margin-top:.75rem">Subir pesos</button>
+            </form>
+
+            @if(session('pesosCargados'))
+                <form method="POST" action="{{ route('courier.calcular') }}" data-subir style="margin-top:.75rem">
+                    @csrf
+                    <input type="hidden" name="periodo" value="{{ $periodo->codigo }}">
+                    <input type="hidden" name="volver" value="peso">
+                    <button type="submit" class="co-btn co-btn-primary" data-loading-text="Calculando…">Calcular de nuevo</button>
+                </form>
+            @endif
+        </div>
+
     @include('courier.partials.paso-pie')
 
 </div>
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    document.querySelectorAll('[data-subir]').forEach(function (form) {
+        form.addEventListener('submit', function () {
+            var boton = form.querySelector('button[type="submit"]');
+
+            if (boton) {
+                boton.disabled = true;
+                boton.textContent = boton.getAttribute('data-loading-text') || 'Procesando…';
+            }
+        });
+    });
+})();
+</script>
+@endpush

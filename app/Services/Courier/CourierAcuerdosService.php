@@ -41,7 +41,8 @@ class CourierAcuerdosService
     private const ZONAS = ['RM', 'Regiones'];
 
     public function __construct(
-        private readonly CourierProveedoresPorRut $proveedores
+        private readonly CourierProveedoresPorRut $proveedores,
+        private readonly CourierProcesosService $procesos
     ) {
     }
 
@@ -179,6 +180,9 @@ class CourierAcuerdosService
             }
 
             $calculo = $this->calcular($periodo);
+
+            /* Lo que ganan en Acuerdos es base de Apoyo Alza. */
+            $this->procesos->aplicarReglasApoyo($periodo);
 
             return $calculo + [
                 'servicios' => count($reglas),

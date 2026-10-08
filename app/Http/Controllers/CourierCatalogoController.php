@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\CourierTarifa;
 use App\Services\Courier\CourierCatalogoService;
+use App\Services\Courier\CourierProcesosService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -129,6 +131,66 @@ class CourierCatalogoController extends Controller
             'buscar' => $buscar,
             'resumen' => $this->catalogo->resumen(),
         ]);
+    }
+
+    /*
+     * Reglas de pago: quién cobra por qué cliente y servicio, y con qué
+     * tabla. Sólo consulta.
+     */
+    public function reglas(Request $request): View
+    {
+        $buscar = trim((string) $request->input('q', ''));
+
+        return view('courier.reglas', [
+            'reglas' => $this->catalogo->reglas($buscar ?: null),
+            'buscar' => $buscar,
+            'resumen' => $this->catalogo->resumen(),
+        ]);
+    }
+
+    /*
+     * Reglas de Apoyo Alza: a quién se le da apoyo y de cuánto. No tienen
+     * mes; cada período se calcula solo con ellas.
+     */
+    public function apoyoAlza(Request $request): View
+    {
+        $buscar = trim((string) $request->input('q', ''));
+
+        return view('courier.apoyo-alza', [
+            'reglasApoyo' => $this->catalogo->apoyoAlzaReglas($buscar ?: null),
+            'buscar' => $buscar,
+            'resumen' => $this->catalogo->resumen(),
+        ]);
+    }
+
+    /*
+     * Reemplaza la lista de reglas de Apoyo Alza con la plantilla. Los
+     * períodos abiertos toman las reglas nuevas al volver a calcular.
+     */
+    public function cargarApoyoAlza(Request $request, CourierProcesosService $procesos): RedirectResponse
+    {
+        $request->validate(
+            ['archivo' => ['required', 'file', 'extensions:xlsx', 'max:20480']],
+            [
+                'archivo.required' => 'Elige la plantilla de Apoyo Alza.',
+                'archivo.extensions' => 'La plantilla debe ser un Excel (.xlsx).',
+                'archivo.max' => 'El archivo supera el tamaño permitido (20 MB).',
+            ]
+        );
+
+        $archivo = $request->file('archivo');
+
+        try {
+            $cantidad = $procesos->cargarReglasApoyo($archivo->getRealPath(), $archivo->getClientOriginalName());
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->withErrors(['archivo' => 'No se cargó nada: ' . $e->getMessage()]);
+        }
+
+        return redirect()
+            ->route('courier.apoyo-alza')
+            ->with('apoyoCargado', ['reglas' => $cantidad, 'archivo' => $archivo->getClientOriginalName()]);
     }
 
     public function proveedores(Request $request): View

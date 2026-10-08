@@ -2,13 +2,15 @@
 
 namespace App\Services\Courier;
 
+use App\Imports\Courier\FiltroColumnas;
 use App\Imports\Courier\GeoliceBultosImport;
 use App\Imports\Courier\PesajesImport;
+use App\Imports\Courier\PesoRealImport;
 use App\Models\CourierAcuerdo;
 use App\Models\CourierBulto;
 use App\Models\CourierCierre;
 use App\Models\CourierCoberturaComuna;
-use App\Models\CourierConfiguracion;
+use App\Models\CourierControl;
 use App\Models\CourierEstadoEntrega;
 use App\Models\CourierImportacion;
 use App\Models\CourierPagoProceso;
@@ -21,6 +23,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Excel as TipoExcel;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 /*
  * Proceso mensual de pago Courier: períodos, cargas de datos y
@@ -37,6 +40,53 @@ class CourierPagoService
      * confirmar, al descartar, o cuando pasa un día.
      */
     private const CARPETA_REVISIONES = 'courier/revisiones';
+
+    /* Pagos extra que se suben en el paso Pagos extra: clave del formulario → nombre. */
+    public const PAGOS_EXTRA = [
+        'acuerdos' => 'Acuerdos',
+        'ruta-cv' => CourierPagoProceso::RUTA_CV,
+        'servicios' => CourierPagoProceso::SERVICIOS,
+        'visitas' => CourierPagoProceso::VISITAS,
+        'especiales' => CourierPagoProceso::ESPECIALES,
+    ];
+
+    /*
+     * Lo cargado de cada pago extra en el período, más Apoyo Alza, que no
+     * se sube: se arma solo con sus reglas.
+     *
+     * @return array<string, array{nombre: string, filas: int, total: int, archivo: ?string, cargado: ?string}>
+     */
+    public function pagosExtra(CourierPeriodo $periodo): array
+    {
+        $resumen = function ($consulta) {
+            $fila = (clone $consulta)
+                ->selectRaw('COUNT(*) filas, COALESCE(SUM(total), 0) total, MAX(archivo_origen) archivo, MAX(updated_at) cargado')
+                ->first();
+
+            return [
+                'filas' => (int) $fila->filas,
+                'total' => (int) $fila->total,
+                'archivo' => $fila->archivo,
+                'cargado' => $fila->cargado,
+            ];
+        };
+
+        $extras = [];
+
+        foreach (self::PAGOS_EXTRA as $clave => $nombre) {
+            $consulta = $clave === 'acuerdos'
+                ? CourierAcuerdo::query()->delPeriodo($periodo->id)
+                : CourierPagoProceso::query()->delPeriodo($periodo->id)->where('proceso', $nombre);
+
+            $extras[$clave] = ['nombre' => $nombre] + $resumen($consulta);
+        }
+
+        $extras['apoyo-alza'] = ['nombre' => CourierPagoProceso::APOYO_ALZA] + $resumen(
+            CourierPagoProceso::query()->delPeriodo($periodo->id)->where('proceso', CourierPagoProceso::APOYO_ALZA)
+        );
+
+        return $extras;
+    }
 
     public function periodos(): Collection
     {
@@ -230,6 +280,87 @@ class CourierPagoService
     }
 
     /*
+     * Encabezado de la plantilla de pesos (primera hoja del Excel). Sólo
+     * se exigen las cuatro primeras columnas; Comerciante y Servicio
+     * pueden venir y no se usan.
+     */
+    public const COLUMNAS_PLANTILLA_PESOS = ['Codigo_S+Bulto', 'Notas', 'Cod_seguimiento', 'Fecha de maestro'];
+
+    /*
+     * Carga la plantilla de pesos (Excel) en courier_pesajes del período,
+     * con el mismo lector de la hoja PesoReal. Deja registro en
+     * courier_importaciones. Todo o nada. No recalcula: eso lo decide
+     * la persona con el botón Calcular.
+     */
+    public function importarPlantillaPesos(UploadedFile $archivo, CourierPeriodo $periodo, ?int $usuarioId): CourierImportacion
+    {
+        set_time_limit(0);
+
+        $filas = $this->leerPlantillaPesos($archivo->getRealPath());
+        $nombre = $archivo->getClientOriginalName();
+
+        return DB::transaction(function () use ($filas, $nombre, $periodo, $usuarioId) {
+            $inicio = microtime(true);
+
+            $import = new PesoRealImport($periodo, $nombre);
+            $import->collection($filas);
+
+            /* Cuántos bultos del período quedaron con un peso de balanza que sirve. */
+            $conPeso = CourierBulto::query()
+                ->delPeriodo($periodo->id)
+                ->whereExists(fn ($q) => $q->selectRaw('1')
+                    ->from('courier_pesajes as p')
+                    ->where('p.courier_periodo_id', $periodo->id)
+                    ->whereColumn('p.seguimiento', 'courier_bultos.seguimiento')
+                    ->where('p.kilos', '>', 0))
+                ->count();
+
+            return CourierImportacion::create([
+                'courier_periodo_id' => $periodo->id,
+                'tipo' => CourierImportacion::TIPO_PESAJES,
+                'archivo' => $nombre,
+                'user_id' => $usuarioId,
+                'filas' => $import->resumen['filas'],
+                'nuevos' => $import->resumen['nuevos'],
+                'actualizados' => $import->resumen['actualizados'],
+                'duracion_seg' => (int) round(microtime(true) - $inicio),
+                'resumen' => [
+                    'resumen' => $import->resumen,
+                    'formato' => 'plantilla_pesos',
+                    'bultos_con_peso' => $conPeso,
+                ],
+            ]);
+        });
+    }
+
+    /*
+     * Primera hoja de la plantilla, sólo sus cuatro primeras columnas.
+     * Si el encabezado no es el de la plantilla, no se carga nada.
+     */
+    private function leerPlantillaPesos(string $ruta): Collection
+    {
+        $lector = IOFactory::createReader('Xlsx');
+        $lector->setReadDataOnly(true);
+        $lector->setReadFilter(new FiltroColumnas(count(self::COLUMNAS_PLANTILLA_PESOS)));
+
+        $libro = $lector->load($ruta);
+        $filas = $libro->getSheet(0)->toArray(null, false, false, false);
+        $libro->disconnectWorksheets();
+        unset($libro, $lector);
+
+        $normalizar = fn ($v) => mb_strtolower(trim((string) $v));
+        $encabezado = array_map($normalizar, array_slice($filas[0] ?? [], 0, count(self::COLUMNAS_PLANTILLA_PESOS)));
+
+        if ($encabezado !== array_map($normalizar, self::COLUMNAS_PLANTILLA_PESOS)) {
+            throw new \InvalidArgumentException(
+                'La primera hoja no tiene las columnas de la plantilla: ' . implode(' · ', self::COLUMNAS_PLANTILLA_PESOS) . '.'
+            );
+        }
+
+        return collect($filas);
+    }
+
+    /*
      * "Proceso del dia 04-09-2026.csv" → "2026-09-04". Acepta también
      * aaaa-mm-dd. Null si el nombre no trae fecha o no es válida.
      */
@@ -312,8 +443,6 @@ class CourierPagoService
             ->mapWithKeys(fn ($c) => [$c->localidad_clave => $c->agente?->nombre ?? ''])
             ->all();
 
-        $configuraciones = CourierConfiguracion::pluck('llave')->flip()->all();
-
         /*
          * Se agrupa en binario para que "CONCÓN" y "Concón" no caigan en
          * el mismo grupo: la colación por defecto ignoraría mayúsculas y
@@ -321,35 +450,23 @@ class CourierPagoService
          */
         $grupos = (clone $bultos)
             ->whereNotNull('comuna_destino')
-            ->selectRaw(
-                'comuna_destino COLLATE utf8mb4_bin AS comuna, '
-                . 'comerciante COLLATE utf8mb4_bin AS comerciante_bin, '
-                . 'servicio COLLATE utf8mb4_bin AS servicio_bin, '
-                . 'COUNT(*) AS n'
-            )
-            ->groupBy('comuna', 'comerciante_bin', 'servicio_bin')
+            ->selectRaw('comuna_destino COLLATE utf8mb4_bin AS comuna, COUNT(*) AS n')
+            ->groupBy('comuna')
             ->get();
 
         $comunasFuera = [];
-        $sinConfiguracion = [];
 
         foreach ($grupos as $grupo) {
-            $clave = CourierCoberturaComuna::clave($grupo->comuna);
-
-            if (! isset($cobertura[$clave])) {
+            if (! isset($cobertura[CourierCoberturaComuna::clave($grupo->comuna)])) {
                 $comunasFuera[$grupo->comuna] = ($comunasFuera[$grupo->comuna] ?? 0) + (int) $grupo->n;
-
-                continue;
-            }
-
-            $agente = $cobertura[$clave];
-            $llave = CourierConfiguracion::llave($agente, $grupo->comerciante_bin, $grupo->servicio_bin);
-
-            if (! isset($configuraciones[$llave])) {
-                $etiqueta = $agente . ' | ' . trim($grupo->comerciante_bin) . ' | ' . trim($grupo->servicio_bin);
-                $sinConfiguracion[$etiqueta] = ($sinConfiguracion[$etiqueta] ?? 0) + (int) $grupo->n;
             }
         }
+
+        /* La llave es la del cálculo, no el catálogo viejo: ver bultosSinLlave(). */
+        $sinConfiguracion = array_map(
+            fn (array $fila) => $fila['bultos'],
+            $this->bultosSinLlave($periodo, $cobertura, [])
+        );
 
         return [
             'total' => $total,
@@ -882,6 +999,86 @@ class CourierPagoService
     }
 
     /*
+     * Bultos del período a los que les falta la llave de pago, por
+     * «agente | comerciante | servicio».
+     *
+     * Hace la pregunta del cálculo (CourierRevisionLlaves): RUT del
+     * proveedor + RUT del cliente + servicio, y no la combinación escrita
+     * del catálogo viejo (courier_configuracions). Como el cálculo, deja
+     * fuera lo que saca antes de mirar la llave: los controles (pagado el
+     * mes anterior, Blue, especial) y los retornos. Los bultos de comuna no
+     * reconocida tienen su propia alerta.
+     *
+     * Para los repartidores de 4N el RUT depende de quién entregó, así que
+     * el repartidor entra en la agrupación; la etiqueta, no.
+     *
+     * @param  array<string, string>  $cobertura  localidad_clave => nombre del agente
+     * @param  array<string, mixed>  $descartan  estados que descuentan, por nombre
+     * @return array<string, array{etiqueta: string, bultos: int, vivos: int}>
+     */
+    private function bultosSinLlave(CourierPeriodo $periodo, array $cobertura, array $descartan): array
+    {
+        $revision = CourierRevisionLlaves::desdeBase($cobertura);
+
+        $grupos = CourierBulto::query()
+            ->delPeriodo($periodo->id)
+            ->whereNotNull('comuna_destino')
+            ->whereNotExists(function ($q) use ($periodo) {
+                $q->select(DB::raw(1))
+                    ->from('courier_controles')
+                    ->whereColumn('courier_controles.seguimiento', 'courier_bultos.seguimiento')
+                    ->where('courier_controles.courier_periodo_id', $periodo->id)
+                    ->whereIn('courier_controles.tipo', [
+                        CourierControl::PAGADO_MES_ANTERIOR,
+                        CourierControl::BLUE,
+                        CourierControl::ESPECIAL,
+                    ]);
+            })
+            ->selectRaw(
+                'comuna_destino COLLATE utf8mb4_bin AS comuna, '
+                . 'comerciante COLLATE utf8mb4_bin AS comerciante_bin, '
+                . 'servicio COLLATE utf8mb4_bin AS servicio_bin, '
+                . 'repartidor_nombre COLLATE utf8mb4_bin AS repartidor_bin, '
+                . '(destinatario_nombre REGEXP ?) AS es_retorno, '
+                . 'estado_entrega, COUNT(*) AS n',
+                ['(?i)' . CourierCalculoService::RETORNO_REGEX]
+            )
+            ->groupBy('comuna', 'comerciante_bin', 'servicio_bin', 'repartidor_bin', 'es_retorno', 'estado_entrega')
+            ->get();
+
+        $sinLlave = [];
+
+        foreach ($grupos as $grupo) {
+            $agente = $cobertura[CourierCoberturaComuna::clave($grupo->comuna)] ?? null;
+
+            if ($agente === null) {
+                continue;
+            }
+
+            $etiqueta = $revision->faltante(
+                $agente,
+                $grupo->comerciante_bin,
+                $grupo->servicio_bin,
+                $grupo->repartidor_bin,
+                (bool) $grupo->es_retorno
+            );
+
+            if ($etiqueta === null) {
+                continue;
+            }
+
+            $cantidad = (int) $grupo->n;
+
+            $sinLlave[$etiqueta]['etiqueta'] = $etiqueta;
+            $sinLlave[$etiqueta]['bultos'] = ($sinLlave[$etiqueta]['bultos'] ?? 0) + $cantidad;
+            $sinLlave[$etiqueta]['vivos'] = ($sinLlave[$etiqueta]['vivos'] ?? 0)
+                + (isset($descartan[(string) $grupo->estado_entrega]) ? 0 : $cantidad);
+        }
+
+        return $sinLlave;
+    }
+
+    /*
      * Hasta tres bultos de ejemplo por comuna no reconocida.
      *
      * El nombre que manda Geolice a veces no dice nada por sí solo
@@ -1058,49 +1255,30 @@ class CourierPagoService
             ->mapWithKeys(fn ($c) => [$c->localidad_clave => $c->agente?->nombre ?? ''])
             ->all();
 
-        $configuraciones = CourierConfiguracion::pluck('llave')->flip()->all();
-
         /* Colación binaria: "CONCÓN" y "Concón" no deben caer juntos. */
         $grupos = (clone $bultos)
             ->whereNotNull('comuna_destino')
-            ->selectRaw(
-                'comuna_destino COLLATE utf8mb4_bin AS comuna, '
-                . 'comerciante COLLATE utf8mb4_bin AS comerciante_bin, '
-                . 'servicio COLLATE utf8mb4_bin AS servicio_bin, '
-                . 'estado_entrega, COUNT(*) AS n'
-            )
-            ->groupBy('comuna', 'comerciante_bin', 'servicio_bin', 'estado_entrega')
+            ->selectRaw('comuna_destino COLLATE utf8mb4_bin AS comuna, estado_entrega, COUNT(*) AS n')
+            ->groupBy('comuna', 'estado_entrega')
             ->get();
 
         $comunas = [];
-        $sinConfiguracion = [];
 
         foreach ($grupos as $grupo) {
+            if (isset($cobertura[CourierCoberturaComuna::clave($grupo->comuna)])) {
+                continue;
+            }
+
             $cantidad = (int) $grupo->n;
             $vivos = $vivo($grupo->estado_entrega) ? $cantidad : 0;
-            $clave = CourierCoberturaComuna::clave($grupo->comuna);
 
-            if (! isset($cobertura[$clave])) {
-                $comunas[$grupo->comuna]['etiqueta'] = $grupo->comuna;
-                $comunas[$grupo->comuna]['bultos'] = ($comunas[$grupo->comuna]['bultos'] ?? 0) + $cantidad;
-                $comunas[$grupo->comuna]['vivos'] = ($comunas[$grupo->comuna]['vivos'] ?? 0) + $vivos;
-
-                continue;
-            }
-
-            $agente = $cobertura[$clave];
-            $llave = CourierConfiguracion::llave($agente, $grupo->comerciante_bin, $grupo->servicio_bin);
-
-            if (isset($configuraciones[$llave])) {
-                continue;
-            }
-
-            $etiqueta = $agente . ' | ' . trim($grupo->comerciante_bin) . ' | ' . trim($grupo->servicio_bin);
-
-            $sinConfiguracion[$etiqueta]['etiqueta'] = $etiqueta;
-            $sinConfiguracion[$etiqueta]['bultos'] = ($sinConfiguracion[$etiqueta]['bultos'] ?? 0) + $cantidad;
-            $sinConfiguracion[$etiqueta]['vivos'] = ($sinConfiguracion[$etiqueta]['vivos'] ?? 0) + $vivos;
+            $comunas[$grupo->comuna]['etiqueta'] = $grupo->comuna;
+            $comunas[$grupo->comuna]['bultos'] = ($comunas[$grupo->comuna]['bultos'] ?? 0) + $cantidad;
+            $comunas[$grupo->comuna]['vivos'] = ($comunas[$grupo->comuna]['vivos'] ?? 0) + $vivos;
         }
+
+        /* La llave es la del cálculo, no el catálogo viejo: ver bultosSinLlave(). */
+        $sinConfiguracion = $this->bultosSinLlave($periodo, $cobertura, $descartan);
 
         /* Lo que cuesta plata arriba; lo que no, abajo. */
         $ordenar = function (array $lista): array {

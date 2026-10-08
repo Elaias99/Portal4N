@@ -65,6 +65,14 @@ class CourierCalcular extends Command
                 ->all()
         );
 
+        if ($resultado['apoyo'] !== null) {
+            $this->line(sprintf(
+                'Apoyo Alza (desde las reglas guardadas): %d filas, $%s.',
+                $resultado['apoyo']['filas'],
+                number_format($resultado['apoyo']['total'], 0, ',', '.')
+            ));
+        }
+
         $this->info("Listo en {$segundos} segundos.");
 
         return self::SUCCESS;

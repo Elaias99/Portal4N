@@ -201,6 +201,12 @@ Route::middleware('auth')->prefix('courier')->name('courier.')->group(function (
     Route::post('/importar-pesajes', [CourierPagoController::class, 'importarPesajes'])
         ->name('importar-pesajes');
 
+    Route::post('/importar-pesos', [CourierPagoController::class, 'importarPesos'])
+        ->name('importar-pesos');
+
+    Route::post('/importar-extra', [CourierPagoController::class, 'importarExtra'])
+        ->name('importar-extra');
+
     // Catálogos.
     Route::get('/agentes', [CourierCatalogoController::class, 'index'])
         ->name('agentes.index');
@@ -220,6 +226,15 @@ Route::middleware('auth')->prefix('courier')->name('courier.')->group(function (
 
     Route::get('/proveedores', [CourierCatalogoController::class, 'proveedores'])
         ->name('proveedores');
+
+    Route::get('/reglas', [CourierCatalogoController::class, 'reglas'])
+        ->name('reglas');
+
+    Route::get('/apoyo-alza', [CourierCatalogoController::class, 'apoyoAlza'])
+        ->name('apoyo-alza');
+
+    Route::post('/apoyo-alza', [CourierCatalogoController::class, 'cargarApoyoAlza'])
+        ->name('apoyo-alza.cargar');
 });
 
 
