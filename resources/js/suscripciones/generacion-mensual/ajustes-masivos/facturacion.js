@@ -167,15 +167,19 @@ export function inicializarFacturacionesMasivas(
     }
 
     /*
-     * Sólo las rutas normales admiten fechas.
-     * Las OPV se guardan como RUTA, pero sólo permiten
-     * cambio de facturación por el mes completo.
+     * Sólo las rutas admiten fechas.
+     * Una OPV de un solo local se trata como ruta.
+     * Una OPV con varios locales sólo permite cambio
+     * de facturación por el mes completo.
      */
     function esAsignacionRuta(item) {
         return normalizarCodigo(
             item?.tipo_asignacion || ''
         ) === 'RUTA'
-            && !esAsignacionOPV(item);
+            && !(
+                esAsignacionOPV(item)
+                && Number(item?.opv_puntos || 0) > 1
+            );
     }
 
     function obtenerDatosFila(row) {
@@ -226,6 +230,9 @@ export function inicializarFacturacionesMasivas(
                 limpiarTexto(
                     row.dataset.tipoAsignacion || ''
                 ),
+
+            opv_puntos:
+                parseInt(row.dataset.opvPuntos || '0', 10) || 0,
 
             /*
              * Alcance individual.

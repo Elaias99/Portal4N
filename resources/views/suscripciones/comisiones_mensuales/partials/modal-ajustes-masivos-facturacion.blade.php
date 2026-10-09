@@ -378,6 +378,7 @@
                                         data-servicio="{{ $asignacion->servicio }}"
                                         data-grupo-prefactura="{{ $asignacion->grupo_prefactura }}"
                                         data-tipo-asignacion="{{ $asignacion->tipo_asignacion }}"
+                                        data-opv-puntos="{{ (int) ($asignacion->opv_puntos_count ?? 0) }}"
                                     >
                                         <td class="text-center">
                                             <input

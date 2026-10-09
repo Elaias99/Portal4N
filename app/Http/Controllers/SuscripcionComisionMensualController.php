@@ -215,6 +215,7 @@ class SuscripcionComisionMensualController extends Controller
                 'suscripcionProveedor.cobranzaCompra',
                 'transportista',
             ])
+                ->withCount('opvPuntos')
                 ->whereNotIn(
                     'tipo_asignacion',
                     [
@@ -223,6 +224,16 @@ class SuscripcionComisionMensualController extends Controller
                         'EXCEPCION_FACTURACION',
                     ]
                 )
+                /*
+                * Una RUTA que ya no se genera (por ejemplo, una OPV
+                * antigua separada en un local por ruta) no se ofrece
+                * para novedades.
+                */
+                ->where(function ($query) {
+                    $query->where('tipo_asignacion', '<>', 'RUTA')
+                        ->orWhereNull('generar_automaticamente')
+                        ->orWhere('generar_automaticamente', 1);
+                })
                 ->orderBy('codigo')
                 ->get();
 

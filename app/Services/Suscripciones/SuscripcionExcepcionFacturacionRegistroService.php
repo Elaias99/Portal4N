@@ -180,14 +180,18 @@ class SuscripcionExcepcionFacturacionRegistroService
         /*
          * Las OPV también están guardadas como RUTA, pero su cantidad
          * es días × puntos. La aplicación por fecha descuenta días sin
-         * multiplicar por puntos, así que sólo admiten el cambio de
+         * multiplicar por puntos: sólo es correcta con un solo local.
+         * Una OPV con varios locales sólo admite el cambio de
          * facturación por el mes completo.
          */
-        if ($this->esAsignacionOPV($asignacion)) {
+        if (
+            $this->esAsignacionOPV($asignacion)
+            && $asignacion->opvPuntos()->count() > 1
+        ) {
             $this->error(
                 $indice,
                 'suscripcion_asignacion_id',
-                "La ruta OPV {$asignacion->codigo} sólo admite cambio de facturación por el mes completo, no por fecha."
+                "La ruta OPV {$asignacion->codigo} tiene varios locales y sólo admite cambio de facturación por el mes completo, no por fecha."
             );
         }
 
