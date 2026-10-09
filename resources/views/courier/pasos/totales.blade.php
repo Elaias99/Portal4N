@@ -27,7 +27,7 @@
             <div class="co-alert co-alert-ok" role="status">
                 <strong>Cálculo terminado.</strong>
                 {{ $n($c['pagar']) }} bultos se pagan y {{ $n($c['descontar']) }} quedan fuera.
-                Apoyo Alza se armó con las reglas guardadas.
+                Apoyo Alza se recalculó con los datos del mes.
             </div>
         @endif
 
@@ -37,7 +37,7 @@
                 <input type="hidden" name="periodo" value="{{ $periodo->codigo }}">
                 <input type="hidden" name="volver" value="totales">
                 <button type="submit" class="co-btn co-btn-muted" data-loading-text="Calculando…">Calcular de nuevo</button>
-                <span class="co-note">Vuelve a calcular los bultos y Apoyo Alza con lo que esté cargado ahora.</span>
+                <span class="co-note">Vuelve a calcular los bultos y Apoyo Alza con lo que esté cargado en el mes.</span>
             </form>
         @endif
 
@@ -113,7 +113,7 @@
                             @foreach($pendientes as $tipo)
                                 <tr class="is-quieto">
                                     <td>{{ $tipo }}</td>
-                                    <td colspan="2">Todavía no está en el sistema</td>
+                                    <td colspan="2">Sin cargar: se sube en el paso Pagos extra</td>
                                 </tr>
                             @endforeach
                             <tr class="co-fila-total">

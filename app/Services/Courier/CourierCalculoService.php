@@ -195,7 +195,7 @@ class CourierCalculoService
         arsort($motivos);
 
         /* Lo que ganan por bultos es base de Apoyo Alza: se rearma con las reglas guardadas. */
-        $apoyo = $this->procesos->aplicarReglasApoyo($periodo);
+        $apoyo = $this->procesos->recalcularApoyo($periodo);
 
         return ['resumen' => $resumen, 'motivos' => $motivos, 'apoyo' => $apoyo];
     }

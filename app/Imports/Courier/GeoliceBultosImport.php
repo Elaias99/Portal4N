@@ -202,6 +202,7 @@ class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRo
             ->keyBy('seguimiento');
 
         $nuevos = [];
+        $cambiados = [];
         $ahora = now()->format('Y-m-d H:i:s');
 
         foreach ($filas as $seguimiento => $datos) {
@@ -233,7 +234,13 @@ class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRo
             $bulto->fill($datos + ['archivo_origen' => $this->archivoOrigen]);
 
             if ($bulto->isDirty()) {
-                $bulto->save();
+                $cambiados[] = $datos + [
+                    'seguimiento' => $seguimiento,
+                    'courier_periodo_id' => $this->periodo->id,
+                    'archivo_origen' => $this->archivoOrigen,
+                    'created_at' => $bulto->getRawOriginal('created_at'),
+                    'updated_at' => $ahora,
+                ];
                 $this->resumen['actualizados']++;
             } else {
                 $this->resumen['sin_cambio']++;
@@ -242,6 +249,18 @@ class GeoliceBultosImport implements ToCollection, WithChunkReading, WithStartRo
 
         foreach (array_chunk($nuevos, 500) as $lote) {
             CourierBulto::insert($lote);
+        }
+
+        /*
+         * Volver a traer un mes ya cargado cambia casi todas sus filas: se
+         * guardan por lotes, no de a una. Sólo se pisan las columnas que
+         * vienen de Geo; lo calculado del bulto queda como estaba.
+         */
+        foreach (array_chunk($cambiados, 500) as $lote) {
+            CourierBulto::upsert($lote, ['seguimiento'], array_values(array_diff(
+                array_keys($lote[0]),
+                ['seguimiento', 'courier_periodo_id', 'created_at']
+            )));
         }
     }
 

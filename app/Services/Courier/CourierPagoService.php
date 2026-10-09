@@ -48,11 +48,12 @@ class CourierPagoService
         'servicios' => CourierPagoProceso::SERVICIOS,
         'visitas' => CourierPagoProceso::VISITAS,
         'especiales' => CourierPagoProceso::ESPECIALES,
+        'apoyo-alza' => CourierPagoProceso::APOYO_ALZA,
     ];
 
     /*
-     * Lo cargado de cada pago extra en el período, más Apoyo Alza, que no
-     * se sube: se arma solo con sus reglas.
+     * Lo cargado de cada pago extra en el período. Apoyo Alza se sube como
+     * los demás y su monto se calcula con las bases del mismo mes.
      *
      * @return array<string, array{nombre: string, filas: int, total: int, archivo: ?string, cargado: ?string}>
      */
@@ -80,10 +81,6 @@ class CourierPagoService
 
             $extras[$clave] = ['nombre' => $nombre] + $resumen($consulta);
         }
-
-        $extras['apoyo-alza'] = ['nombre' => CourierPagoProceso::APOYO_ALZA] + $resumen(
-            CourierPagoProceso::query()->delPeriodo($periodo->id)->where('proceso', CourierPagoProceso::APOYO_ALZA)
-        );
 
         return $extras;
     }

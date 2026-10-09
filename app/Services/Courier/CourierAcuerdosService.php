@@ -182,7 +182,7 @@ class CourierAcuerdosService
             $calculo = $this->calcular($periodo);
 
             /* Lo que ganan en Acuerdos es base de Apoyo Alza. */
-            $this->procesos->aplicarReglasApoyo($periodo);
+            $this->procesos->recalcularApoyo($periodo);
 
             return $calculo + [
                 'servicios' => count($reglas),

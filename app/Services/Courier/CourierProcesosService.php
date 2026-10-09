@@ -69,14 +69,6 @@ class CourierProcesosService
             throw new \RuntimeException('El archivo no trae filas para cargar.');
         }
 
-        /*
-         * Con reglas guardadas, Apoyo Alza se arma solo al calcular: un
-         * archivo del mes se pisaría en el siguiente cálculo.
-         */
-        if ($proceso === CourierPagoProceso::APOYO_ALZA && CourierApoyoAlzaRegla::exists()) {
-            throw new \RuntimeException('Apoyo Alza ya se calcula con las reglas guardadas en /courier/apoyo-alza. Para cambiarlas, carga ahí la plantilla.');
-        }
-
         return DB::transaction(function () use ($proceso, $nombreArchivo, $periodo, $filas) {
             CourierPagoProceso::delPeriodo($periodo->id)->where('proceso', $proceso)->delete();
 
@@ -92,7 +84,7 @@ class CourierProcesosService
 
             /* Los días de Ruta CV son base de Apoyo Alza. */
             if ($proceso === CourierPagoProceso::RUTA_CV) {
-                $this->aplicarReglasApoyo($periodo);
+                $this->recalcularApoyo($periodo);
             }
 
             $cargados = CourierPagoProceso::delPeriodo($periodo->id)->where('proceso', $proceso);
@@ -153,59 +145,31 @@ class CourierProcesosService
     }
 
     /*
-     * Arma Apoyo Alza del período desde las reglas guardadas y lo calcula.
-     * Reemplaza lo que hubiera de Apoyo Alza en el período. Si no hay
-     * reglas, o el período está cerrado, no hace nada y devuelve null.
+     * Vuelve a calcular el Apoyo Alza que el período ya tiene cargado, con
+     * sus propias filas: cada mes trae su archivo, igual que en LogisticaCL.
+     * Si el período no tiene Apoyo Alza, o está cerrado, no hace nada y
+     * devuelve null.
      *
      * Se llama al calcular los bultos, al cargar Acuerdos y al cargar
      * Ruta CV, porque esas son sus bases.
      *
      * @return array{filas: int, total: int, estados: array<string, int>}|null
      */
-    public function aplicarReglasApoyo(CourierPeriodo $periodo): ?array
+    public function recalcularApoyo(CourierPeriodo $periodo): ?array
     {
-        if ($periodo->estaCerrado() || ! CourierApoyoAlzaRegla::exists()) {
+        $filas = CourierPagoProceso::delPeriodo($periodo->id)->where('proceso', CourierPagoProceso::APOYO_ALZA);
+
+        if ($periodo->estaCerrado() || ! (clone $filas)->exists()) {
             return null;
         }
 
-        return DB::transaction(function () use ($periodo) {
-            CourierPagoProceso::delPeriodo($periodo->id)->where('proceso', CourierPagoProceso::APOYO_ALZA)->delete();
+        $estados = $this->calcularApoyo($periodo);
 
-            foreach (CourierApoyoAlzaRegla::query()->orderBy('id')->get() as $regla) {
-                $servicio = $regla->servicio_acuerdo;
-
-                CourierPagoProceso::create($this->conProveedor([
-                    'fila_origen' => $regla->fila_origen,
-                    'proveedor' => $regla->proveedor,
-                    'rut_proveedor' => $regla->rut_proveedor,
-                    'concepto' => $regla->proceso_base . ($servicio !== null ? ' · ' . $servicio : ''),
-                    'total' => 0,
-                    'datos' => [
-                        'proceso_base' => $regla->proceso_base,
-                        'servicio_acuerdo' => $servicio,
-                        'factor' => $regla->factor,
-                        'porcentaje' => $regla->porcentaje,
-                        'monto_dia' => $regla->monto_dia,
-                        'empresa_mandante' => $regla->empresa_mandante,
-                        'agencia' => $regla->agencia,
-                        'regla_id' => $regla->id,
-                    ],
-                ], $regla->zona) + [
-                    'courier_periodo_id' => $periodo->id,
-                    'proceso' => CourierPagoProceso::APOYO_ALZA,
-                    'archivo_origen' => 'Reglas de Apoyo Alza',
-                ]);
-            }
-
-            $estados = $this->calcularApoyo($periodo);
-            $filas = CourierPagoProceso::delPeriodo($periodo->id)->where('proceso', CourierPagoProceso::APOYO_ALZA);
-
-            return [
-                'filas' => (clone $filas)->count(),
-                'total' => (int) (clone $filas)->sum('total'),
-                'estados' => $estados,
-            ];
-        });
+        return [
+            'filas' => (clone $filas)->count(),
+            'total' => (int) (clone $filas)->sum('total'),
+            'estados' => $estados,
+        ];
     }
 
     /*

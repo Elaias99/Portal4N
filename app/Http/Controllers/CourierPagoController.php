@@ -56,7 +56,7 @@ class CourierPagoController extends Controller
         ],
         'extras' => [
             'pregunta' => '¿Qué pagos extra tiene el mes?',
-            'bajada' => 'Lo que no sale de los paquetes: Acuerdos, Ruta CV, Servicios, Visitas y Especiales. Apoyo Alza se calcula solo.',
+            'bajada' => 'Lo que no sale de los paquetes: Acuerdos, Ruta CV, Servicios, Visitas, Especiales y Apoyo Alza. Cada mes trae sus archivos.',
             'requiere_calculo' => true,
         ],
         'totales' => [

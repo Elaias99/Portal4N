@@ -30,7 +30,8 @@
 
         <p class="co-paso-frase">
             Sube el archivo de cada pago. Cada archivo reemplaza lo que ese pago tenía en el mes,
-            así que se puede volver a subir si viene corregido.
+            así que se puede volver a subir si viene corregido. El monto de Apoyo Alza se calcula
+            con los Acuerdos, la Ruta CV y los paquetes del mismo mes.
         </p>
 
         <div class="co-paso-bloque">
@@ -51,9 +52,6 @@
                                 <td class="is-num">{{ $extra['filas'] > 0 ? $n($extra['filas']) : '—' }}</td>
                                 <td class="is-num">{{ $extra['filas'] > 0 ? '$' . $n($extra['total']) : 'Sin cargar' }}</td>
                                 <td>
-                                    @if($clave === 'apoyo-alza')
-                                        <span class="co-note">Se calcula solo con las <a href="{{ route('courier.apoyo-alza') }}">reglas de Apoyo Alza</a>.</span>
-                                    @else
                                         @if($extra['archivo'])
                                             <div class="co-note">{{ $extra['archivo'] }}</div>
                                         @endif
@@ -71,7 +69,6 @@
                                                    aria-label="Archivo de {{ $extra['nombre'] }}">
                                             <button type="submit" class="co-btn co-btn-primary co-btn-sm" data-loading-text="Subiendo…">Subir</button>
                                         </form>
-                                    @endif
                                 </td>
                             </tr>
                         @endforeach
