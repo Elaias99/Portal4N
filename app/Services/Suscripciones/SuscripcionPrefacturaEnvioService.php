@@ -3,12 +3,30 @@
 namespace App\Services\Suscripciones;
 
 use App\Mail\SuscripcionPrefacturaPruebaMail;
+use App\Models\SuscripcionPrefacturaEnvio;
+use Carbon\CarbonInterface;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class SuscripcionPrefacturaEnvioService
 {
+    /*
+    * Pre-facturas enviadas por petición.
+    *
+    * Producción corta cada petición a los 120 segundos y cada
+    * correo tarda unos 2 segundos. Con 20 por tanda queda margen.
+    */
+    public const PREFACTURAS_POR_TANDA = 20;
+
+    /*
+    * Un registro "enviando" más reciente que esto pertenece
+    * a una tanda que todavía está en curso.
+    */
+    private const MINUTOS_ENVIO_EN_CURSO = 3;
+
     public function __construct(
         private SuscripcionPrefacturaPdfService $pdfService,
         private SuscripcionPrefacturaAgrupacionService $agrupacionService,
@@ -349,8 +367,22 @@ class SuscripcionPrefacturaEnvioService
 
 
 
+    /**
+     * Envía una tanda de pre-facturas reales.
+     *
+     * Cada pre-factura queda anotada en suscripcion_prefactura_envios.
+     * Una corrida (identificada por $inicioCorrida) recorre todas las
+     * pre-facturas pendientes en tandas de PREFACTURAS_POR_TANDA:
+     *
+     * - nunca reenvía una pre-factura ya enviada;
+     * - no reintenta en la misma corrida una que ya falló u omitió;
+     * - una corrida nueva vuelve a intentar sólo las no enviadas.
+     */
     public function enviarRealesDesdeDetalles(
-        Collection $detallesBase
+        Collection $detallesBase,
+        int $anio,
+        int $mes,
+        CarbonInterface $inicioCorrida
     ): array {
         @set_time_limit(0);
         ini_set('memory_limit', '1024M');
@@ -361,63 +393,45 @@ class SuscripcionPrefacturaEnvioService
             'proveedores@4nlogistica.cl',
         ];
 
-        $this->ajusteMensualService->precargarParaDetalles($detallesBase);
+        $prefacturas = $this->prefacturasDesdeDetalles($detallesBase);
 
-        $detallesConProveedor = $detallesBase
-            ->filter(function ($detalle) {
-                return $this->ajusteMensualService
-                    ->proveedorFacturacionParaDetalle($detalle)?->id;
-            })
-            ->values();
-
-        /*
-        * Una pre-factura corresponde a:
-        * proveedor efectivo + año + mes + grupo.
-        */
-        $detallesPorPrefactura = $detallesConProveedor
-            ->groupBy(function ($detalle) {
-                $proveedorEfectivo = $this->ajusteMensualService
-                    ->proveedorFacturacionParaDetalle($detalle);
-
-                $grupoPrefactura = $this->agrupacionService
-                    ->claveGrupo(
-                        $this->agrupacionService
-                            ->grupoDesdeDetalle($detalle)
-                    );
-
-                return implode('_', [
-                    $proveedorEfectivo?->id ?? 'sin_proveedor',
-                    $detalle->anio,
-                    $detalle->mes,
-                    $grupoPrefactura,
-                ]);
-            });
-
-        if ($detallesPorPrefactura->isEmpty()) {
+        if ($prefacturas->isEmpty()) {
             throw new \RuntimeException(
                 'No existen pre-facturas para realizar el envío.'
             );
         }
 
-        $resumen = [
-            'total' => $detallesPorPrefactura->count(),
-            'enviados' => 0,
-            'omitidos' => 0,
-            'fallidos' => 0,
-            'copias' => $copias,
-            'resultados' => [],
-        ];
+        $procesadas = 0;
 
-        foreach ($detallesPorPrefactura as $detallesPrefactura) {
-            $detallesPrefactura = $detallesPrefactura
-                ->sortBy('codigo')
-                ->values();
+        foreach ($prefacturas as $item) {
+            if ($procesadas >= self::PREFACTURAS_POR_TANDA) {
+                break;
+            }
 
-            if ($detallesPrefactura->isEmpty()) {
+            $registro = $this->reservarPrefactura(
+                $anio,
+                $mes,
+                (int) $item['proveedor']->id,
+                $item['grupo_clave'],
+                $inicioCorrida
+            );
+
+            /*
+            * Ya enviada, ya intentada en esta corrida
+            * o en curso en otra tanda.
+            */
+            if (!$registro) {
                 continue;
             }
 
-            $detalleRepresentativo = $detallesPrefactura->first();
+            $procesadas++;
+
+            $detalleRepresentativo = $item['detalle'];
+            $nombreProveedor = (string) (
+                $item['proveedor']->cobranzaCompra?->razon_social
+                ?? 'Proveedor desconocido'
+            );
+
             $prefactura = null;
 
             try {
@@ -425,11 +439,6 @@ class SuscripcionPrefacturaEnvioService
                     ->generarDesdeDetalle($detalleRepresentativo);
 
                 $cobranzaCompra = $prefactura['cobranza_compra'];
-
-                $nombreProveedor = (string) (
-                    $cobranzaCompra?->razon_social
-                    ?? 'Proveedor'
-                );
 
                 $correoDestino = trim(
                     (string) ($prefactura['correo_proveedor'] ?? '')
@@ -443,17 +452,15 @@ class SuscripcionPrefacturaEnvioService
                     $correoDestino === ''
                     || !filter_var($correoDestino, FILTER_VALIDATE_EMAIL)
                 ) {
-                    $resumen['omitidos']++;
-
-                    $resumen['resultados'][] = [
-                        'estado' => 'omitido',
-                        'proveedor' => $nombreProveedor,
+                    $registro->update([
+                        'estado' => SuscripcionPrefacturaEnvio::ESTADO_OMITIDO,
                         'correo' => $correoDestino ?: null,
-                        'motivo' => $correoDestino === ''
+                        'archivo' => $prefactura['nombre_archivo'],
+                        'oc' => (string) $prefactura['oc'],
+                        'mensaje' => $correoDestino === ''
                             ? 'Proveedor sin correo registrado.'
                             : 'Correo inválido.',
-                        'archivo' => $prefactura['nombre_archivo'],
-                    ];
+                    ]);
 
                     Log::warning(
                         '[SUSCRIPCIONES] Pre-factura omitida por correo inválido',
@@ -470,18 +477,17 @@ class SuscripcionPrefacturaEnvioService
                     continue;
                 }
 
-
                 $copiasEnvio = collect($copias)
-                ->reject(function ($correoCopia) use ($correoDestino) {
-                    return strcasecmp($correoCopia, $correoDestino) === 0;
-                })
-                ->values()
-                ->all();
+                    ->reject(function ($correoCopia) use ($correoDestino) {
+                        return strcasecmp($correoCopia, $correoDestino) === 0;
+                    })
+                    ->values()
+                    ->all();
 
                 /*
                 * Envío real:
                 * - Para: correo del proveedor efectivo.
-                * - CC: Finanzas y Luis de la Barra.
+                * - CC: Finanzas, Luis de la Barra y proveedores@.
                 */
                 Mail::to($correoDestino)
                     ->cc($copiasEnvio)
@@ -520,16 +526,18 @@ class SuscripcionPrefacturaEnvioService
                         )
                     );
 
-                $resumen['enviados']++;
-
-                $resumen['resultados'][] = [
-                    'estado' => 'enviado',
-                    'proveedor' => $nombreProveedor,
+                /*
+                * Se anota inmediatamente después de enviar para que
+                * un corte posterior no vuelva a mandar este correo.
+                */
+                $registro->update([
+                    'estado' => SuscripcionPrefacturaEnvio::ESTADO_ENVIADO,
                     'correo' => $correoDestino,
-                    'copias' => $copiasEnvio,
                     'archivo' => $prefactura['nombre_archivo'],
-                    'oc' => $prefactura['oc'],
-                ];
+                    'oc' => (string) $prefactura['oc'],
+                    'mensaje' => null,
+                    'enviado_at' => now(),
+                ]);
 
                 Log::info(
                     '[SUSCRIPCIONES] Pre-factura enviada al proveedor',
@@ -543,23 +551,10 @@ class SuscripcionPrefacturaEnvioService
                     ]
                 );
             } catch (\Throwable $e) {
-                $resumen['fallidos']++;
-
-                $proveedorEfectivo = $this->ajusteMensualService
-                    ->proveedorFacturacionParaDetalle(
-                        $detalleRepresentativo
-                    );
-
-                $nombreProveedor = $proveedorEfectivo
-                    ?->cobranzaCompra
-                    ?->razon_social
-                    ?? 'Proveedor desconocido';
-
-                $resumen['resultados'][] = [
-                    'estado' => 'fallido',
-                    'proveedor' => $nombreProveedor,
-                    'error' => $e->getMessage(),
-                ];
+                $registro->update([
+                    'estado' => SuscripcionPrefacturaEnvio::ESTADO_FALLIDO,
+                    'mensaje' => mb_substr($e->getMessage(), 0, 1000),
+                ]);
 
                 Log::error(
                     '[SUSCRIPCIONES] Falló envío real de pre-factura',
@@ -575,15 +570,244 @@ class SuscripcionPrefacturaEnvioService
             gc_collect_cycles();
         }
 
-        return $resumen;
+        return [
+            'procesadas' => $procesadas,
+
+            ...$this->estadoEnvio(
+                $prefacturas,
+                $anio,
+                $mes,
+                $inicioCorrida
+            ),
+        ];
     }
 
+    /**
+     * Estado del envío real de un conjunto de pre-facturas:
+     * cuántas salieron y cuáles no, con su motivo.
+     */
+    public function estadoEnvio(
+        Collection $prefacturas,
+        int $anio,
+        int $mes,
+        CarbonInterface $inicioCorrida
+    ): array {
+        $registros = SuscripcionPrefacturaEnvio::query()
+            ->where('anio', $anio)
+            ->where('mes', $mes)
+            ->get()
+            ->keyBy(fn (SuscripcionPrefacturaEnvio $registro) =>
+                $registro->suscripcion_proveedor_id
+                . '|'
+                . $registro->grupo_prefactura
+            );
 
+        $enviadas = 0;
+        $pendientesCorrida = 0;
+        $noEnviadas = collect();
 
+        foreach ($prefacturas as $item) {
+            $proveedor = $item['proveedor'];
 
+            $registro = $registros->get(
+                $proveedor->id . '|' . $item['grupo_clave']
+            );
 
+            if ($registro?->estado === SuscripcionPrefacturaEnvio::ESTADO_ENVIADO) {
+                $enviadas++;
 
+                continue;
+            }
 
+            if (!$registro || $this->estaPendiente($registro, $inicioCorrida)) {
+                $pendientesCorrida++;
+            }
 
+            $estado = $registro?->estado;
 
+            $motivo = match ($estado) {
+                SuscripcionPrefacturaEnvio::ESTADO_OMITIDO,
+                SuscripcionPrefacturaEnvio::ESTADO_FALLIDO =>
+                    $registro->mensaje,
+
+                SuscripcionPrefacturaEnvio::ESTADO_ENVIANDO =>
+                    'El envío se cortó con este correo en curso. Revisar en proveedores@4nlogistica.cl si llegó.',
+
+                default =>
+                    'Todavía no se envía.',
+            };
+
+            $noEnviadas->push([
+                'proveedor' => $proveedor->cobranzaCompra?->razon_social
+                    ?? 'Proveedor desconocido',
+
+                'rut' => $proveedor->cobranzaCompra?->rut_cliente ?? '—',
+
+                'correo' => trim((string) ($proveedor->correo ?? '')),
+
+                'grupo' => $item['grupo_label'],
+
+                'estado' => $estado ?? 'pendiente',
+
+                'motivo' => $motivo,
+            ]);
+        }
+
+        return [
+            'total' => $prefacturas->count(),
+            'enviadas' => $enviadas,
+            'no_enviadas' => $noEnviadas->values(),
+            'pendientes_corrida' => $pendientesCorrida,
+        ];
+    }
+
+    /**
+     * Una pre-factura por proveedor efectivo + grupo,
+     * ordenadas por razón social para que las tandas
+     * avancen siempre en el mismo orden.
+     */
+    public function prefacturasDesdeDetalles(
+        Collection $detallesBase
+    ): Collection {
+        $this->ajusteMensualService->precargarParaDetalles($detallesBase);
+
+        return $detallesBase
+            ->filter(function ($detalle) {
+                return $this->ajusteMensualService
+                    ->proveedorFacturacionParaDetalle($detalle)?->id;
+            })
+            ->groupBy(function ($detalle) {
+                $proveedorEfectivo = $this->ajusteMensualService
+                    ->proveedorFacturacionParaDetalle($detalle);
+
+                return implode('_', [
+                    $proveedorEfectivo->id,
+                    $detalle->anio,
+                    $detalle->mes,
+                    $this->agrupacionService->claveGrupo(
+                        $this->agrupacionService->grupoDesdeDetalle($detalle)
+                    ),
+                ]);
+            })
+            ->map(function ($detallesPrefactura) {
+                $detalle = $detallesPrefactura
+                    ->sortBy('codigo')
+                    ->first();
+
+                $grupo = $this->agrupacionService
+                    ->grupoDesdeDetalle($detalle);
+
+                return [
+                    'detalle' => $detalle,
+
+                    'proveedor' => $this->ajusteMensualService
+                        ->proveedorFacturacionParaDetalle($detalle),
+
+                    'grupo_clave' => $this->agrupacionService
+                        ->claveGrupo($grupo),
+
+                    'grupo_label' => $this->agrupacionService
+                        ->etiquetaGrupo($grupo),
+                ];
+            })
+            ->sortBy(function (array $item) {
+                return mb_strtoupper(trim((string) (
+                    $item['proveedor']->cobranzaCompra?->razon_social ?? ''
+                )))
+                    . '|'
+                    . $item['grupo_clave'];
+            })
+            ->values();
+    }
+
+    /**
+     * Marca la pre-factura como "enviando" si le toca en esta corrida.
+     *
+     * Devuelve null cuando ya fue enviada, ya se intentó en esta
+     * corrida o la está enviando otra tanda en este momento.
+     */
+    private function reservarPrefactura(
+        int $anio,
+        int $mes,
+        int $proveedorId,
+        string $grupoClave,
+        CarbonInterface $inicioCorrida
+    ): ?SuscripcionPrefacturaEnvio {
+        try {
+            return DB::transaction(function () use (
+                $anio,
+                $mes,
+                $proveedorId,
+                $grupoClave,
+                $inicioCorrida
+            ) {
+                $registro = SuscripcionPrefacturaEnvio::query()
+                    ->where('anio', $anio)
+                    ->where('mes', $mes)
+                    ->where('suscripcion_proveedor_id', $proveedorId)
+                    ->where('grupo_prefactura', $grupoClave)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($registro && !$this->estaPendiente($registro, $inicioCorrida)) {
+                    return null;
+                }
+
+                $reserva = [
+                    'estado' => SuscripcionPrefacturaEnvio::ESTADO_ENVIANDO,
+                    'mensaje' => null,
+                    'ultimo_intento_at' => now(),
+                ];
+
+                if (!$registro) {
+                    return SuscripcionPrefacturaEnvio::create([
+                        'anio' => $anio,
+                        'mes' => $mes,
+                        'suscripcion_proveedor_id' => $proveedorId,
+                        'grupo_prefactura' => $grupoClave,
+                        ...$reserva,
+                    ]);
+                }
+
+                $registro->update($reserva);
+
+                return $registro;
+            });
+        } catch (UniqueConstraintViolationException) {
+            /*
+            * Otra tanda creó el registro al mismo tiempo.
+            */
+            return null;
+        }
+    }
+
+    private function estaPendiente(
+        SuscripcionPrefacturaEnvio $registro,
+        CarbonInterface $inicioCorrida
+    ): bool {
+        if ($registro->estado === SuscripcionPrefacturaEnvio::ESTADO_ENVIADO) {
+            return false;
+        }
+
+        /*
+        * Ya intentada en esta corrida.
+        */
+        if ($registro->ultimo_intento_at?->gte($inicioCorrida)) {
+            return false;
+        }
+
+        /*
+        * Otra tanda la está enviando ahora mismo.
+        */
+        if (
+            $registro->estado === SuscripcionPrefacturaEnvio::ESTADO_ENVIANDO
+            && $registro->ultimo_intento_at?->gt(
+                now()->subMinutes(self::MINUTOS_ENVIO_EN_CURSO)
+            )
+        ) {
+            return false;
+        }
+
+        return true;
+    }
 }

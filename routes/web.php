@@ -1197,16 +1197,20 @@ Route::middleware('auth')
 
 
 Route::get('/suscripciones/comisiones-mensuales/create', [SuscripcionComisionMensualController::class, 'create'])
+    ->middleware('auth')
     ->name('suscripciones.comisiones-mensuales.create');
 
 Route::post('/suscripciones/comisiones-mensuales', [SuscripcionComisionMensualController::class, 'store'])
+    ->middleware('auth')
     ->name('suscripciones.comisiones-mensuales.store');
 
 
 use App\Http\Controllers\SuscripcionCantidadMensualController;
 
 Route::get('/suscripciones/cantidades-mensuales/create', [SuscripcionCantidadMensualController::class, 'create'])
+    ->middleware('auth')
     ->name('suscripciones.cantidades-mensuales.create');
 
 Route::post('/suscripciones/cantidades-mensuales', [SuscripcionCantidadMensualController::class, 'store'])
+    ->middleware('auth')
     ->name('suscripciones.cantidades-mensuales.store');

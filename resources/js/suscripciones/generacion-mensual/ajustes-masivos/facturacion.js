@@ -152,10 +152,30 @@ export function inicializarFacturacionesMasivas(
         errorBox.classList.remove('d-none');
     }
 
+    /*
+     * Mismo criterio de detección OPV que el backend.
+     */
+    function esAsignacionOPV(item) {
+        const codigo = String(item?.codigo || '').trim().toUpperCase();
+        const servicio = String(item?.servicio || '').trim().toUpperCase();
+        const origenGasto = String(item?.origen_gasto || '').trim().toUpperCase();
+
+        return codigo === 'OPV'
+            || codigo.endsWith('.OPV')
+            || servicio === 'OPV'
+            || origenGasto === 'OPV';
+    }
+
+    /*
+     * Sólo las rutas normales admiten fechas.
+     * Las OPV se guardan como RUTA, pero sólo permiten
+     * cambio de facturación por el mes completo.
+     */
     function esAsignacionRuta(item) {
         return normalizarCodigo(
             item?.tipo_asignacion || ''
-        ) === 'RUTA';
+        ) === 'RUTA'
+            && !esAsignacionOPV(item);
     }
 
     function obtenerDatosFila(row) {

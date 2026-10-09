@@ -290,7 +290,7 @@
                             type="number"
                             name="anio_pdf"
                             class="form-control form-control-sm"
-                            value="{{ request('anio', 2026) }}"
+                            value="{{ $anioPdf }}"
                             min="2020"
                             max="2100"
                             required
@@ -306,7 +306,7 @@
                             required
                         >
                             @foreach($meses as $numero => $nombre)
-                                <option value="{{ $numero }}" {{ (int) request('mes', 4) === $numero ? 'selected' : '' }}>
+                                <option value="{{ $numero }}" {{ (int) $mesPdf === $numero ? 'selected' : '' }}>
                                     {{ $nombre }}
                                 </option>
                             @endforeach
@@ -329,6 +329,18 @@
                         <span>Revisar destinatarios</span>
                     </button>
 
+                    <div class="sl-field">
+                        <label for="sl-correo-prueba">Correo para la prueba</label>
+                        <input
+                            id="sl-correo-prueba"
+                            type="email"
+                            name="correo_prueba"
+                            class="form-control form-control-sm"
+                            value="{{ old('correo_prueba') }}"
+                            placeholder="nombre@4nlogistica.cl"
+                        >
+                    </div>
+
                     <button
                         type="submit"
                         class="btn sl-btn sl-btn-outline"
@@ -336,8 +348,22 @@
                         onclick="
                             document.getElementById('confirmacion_envio_real').value = '';
 
+                            const correoPrueba =
+                                document.getElementById('sl-correo-prueba').value.trim();
+
+                            if (correoPrueba === '') {
+                                alert('Escribe el correo que recibirá la prueba.');
+
+                                return false;
+                            }
+
+                            const periodoPrueba =
+                                document.getElementById('sl-pdf-mes').selectedOptions[0].text.trim()
+                                + ' '
+                                + document.getElementById('sl-pdf-anio').value;
+
                             return confirm(
-                                '¿Enviar una copia de cada pre-factura seleccionada únicamente a eliascorreap@gmail.com?'
+                                '¿Enviar una copia de cada pre-factura de ' + periodoPrueba + ' únicamente a ' + correoPrueba + '?'
                             );
                         "
                     >
@@ -346,7 +372,7 @@
                     </button>
 
                     <p class="sl-helper">
-                        La prueba se dirige únicamente a eliascorreap@gmail.com.
+                        La prueba llega solo al correo indicado arriba, nunca a los proveedores.
                     </p>
                 </div>
 
@@ -356,8 +382,13 @@
                         class="btn sl-btn sl-btn-danger w-100"
                         formaction="{{ route('suscripciones.liquidacion-detalles.enviar-correos-reales-masivo') }}"
                         onclick="
+                            const periodoReal =
+                                document.getElementById('sl-pdf-mes').selectedOptions[0].text.trim()
+                                + ' '
+                                + document.getElementById('sl-pdf-anio').value;
+
                             const confirmacion = prompt(
-                                'ATENCIÓN: este envío llegará a los proveedores reales.\n\nEscribe ENVIAR para continuar:'
+                                'ATENCIÓN: este envío llegará a los proveedores reales.\n\nPeríodo: ' + periodoReal + '\n\nEscribe ENVIAR para continuar:'
                             );
 
                             if (confirmacion !== 'ENVIAR') {
@@ -371,7 +402,7 @@
                             document.getElementById('confirmacion_envio_real').value = 'ENVIAR';
 
                             return confirm(
-                                'CONFIRMACIÓN FINAL:\n\n¿Enviar las pre-facturas seleccionadas a los correos reales de los proveedores, con copia a Finanzas y Luis de la Barra?'
+                                'CONFIRMACIÓN FINAL:\n\n¿Enviar las pre-facturas de ' + periodoReal + ' a los correos reales de los proveedores, con copia a Finanzas y Luis de la Barra?'
                             );
                         "
                     >

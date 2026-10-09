@@ -633,6 +633,25 @@ class SuscripcionComisionMensualController extends Controller
         $mes = (int) $data['mes'];
 
         /*
+        * Un período ya generado no se vuelve a enviar.
+        * Reenviarlo duplicaba los pagos adicionales.
+        */
+        $periodoYaGenerado =
+            SuscripcionLiquidacionDetalle::query()
+                ->where('anio', $anio)
+                ->where('mes', $mes)
+                ->exists();
+
+        if ($periodoYaGenerado) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'anio' =>
+                        'Este período ya fue generado. No se puede volver a enviar desde este formulario.',
+                ]);
+        }
+
+        /*
         * Normalizar calendario zonal.
         */
         $zonasOperativas = collect(
@@ -768,6 +787,18 @@ class SuscripcionComisionMensualController extends Controller
                 ->withInput()
                 ->withErrors($erroresAjustes);
         }
+
+        /*
+        * Todo el guardado y la generación van en una sola transacción.
+        *
+        * Si algo falla a mitad de camino (por ejemplo, el tope de
+        * excepciones por fecha), no queda nada guardado: el formulario
+        * vuelve con sus datos y el reintento no duplica pagos adicionales
+        * ni deja el período generado a medias.
+        */
+        DB::beginTransaction();
+
+        try {
 
         /*
         * Guardar calendario, cantidad variable
@@ -1078,6 +1109,13 @@ class SuscripcionComisionMensualController extends Controller
                     $anio,
                     $mes
                 );
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            throw $e;
+        }
 
         /*
         * Construir mensaje final.

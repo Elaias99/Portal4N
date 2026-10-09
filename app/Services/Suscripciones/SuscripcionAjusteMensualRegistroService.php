@@ -7,6 +7,7 @@ use App\Models\SuscripcionAjusteMensual;
 use App\Models\SuscripcionProveedor;
 use App\Models\SuscripcionConceptoPagoVariable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class SuscripcionAjusteMensualRegistroService
 {
@@ -348,13 +349,18 @@ class SuscripcionAjusteMensualRegistroService
         ];
     }
 
-    private function guardarOActualizarAjuste(int $suscripcionAsignacionId, int $anio, int $mes, string $tipoAjuste, array $payload): string 
+    private function guardarOActualizarAjuste(int $suscripcionAsignacionId, int $anio, int $mes, string $tipoAjuste, array $payload): string
     {
+        /*
+        * La base admite un solo ajuste por asignación y período:
+        * sus_aj_mens_asig_periodo_unique no incluye tipo_ajuste.
+        *
+        * Por eso se busca sin filtrar por tipo.
+        */
         $ajuste = SuscripcionAjusteMensual::query()
             ->where('suscripcion_asignacion_id', $suscripcionAsignacionId)
             ->where('anio', $anio)
             ->where('mes', $mes)
-            ->where('tipo_ajuste', $tipoAjuste)
             ->first();
 
         if (!$ajuste) {
@@ -367,6 +373,14 @@ class SuscripcionAjusteMensualRegistroService
             return 'creado';
         }
 
+        if ($this->normalizarTipo($ajuste->tipo_ajuste) !== $tipoAjuste) {
+            $payload = $this->combinarInasistenciaYFacturacion(
+                $ajuste,
+                $tipoAjuste,
+                $payload
+            );
+        }
+
         $ajuste->fill($payload);
 
         if ($ajuste->isDirty()) {
@@ -376,6 +390,59 @@ class SuscripcionAjusteMensualRegistroService
         }
 
         return 'sin_cambios';
+    }
+
+    /*
+    * Una ruta puede tener en el mismo período una inasistencia
+    * y un cambio de facturación. Ejemplo: OR.01 se factura a
+    * Mauricio Jara y además faltó un día.
+    *
+    * Ambas novedades quedan en un solo registro FACTURACION:
+    * - datos de facturación y costo: del cambio de facturación;
+    * - q_inasistencia: de la inasistencia.
+    *
+    * Cualquier otra combinación se rechaza con un mensaje claro
+    * en vez de chocar con el índice único.
+    */
+    private function combinarInasistenciaYFacturacion(SuscripcionAjusteMensual $existente, string $tipoNuevo, array $payload): array
+    {
+        $tipoExistente = $this->normalizarTipo($existente->tipo_ajuste);
+
+        $tipos = [$tipoExistente, $tipoNuevo];
+        sort($tipos);
+
+        if ($tipos !== ['FACTURACION', 'INASISTENCIA']) {
+            throw ValidationException::withMessages([
+                'ajustes_mensuales' =>
+                    "La asignación {$existente->codigo} ya tiene una novedad de tipo {$tipoExistente} en este período. "
+                    . "No se puede agregar además una de tipo {$tipoNuevo}.",
+            ]);
+        }
+
+        $datosExistentes = $existente->only(array_keys($payload));
+
+        $facturacion = $tipoNuevo === 'FACTURACION'
+            ? $payload
+            : $datosExistentes;
+
+        $inasistencia = $tipoNuevo === 'INASISTENCIA'
+            ? $payload
+            : $datosExistentes;
+
+        $observacion = collect([
+            $facturacion['observacion'] ?? null,
+            $inasistencia['observacion'] ?? null,
+        ])
+            ->map(fn ($valor) => $this->texto($valor))
+            ->filter()
+            ->unique()
+            ->implode(' | ');
+
+        return array_merge($facturacion, [
+            'tipo_ajuste' => 'FACTURACION',
+            'q_inasistencia' => $inasistencia['q_inasistencia'] ?? null,
+            'observacion' => $observacion !== '' ? $observacion : null,
+        ]);
     }
 
     private function esLineaAdicional(string $tipo): bool

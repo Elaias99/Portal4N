@@ -177,6 +177,20 @@ class SuscripcionExcepcionFacturacionRegistroService
             );
         }
 
+        /*
+         * Las OPV también están guardadas como RUTA, pero su cantidad
+         * es días × puntos. La aplicación por fecha descuenta días sin
+         * multiplicar por puntos, así que sólo admiten el cambio de
+         * facturación por el mes completo.
+         */
+        if ($this->esAsignacionOPV($asignacion)) {
+            $this->error(
+                $indice,
+                'suscripcion_asignacion_id',
+                "La ruta OPV {$asignacion->codigo} sólo admite cambio de facturación por el mes completo, no por fecha."
+            );
+        }
+
         $proveedorFacturacion = SuscripcionProveedor::query()
             ->with('cobranzaCompra')
             ->find($proveedorFacturacionId);
@@ -352,6 +366,23 @@ class SuscripcionExcepcionFacturacionRegistroService
         }
 
         return $fechaCarbon;
+    }
+
+    /**
+     * Mismo criterio de detección OPV que la generación mensual.
+     */
+    private function esAsignacionOPV(Asignaciones $asignacion): bool
+    {
+        $tipoAsignacion = mb_strtoupper(trim((string) $asignacion->tipo_asignacion));
+        $codigo = mb_strtoupper(trim((string) $asignacion->codigo));
+        $servicio = mb_strtoupper(trim((string) $asignacion->servicio));
+        $origenGasto = mb_strtoupper(trim((string) $asignacion->origen_gasto));
+
+        return $tipoAsignacion === 'OPV'
+            || $codigo === 'OPV'
+            || str_ends_with($codigo, '.OPV')
+            || $servicio === 'OPV'
+            || $origenGasto === 'OPV';
     }
 
     /**

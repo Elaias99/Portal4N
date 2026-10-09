@@ -62,8 +62,7 @@
             <strong>Este período ya contiene liquidaciones generadas.</strong>
 
             <div class="mt-1">
-                Volver a preparar este mes no recalculará automáticamente los
-                detalles existentes y podría duplicar pagos adicionales.
+                No se puede volver a enviar este formulario para un mes ya generado.
             </div>
         </div>
     @endif

@@ -247,6 +247,23 @@ class SuscripcionLiquidacionDetalleController extends Controller
             $mes,
         ])->filter(fn ($value) => $value !== null && $value !== '')->count();
 
+        /*
+        * Período por defecto para ZIP y envíos de pre-facturas:
+        * el filtrado, o si no hay filtro, el último período generado.
+        */
+        $ultimoPeriodo = SuscripcionLiquidacionDetalle::query()
+            ->orderByDesc('anio')
+            ->orderByDesc('mes')
+            ->first(['anio', 'mes']);
+
+        $anioPdf = $anio && $mes
+            ? (int) $anio
+            : (int) ($ultimoPeriodo?->anio ?? now()->year);
+
+        $mesPdf = $anio && $mes
+            ? (int) $mes
+            : (int) ($ultimoPeriodo?->mes ?? now()->month);
+
         $page = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
         $perPage = 10;
 
@@ -274,6 +291,8 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'cantidadRegistros' => $cantidadRegistros,
             'filtrosActivos' => $filtrosActivos,
             'resumenPorTipo' => $resumenPorTipo,
+            'anioPdf' => $anioPdf,
+            'mesPdf' => $mesPdf,
         ]);
     }
 
@@ -1408,7 +1427,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function enviarCorreosPruebaMasivo(Request $request, SuscripcionPrefacturaEnvioService $envioService, SuscripcionAjusteMensualService $ajusteMensualService) 
+    public function enviarCorreosPruebaMasivo(Request $request, SuscripcionPrefacturaEnvioService $envioService, SuscripcionAjusteMensualService $ajusteMensualService)
     {
         $request->validate([
             'anio_pdf' => 'required|integer|min:2020|max:2100',
@@ -1416,6 +1435,13 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'proveedor_pdf' => 'nullable|string',
             'rut_pdf' => 'nullable|string',
             'tipo_pdf' => 'nullable|string',
+            'correo_prueba' => 'required|email',
+        ], [
+            'correo_prueba.required' =>
+                'Escribe el correo que recibirá la prueba.',
+
+            'correo_prueba.email' =>
+                'El correo para la prueba no es válido.',
         ]);
 
         $anio = (int) $request->anio_pdf;
@@ -1515,11 +1541,12 @@ class SuscripcionLiquidacionDetalleController extends Controller
         try {
             /*
             * Protección de prueba:
-            * todos los correos se envían exclusivamente a tu Gmail.
+            * todos los correos se envían exclusivamente
+            * al correo indicado en el formulario.
             */
             $resultado = $envioService->enviarPruebasDesdeDetalles(
                 $detallesBase,
-                'eliascorreap@gmail.com'
+                trim((string) $request->correo_prueba)
             );
         } catch (\Throwable $e) {
             report($e);
@@ -1559,6 +1586,12 @@ class SuscripcionLiquidacionDetalleController extends Controller
             * el formulario real deberá enviar exactamente la palabra ENVIAR.
             */
             'confirmacion_envio' => 'required|in:ENVIAR',
+
+            /*
+            * Inicio de la corrida de envío. Vacío = corrida nueva.
+            * Las tandas siguientes lo reenvían para continuar.
+            */
+            'inicio_envio' => 'nullable|date_format:Y-m-d H:i:s',
         ], [
             'confirmacion_envio.required' =>
                 'Debes confirmar expresamente el envío real.',
@@ -1663,9 +1696,21 @@ class SuscripcionLiquidacionDetalleController extends Controller
             ]);
         }
 
+        $inicioCorrida = $request->filled('inicio_envio')
+            ? Carbon::createFromFormat(
+                'Y-m-d H:i:s',
+                $request->inicio_envio
+            )
+            : now()->startOfSecond();
+
         try {
             $resultado = $envioService
-                ->enviarRealesDesdeDetalles($detallesBase);
+                ->enviarRealesDesdeDetalles(
+                    $detallesBase,
+                    $anio,
+                    $mes,
+                    $inicioCorrida
+                );
         } catch (\Throwable $e) {
             report($e);
 
@@ -1676,24 +1721,45 @@ class SuscripcionLiquidacionDetalleController extends Controller
             ]);
         }
 
-        $mensaje = 'Envío real finalizado. '
-            . 'Pre-facturas enviadas: '
-            . $resultado['enviados']
-            . '. Omitidas: '
-            . $resultado['omitidos']
-            . '. Fallidas: '
-            . $resultado['fallidos']
-            . '. Se envió copia a finanzas@4nlogistica.cl '
-            . 'y luisdelabarra@4nlogistica.cl.';
+        $meses = [
+            1 => 'Enero',
+            2 => 'Febrero',
+            3 => 'Marzo',
+            4 => 'Abril',
+            5 => 'Mayo',
+            6 => 'Junio',
+            7 => 'Julio',
+            8 => 'Agosto',
+            9 => 'Septiembre',
+            10 => 'Octubre',
+            11 => 'Noviembre',
+            12 => 'Diciembre',
+        ];
 
-        if (
-            $resultado['omitidos'] > 0
-            || $resultado['fallidos'] > 0
-        ) {
-            return back()->with('info', $mensaje);
-        }
+        /*
+        * Si quedan pre-facturas por intentar y esta tanda avanzó,
+        * la pantalla continúa sola con la siguiente tanda.
+        */
+        $continuar =
+            $resultado['pendientes_corrida'] > 0
+            && $resultado['procesadas'] > 0;
 
-        return back()->with('success', $mensaje);
+        return view(
+            'suscripciones.liquidacion_detalles.envio_resultado',
+            [
+                'resultado' => $resultado,
+                'continuar' => $continuar,
+                'inicioEnvio' => $inicioCorrida->format('Y-m-d H:i:s'),
+
+                'anio' => $anio,
+                'mes' => $mes,
+                'mesNombre' => $meses[$mes] ?? $mes,
+
+                'proveedorFiltro' => $proveedorFiltro,
+                'rutFiltro' => $rutFiltro,
+                'tipoFiltro' => $tipoFiltro,
+            ]
+        );
     }
 
 

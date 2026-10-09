@@ -180,6 +180,13 @@ document.addEventListener(
             let formularioEnviado =
                 false;
 
+            /*
+             * El servidor deshabilita el botón cuando el período
+             * ya fue generado. Ese bloqueo debe mantenerse.
+             */
+            const bloqueadoPorServidor =
+                botonGeneracion.disabled;
+
             const textoOriginal =
                 botonGeneracion
                     .textContent
@@ -189,7 +196,10 @@ document.addEventListener(
                 .addEventListener(
                     'submit',
                     function (event) {
-                        if (formularioEnviado) {
+                        if (
+                            formularioEnviado
+                            || bloqueadoPorServidor
+                        ) {
                             event.preventDefault();
                             return;
                         }
@@ -230,7 +240,7 @@ document.addEventListener(
                         false;
 
                     botonGeneracion.disabled =
-                        false;
+                        bloqueadoPorServidor;
 
                     botonGeneracion
                         .removeAttribute(
