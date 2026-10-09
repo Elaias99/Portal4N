@@ -1886,6 +1886,91 @@ Sin limitar el análisis, el modelo permite investigar al menos:
 
 ---
 
+# 26 bis. Tabla `suscripcion_excepciones_facturacion`
+
+Incorporada en agosto de 2026, posterior a la redacción original de este
+documento. La referencia funcional completa está en
+`excepciones-facturacion.md`.
+
+## 26 bis.1. Propósito
+
+Registra que una **ejecución puntual** de una ruta, en una fecha concreta, será
+cobrada por un proveedor distinto al habitual.
+
+No sustituye al ajuste mensual de tipo `FACTURACION`, que traslada el mes
+completo. Son mecanismos distintos y conviven.
+
+## 26 bis.2. Estructura confirmada por migración
+
+```text
+id
+suscripcion_asignacion_id             unsignedBigInteger  NOT NULL
+fecha                                 date                NOT NULL
+suscripcion_proveedor_facturacion_id  unsignedBigInteger  NOT NULL
+suscripcion_transportista_override_id unsignedBigInteger  NULL
+costo                                 integer             NULL
+tipo_documento                        string              NULL
+detalle_documento                     string              NULL
+detalle_impuesto                      string              NULL
+final                                 string              NULL
+observacion                           text                NULL
+activo                                boolean             DEFAULT true
+created_at / updated_at
+```
+
+## 26 bis.3. Restricciones
+
+```text
+UNIQUE(suscripcion_asignacion_id, fecha)   sus_exc_fact_asig_fecha_uq
+INDEX(fecha)                               sus_exc_fact_fecha_idx
+INDEX(fecha, suscripcion_proveedor_facturacion_id)
+FK suscripcion_asignacion_id             → restrictOnDelete
+FK suscripcion_proveedor_facturacion_id  → restrictOnDelete
+FK suscripcion_transportista_override_id → restrictOnDelete
+```
+
+**La clave lógica es `asignación + fecha`.** Una asignación admite tantas
+excepciones como fechas tenga el período.
+
+## 26 bis.4. Semántica de los campos nulos
+
+```text
+suscripcion_transportista_override_id NULL → conservar el transportista original
+costo NULL                                 → usar el costo habitual de la ruta
+activo = 0                                 → desactivada sin borrar
+```
+
+El servicio de aplicación carga también las filas inactivas, porque necesita
+restaurar la cantidad del detalle de origen cuando una excepción se desactiva.
+
+## 26 bis.5. Relación con las demás tablas
+
+```text
+suscripcion_excepciones_facturacion.suscripcion_asignacion_id
+    → suscripcion_asignaciones.id          (asignación original, tipo RUTA)
+
+suscripcion_excepciones_facturacion.suscripcion_proveedor_facturacion_id
+    → suscripcion_proveedores.id           (proveedor receptor)
+```
+
+La fila **no apunta** al detalle mensual. La relación con
+`suscripcion_liquidacion_detalles` se reconstruye en tiempo de lectura a partir
+del código técnico `EXF-{origen}-{proveedor}-{transportista}-{costo}` de la
+asignación receptora.
+
+## 26 bis.6. Riesgos
+
+- La tabla no guarda el período de forma explícita: se deriva de `fecha`. Una
+  consulta por año y mes debe filtrar por rango de fechas.
+- La reconstrucción de la relación con el detalle depende del formato del
+  código técnico y de que coincidan proveedor, transportista y costo. Un cambio
+  posterior del costo del detalle receptor rompe el cruce visual, aunque no los
+  montos.
+- El tope de ejecuciones trasladables se valida en el servicio de aplicación, no
+  en la base. La base acepta más excepciones que días pagables.
+
+---
+
 # 27. Consultas de diagnóstico no destructivas sugeridas por el modelo
 
 Estas consultas son ejemplos de inspección. Codex puede diseñar otras.

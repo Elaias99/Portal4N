@@ -838,6 +838,66 @@ La pantalla, PDF, ZIP y correo no deben usar identidades distintas.
 
 ---
 
+## 16.4. Excepciones de facturación por fecha
+
+Regla incorporada en agosto de 2026, posterior a la redacción original de este
+documento. La referencia completa está en `excepciones-facturacion.md`.
+
+El ajuste `FACTURACION` traslada el **mes completo**. Cuando el traslado afecta
+sólo a días concretos se utiliza un mecanismo distinto: las excepciones de
+facturación por fecha, registradas en
+`suscripcion_excepciones_facturacion`.
+
+### Diferencia funcional
+
+```text
+Ajuste FACTURACION
+→ no modifica el detalle
+→ el proveedor efectivo se resuelve al leer
+
+Excepción por fecha
+→ sí modifica el detalle
+→ descuenta ejecuciones al origen
+→ crea una línea nueva para el receptor
+```
+
+### Restricciones
+
+- sólo aplica a asignaciones de tipo `RUTA`;
+- la identidad es `asignación + fecha`;
+- una asignación puede tener **varias fechas** en el mismo período;
+- no puede trasladar más ejecuciones que las pagables.
+
+### Fórmulas
+
+Ruta de origen:
+
+```text
+cantidad = max(0, q_calendario - q_inasistencia) - excepciones_activas
+```
+
+El recálculo parte siempre de `q_calendario`, nunca de la cantidad actual. Esa
+es la condición que hace el proceso idempotente.
+
+Línea receptora, por cada grupo de excepciones que comparten asignación,
+proveedor, transportista y costo efectivo:
+
+```text
+cantidad = cantidad de ejecuciones trasladadas
+total    = costo efectivo × cantidad
+```
+
+Cuatro fechas con el mismo receptor producen **una línea de cantidad 4**, no
+cuatro líneas de cantidad 1.
+
+### Ambigüedad pendiente
+
+No está definido qué debe ocurrir cuando una misma asignación recibe, en el
+mismo período, un ajuste mensual `FACTURACION` y además excepciones por fecha.
+El código no lo impide. Debe analizarse antes de registrarlo.
+
+---
+
 # 17. Regla `LINEA_ADICIONAL`
 
 ## 17.1. Propósito

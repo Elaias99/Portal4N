@@ -17,6 +17,7 @@ Suscripciones, lee primero la documentación disponible en:
 - `storage/agents/docs/suscripciones/generacion-mensual.md`
 - `storage/agents/docs/suscripciones/zonas-distribucion.md`
 - `storage/agents/docs/suscripciones/ajustes-mensuales.md`
+- `storage/agents/docs/suscripciones/excepciones-facturacion.md`
 - `storage/agents/docs/suscripciones/prefacturas-y-envios.md`
 - `storage/agents/docs/suscripciones/riesgos-conocidos.md`
 
@@ -222,8 +223,23 @@ asignaciones en distintas zonas.
 
 ### Asignaciones técnicas
 
-Los tipos `COMISION` y `CONTENEDOR_AJUSTE` son técnicos y no deben generarse
-automáticamente como rutas calendarizadas.
+Los tipos `COMISION`, `CONTENEDOR_AJUSTE` y `EXCEPCION_FACTURACION` son técnicos
+y no deben generarse automáticamente como rutas calendarizadas.
+
+### Excepciones de facturación por fecha
+
+Una ejecución puntual de una ruta puede ser cobrada por otro proveedor sin
+alterar el resto del mes. Se registra en `suscripcion_excepciones_facturacion`,
+cuya clave lógica es `suscripcion_asignacion_id + fecha`.
+
+Una misma asignación puede tener varias fechas en el mismo período. Las que
+comparten proveedor, transportista y costo efectivo se consolidan en una sola
+línea receptora.
+
+No debe confundirse con el ajuste mensual de tipo `FACTURACION`, que traslada el
+mes completo y no modifica el detalle.
+
+Ver `storage/agents/docs/suscripciones/excepciones-facturacion.md`.
 
 ### Períodos existentes
 
@@ -247,6 +263,8 @@ período ya generado.
 - `app/Services/Suscripciones/SuscripcionAjusteMensualRegistroService.php`
 - `app/Services/Suscripciones/SuscripcionAjusteMensualAplicacionService.php`
 - `app/Services/Suscripciones/SuscripcionAjusteMensualService.php`
+- `app/Services/Suscripciones/SuscripcionExcepcionFacturacionRegistroService.php`
+- `app/Services/Suscripciones/SuscripcionExcepcionFacturacionAplicacionService.php`
 - `app/Services/Suscripciones/SuscripcionLiquidacionResumenService.php`
 - `app/Services/Suscripciones/SuscripcionPrefacturaAgrupacionService.php`
 - `app/Services/Suscripciones/SuscripcionPrefacturaOcService.php`

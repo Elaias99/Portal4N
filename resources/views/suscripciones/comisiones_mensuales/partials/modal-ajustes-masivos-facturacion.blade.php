@@ -116,30 +116,42 @@
                 </select>
 
 
-                <select
+                {{--
+                    Plantilla de fechas del periodo.
+
+                    Se clona dentro de cada tarjeta seleccionada para
+                    permitir elegir una o varias ejecuciones puntuales.
+                --}}
+                <div
                     id="facturacion-masiva-fecha-template"
                     class="d-none"
                     aria-hidden="true"
                 >
-                    <option value="">
-                        Todo el mes
-                    </option>
-
                     @foreach($fechasFinSemana as $fecha)
                         @php
                             $fechaCarbon = \Carbon\Carbon::parse($fecha);
 
                             $diaSemana = $fechaCarbon->isSaturday()
-                                ? 'Sábado'
-                                : 'Domingo';
+                                ? 'Sáb'
+                                : 'Dom';
                         @endphp
 
-                        <option value="{{ $fecha }}">
-                            {{ $diaSemana }}
-                            {{ $fechaCarbon->format('d/m/Y') }}
-                        </option>
+                        <label
+                            class="d-inline-flex align-items-center gap-1 small border rounded px-2 py-1 mb-0"
+                        >
+                            <input
+                                type="checkbox"
+                                value="{{ $fecha }}"
+                                data-facturacion-masiva-fecha-item
+                            >
+
+                            <span>
+                                {{ $diaSemana }}
+                                {{ $fechaCarbon->format('d/m') }}
+                            </span>
+                        </label>
                     @endforeach
-                </select>
+                </div>
 
 
                 {{--

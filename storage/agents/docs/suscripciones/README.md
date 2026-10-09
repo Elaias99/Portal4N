@@ -110,6 +110,18 @@ automáticamente como ruta.
 Asignación técnica utilizada para líneas adicionales, pagos variables,
 reemplazos u otras novedades que necesitan un soporte de asignación.
 
+### `EXCEPCION_FACTURACION`
+
+Asignación técnica creada automáticamente cuando una o varias ejecuciones
+puntuales de una ruta son trasladadas a otro proveedor. Pertenece al proveedor
+receptor y no se genera como ruta calendarizada.
+
+Su código interno tiene el formato
+`EXF-{asignacionOrigen}-{proveedor}-{transportista}-{costo}`, pero el detalle
+mensual conserva el código visible de la ruta original.
+
+Ver `excepciones-facturacion.md`.
+
 ### OPV
 
 Actualmente puede estar almacenada como `RUTA` y se detecta por tipo, código,
@@ -308,6 +320,8 @@ La documentación se divide en:
 - `flujo-generacion-mensual.md`: orden exacto del proceso;
 - `zonas-distribucion.md`: calendario zonal y relación con asignaciones;
 - `ajustes-mensuales.md`: tipos de novedades y aplicación;
+- `excepciones-facturacion.md`: traslado de ejecuciones puntuales a otro
+  proveedor, por una o varias fechas;
 - `prefacturas-distribucion.md`: agrupación, PDF, ZIP, correo y OneDrive;
 - `riesgos-y-consideraciones.md`: limitaciones, riesgos y decisiones pendientes.
 

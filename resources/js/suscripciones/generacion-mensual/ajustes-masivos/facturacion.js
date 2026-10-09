@@ -210,14 +210,14 @@ export function inicializarFacturacionesMasivas(
             /*
              * Alcance individual.
              *
-             * Vacío:
+             * Arreglo vacío:
              * todo el mes.
              *
-             * YYYY-MM-DD:
-             * una ejecución específica.
+             * Una o varias YYYY-MM-DD:
+             * sólo esas ejecuciones.
              */
-            fecha:
-                '',
+            fechas:
+                [],
 
             /*
              * Información editable.
@@ -445,9 +445,14 @@ export function inicializarFacturacionesMasivas(
                         String(id)
                     );
 
-                const fechaSelect =
+                const todoElMesCheck =
                     row.querySelector(
-                        '[data-facturacion-masiva-fecha]'
+                        '[data-facturacion-masiva-todo-el-mes]'
+                    );
+
+                const fechaChecks =
+                    row.querySelectorAll(
+                        '[data-facturacion-masiva-fecha-item]'
                     );
 
                 const proveedorSelect =
@@ -460,11 +465,23 @@ export function inicializarFacturacionesMasivas(
                         '[data-facturacion-masiva-transportista]'
                     );
 
-                item.fecha =
-                    limpiarTexto(
-                        fechaSelect?.value
-                        || ''
-                    );
+                /*
+                 * Con "Todo el mes" marcado el alcance es mensual,
+                 * aunque hubiese fechas marcadas antes.
+                 */
+                item.fechas =
+                    todoElMesCheck?.checked
+                        ? []
+                        : Array.from(fechaChecks)
+                            .filter(function (check) {
+                                return check.checked;
+                            })
+                            .map(function (check) {
+                                return limpiarTexto(
+                                    check.value || ''
+                                );
+                            })
+                            .filter(Boolean);
 
                 item.suscripcion_proveedor_facturacion_id =
                     proveedorSelect?.value
@@ -628,24 +645,39 @@ export function inicializarFacturacionesMasivas(
 
                         <div class="col-md-4">
                             <label class="form-label small mb-1">
-                                Fecha efectiva
+                                Fechas efectivas
                             </label>
 
-                            <select
-                                class="form-select form-select-sm"
-                                data-facturacion-masiva-fecha
-                                ${esRuta ? '' : 'disabled'}
+                            <label
+                                class="d-inline-flex align-items-center gap-1 small mb-1"
                             >
-                                ${
-                                    fechaTemplate?.innerHTML
-                                    || '<option value="">Todo el mes</option>'
-                                }
-                            </select>
+                                <input
+                                    type="checkbox"
+                                    data-facturacion-masiva-todo-el-mes
+                                    checked
+                                    ${esRuta ? '' : 'disabled'}
+                                >
+
+                                <span>Todo el mes</span>
+                            </label>
+
+                            ${
+                                esRuta
+                                    ? `
+                                        <div
+                                            class="d-flex flex-wrap gap-2 border rounded p-2"
+                                            data-facturacion-masiva-fechas
+                                        >
+                                            ${fechaTemplate?.innerHTML || ''}
+                                        </div>
+                                    `
+                                    : ''
+                            }
 
                             <div class="small text-muted mt-1">
                                 ${
                                     esRuta
-                                        ? 'Todo el mes mantiene el cambio mensual. Selecciona una fecha para trasladar sólo esa ejecución.'
+                                        ? 'Deja marcado "Todo el mes" para el cambio mensual completo. Marca una o varias fechas para trasladar sólo esas ejecuciones.'
                                         : 'Este tipo de asignación sólo permite cambio de facturación para todo el mes.'
                                 }
                             </div>
@@ -835,9 +867,14 @@ export function inicializarFacturacionesMasivas(
                 seleccionadasBody
                     .appendChild(row);
 
-                const fechaSelect =
+                const todoElMesCheck =
                     row.querySelector(
-                        '[data-facturacion-masiva-fecha]'
+                        '[data-facturacion-masiva-todo-el-mes]'
+                    );
+
+                const fechaChecks =
+                    row.querySelectorAll(
+                        '[data-facturacion-masiva-fecha-item]'
                     );
 
                 const proveedorSelect =
@@ -874,10 +911,24 @@ export function inicializarFacturacionesMasivas(
                  * Restaurar valores almacenados
                  * en el Map después de cada render.
                  */
-                if (fechaSelect) {
-                    fechaSelect.value =
-                        item.fecha || '';
+                const fechasGuardadas =
+                    Array.isArray(item.fechas)
+                        ? item.fechas
+                        : [];
+
+                if (todoElMesCheck) {
+                    todoElMesCheck.checked =
+                        fechasGuardadas.length === 0;
                 }
+
+                fechaChecks.forEach(
+                    function (check) {
+                        check.checked =
+                            fechasGuardadas.includes(
+                                check.value
+                            );
+                    }
+                );
 
                 if (proveedorSelect) {
                     proveedorSelect.value =
@@ -1044,16 +1095,16 @@ export function inicializarFacturacionesMasivas(
 
         seleccionadas.forEach(
             function (item) {
-                const fecha =
-                    limpiarTexto(
-                        item.fecha || ''
-                    );
+                const fechas =
+                    Array.isArray(item.fechas)
+                        ? item.fechas
+                        : [];
 
                 /*
-                 * Si existe fecha, este item pertenece
+                 * Si tiene fechas, este item pertenece
                  * al flujo de excepciones.
                  */
-                if (fecha !== '') {
+                if (fechas.length > 0) {
                     return;
                 }
 
@@ -1178,97 +1229,112 @@ export function inicializarFacturacionesMasivas(
 
     /*
      * Construye exclusivamente los elementos
-     * que tienen una fecha específica.
+     * que tienen fechas específicas.
+     *
+     * Cada fecha marcada genera su propia excepción.
+     * El backend las agrupa luego por asignación,
+     * proveedor, transportista y costo, y construye
+     * una sola línea receptora con la cantidad total.
      */
     function construirExcepcionesFacturacion() {
         const excepciones = [];
 
         seleccionadas.forEach(
             function (item) {
-                const fecha =
-                    limpiarTexto(
-                        item.fecha || ''
-                    );
+                const fechas =
+                    (
+                        Array.isArray(item.fechas)
+                            ? item.fechas
+                            : []
+                    )
+                        .map(function (valor) {
+                            return limpiarTexto(
+                                valor || ''
+                            );
+                        })
+                        .filter(Boolean);
 
                 /*
-                 * Sin fecha:
+                 * Sin fechas:
                  * pertenece al cambio mensual.
                  */
-                if (fecha === '') {
+                if (fechas.length === 0) {
                     return;
                 }
 
-                excepciones.push({
-                    clave_control: [
-                        'EXCEPCION_FACTURACION',
-                        'ASIGNACION',
-                        item.suscripcion_asignacion_id
-                        || '',
-                        fecha,
-                    ].join('|'),
+                fechas.forEach(function (fecha) {
+                    excepciones.push({
+                        clave_control: [
+                            'EXCEPCION_FACTURACION',
+                            'ASIGNACION',
+                            item.suscripcion_asignacion_id
+                            || '',
+                            fecha,
+                        ].join('|'),
 
-                    suscripcion_asignacion_id:
-                        item.suscripcion_asignacion_id
-                        || '',
+                        suscripcion_asignacion_id:
+                            item.suscripcion_asignacion_id
+                            || '',
 
-                    fecha:
-                        fecha,
+                        fecha:
+                            fecha,
 
-                    suscripcion_proveedor_facturacion_id:
-                        item.suscripcion_proveedor_facturacion_id
-                        || '',
+                        suscripcion_proveedor_facturacion_id:
+                            item.suscripcion_proveedor_facturacion_id
+                            || '',
 
-                    suscripcion_transportista_override_id:
-                        item.suscripcion_transportista_override_id
-                        || '',
+                        suscripcion_transportista_override_id:
+                            item.suscripcion_transportista_override_id
+                            || '',
 
-                    /*
-                     * Vacío significa utilizar
-                     * el costo normal de la ruta.
-                     */
-                    costo:
-                        item.costo || '',
+                        /*
+                         * Vacío significa utilizar
+                         * el costo normal de la ruta.
+                         */
+                        costo:
+                            item.costo || '',
 
-                    tipo_documento:
-                        item.tipo_documento
-                        || '',
+                        tipo_documento:
+                            item.tipo_documento
+                            || '',
 
-                    detalle_documento:
-                        item.detalle_documento
-                        || '',
+                        detalle_documento:
+                            item.detalle_documento
+                            || '',
 
-                    detalle_impuesto:
-                        item.detalle_impuesto
-                        || '',
+                        detalle_impuesto:
+                            item.detalle_impuesto
+                            || '',
 
-                    final:
-                        item.final
-                        || '',
+                        final:
+                            item.final
+                            || '',
 
-                    observacion:
-                        item.observacion
-                        || '',
+                        observacion:
+                            item.observacion
+                            || '',
 
-                    /*
-                     * Campos visuales.
-                     */
-                    asignacion_label:
-                        item.label || '',
+                        /*
+                         * Campos visuales.
+                         */
+                        asignacion_label:
+                            item.label || '',
 
-                    proveedor_facturacion_label:
-                        item.proveedor_facturacion_label
-                        || '',
+                        proveedor_facturacion_label:
+                            item.proveedor_facturacion_label
+                            || '',
 
-                    transportista_override_label:
-                        item.transportista_override_label
-                        || '',
+                        transportista_override_label:
+                            item.transportista_override_label
+                            || '',
 
-                    codigo:
-                        item.codigo || '',
+                        codigo:
+                            item.codigo || '',
 
-                    tipo_asignacion:
-                        item.tipo_asignacion
-                        || '',
+                        tipo_asignacion:
+                            item.tipo_asignacion
+                            || '',
+                    });
                 });
             }
         );
@@ -1768,6 +1834,62 @@ export function inicializarFacturacionesMasivas(
             seleccionadasBody.addEventListener(
                 'change',
                 function (event) {
+                    /*
+                     * "Todo el mes" y las fechas puntuales
+                     * son excluyentes entre sí.
+                     */
+                    const todoElMesCheck =
+                        event.target.closest(
+                            '[data-facturacion-masiva-todo-el-mes]'
+                        );
+
+                    const fechaCheck =
+                        event.target.closest(
+                            '[data-facturacion-masiva-fecha-item]'
+                        );
+
+                    if (todoElMesCheck?.checked) {
+                        todoElMesCheck
+                            .closest(
+                                '[data-facturacion-masiva-seleccionada]'
+                            )
+                            ?.querySelectorAll(
+                                '[data-facturacion-masiva-fecha-item]'
+                            )
+                            .forEach(function (check) {
+                                check.checked = false;
+                            });
+                    }
+
+                    if (fechaCheck) {
+                        const row =
+                            fechaCheck.closest(
+                                '[data-facturacion-masiva-seleccionada]'
+                            );
+
+                        const todoElMes =
+                            row?.querySelector(
+                                '[data-facturacion-masiva-todo-el-mes]'
+                            );
+
+                        /*
+                         * Al quitar la última fecha se vuelve
+                         * al alcance mensual.
+                         */
+                        const algunaMarcada =
+                            Array.from(
+                                row?.querySelectorAll(
+                                    '[data-facturacion-masiva-fecha-item]'
+                                ) || []
+                            ).some(function (check) {
+                                return check.checked;
+                            });
+
+                        if (todoElMes) {
+                            todoElMes.checked = !algunaMarcada;
+                        }
+                    }
+
                     const proveedorSelect =
                         event.target.closest(
                             '[data-facturacion-masiva-proveedor]'
