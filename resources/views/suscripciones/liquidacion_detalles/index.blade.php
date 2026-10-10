@@ -330,6 +330,32 @@
                     </button>
 
                     <div class="sl-field">
+                        <label>Texto del correo</label>
+
+                        <p class="sl-helper mb-1">
+                            {{ $meses[(int) $mesPdf] ?? $mesPdf }} {{ $anioPdf }}:
+                            @if($textoCorreoListo)
+                                <strong class="text-success">listo</strong>
+                            @else
+                                <strong class="text-danger">falta escribirlo</strong>
+                            @endif
+                        </p>
+
+                        <a
+                            href="{{ route('suscripciones.correo-texto.edit', ['anio' => $anioPdf, 'mes' => $mesPdf]) }}"
+                            class="btn sl-btn sl-btn-outline"
+                            onclick="
+                                this.href = '{{ route('suscripciones.correo-texto.edit') }}'
+                                    + '?anio=' + encodeURIComponent(document.getElementById('sl-pdf-anio').value)
+                                    + '&mes=' + encodeURIComponent(document.getElementById('sl-pdf-mes').value);
+                            "
+                        >
+                            <i class="fa-regular fa-pen-to-square" aria-hidden="true"></i>
+                            <span>Escribir texto del correo</span>
+                        </a>
+                    </div>
+
+                    <div class="sl-field">
                         <label for="sl-correo-prueba">Correo para la prueba</label>
                         <input
                             id="sl-correo-prueba"

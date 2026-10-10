@@ -18,6 +18,8 @@ use App\Services\Suscripciones\SuscripcionAjusteMensualService;
 use App\Services\Suscripciones\SuscripcionPrefacturaPdfService;
 use App\Services\Suscripciones\SuscripcionPrefacturaEnvioService;
 use App\Services\Suscripciones\SuscripcionOneDriveService;
+use App\Services\Suscripciones\SuscripcionCorreoTextoService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 use App\Mail\SuscripcionPrefacturaPruebaMail;
@@ -299,6 +301,8 @@ class SuscripcionLiquidacionDetalleController extends Controller
             'resumenPorTipo' => $resumenPorTipo,
             'anioPdf' => $anioPdf,
             'mesPdf' => $mesPdf,
+            'textoCorreoListo' => (bool) app(SuscripcionCorreoTextoService::class)
+                ->guardado((int) $anioPdf, (int) $mesPdf),
         ]);
     }
 
@@ -1230,6 +1234,10 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
     public function enviarCorreoPrueba(SuscripcionLiquidacionDetalle $detalle, SuscripcionPrefacturaPdfService $pdfService) 
     {
+        if ($faltaTexto = $this->faltaTextoCorreo((int) $detalle->anio, (int) $detalle->mes)) {
+            return $faltaTexto;
+        }
+
         try {
             $resultado = $pdfService->generarDesdeDetalle($detalle);
 
@@ -1549,6 +1557,25 @@ class SuscripcionLiquidacionDetalleController extends Controller
         ];
     }
 
+    /*
+    * Sin texto del correo para el período no se envía nada.
+    */
+    private function faltaTextoCorreo(int $anio, int $mes): ?RedirectResponse
+    {
+        if (app(SuscripcionCorreoTextoService::class)->guardado($anio, $mes)) {
+            return null;
+        }
+
+        return back()
+            ->withInput()
+            ->withErrors([
+                'texto_correo' =>
+                    'Falta el texto del correo de '
+                    . $this->nombreMes($mes) . ' ' . $anio
+                    . '. Escríbelo en "Texto del correo" antes de enviar.',
+            ]);
+    }
+
     private function nombreMes(int $mes): string
     {
         return [
@@ -1592,6 +1619,13 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
         $anio = (int) $request->anio_pdf;
         $mes = (int) $request->mes_pdf;
+
+        /*
+        * Sin texto del correo para el período no se envía nada.
+        */
+        if ($faltaTexto = $this->faltaTextoCorreo($anio, $mes)) {
+            return $faltaTexto;
+        }
 
         $proveedorFiltro = trim((string) $request->proveedor_pdf);
         $rutFiltro = trim((string) $request->rut_pdf);
@@ -1748,6 +1782,13 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
         $anio = (int) $request->anio_pdf;
         $mes = (int) $request->mes_pdf;
+
+        /*
+        * Sin texto del correo para el período no se envía nada.
+        */
+        if ($faltaTexto = $this->faltaTextoCorreo($anio, $mes)) {
+            return $faltaTexto;
+        }
 
         $proveedorFiltro = trim((string) $request->proveedor_pdf);
         $rutFiltro = trim((string) $request->rut_pdf);

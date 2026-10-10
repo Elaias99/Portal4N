@@ -2,9 +2,11 @@
 
 namespace App\Mail;
 
+use App\Services\Suscripciones\SuscripcionCorreoTextoService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
+use RuntimeException;
 
 class SuscripcionPrefacturaPruebaMail extends Mailable
 {
@@ -87,6 +89,24 @@ class SuscripcionPrefacturaPruebaMail extends Mailable
             . $mesNumero
             . $this->anio;
 
+        /*
+         * El texto lo escribe quien envía, por período,
+         * en "Texto del correo". Sin texto no se envía.
+         */
+        $textoService = app(SuscripcionCorreoTextoService::class);
+
+        $texto = $textoService->guardado(
+            $this->anio,
+            (int) $mesNumero
+        );
+
+        if (!$texto) {
+            throw new RuntimeException(
+                'Falta el texto del correo de '
+                . $this->mesNombre . ' ' . $this->anio . '.'
+            );
+        }
+
         return $this
             ->from(
                 'proveedores@4nlogistica.cl',
@@ -103,6 +123,7 @@ class SuscripcionPrefacturaPruebaMail extends Mailable
                 'totalLiquido' => $this->totalLiquido,
                 'correoProveedorReal' => $this->correoProveedorReal,
                 'grupoPrefacturaLabel' => $this->grupoPrefacturaLabel,
+                'parrafosCuerpo' => $textoService->parrafos($texto->cuerpo),
             ])
             ->attachData(
                 $this->contenidoPdf,

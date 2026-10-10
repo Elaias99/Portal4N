@@ -45,6 +45,7 @@ use App\Http\Controllers\HonorarioMensualRecController;
 use App\Http\Controllers\TrackingReportController;
 use App\Http\Controllers\PublicTrackingController;
 use App\Http\Controllers\SuscripcionLiquidacionDetalleController;
+use App\Http\Controllers\SuscripcionCorreoTextoController;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -1178,6 +1179,12 @@ Route::middleware('auth')
 
         Route::get('/liquidacion-detalles/pdf-masivo/descargar', [SuscripcionLiquidacionDetalleController::class, 'descargarZip'])
             ->name('liquidacion-detalles.pdf-masivo.descargar');
+
+        Route::get('/correo-texto', [SuscripcionCorreoTextoController::class, 'edit'])
+            ->name('correo-texto.edit');
+
+        Route::post('/correo-texto', [SuscripcionCorreoTextoController::class, 'update'])
+            ->name('correo-texto.update');
 
         Route::post(
             '/liquidacion-detalles/enviar-correos-prueba-masivo',
