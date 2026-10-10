@@ -19,9 +19,9 @@
 
     <p>
         Es indispensable que emita el documento correspondiente hasta el día
-        martes 15/9, para que el pago sea realizado el día jueves 17/9.
+        martes 20/10, para que el pago sea realizado el día viernes 23/10.
         Si su documento es emitido fuera de plazo, el pago será realizado
-        el día viernes 25/9.
+        el día viernes 30/10.
     </p>
 
 </body>
