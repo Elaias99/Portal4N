@@ -22,9 +22,15 @@ use Illuminate\Http\Request;
 
 use App\Mail\SuscripcionPrefacturaPruebaMail;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class SuscripcionLiquidacionDetalleController extends Controller
 {
+    /*
+    * PDFs que se generan por petición al armar el ZIP.
+    * Cada PDF tarda cerca de 2 s y producción corta a los 120 s.
+    */
+    private const PDFS_ZIP_POR_TANDA = 15;
 
     public function index( Request $request, SuscripcionLiquidacionResumenService $resumenService, SuscripcionAjusteMensualService $ajusteMensualService) 
     {
@@ -1280,7 +1286,7 @@ class SuscripcionLiquidacionDetalleController extends Controller
 
 
 
-    public function pdfMasivo(Request $request, SuscripcionPrefacturaZipService $zipService, SuscripcionOneDriveService $oneDriveService, SuscripcionAjusteMensualService $ajusteMensualService) 
+    public function pdfMasivo(Request $request, SuscripcionPrefacturaZipService $zipService, SuscripcionAjusteMensualService $ajusteMensualService)
     {
         $request->validate([
             'anio_pdf' => 'required|integer|min:2020|max:2100',
@@ -1384,41 +1390,181 @@ class SuscripcionLiquidacionDetalleController extends Controller
             ]);
         }
 
+        $hayFiltros =
+            $proveedorFiltro !== ''
+            || $rutFiltro !== ''
+            || $tipoFiltro !== '';
+
+        $nombreDescarga = 'Prefacturas_Suscripciones_'
+            . $anio
+            . '_'
+            . str_pad((string) $mes, 2, '0', STR_PAD_LEFT)
+            . ($hayFiltros ? '_filtrado' : '')
+            . '.zip';
+
+        $datosVista = [
+            'anio' => $anio,
+            'mes' => $mes,
+            'mesNombre' => $this->nombreMes($mes),
+            'proveedorFiltro' => $proveedorFiltro,
+            'rutFiltro' => $rutFiltro,
+            'tipoFiltro' => $tipoFiltro,
+        ];
+
         try {
             /*
-            * Primero se genera el ZIP local utilizando el flujo existente.
+            * Por tandas: cada petición genera a lo más
+            * PDFS_ZIP_POR_TANDA PDFs y la pantalla continúa sola.
+            */
+            $estado = $zipService->prepararPdfs(
+                $detallesBase,
+                $anio,
+                $mes,
+                self::PDFS_ZIP_POR_TANDA
+            );
+
+            if ($estado['listos'] < $estado['total']) {
+                return view(
+                    'suscripciones.liquidacion_detalles.zip_resultado',
+                    $datosVista + [
+                        'continuar' => true,
+                        'total' => $estado['total'],
+                        'listos' => $estado['listos'],
+                    ]
+                );
+            }
+
+            /*
+            * Con todos los PDFs listos, armar el ZIP toma segundos.
             */
             $resultado = $zipService->generarDesdeDetalles(
                 $detallesBase,
                 $anio,
                 $mes
             );
-
-            /*
-            * Después se guarda una copia del mismo ZIP en la carpeta
-            * Portal4N - Suscripciones de OneDrive.
-            */
-            $oneDriveService->subirZip(
-                $resultado['zip_path'],
-                $resultado['zip_file_name']
-            );
         } catch (\Throwable $e) {
             report($e);
 
             return back()->withErrors([
                 'pdf_masivo' =>
-                    'No se pudo generar o guardar el ZIP en OneDrive: '
+                    'No se pudo generar el ZIP: '
                     . $e->getMessage(),
             ]);
         }
 
-        /*
-        * Finalmente se mantiene la descarga habitual en el computador.
-        */
-        return response()->download(
+        $drive = $this->guardarZipEnDrive(
             $resultado['zip_path'],
-            $resultado['zip_file_name']
+            $nombreDescarga,
+            $hayFiltros
         );
+
+        return view(
+            'suscripciones.liquidacion_detalles.zip_resultado',
+            $datosVista + [
+                'continuar' => false,
+                'total' => $resultado['generados'],
+                'listos' => $resultado['generados'],
+                'drive' => $drive,
+                'nombreDescarga' => $nombreDescarga,
+                'urlDescarga' => route(
+                    'suscripciones.liquidacion-detalles.pdf-masivo.descargar',
+                    [
+                        'archivo' => $resultado['zip_file_name'],
+                        'nombre' => $nombreDescarga,
+                    ]
+                ),
+            ]
+        );
+    }
+
+    /**
+     * Descarga un ZIP ya armado por pdfMasivo.
+     */
+    public function descargarZip(Request $request, SuscripcionPrefacturaZipService $zipService)
+    {
+        $data = $request->validate([
+            'archivo' => 'required|string|max:120',
+            'nombre' => [
+                'required',
+                'string',
+                'regex:/^Prefacturas_Suscripciones_\d{4}_\d{2}(_filtrado)?\.zip$/',
+            ],
+        ]);
+
+        $zipPath = $zipService->rutaZipGuardado($data['archivo']);
+
+        abort_if(
+            $zipPath === null,
+            404,
+            'El ZIP ya no está disponible. Vuelve a generarlo desde liquidaciones.'
+        );
+
+        return response()->download($zipPath, $data['nombre']);
+    }
+
+    /**
+     * Guarda una copia del ZIP en el drive compartido.
+     *
+     * Un error del drive no impide la descarga: se informa en pantalla.
+     * Sólo se guarda el ZIP completo del mes, con nombre fijo, para que
+     * cada versión reemplace a la anterior.
+     *
+     * @return array{estado: string, mensaje: string}
+     */
+    private function guardarZipEnDrive(string $zipPath, string $nombreDrive, bool $hayFiltros): array
+    {
+        if ($hayFiltros) {
+            return [
+                'estado' => 'omitido',
+                'mensaje' => 'Este ZIP tiene filtros, así que no se guarda en el drive compartido: ahí queda sólo el ZIP completo del mes.',
+            ];
+        }
+
+        try {
+            /*
+            * Se resuelve aquí y no en la firma del método: si falta
+            * la configuración del drive, la descarga igual funciona.
+            */
+            $archivo = app(SuscripcionOneDriveService::class)
+                ->subirZip($zipPath, $nombreDrive);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return [
+                'estado' => 'error',
+                'mensaje' => Str::limit($e->getMessage(), 300),
+            ];
+        }
+
+        if (($archivo['id'] ?? null) === null) {
+            return [
+                'estado' => 'omitido',
+                'mensaje' => 'La copia en el drive está desactivada en este ambiente.',
+            ];
+        }
+
+        return [
+            'estado' => 'guardado',
+            'mensaje' => 'Se guardó como ' . $nombreDrive . ' y reemplazó la versión anterior del mes.',
+        ];
+    }
+
+    private function nombreMes(int $mes): string
+    {
+        return [
+            1 => 'Enero',
+            2 => 'Febrero',
+            3 => 'Marzo',
+            4 => 'Abril',
+            5 => 'Mayo',
+            6 => 'Junio',
+            7 => 'Julio',
+            8 => 'Agosto',
+            9 => 'Septiembre',
+            10 => 'Octubre',
+            11 => 'Noviembre',
+            12 => 'Diciembre',
+        ][$mes] ?? (string) $mes;
     }
 
 

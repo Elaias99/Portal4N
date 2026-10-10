@@ -1176,6 +1176,9 @@ Route::middleware('auth')
         Route::post('/liquidacion-detalles/pdf-masivo', [SuscripcionLiquidacionDetalleController::class, 'pdfMasivo'])
             ->name('liquidacion-detalles.pdf-masivo');
 
+        Route::get('/liquidacion-detalles/pdf-masivo/descargar', [SuscripcionLiquidacionDetalleController::class, 'descargarZip'])
+            ->name('liquidacion-detalles.pdf-masivo.descargar');
+
         Route::post(
             '/liquidacion-detalles/enviar-correos-prueba-masivo',
             [SuscripcionLiquidacionDetalleController::class, 'enviarCorreosPruebaMasivo']
